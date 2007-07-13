@@ -30,11 +30,6 @@
  * fault and not Elliot's.
  */
 
-#ifndef lint
-static char ocopyright[] =
-"$Id: dhclient.c,v 1.154 2007/06/15 15:02:05 shane Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
-#endif /* not lint */
-
 #include "dhcpd.h"
 #include <syslog.h>
 #include <signal.h>
@@ -99,7 +94,6 @@ main(int argc, char **argv) {
 	omapi_object_t *listener;
 	isc_result_t result;
 	int persist = 0;
-	int omapi_port;
 	int no_dhclient_conf = 0;
 	int no_dhclient_db = 0;
 	int no_dhclient_pid = 0;
@@ -451,8 +445,6 @@ main(int argc, char **argv) {
 	/* Start a configuration state machine for each interface. */
 #ifdef DHCPv6
 	if (local_family == AF_INET6) {
-		struct option_cache *oc;
-
 		/* Establish a default DUID.  This may be moved to the
 		 * DHCPv4 area later.
 		 */
@@ -721,7 +713,6 @@ void state_selecting (cpp)
 			picked = lp;
 			picked -> next = (struct client_lease *)0;
 		} else {
-		      freeit:
 			destroy_client_lease (lp);
 		}
 	}
@@ -780,7 +771,6 @@ void dhcpack (packet)
 	struct client_lease *lease;
 	struct option_cache *oc;
 	struct data_string ds;
-	int i;
 	
 	/* If we're not receptive to an offer right now, or if the offer
 	   has an unrecognizable transaction id, then just drop it. */
@@ -932,8 +922,6 @@ void dhcpack (packet)
 void bind_lease (client)
 	struct client_state *client;
 {
-	struct interface_info *ip = client -> interface;
-
 	/* Remember the medium. */
 	client -> new -> medium = client -> medium;
 
@@ -996,7 +984,6 @@ void state_bound (cpp)
 	void *cpp;
 {
 	struct client_state *client = cpp;
-	int i;
 	struct option_cache *oc;
 	struct data_string ds;
 
@@ -1223,8 +1210,6 @@ void dhcpoffer (packet)
 	int i;
 	int stop_selecting;
 	const char *name = packet -> packet_type ? "DHCPOFFER" : "BOOTREPLY";
-	struct iaddrlist *ap;
-	struct option_cache *oc;
 	char obuf [1024];
 	
 #ifdef DEBUG_PACKET
@@ -2069,7 +2054,6 @@ void make_discover (client, lease)
 	struct client_lease *lease;
 {
 	unsigned char discover = DHCPDISCOVER;
-	int i;
 	struct option_state *options = (struct option_state *)0;
 
 	memset (&client -> packet, 0, sizeof (client -> packet));
@@ -2133,9 +2117,6 @@ void make_request (client, lease)
 	struct client_lease *lease;
 {
 	unsigned char request = DHCPREQUEST;
-	int i, j;
-	unsigned char *tmp, *digest;
-	unsigned char *old_digest_loc;
 	struct option_cache *oc;
 
 	memset (&client -> packet, 0, sizeof (client -> packet));
@@ -2223,7 +2204,6 @@ void make_decline (client, lease)
 	struct client_lease *lease;
 {
 	unsigned char decline = DHCPDECLINE;
-	int i;
 	struct option_cache *oc;
 
 	struct option_state *options = (struct option_state *)0;
@@ -2279,7 +2259,6 @@ void make_release (client, lease)
 	struct client_lease *lease;
 {
 	unsigned char request = DHCPRELEASE;
-	int i;
 	struct option_cache *oc;
 
 	struct option_state *options = (struct option_state *)0;
@@ -2336,8 +2315,6 @@ void make_release (client, lease)
 void destroy_client_lease (lease)
 	struct client_lease *lease;
 {
-	int i;
-
 	if (lease -> server_name)
 		dfree (lease -> server_name, MDL);
 	if (lease -> filename)
@@ -2415,8 +2392,6 @@ void write_lease_option (struct option_cache *oc,
 {
 	const char *name, *dot;
 	struct data_string ds;
-	int status;
-	struct client_state *client;
 	char *preamble = stuff;
 
 	memset (&ds, 0, sizeof ds);
@@ -2595,11 +2570,7 @@ int write_client_lease (client, lease, rewrite, makesure)
 	int rewrite;
 	int makesure;
 {
-	int i;
-	struct tm *t;
-	struct option_cache *oc;
 	struct data_string ds;
-	pair *hash;
 	int errors = 0;
 	char *s;
 	const char *tval;
@@ -2803,8 +2774,6 @@ void script_write_params (client, prefix, lease)
 	int i;
 	struct data_string data;
 	struct option_cache *oc;
-	pair *hash;
-	char *s, *t;
 	struct envadd_state es;
 
 	es.client = client;
@@ -2881,11 +2850,9 @@ void script_write_params (client, prefix, lease)
 int script_go (client)
 	struct client_state *client;
 {
-	int rval;
 	char *scriptName;
 	char *argv [2];
 	char **envp;
-	char *epp [3];
 	char reason [] = "REASON=NBI";
 	static char client_path [] = CLIENT_PATH;
 	int i;
@@ -2966,7 +2933,7 @@ void client_envadd (struct client_state *client,
 {
 	char spbuf [1024];
 	char *s;
-	unsigned len, i;
+	unsigned len;
 	struct string_list *val;
 	va_list list;
 
@@ -3423,8 +3390,7 @@ void client_dns_update_timeout (void *cp)
 isc_result_t client_dns_update (struct client_state *client, int addp,
 				int ttl, struct iaddr *address)
 {
-	struct data_string ddns_fqdn, ddns_fwd_name,
-	       ddns_dhcid, client_identifier;
+	struct data_string ddns_fwd_name, ddns_dhcid, client_identifier;
 	struct option_cache *oc;
 	int ignorep;
 	int result;

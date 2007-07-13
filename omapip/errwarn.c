@@ -31,11 +31,6 @@
  * with Vixie Laboratories.
  */
 
-#ifndef lint
-static char copyright[] =
-"$Id: errwarn.c,v 1.12 2007/05/19 19:16:26 dhankins Exp $ Copyright (c) 2004,2007 Internet Systems Consortium.  All rights reserved.\n";
-#endif /* not lint */
-
 #include "dhcpd.h"
 
 #include <omapip/omapip_p.h>

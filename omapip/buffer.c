@@ -441,7 +441,6 @@ isc_result_t omapi_connection_writer (omapi_object_t *h)
 	int bytes_written;
 	unsigned first_byte;
 	omapi_buffer_t *buffer;
-	unsigned char *bufp;
 	omapi_connection_object_t *c;
 	isc_result_t status;
 
@@ -578,7 +577,6 @@ isc_result_t omapi_connection_put_uint32 (omapi_object_t *c,
 					  u_int32_t value)
 {
 	u_int32_t inbuf;
-	isc_result_t status;
 
 	inbuf = htonl (value);
 	
@@ -605,7 +603,6 @@ isc_result_t omapi_connection_put_uint16 (omapi_object_t *c,
 					  u_int32_t value)
 {
 	u_int16_t inbuf;
-	isc_result_t status;
 
 	inbuf = htons (value);
 	

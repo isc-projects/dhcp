@@ -26,11 +26,6 @@
  *   http://www.isc.org/
  */
 
-#ifndef lint
-static char copyright[] =
-"$Id: lpf.c,v 1.35 2007/05/19 18:47:14 dhankins Exp $ Copyright (c) 2004,2007 Internet Systems Consortium.  All rights reserved.\n";
-#endif /* not lint */
-
 #include "dhcpd.h"
 #if defined (USE_LPF_SEND) || defined (USE_LPF_RECEIVE)
 #include <sys/ioctl.h>
@@ -71,8 +66,6 @@ int if_register_lpf (info)
 	struct interface_info *info;
 {
 	int sock;
-	char filename[50];
-	int b;
 	struct sockaddr sa;
 
 	/* Make an LPF socket. */
@@ -338,7 +331,6 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 	struct sockaddr_in *from;
 	struct hardware *hfrom;
 {
-	int nread;
 	int length = 0;
 	int offset = 0;
 	unsigned char ibuf [1536];
@@ -460,7 +452,7 @@ get_hw_addr(const char *name, struct hardware *hw) {
 			break;
 		default:
 			log_fatal("Unsupported device type %ld for \"%s\"",
-				  sa->sa_family, name);
+				  (long int)sa->sa_family, name);
 	}
 
 	close(sock);

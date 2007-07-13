@@ -32,11 +32,6 @@
  * ``http://www.nominum.com''.
  */
 
-#ifndef lint
-static char copyright[] =
-"$Id: print.c,v 1.67 2007/06/07 15:52:29 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
-#endif /* not lint */
-
 #include "dhcpd.h"
 
 int db_time_format = DEFAULT_TIME_FORMAT;
@@ -44,7 +39,7 @@ int db_time_format = DEFAULT_TIME_FORMAT;
 char *quotify_string (const char *s, const char *file, int line)
 {
 	unsigned len = 0;
-	const unsigned char *sp;
+	const char *sp;
 	char *buf, *nsp;
 
 	for (sp = s; sp && *sp; sp++) {
@@ -461,7 +456,6 @@ static unsigned print_subexpression (expr, buf, len)
 {
 	unsigned rv, left;
 	const char *s;
-	struct expression *next_arg;
 
 	switch (expr -> op) {
 	      case expr_none:
@@ -1091,7 +1085,6 @@ int token_print_indent_concat (FILE *file, int col,  int indent,
 			       const char *suffix, ...)
 {
 	va_list list;
-	char *buf;
 	unsigned len;
 	char *s, *t, *u;
 
@@ -1140,7 +1133,7 @@ int token_indent_data_string (FILE *file, int col, int indent,
 
 	/* If we have a purely ASCII string, output it as text. */
 	if (i == data -> len) {
-		char *buf = dmalloc (data -> len + 3, MDL);
+		buf = dmalloc (data -> len + 3, MDL);
 		if (buf) {
 			buf [0] = '"';
 			memcpy (buf + 1, data -> data, data -> len);

@@ -32,12 +32,7 @@
  * ``http://www.nominum.com''.
  */
 
-#ifndef lint
-static char ocopyright[] =
-"$Id: dhcpd.c,v 1.129 2007/07/03 10:34:18 shane Exp $ Copyright 2004-2007 Internet Systems Consortium.";
-#endif
-
-  static char copyright[] =
+static char copyright[] =
 "Copyright 2004-2007 Internet Systems Consortium.";
 static char arr [] = "All rights reserved.";
 static char message [] = "Internet Systems Consortium DHCP Server";
@@ -48,6 +43,8 @@ static char url [] = "For info, please visit http://www.isc.org/sw/dhcp/";
 #include <syslog.h>
 #include <errno.h>
 #include <limits.h>
+#include <sys/types.h>
+#include <signal.h>
 
 static void usage(void);
 
@@ -201,7 +198,7 @@ main(int argc, char **argv) {
 	int fd;
 	int i, status;
 	struct servent *ent;
-	unsigned char *s;
+	char *s;
 	int cftest = 0;
 	int lftest = 0;
 #ifndef DEBUG
@@ -217,9 +214,6 @@ main(int argc, char **argv) {
 	struct interface_info *ip;
 	struct parse *parse;
 	int lose;
-	omapi_object_t *auth;
-	struct tsig_key *key;
-	omapi_typed_data_t *td;
 	int no_dhcpd_conf = 0;
 	int no_dhcpd_db = 0;
 	int no_dhcpd_pid = 0;
@@ -265,7 +259,7 @@ main(int argc, char **argv) {
 			if (++i == argc)
 				usage ();
 			for (s = argv [i]; *s; s++)
-				if (!isdigit (*s))
+				if (!isdigit ((unsigned char)*s))
 					log_fatal ("%s: not a valid UDP port",
 					       argv [i]);
 			status = atoi (argv [i]);
@@ -1072,7 +1066,6 @@ int dhcpd_interface_setup_hook (struct interface_info *ip, struct iaddr *ia)
 	   necessary. */
 	if (!ia) {
 		const char *fnn = "fallback-net";
-		char *s;
 		status = shared_network_allocate (&ip -> shared_network, MDL);
 		if (status != ISC_R_SUCCESS)
 			log_fatal ("No memory for shared subnet: %s",

@@ -32,15 +32,8 @@
  * ``http://www.nominum.com''.
  */
 
-#ifndef lint
-static char copyright[] =
-"$Id: clparse.c,v 1.71 2007/05/19 19:16:23 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
-#endif /* not lint */
-
 #include "dhcpd.h"
 #include <errno.h>
-
-static TIME parsed_time;
 
 struct client_config top_level_config;
 
@@ -57,8 +50,10 @@ u_int32_t default_requested_options [] = {
 
 static void parse_client_default_duid(struct parse *cfile);
 static void parse_client6_lease_statement(struct parse *cfile);
+#ifdef DHCPv6
 static struct dhc6_ia *parse_client6_ia_statement(struct parse *cfile);
 static struct dhc6_addr *parse_client6_iaaddr_statement(struct parse *cfile);
+#endif /* DHCPv6 */
 
 /* client-conf-file :== client-declarations END_OF_FILE
    client-declarations :== <nil>
@@ -68,7 +63,6 @@ static struct dhc6_addr *parse_client6_iaaddr_statement(struct parse *cfile);
 isc_result_t read_client_conf ()
 {
 	struct client_config *config;
-	struct client_state *state;
 	struct interface_info *ip;
 	isc_result_t status;
 
@@ -258,11 +252,9 @@ void parse_client_statement (cfile, ip, config)
 	int token;
 	const char *val;
 	struct option *option = NULL;
-	struct executable_statement *stmt, **p;
-	enum statement_op op;
+	struct executable_statement *stmt;
 	int lose;
 	char *name;
-	struct data_string key_id;
 	enum policy policy;
 	int known;
 	int tmp, i;
@@ -988,11 +980,9 @@ void parse_client_lease_declaration (cfile, lease, ipp, clientp)
 {
 	int token;
 	const char *val;
-	char *t, *n;
 	struct interface_info *ip;
 	struct option_cache *oc;
 	struct client_state *client = (struct client_state *)0;
-	struct data_string key_id;
 
 	switch (next_token (&val, (unsigned *)0, cfile)) {
 	      case KEY:
@@ -1142,6 +1132,10 @@ parse_client_default_duid(struct parse *cfile)
 static void
 parse_client6_lease_statement(struct parse *cfile)
 {
+#if !defined(DHCPv6)
+	parse_warn(cfile, "No DHCPv6 support.");
+	skip_to_semi(cfile);
+#else /* defined(DHCPv6) */
 	struct option_cache *oc = NULL;
 	struct dhc6_lease *lease;
 	struct dhc6_ia **ia;
@@ -1152,10 +1146,6 @@ parse_client6_lease_statement(struct parse *cfile)
 	unsigned len;
 	int token, has_ia, no_semi, has_name;
 
-#if !defined(DHCPv6)
-	parse_warn(cfile, "No DHCPv6 support.");
-	skip_to_semi(cfile);
-#else /* defined(DHCPv6) */
 	token = next_token(NULL, NULL, cfile);
 	if (token != LBRACE) {
 		parse_warn(cfile, "Expecting open curly brace.");
@@ -1354,6 +1344,7 @@ parse_client6_lease_statement(struct parse *cfile)
 
 /* Parse an ia_na object from the client lease.
  */
+#ifdef DHCPv6
 static struct dhc6_ia *
 parse_client6_ia_statement(struct parse *cfile)
 {
@@ -1362,7 +1353,6 @@ parse_client6_ia_statement(struct parse *cfile)
 	struct dhc6_ia *ia;
 	struct dhc6_addr **addr;
 	const char *val;
-	unsigned len;
 	int token, no_semi;
 
 	ia = dmalloc(sizeof(*ia), MDL);
@@ -1486,8 +1476,10 @@ parse_client6_ia_statement(struct parse *cfile)
 
 	return ia;
 }
+#endif /* DHCPv6 */
 
 /* Parse an iaaddr {} structure. */
+#ifdef DHCPv6
 static struct dhc6_addr *
 parse_client6_iaaddr_statement(struct parse *cfile)
 {
@@ -1592,6 +1584,7 @@ parse_client6_iaaddr_statement(struct parse *cfile)
 
 	return addr;
 }
+#endif /* DHCPv6 */
 
 void parse_string_list (cfile, lp, multiple)
 	struct parse *cfile;
@@ -1712,12 +1705,6 @@ int parse_allow_deny (oc, cfile, flag)
 	struct parse *cfile;
 	int flag;
 {
-	enum dhcp_token token;
-	const char *val;
-	unsigned char rf = flag;
-	struct expression *data = (struct expression *)0;
-	int status;
-
 	parse_warn (cfile, "allow/deny/ignore not permitted here.");
 	skip_to_semi (cfile);
 	return 0;

@@ -32,11 +32,6 @@
  * ``http://www.nominum.com''.
  */
 
-#ifndef lint
-static char copyright[] =
-"$Id: remote.c,v 1.16 2007/05/19 19:16:24 dhankins Exp $ Copyright (c) 2004,2007 Internet Systems Consortium.  All rights reserved.\n";
-#endif /* not lint */
-
 #include "dhcpd.h"
 #include <omapip/omapip_p.h>
 #include "dhcpctl.h"
@@ -355,8 +350,6 @@ isc_result_t dhcpctl_remote_stuff_values (omapi_object_t *c,
 					  omapi_object_t *id,
 					  omapi_object_t *p)
 {
-	int i;
-
 	if (p -> type != dhcpctl_remote_type)
 		return ISC_R_INVALIDARG;
 

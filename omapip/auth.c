@@ -32,11 +32,6 @@
  * ``http://www.nominum.com''.
  */
 
-#ifndef lint
-static char ocopyright[] =
-"$Id: auth.c,v 1.8 2007/05/19 19:16:25 dhankins Exp $ Copyright 2004,2007 Internet Systems Consortium.";
-#endif
-
 #include "dhcpd.h"
 
 #include <omapip/omapip_p.h>

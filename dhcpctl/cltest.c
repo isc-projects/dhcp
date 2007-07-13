@@ -28,11 +28,6 @@
  * by Brian Murrell.
  */
 
-#ifndef lint
-static char ocopyright[] =
-"$Id: cltest.c,v 1.13 2005/03/17 20:15:03 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
-#endif /* not lint */
-
 #include <time.h>
 #include <sys/time.h>
 #include <stdio.h>
@@ -60,9 +55,8 @@ int main (argc, argv)
 	isc_result_t status, waitstatus;
 	dhcpctl_handle authenticator;
 	dhcpctl_handle connection;
-	dhcpctl_handle host_handle, group_handle, interface_handle;
-	dhcpctl_data_string cid;
-	dhcpctl_data_string result, groupname, identifier;
+	dhcpctl_handle interface_handle;
+	dhcpctl_data_string result;
 	int i;
 	int mode = undefined;
 	const char *interface = 0;

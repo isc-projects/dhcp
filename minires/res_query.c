@@ -76,7 +76,7 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static const char sccsid[] = "@(#)res_query.c	8.1 (Berkeley) 6/4/93";
-static const char rcsid[] = "$Id: res_query.c,v 1.6 2007/05/29 18:11:56 each Exp $";
+static const char rcsid[] = "$Id: res_query.c,v 1.7 2007/07/13 06:43:42 shane Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 #include <sys/types.h>
@@ -396,7 +396,7 @@ res_hostalias(const res_state statp, const char *name, char *dst, size_t siz) {
 	setbuf(fp, NULL);
 	buf[sizeof(buf) - 1] = '\0';
 	while (fgets(buf, sizeof(buf), fp)) {
-		for (cp1 = buf; *cp1 && !isspace(*cp1); ++cp1)
+		for (cp1 = (unsigned char *)buf; *cp1 && !isspace(*cp1); ++cp1)
 			;
 		if (!*cp1)
 			break;
@@ -409,7 +409,7 @@ res_hostalias(const res_state statp, const char *name, char *dst, size_t siz) {
 			for (cp2 = cp1 + 1; *cp2 && !isspace(*cp2); ++cp2)
 				;
 			*cp2 = '\0';
-			strncpy(dst, cp1, siz - 1);
+			strncpy(dst, (char *)cp1, siz - 1);
 			dst[siz - 1] = '\0';
 			fclose(fp);
 			return (dst);

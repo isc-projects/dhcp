@@ -76,7 +76,7 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static const char sccsid[] = "@(#)res_init.c	8.1 (Berkeley) 6/7/93";
-static const char rcsid[] = "$Id: res_init.c,v 1.7 2007/05/29 18:11:56 each Exp $";
+static const char rcsid[] = "$Id: res_init.c,v 1.8 2007/07/13 06:43:42 shane Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 #include <sys/types.h>
@@ -154,7 +154,7 @@ res_ninit(res_state statp) {
 int
 minires_vinit(res_state statp, int preinit) {
 	register FILE *fp;
-	register unsigned char *cp;
+	char *cp;
 	register char **pp;
 	register int n;
 	char buf[BUFSIZ];

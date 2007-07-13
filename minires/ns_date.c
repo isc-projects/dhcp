@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static const char rcsid[] = "$Id: ns_date.c,v 1.4 2007/05/29 18:11:56 each Exp $";
+static const char rcsid[] = "$Id: ns_date.c,v 1.5 2007/07/13 06:43:42 shane Exp $";
 #endif
 
 /* Import. */
@@ -48,7 +48,7 @@ static const char rcsid[] = "$Id: ns_date.c,v 1.4 2007/05/29 18:11:56 each Exp $
 
 /* Forward. */
 
-static int	datepart(const unsigned char *, int, int, int, int *);
+static int	datepart(const char *, int, int, int, int *);
 
 /* Public. */
 
@@ -118,12 +118,12 @@ ns_datetosecs(const char *cp, int *errp) {
  * Don't reset the flag if there is no error.
  */
 static int
-datepart(const unsigned char *buf, int size, int min, int max, int *errp) {
+datepart(const char *buf, int size, int min, int max, int *errp) {
 	int result = 0;
 	int i;
 
 	for (i = 0; i < size; i++) {
-		if (!isdigit(buf[i]))
+		if (!isdigit((unsigned char)buf[i]))
 			*errp = 1;
 		result = (result * 10) + buf[i] - '0';
 	}

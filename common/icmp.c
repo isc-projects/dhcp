@@ -33,11 +33,6 @@
  * ``http://www.nominum.com''.
  */
 
-#ifndef lint
-static char copyright[] =
-"$Id: icmp.c,v 1.34 2007/05/23 10:35:10 shane Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
-#endif /* not lint */
-
 #include "dhcpd.h"
 #include "netinet/ip.h"
 #include "netinet/ip_icmp.h"
@@ -61,11 +56,7 @@ void icmp_startup (routep, handler)
 {
 	struct protoent *proto;
 	int protocol = 1;
-	struct sockaddr_in from;
-	int fd;
 	int state;
-	struct icmp_state *new;
-	omapi_object_t *h;
 	isc_result_t result;
 
 	/* Only initialize icmp once. */
@@ -284,7 +275,6 @@ isc_result_t icmp_echoreply (h)
 void trace_icmp_input_input (trace_type_t *ttype, unsigned length, char *buf)
 {
 	struct iaddr *ia;
-	unsigned len;
 	u_int8_t *icbuf;
 	ia = (struct iaddr *)buf;
 	ia->len = ntohl(ia->len);

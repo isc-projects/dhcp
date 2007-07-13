@@ -32,11 +32,6 @@
  * ``http://www.nominum.com''.
  */
 
-#ifndef lint
-static char copyright[] =
-"$Id: mdb.c,v 1.92 2007/06/08 18:56:30 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
-#endif /* not lint */
-
 #include "dhcpd.h"
 #include "omapip/hash.h"
 
@@ -183,8 +178,6 @@ hash_print_hosts(struct hash_table *h) {
 
 void
 change_host_uid(struct host_decl *host, const char *uid, int len) {
-	struct host_decl *old_entry;
-
 	/* XXX: should consolidate this type of code throughout */
 	if (host_uid_hash == NULL) {
 		if (!host_new_hash(&host_uid_hash, HOST_HASH_SIZE, MDL)) {
@@ -467,7 +460,6 @@ isc_result_t delete_host (hd, commit)
 	struct host_decl *hp = (struct host_decl *)0;
 	struct host_decl *np = (struct host_decl *)0;
 	struct host_decl *foo;
-	struct executable_statement *esp;
 	int hw_head = 0, uid_head = 1;
 
 	/* Don't need to do it twice. */
@@ -607,7 +599,6 @@ int find_hosts_by_haddr (struct host_decl **hp, int htype,
 			 const unsigned char *haddr, unsigned hlen,
 			 const char *file, int line)
 {
-	struct host_decl *foo;
 	struct hardware h;
 
 	h.hlen = hlen + 1;
@@ -674,7 +665,6 @@ int find_host_for_network (struct subnet **sp, struct host_decl **host,
 			   struct iaddr *addr, struct shared_network *share)
 {
 	int i;
-	struct subnet *subnet;
 	struct iaddr ip_address;
 	struct host_decl *hp;
 	struct data_string fixed_addr;
@@ -724,13 +714,15 @@ void new_address_range (cfile, low, high, subnet, pool, lpchain)
 	struct pool *pool;
 	struct lease **lpchain;
 {
-	struct lease *address_range, *lp, *plp;
+	struct lease *address_range;
 	struct iaddr net;
 	unsigned min, max, i;
 	char lowbuf [16], highbuf [16], netbuf [16];
 	struct shared_network *share = subnet -> shared_network;
-	isc_result_t status;
 	struct lease *lt = (struct lease *)0;
+#if !defined(COMPACT_LEASES)
+	isc_result_t status;
+#endif
 
 	/* All subnets should have attached shared network structures. */
 	if (!share) {
@@ -1018,7 +1010,6 @@ void enter_lease (lease)
 	struct lease *lease;
 {
 	struct lease *comp = (struct lease *)0;
-	isc_result_t status;
 
 	if (find_lease_by_ip_addr (&comp, lease -> ip_addr, MDL)) {
 		if (!comp -> pool) {
@@ -1065,7 +1056,6 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 	int pimmediate;
 {
 	struct lease *lp, **lq, *prev;
-	TIME lp_next_state;
 #if defined (FAILOVER_PROTOCOL)
 	int do_pool_check = 0;
 
@@ -1757,7 +1747,6 @@ void pool_timer (vpool)
 	void *vpool;
 {
 	struct pool *pool;
-	struct lease *lt = (struct lease *)0;
 	struct lease *next = (struct lease *)0;
 	struct lease *lease = (struct lease *)0;
 #define FREE_LEASES 0
@@ -2486,7 +2475,6 @@ void expire_all_pools ()
 {
 	struct shared_network *s;
 	struct pool *p;
-	struct hash_bucket *hb;
 	int i;
 	struct lease *l;
 	struct lease **lptr[RESERVED_LEASES+1];

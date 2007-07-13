@@ -32,11 +32,6 @@
  * ``http://www.nominum.com''.
  */
 
-#ifndef lint
-static char ocopyright[] =
-"$Id: dhcrelay.c,v 1.63 2007/06/07 15:29:31 each Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
-#endif /* not lint */
-
 #include "dhcpd.h"
 #include <syslog.h>
 
@@ -745,7 +740,7 @@ int add_relay_agent_options (ip, packet, length, giaddr)
 	unsigned length;
 	struct in_addr giaddr;
 {
-	int is_dhcp = 0, agent_options_present = 0;
+	int is_dhcp = 0;
 	unsigned optlen;
 	u_int8_t *op, *nextop, *sp, *max, *end_pad = NULL;
 

@@ -32,22 +32,16 @@
  * ``http://www.nominum.com''.
  */
 
-#ifndef lint
-static char copyright[] =
-"$Id: conflex.c,v 1.112 2007/07/03 09:51:58 shane Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
-#endif /* not lint */
-
 #include "dhcpd.h"
 #include <ctype.h>
 
 static int get_char PROTO ((struct parse *));
-static enum dhcp_token get_token PROTO ((struct parse *));
 static void skip_to_eol PROTO ((struct parse *));
 static enum dhcp_token read_whitespace(int c, struct parse *cfile);
 static enum dhcp_token read_string PROTO ((struct parse *));
 static enum dhcp_token read_number PROTO ((int, struct parse *));
 static enum dhcp_token read_num_or_name PROTO ((int, struct parse *));
-static enum dhcp_token intern PROTO ((unsigned char *, enum dhcp_token));
+static enum dhcp_token intern PROTO ((char *, enum dhcp_token));
 
 isc_result_t new_parse (cfile, file, inbuf, buflen, name, eolp)
 	struct parse **cfile;
@@ -214,7 +208,7 @@ static int get_char (cfile)
  * when parsing IPv6 addresses).
  *
  * Generally we use the next_token() function to read tokens. This 
- * in turn calls get_token, which does *not* return tokens for
+ * in turn calls get_next_token, which does *not* return tokens for
  * whitespace. Rather, it skips these.
  *
  * When we need to see whitespace, we us next_raw_token(), which also
@@ -678,17 +672,15 @@ static enum dhcp_token read_num_or_name (c, cfile)
 	cfile -> tokbuf [i] = 0;
 	cfile -> tlen = i;
 	cfile -> tval = cfile -> tokbuf;
-	return intern (cfile -> tval, rv);
+	return intern(cfile->tval, rv);
 }
 
-static enum dhcp_token intern (atom, dfv)
-	unsigned char *atom;
-	enum dhcp_token dfv;
-{
-	if (!isascii (atom [0]))
+static enum dhcp_token
+intern(char *atom, enum dhcp_token dfv) {
+	if (!isascii(atom[0]))
 		return dfv;
 
-	switch (tolower (atom [0])) {
+	switch (tolower((unsigned char)atom[0])) {
 	      case '-':
 		if (atom [1] == 0)
 			return MINUS;
@@ -861,7 +853,8 @@ static enum dhcp_token intern (atom, dfv)
 		}
 		break;
 	      case 'e':
-		if (isascii (atom [1]) && tolower (atom [1]) == 'x') {
+		if (isascii (atom [1]) && 
+		    tolower((unsigned char)atom[1]) == 'x') {
 			if (!strcasecmp (atom + 2, "tract-int"))
 				return EXTRACT_INT;
 			if (!strcasecmp (atom + 2, "ists"))
@@ -1206,10 +1199,12 @@ static enum dhcp_token intern (atom, dfv)
 	      case 's':
                 if (!strcasecmp(atom + 1, "cript"))
                         return SCRIPT;
-		if (isascii(atom[1]) && tolower(atom[1]) == 'e') {
+		if (isascii(atom[1]) && 
+		    tolower((unsigned char)atom[1]) == 'e') {
                         if (!strcasecmp(atom + 2, "arch"))
                                 return SEARCH;
-			if (isascii(atom[2]) && tolower(atom[2]) == 'c') {
+			if (isascii(atom[2]) && 
+			    tolower((unsigned char)atom[2]) == 'c') {
 				if (!strncasecmp(atom + 3, "ond", 3)) {
                                         if (!strcasecmp(atom + 6, "ary"))
                                                 return SECONDARY;
@@ -1256,14 +1251,16 @@ static enum dhcp_token intern (atom, dfv)
                                 return TOKEN_SET;
 			break;
 		}
-		if (isascii(atom[1]) && tolower(atom[1]) == 'h') {
+		if (isascii(atom[1]) && 
+		    tolower((unsigned char)atom[1]) == 'h') {
                         if (!strcasecmp(atom + 2, "ared-network"))
                                 return SHARED_NETWORK;
                         if (!strcasecmp(atom + 2, "utdown"))
                                 return SHUTDOWN;
 			break;
 		}
-		if (isascii(atom[1]) && tolower(atom[1]) == 'i') {
+		if (isascii(atom[1]) && 
+		    tolower((unsigned char)atom[1]) == 'i') {
                         if (!strcasecmp(atom + 2, "addr"))
                                 return SIADDR;
                         if (!strcasecmp(atom + 2, "gned"))
@@ -1272,8 +1269,10 @@ static enum dhcp_token intern (atom, dfv)
                                 return SIZE;
 			break;
 		}
-		if (isascii(atom[1]) && tolower(atom[1]) == 'p') {
-			if (isascii(atom[2]) && tolower(atom[2]) == 'a') {
+		if (isascii(atom[1]) && 
+		    tolower((unsigned char)atom[1]) == 'p') {
+			if (isascii(atom[2]) && 
+			    tolower((unsigned char)atom[2]) == 'a') {
                                 if (!strcasecmp(atom + 3, "ce"))
                                         return SPACE;
                                 if (!strcasecmp(atom + 3, "wn"))
@@ -1284,8 +1283,10 @@ static enum dhcp_token intern (atom, dfv)
                                 return SPLIT;
 			break;
 		}
-		if (isascii(atom[1]) && tolower(atom[1]) == 't') {
-			if (isascii(atom[2]) && tolower(atom[2]) == 'a') {
+		if (isascii(atom[1]) && 
+		    tolower((unsigned char)atom[1]) == 't') {
+			if (isascii(atom[2]) && 
+			    tolower((unsigned char)atom[2]) == 'a') {
 				if(!strncasecmp(atom + 3, "rt", 2)) {
                                          if (!strcasecmp(atom + 5, "s"))
                                                  return STARTS;
@@ -1294,7 +1295,7 @@ static enum dhcp_token intern (atom, dfv)
 					break;
 				}
 				if (isascii(atom[3]) &&
-				    tolower(atom[3]) == 't') {
+				    tolower((unsigned char)atom[3]) == 't') {
                                         if (!strcasecmp(atom + 4, "e"))
                                                 return STATE;
                                         if (!strcasecmp(atom + 4, "ic"))
@@ -1317,7 +1318,8 @@ static enum dhcp_token intern (atom, dfv)
                                 return SUBSTRING;
                         break;
                 }
-		if (isascii(atom[1]) && tolower(atom[1]) == 'u') {
+		if (isascii(atom[1]) && 
+		    tolower((unsigned char)atom[1]) == 'u') {
                         if (!strcasecmp(atom + 2, "ffix"))
                                 return SUFFIX;
                         if (!strcasecmp(atom + 2, "persede"))

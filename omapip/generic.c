@@ -32,11 +32,6 @@
  * ``http://www.nominum.com''.
  */
 
-#ifndef lint
-static char ocopyright[] =
-"$Id: generic.c,v 1.14 2007/05/19 19:16:26 dhankins Exp $ Copyright 2004-2007 Internet Systems Consortium.";
-#endif
-
 #include "dhcpd.h"
 
 #include <omapip/omapip_p.h>
@@ -294,7 +289,6 @@ isc_result_t omapi_generic_stuff_values (omapi_object_t *c,
 isc_result_t omapi_generic_clear_flags (omapi_object_t *o)
 {
 	int i;
-	isc_result_t status;
 	omapi_generic_object_t *g;
 
 	if (o -> type != omapi_type_generic)

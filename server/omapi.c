@@ -39,11 +39,6 @@
    useful, you have Brian and BCtel to thank.  Any limitations in the
    code are a result of mistakes on my part.  -- Ted Lemon */
 
-#ifndef lint
-static char copyright[] =
-"$Id: omapi.c,v 1.61 2007/05/19 19:16:27 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
-#endif /* not lint */
-
 #include "dhcpd.h"
 #include <omapip/omapip_p.h>
 
@@ -212,7 +207,6 @@ isc_result_t dhcp_lease_set_value  (omapi_object_t *h,
 {
 	struct lease *lease;
 	isc_result_t status;
-	int foo;
 
 	if (h -> type != dhcp_type_lease)
 		return ISC_R_INVALIDARG;
@@ -399,8 +393,6 @@ isc_result_t dhcp_lease_get_value (omapi_object_t *h, omapi_object_t *id,
 isc_result_t dhcp_lease_destroy (omapi_object_t *h, const char *file, int line)
 {
 	struct lease *lease;
-	isc_result_t status;
-	u_int8_t flagbuf;
 
 	if (h -> type != dhcp_type_lease)
 		return ISC_R_INVALIDARG;
@@ -477,7 +469,6 @@ isc_result_t dhcp_lease_signal_handler (omapi_object_t *h,
 {
 	struct lease *lease;
 	isc_result_t status;
-	int updatep = 0;
 
 	if (h -> type != dhcp_type_lease)
 		return ISC_R_INVALIDARG;
@@ -911,9 +902,8 @@ isc_result_t dhcp_host_set_value  (omapi_object_t *h,
 				   omapi_data_string_t *name,
 				   omapi_typed_data_t *value)
 {
-	struct host_decl *host, *hp;
+	struct host_decl *host;
 	isc_result_t status;
-	int foo;
 
 	if (h -> type != dhcp_type_host)
 		return ISC_R_INVALIDARG;
@@ -1172,7 +1162,6 @@ isc_result_t dhcp_host_get_value (omapi_object_t *h, omapi_object_t *id,
 isc_result_t dhcp_host_destroy (omapi_object_t *h, const char *file, int line)
 {
 	struct host_decl *host;
-	isc_result_t status;
 
 	if (h -> type != dhcp_type_host)
 		return ISC_R_INVALIDARG;
@@ -1593,7 +1582,6 @@ isc_result_t dhcp_pool_set_value  (omapi_object_t *h,
 {
 	struct pool *pool;
 	isc_result_t status;
-	int foo;
 
 	if (h -> type != dhcp_type_pool)
 		return ISC_R_INVALIDARG;
@@ -1639,8 +1627,10 @@ isc_result_t dhcp_pool_get_value (omapi_object_t *h, omapi_object_t *id,
 isc_result_t dhcp_pool_destroy (omapi_object_t *h, const char *file, int line)
 {
 	struct pool *pool;
-	isc_result_t status;
+#if defined (DEBUG_MEMORY_LEAKAGE) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 	struct permit *pc, *pn;
+#endif
 
 	if (h -> type != dhcp_type_pool)
 		return ISC_R_INVALIDARG;
@@ -1737,10 +1727,6 @@ isc_result_t dhcp_pool_stuff_values (omapi_object_t *c,
 isc_result_t dhcp_pool_lookup (omapi_object_t **lp,
 			       omapi_object_t *id, omapi_object_t *ref)
 {
-	omapi_value_t *tv = (omapi_value_t *)0;
-	isc_result_t status;
-	struct pool *pool;
-
 	/* Can't look up pools yet. */
 
 	/* If we get to here without finding a pool, no valid key was
@@ -1914,11 +1900,6 @@ isc_result_t dhcp_class_set_value  (omapi_object_t *h,
 				    omapi_data_string_t *name,
 				    omapi_typed_data_t *value)
 {
-	struct class *class;
-	struct class *superclass = 0;
-	isc_result_t status;
-	int foo;
-
 	if (h -> type != dhcp_type_class)
 		return ISC_R_INVALIDARG;
 
@@ -1953,8 +1934,6 @@ isc_result_t dhcp_class_get_value (omapi_object_t *h, omapi_object_t *id,
 isc_result_t dhcp_class_destroy (omapi_object_t *h, const char *file, int line)
 {
 	struct class *class;
-	isc_result_t status;
-	int i;
 
 	if (h -> type != dhcp_type_class && h -> type != dhcp_type_subclass)
 		return ISC_R_INVALIDARG;
@@ -1971,6 +1950,7 @@ isc_result_t dhcp_class_destroy (omapi_object_t *h, const char *file, int line)
 		class -> name = (char *)0;
 	}
 	if (class -> billed_leases) {
+		int i;
 		for (i = 0; i < class -> lease_limit; i++) {
 			if (class -> billed_leases [i]) {
 				lease_dereference (&class -> billed_leases [i],
@@ -2231,11 +2211,6 @@ isc_result_t dhcp_subclass_set_value  (omapi_object_t *h,
 				       omapi_data_string_t *name,
 				       omapi_typed_data_t *value)
 {
-	struct class *subclass = 0;
-	struct class *superclass = 0;
-	isc_result_t status;
-	int foo;
-
 	if (h -> type != dhcp_type_subclass)
 		return ISC_R_INVALIDARG;
 

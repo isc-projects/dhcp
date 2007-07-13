@@ -32,11 +32,6 @@
  * ``http://www.nominum.com''.
  */
 
-#ifndef lint
-static char copyright[] =
-"$Id: omshell.c,v 1.16 2007/06/08 14:58:20 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
-#endif /* not lint */
-
 #include <time.h>
 #include <sys/time.h>
 #include <stdio.h>
@@ -89,11 +84,9 @@ main(int argc, char **argv) {
 	dhcpctl_handle connection;
 	dhcpctl_handle authenticator;
 	dhcpctl_handle oh;
-	dhcpctl_data_string cid, ip_addr;
-	dhcpctl_data_string result, groupname, identifier;
 	struct data_string secret;
 	const char *name = 0, *algorithm = "hmac-md5";
-	int i, j;
+	int i;
 	int port = 7911;
 	const char *server = "127.0.0.1";
 	struct parse *cfile;
@@ -483,7 +476,6 @@ main(int argc, char **argv) {
 				val = buf;
 				do {
 				    int intval = atoi (val);
-				dotiszero:
 				    if (intval > 255) {
 					parse_warn (cfile,
 						    "dotted octet > 255: %s",

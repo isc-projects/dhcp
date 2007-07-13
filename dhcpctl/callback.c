@@ -32,11 +32,6 @@
  * ``http://www.nominum.com''.
  */
 
-#ifndef lint
-static char copyright[] =
-"$Id: callback.c,v 1.8 2007/05/19 19:16:24 dhankins Exp $ Copyright (c) 2004,2007 Internet Systems Consortium.  All rights reserved.\n";
-#endif /* not lint */
-
 #include "dhcpd.h"
 #include <omapip/omapip_p.h>
 #include "dhcpctl.h"
@@ -60,7 +55,6 @@ dhcpctl_status dhcpctl_set_callback (dhcpctl_handle h, void *data,
 {
 	dhcpctl_callback_object_t *callback;
 	omapi_object_t *inner;
-	isc_result_t status;
 
 	callback = dmalloc (sizeof *callback, MDL);
 	if (!callback)
@@ -163,8 +157,6 @@ isc_result_t dhcpctl_callback_stuff_values (omapi_object_t *c,
 					    omapi_object_t *id,
 					    omapi_object_t *p)
 {
-	int i;
-
 	if (p -> type != dhcpctl_callback_type)
 		return ISC_R_INVALIDARG;
 

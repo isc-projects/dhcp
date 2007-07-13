@@ -33,11 +33,6 @@
  * ``http://www.nominum.com''.
  */
 
-#ifndef lint
-static char copyright[] =
-"$Id: nit.c,v 1.36 2007/04/27 23:54:05 each Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
-#endif /* not lint */
-
 #include "dhcpd.h"
 #if defined (USE_NIT_SEND) || defined (USE_NIT_RECEIVE)
 #include <sys/ioctl.h>

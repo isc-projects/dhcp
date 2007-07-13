@@ -32,11 +32,6 @@
  * ``http://www.nominum.com''.
  */
 
-#ifndef lint
-static char ocopyright[] =
-"$Id: handle.c,v 1.10 2007/05/19 19:16:26 dhankins Exp $ Copyright 2004-2007 Internet Systems Consortium.";
-#endif
-
 #include "dhcpd.h"
 
 #include <omapip/omapip_p.h>
@@ -78,7 +73,6 @@ static isc_result_t omapi_handle_table_enclose (omapi_handle_table_t **);
 
 isc_result_t omapi_object_handle (omapi_handle_t *h, omapi_object_t *o)
 {
-	int tabix;
 	isc_result_t status;
 
 	if (o -> handle) {
@@ -287,7 +281,6 @@ static isc_result_t omapi_handle_lookup_in (omapi_object_t **o,
 isc_result_t omapi_handle_td_lookup (omapi_object_t **obj,
 				     omapi_typed_data_t *handle)
 {
-	isc_result_t status;
 	omapi_handle_t h;
 
 	if (handle -> type == omapi_datatype_int)

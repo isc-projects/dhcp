@@ -32,11 +32,6 @@
  * ``http://www.nominum.com''.
  */
 
-#ifndef lint
-static char copyright[] =
-"$Id: dhcp.c,v 1.220 2007/05/21 22:09:07 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
-#endif /* not lint */
-
 #include "dhcpd.h"
 #include <errno.h>
 #include <limits.h>
@@ -267,7 +262,7 @@ void dhcpdiscover (packet, ms_nulltp)
 
 	if (lease && lease -> client_hostname) {
 		if ((strlen (lease -> client_hostname) <= 64) &&
-		    db_printable (lease -> client_hostname))
+		    db_printable((unsigned char *)lease->client_hostname))
 			s = lease -> client_hostname;
 		else
 			s = "Hostname Unsuitable for Printing";
@@ -393,7 +388,6 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 	int ours = 0;
 	struct option_cache *oc;
 	struct data_string data;
-	int status;
 	char msgbuf [1024]; /* XXX */
 	const char *s;
 	char smbuf [19];
@@ -432,7 +426,7 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 
 	if (lease && lease -> client_hostname) {
 		if ((strlen (lease -> client_hostname) <= 64) &&
-		    db_printable (lease -> client_hostname))
+		    db_printable((unsigned char *)lease->client_hostname))
 			s = lease -> client_hostname;
 		else
 			s = "Hostname Unsuitable for Printing";
@@ -735,7 +729,7 @@ void dhcprelease (packet, ms_nulltp)
 
 	if (lease && lease -> client_hostname) {
 		if ((strlen (lease -> client_hostname) <= 64) &&
-		    db_printable (lease -> client_hostname))
+		    db_printable((unsigned char *)lease->client_hostname))
 			s = lease -> client_hostname;
 		else
 			s = "Hostname Unsuitable for Printing";
@@ -831,7 +825,7 @@ void dhcpdecline (packet, ms_nulltp)
 
 	if (lease && lease -> client_hostname) {
 		if ((strlen (lease -> client_hostname) <= 64) &&
-		    db_printable (lease -> client_hostname))
+		    db_printable((unsigned char *)lease->client_hostname))
 			s = lease -> client_hostname;
 		else
 			s = "Hostname Unsuitable for Printing";
@@ -929,14 +923,13 @@ void dhcpinform (packet, ms_nulltp)
 	char msgbuf [1024];
 	struct data_string d1, prl;
 	struct option_cache *oc;
-	struct expression *expr;
 	struct option_state *options = (struct option_state *)0;
 	struct dhcp_packet raw;
 	struct packet outgoing;
 	unsigned char dhcpack = DHCPACK;
 	struct subnet *subnet = (struct subnet *)0;
 	struct iaddr cip, gip;
-	unsigned i, j;
+	unsigned i;
 	int nulltp;
 	struct sockaddr_in to;
 	struct in_addr from;
@@ -1280,9 +1273,7 @@ void nak_lease (packet, cip)
 	struct packet outgoing;
 	struct hardware hto;
 	unsigned i;
-	struct data_string data;
 	struct option_state *options = (struct option_state *)0;
-	struct expression *expr;
 	struct option_cache *oc = (struct option_cache *)0;
 
 	option_state_allocate (&options, MDL);
@@ -1456,17 +1447,13 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 	TIME max_lease_time;
 	TIME default_lease_time;
 	struct option_cache *oc;
-	struct expression *expr;
-	int status;
 	isc_result_t result;
-	int did_ping = 0;
 	TIME ping_timeout;
 	TIME lease_cltt;
 	struct in_addr from;
 
 	unsigned i, j;
-	int s1, s2;
-	int val;
+	int s1;
 	int ignorep;
 
 	/* If we're already acking this lease, don't do it again. */
@@ -2776,12 +2763,9 @@ void dhcp_reply (lease)
 	struct in_addr from;
 	struct hardware hto;
 	int result;
-	int i;
 	struct lease_state *state = lease -> state;
 	int nulltp, bootpp, unicastp = 1;
-	struct option_tag *ot, *not;
 	struct data_string d1;
-	struct option_cache *oc;
 	const char *s;
 
 	if (!state)
@@ -2858,7 +2842,7 @@ void dhcp_reply (lease)
 
 	if (lease -> client_hostname) {
 		if ((strlen (lease -> client_hostname) <= 64) &&
-		    db_printable (lease -> client_hostname))
+		    db_printable((unsigned char *)lease->client_hostname))
 			s = lease -> client_hostname;
 		else
 			s = "Hostname Unsuitable for Printing";
@@ -3001,7 +2985,6 @@ int find_lease (struct lease **lp,
 	struct data_string d1;
 	int have_client_identifier = 0;
 	struct data_string client_identifier;
-	int status;
 	struct hardware h;
 
 	/* Quick check to see if the peer has leases. */
@@ -3964,7 +3947,7 @@ get_server_source_address(struct in_addr *from,
 		if (option_cache_allocate(&oc, MDL)) {
 			a = &packet->interface->addresses[0];
 			if (make_const_data(&oc->expression,
-					    (char *)a, sizeof(*a),
+					    (unsigned char *)a, sizeof(*a),
 					    0, 0, MDL)) {
 				option_code_hash_lookup(&oc->option, 
 							dhcp_universe.code_hash,

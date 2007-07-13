@@ -85,11 +85,6 @@
  * http://docs.hp.com/en/B2355-90139/index.html
  */
 
-#ifndef lint
-static char copyright[] =
-"$Id: dlpi.c,v 1.33 2007/05/19 18:47:14 dhankins Exp $ Copyright (c) 2004,2007 Internet Systems Consortium.  All rights reserved.\n";
-#endif /* not lint */
-
 #include "dhcpd.h"
 
 #if defined (USE_DLPI_SEND) || defined (USE_DLPI_RECEIVE)

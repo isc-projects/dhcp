@@ -32,11 +32,6 @@
  * ``http://www.nominum.com''.
  */
 
-#ifndef lint
-static char copyright[] =
-"$Id: upf.c,v 1.24 2007/05/19 19:16:24 dhankins Exp $ Copyright (c) 2004,2007 Internet Systems Consortium.  All rights reserved.\n";
-#endif /* not lint */
-
 #include "dhcpd.h"
 #if defined (USE_UPF_SEND) || defined (USE_UPF_RECEIVE)
 #include <sys/ioctl.h>

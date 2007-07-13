@@ -33,11 +33,6 @@
  * ``http://www.nominum.com''.
  */
 
-#ifndef lint
-static char copyright[] =
-"$Id: inet.c,v 1.14 2007/06/19 17:06:03 shane Exp $ Copyright (c) 2004,2005,2007 Internet Systems Consortium.  All rights reserved.\n";
-#endif /* not lint */
-
 #include "dhcpd.h"
 
 /* Return just the network number of an internet address... */
@@ -124,7 +119,7 @@ struct iaddr broadcast_addr (subnet, mask)
 	struct iaddr subnet;
 	struct iaddr mask;
 {
-	int i, j, k;
+	int i;
 	struct iaddr rv;
 
 	if (subnet.len > sizeof(subnet.iabuf))

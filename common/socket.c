@@ -40,12 +40,6 @@
  * I have implemented it under Linux; other systems should be doable also.
  */
 
-#ifndef lint
-static char copyright[] =
-"$Id: socket.c,v 1.66 2007/05/19 23:16:13 dhankins Exp $ "
-"Copyright (c) 2004-2007 Internet Systems Consortium.\n";
-#endif /* not lint */
-
 #include "dhcpd.h"
 #include <errno.h>
 #include <sys/ioctl.h>
@@ -60,7 +54,14 @@ static char copyright[] =
 # endif
 #endif
 
+/*
+ * If we can't bind() to a specific interface, then we can only have
+ * a single socket. This variable insures that we don't try to listen
+ * on two sockets.
+ */
+#if !defined(SO_BINDTODEVICE) && !defined(USE_FALLBACK)
 static int once = 0;
+#endif /* !defined(SO_BINDTODEVICE) && !defined(USE_FALLBACK) */
 
 /* Reinitializes the specified interface after an address change.   This
    is not required for packet-filter APIs. */

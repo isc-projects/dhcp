@@ -32,11 +32,6 @@
  * ``http://www.nominum.com''.
  */
 
-#ifndef lint
-static char copyright[] =
-"$Id: db.c,v 1.81 2007/06/06 23:07:17 each Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
-#endif /* not lint */
-
 #include "dhcpd.h"
 #include <ctype.h>
 #include <errno.h>
@@ -54,7 +49,6 @@ int write_lease (lease)
 	struct lease *lease;
 {
 	int errors = 0;
-	int i;
 	struct binding *b;
 	char *s;
 	const char *tval;
@@ -148,7 +142,6 @@ int write_lease (lease)
 			++errors;
 	}
 	if (lease -> uid_len) {
-		int i;
 		s = quotify_buf (lease -> uid, lease -> uid_len, MDL);
 		if (s) {
 			errno = 0;
@@ -222,7 +215,7 @@ int write_lease (lease)
 	    }
 	}
 	if (lease -> client_hostname &&
-	    db_printable (lease -> client_hostname)) {
+	    db_printable((unsigned char *)lease->client_hostname)) {
 		s = quotify_string (lease -> client_hostname, MDL);
 		if (s) {
 			errno = 0;
@@ -281,7 +274,7 @@ int write_host (host)
 		if (!new_lease_file ())
 			return 0;
 
-	if (!db_printable (host -> name))
+	if (!db_printable((unsigned char *)host->name))
 		return 0;
 
 	if (counting)
@@ -419,7 +412,6 @@ int write_group (group)
 	struct group_object *group;
 {
 	int errors = 0;
-	int i;
 
 	/* If the lease file is corrupt, don't try to write any more leases
 	   until we've written a good lease file. */
@@ -427,7 +419,7 @@ int write_group (group)
 		if (!new_lease_file ())
 			return 0;
 
-	if (!db_printable (group -> name))
+	if (!db_printable((unsigned char *)group->name))
 		return 0;
 
 	if (counting)
@@ -619,7 +611,6 @@ error_exit:
 #if defined (FAILOVER_PROTOCOL)
 int write_failover_state (dhcp_failover_state_t *state)
 {
-	struct tm *t;
 	int errors = 0;
 	const char *tval;
 
@@ -831,8 +822,6 @@ void write_billing_classes ()
 {
 	struct collection *lp;
 	struct class *cp;
-	struct hash_bucket *bp;
-	int i;
 
 	for (lp = collections; lp; lp = lp -> next) {
 	    for (cp = lp -> classes; cp; cp = cp -> nic) {
@@ -849,7 +838,6 @@ int write_billing_class (class)
 	struct class *class;
 {
 	int errors = 0;
-	int i;
 
 	if (lease_file_is_corrupt)
 		if (!new_lease_file ())

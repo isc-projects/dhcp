@@ -335,7 +335,7 @@ ia_na_remove_iaaddr(struct ia_na *ia_na, struct iaaddr *iaaddr,
  */
 void
 ia_na_remove_all_iaaddr(struct ia_na *ia_na, const char *file, int line) {
-	int i, j;
+	int i;
 
 	for (i=0; i<ia_na->num_iaaddr; i++) {
 		iaaddr_dereference(&(ia_na->iaaddr[i]), file, line);
@@ -952,7 +952,7 @@ cleanup_old_expired(struct ipv6_pool *pool) {
 		iaaddr_dereference(&tmp, MDL);
 		if (ia_na->num_iaaddr <= 0) {
 			ia_na_hash_delete(ia_active, 
-					  (char *)ia_na->iaid_duid.data,
+					  (unsigned char*)ia_na->iaid_duid.data,
 					  ia_na->iaid_duid.len, MDL);
 		}
 		ia_na_dereference(&ia_na, MDL);
@@ -1206,6 +1206,7 @@ decline_leases(struct ia_na *ia_na) {
 	return change_leases(ia_na, decline_lease6);
 }
 
+#ifdef DHCPv6
 /*
  * Helper function to output leases.
  */
@@ -1223,7 +1224,6 @@ write_ia_na_leases(const void *name, unsigned len, void *value) {
 	return ISC_R_SUCCESS;
 }
 
-#ifdef DHCPv6
 /*
  * Write all DHCPv6 information.
  */

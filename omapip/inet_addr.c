@@ -41,11 +41,6 @@ static char rcsid[] = "$NetBSD: inet_addr.c,v 1.6 1996/02/02 15:22:23 mrg Exp $"
 #endif
 #endif /* LIBC_SCCS and not lint */
 
-#ifndef lint
-static char copyright[] =
-"$Id: inet_addr.c,v 1.2 2007/05/19 18:47:15 dhankins Exp $ Copyright (c) 1983, 1990, 1993 The Regents of the University of California.  All rights reserved.\n";
-#endif /* not lint */
-
 #include "dhcpd.h"
 
 #include "omapip/omapip_p.h"

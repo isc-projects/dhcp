@@ -32,12 +32,6 @@
  * ``http://www.nominum.com''.
  */
 
-#ifndef lint
-static char copyright[] =
-"$Id: class.c,v 1.33 2006/06/01 20:23:17 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
-
-#endif /* not lint */
-
 #include "dhcpd.h"
 
 struct collection default_collection = {

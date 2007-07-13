@@ -32,11 +32,6 @@
  * managed to get me to integrate them.
  */
 
-#ifndef lint
-static char copyright[] =
-"$Id: bpf.c,v 1.57 2007/05/19 23:39:51 dhankins Exp $ Copyright (c) 2004,2007 Internet Systems Consortium.  All rights reserved.\n";
-#endif /* not lint */
-
 #include "dhcpd.h"
 #if defined (USE_BPF_SEND) || defined (USE_BPF_RECEIVE)	\
 				|| defined (USE_LPF_RECEIVE)

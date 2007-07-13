@@ -1688,6 +1688,8 @@ int parse_non_binary PROTO ((struct expression **, struct parse *, int *,
 int parse_expression PROTO ((struct expression **, struct parse *, int *,
 			     enum expression_context,
 			     struct expression **, enum expr_op));
+int parse_option_data(struct expression **expr, struct parse *cfile,
+		      int lookups, struct option *option);
 int parse_option_statement PROTO ((struct executable_statement **,
 				   struct parse *, int,
 				   struct option *, enum statement_op));

@@ -32,11 +32,6 @@
  * ``http://www.nominum.com''.
  */
 
-#ifndef lint
-static char copyright[] =
-"$Id: failover.c,v 1.73 2007/06/01 22:26:01 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
-#endif /* not lint */
-
 #include "dhcpd.h"
 #include <omapip/omapip_p.h>
 
@@ -63,7 +58,6 @@ void dhcp_failover_startup ()
 {
 	dhcp_failover_state_t *state;
 	isc_result_t status;
-	dhcp_failover_listener_t *l;
 
 	for (state = failover_states; state; state = state -> next) {
 		dhcp_failover_state_transition (state, "startup");
@@ -180,7 +174,6 @@ isc_result_t dhcp_failover_link_initiate (omapi_object_t *h)
 {
 	isc_result_t status;
 	dhcp_failover_link_t *obj;
-	omapi_value_t *value = (omapi_value_t *)0;
 	dhcp_failover_state_t *state;
 	omapi_object_t *o;
 	int i;
@@ -282,8 +275,6 @@ isc_result_t dhcp_failover_link_signal (omapi_object_t *h,
 	isc_result_t status;
 	dhcp_failover_link_t *link;
 	omapi_object_t *c;
-	u_int16_t nlen;
-	u_int32_t vlen;
 	dhcp_failover_state_t *s, *state = (dhcp_failover_state_t *)0;
 
 	if (h -> type != dhcp_type_failover_link) {
@@ -597,7 +588,6 @@ static isc_result_t do_a_failover_option (c, link)
 	unsigned op_size;
 	unsigned op_count;
 	int i;
-	isc_result_t status;
 	
 	if (link -> imsg_count + 2 > link -> imsg_len) {
 		log_error ("FAILOVER: message overflow at option code.");
@@ -1127,8 +1117,6 @@ isc_result_t dhcp_failover_listener_stuff (omapi_object_t *c,
 					   omapi_object_t *id,
 					   omapi_object_t *p)
 {
-	int i;
-
 	if (p -> type != dhcp_type_failover_listener)
 		return ISC_R_INVALIDARG;
 
@@ -1188,11 +1176,8 @@ isc_result_t dhcp_failover_state_signal (omapi_object_t *o,
 					 const char *name, va_list ap)
 {
 	isc_result_t status;
-	omapi_connection_object_t *c;
-	omapi_protocol_object_t *obj;
 	dhcp_failover_state_t *state;
 	dhcp_failover_link_t *link;
-	char *peer_name;
 
 	if (!o || o -> type != dhcp_type_failover_state)
 		return ISC_R_INVALIDARG;
@@ -1843,7 +1828,6 @@ isc_result_t dhcp_failover_peer_state_changed (dhcp_failover_state_t *state,
 	enum failover_state previous_state = state -> partner.state;
 	enum failover_state new_state;
 	int startupp;
-	isc_result_t status;
 
 	new_state = msg -> server_state;
 	startupp = (msg -> server_flags & FTF_SERVER_STARTUP) ? 1 : 0;
@@ -2286,7 +2270,6 @@ static int dhcp_failover_pool_dobalance(dhcp_failover_state_t *state)
 	struct lease *next = (struct lease *)0;
 	struct shared_network *s;
 	struct pool *p;
-	int polarity;
 	binding_state_t peer_lease_state;
 	binding_state_t my_lease_state;
 	struct lease **lq;
@@ -2514,7 +2497,6 @@ dhcp_failover_pool_check(struct pool *pool)
 
 int dhcp_failover_state_pool_check (dhcp_failover_state_t *state)
 {
-	struct lease *lp;
 	struct shared_network *s;
 	struct pool *p;
 
@@ -2843,7 +2825,6 @@ isc_result_t dhcp_failover_state_set_value (omapi_object_t *h,
 
 void dhcp_failover_keepalive (void *vs)
 {
-	dhcp_failover_state_t *state = vs;
 }
 
 void dhcp_failover_reconnect (void *vs)
@@ -2877,7 +2858,6 @@ void dhcp_failover_reconnect (void *vs)
 void dhcp_failover_startup_timeout (void *vs)
 {
 	dhcp_failover_state_t *state = vs;
-	isc_result_t status;
 
 #if defined (DEBUG_FAILOVER_TIMING)
 	log_info ("dhcp_failover_startup_timeout");
@@ -2889,7 +2869,6 @@ void dhcp_failover_startup_timeout (void *vs)
 void dhcp_failover_link_startup_timeout (void *vl)
 {
 	dhcp_failover_link_t *link = vl;
-	isc_result_t status;
 	omapi_object_t *p;
 
 	for (p = (omapi_object_t *)link; p -> inner; p = p -> inner)
@@ -3368,7 +3347,6 @@ isc_result_t dhcp_failover_state_remove (omapi_object_t *sp,
 int dhcp_failover_state_match (dhcp_failover_state_t *state,
 			       u_int8_t *addr, unsigned addrlen)
 {
-	struct option_cache *oc;
 	struct data_string ds;
 	int i;
 	
@@ -3948,7 +3926,6 @@ isc_result_t dhcp_failover_put_message (dhcp_failover_link_t *link,
 					omapi_object_t *connection,
 					int msg_type, u_int32_t xid, ...)
 {
-	unsigned count = 0;
 	unsigned size = 0;
 	int bad_option = 0;
 	int opix = 0;
@@ -4061,7 +4038,6 @@ void dhcp_failover_timeout (void *vstate)
 {
 	dhcp_failover_state_t *state = vstate;
 	dhcp_failover_link_t *link;
-	isc_result_t status;
 
 #if defined (DEBUG_FAILOVER_TIMING)
 	log_info ("dhcp_failover_timeout");
@@ -4181,7 +4157,6 @@ isc_result_t dhcp_failover_send_connect (omapi_object_t *l)
 	dhcp_failover_link_t *link;
 	dhcp_failover_state_t *state;
 	isc_result_t status;
-	char hba [32];
 #if defined (DEBUG_FAILOVER_MESSAGES)	
 	char obuf [64];
 	unsigned obufix = 0;
@@ -5188,7 +5163,7 @@ isc_result_t dhcp_failover_generate_update_queue (dhcp_failover_state_t *state,
 {
 	struct shared_network *s;
 	struct pool *p;
-	struct lease *l, *n;
+	struct lease *l;
 	int i;
 #define FREE_LEASES 0
 #define ACTIVE_LEASES 1

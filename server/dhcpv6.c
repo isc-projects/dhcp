@@ -641,7 +641,7 @@ set_status_code(u_int16_t status_code, const char *status_message,
 	memcpy(d.buffer->data + sizeof(status_code), 
 	       status_message, d.len - sizeof(status_code));
 	if (!save_option_buffer(&dhcpv6_universe, opt_state, 
-				d.buffer, (char *)d.data, d.len, 
+				d.buffer, (unsigned char *)d.data, d.len, 
 				D6O_STATUS_CODE, 0)) {
 		log_error("set_status_code: error saving status code.");
 		ret_val = 0;
@@ -664,7 +664,7 @@ start_reply(struct packet *packet,
 	    struct dhcpv6_packet *reply) {
 	struct option_cache *oc;
 	struct data_string server_oro;
-	char *server_id_data;
+	const unsigned char *server_id_data;
 	int server_id_len;
 
 	reply->msg_type = DHCPV6_REPLY;
@@ -701,15 +701,15 @@ start_reply(struct packet *packet,
 	oc = lookup_option(&dhcpv6_universe, *opt_state, D6O_SERVERID);
 	if (oc == NULL) {
 		if (server_id == NULL) {
-			server_id_data = (char *)server_duid.data;
+			server_id_data = server_duid.data;
 			server_id_len = server_duid.len;
 		} else {
-			server_id_data = (char *)server_id->data;
+			server_id_data = server_id->data;
 			server_id_len = server_id->len;
 		}
 		if (!save_option_buffer(&dhcpv6_universe, *opt_state, 
-					NULL, server_id_data, server_id_len,
-					D6O_SERVERID, 0)) {
+					NULL, (unsigned char *)server_id_data,
+					server_id_len, D6O_SERVERID, 0)) {
 				log_error("start_reply: "
 					  "error saving server identifier.");
 				return 0;
@@ -739,7 +739,8 @@ start_reply(struct packet *packet,
 			   D6O_RECONF_ACCEPT);
 	if (oc != NULL) {
 		if (!save_option_buffer(&dhcpv6_universe, *opt_state,
-					NULL, "", 0, D6O_RECONF_ACCEPT, 0)) {
+					NULL, (unsigned char *)"", 0, 
+					D6O_RECONF_ACCEPT, 0)) {
 			log_error("start_reply: "
 				  "error saving RECONF_ACCEPT option.");
 			option_state_dereference(opt_state, MDL);
@@ -752,7 +753,8 @@ start_reply(struct packet *packet,
 	 */
 	build_server_oro(&server_oro, *opt_state, MDL);
 	if (!save_option_buffer(&dhcpv6_universe, *opt_state,
-				server_oro.buffer, (char *)server_oro.data,
+				server_oro.buffer, 
+				(unsigned char *)server_oro.data,
 				server_oro.len, D6O_ORO, 0)) {
 		log_error("start_reply: error saving server ORO.");
 		data_string_forget(&server_oro, MDL);
@@ -778,7 +780,6 @@ try_client_v6_address(struct iaaddr **addr,
 		      const struct data_string *requested_addr) {
 	struct in6_addr tmp_addr;
 	isc_result_t result;
-	struct iaddrmatch match;
 
 	if (requested_addr->len < sizeof(tmp_addr)) {
 		return ISC_R_INVALIDARG;
@@ -832,7 +833,7 @@ pick_v6_address(struct iaaddr **addr,
 	struct ipv6_pool *p;
 	int i;
 	int start_pool;
-	int attempts;
+	unsigned int attempts;
 
 	/*
 	 * First, find the link address where the packet from the client
@@ -966,7 +967,6 @@ lease_to_client(struct data_string *reply_ret,
 	struct host_decl *packet_host;
 	int matched_packet_host;
 	struct option_cache *ia;
-	int rapid_commit;
 	char reply_data[65536];
 	struct dhcpv6_packet *reply = (struct dhcpv6_packet *)reply_data;
 	int reply_ofs = (int)((char *)reply->options - (char *)reply);
@@ -1053,7 +1053,8 @@ lease_to_client(struct data_string *reply_ret,
 					   packet->options, D6O_RAPID_COMMIT);
 			if (oc != NULL) {
 				if (!save_option_buffer(&dhcpv6_universe, 
-							opt_state, NULL, "", 0,
+							opt_state, NULL, 
+							(unsigned char *)"", 0,
 							D6O_RAPID_COMMIT, 0)) {
 					log_error("start_reply: error saving "
 						  "RAPID_COMMIT option.");
@@ -1118,7 +1119,7 @@ lease_to_client(struct data_string *reply_ret,
 		 */
 		iaid = getULong(cli_enc_opt_data.data);
 		ia_na = NULL;
-		if (ia_na_allocate(&ia_na, iaid, client_id->data, 
+		if (ia_na_allocate(&ia_na, iaid, (char *)client_id->data, 
 				   client_id->len, MDL) != ISC_R_SUCCESS) {
 			log_fatal("lease_to_client: no memory for ia_na.");
 		}
@@ -1271,7 +1272,8 @@ lease_to_client(struct data_string *reply_ret,
 			 */
 			existing_ia_na = NULL;
 			if (ia_na_hash_lookup(&existing_ia_na, ia_active, 
-					      (char *)ia_na->iaid_duid.data,
+					      (unsigned char *)
+					      ia_na->iaid_duid.data,
 					      ia_na->iaid_duid.len, MDL) == 0) {
 				existing_ia_na = NULL;
 			}
@@ -1505,8 +1507,6 @@ lease_to_client(struct data_string *reply_ret,
 		}
 
 		if (fixed_addr.len == 16) {
-			struct iaaddr *store_iaaddr;
-
 			/*
 			 * Store the address.
 			 *
@@ -1544,7 +1544,7 @@ lease_to_client(struct data_string *reply_ret,
 			 * it up later.
 			 */
 			if (host != NULL) {
-				change_host_uid(host, client_id->data, 
+				change_host_uid(host, (char *)client_id->data, 
 						client_id->len);
 			} 
 			/*
@@ -1558,10 +1558,11 @@ lease_to_client(struct data_string *reply_ret,
 				struct data_string *d = &ia_na->iaid_duid;
 				old_ia_na = NULL;
 				if (ia_na_hash_lookup(&old_ia_na, ia_active,
-						      (char *)d->data,
+						      (unsigned char *)d->data,
 						      d->len, MDL)) {
 					ia_na_hash_delete(ia_active, 
-							  (char *)d->data,
+							  (unsigned char *)
+							  d->data,
 							  d->len, MDL);
 					ia_na_dereference(&old_ia_na, MDL);
 				}
@@ -1581,7 +1582,8 @@ lease_to_client(struct data_string *reply_ret,
 						  "memory adding IAADDR");
 				}
 				ia_na_hash_add(ia_active, 
-					       (char *)ia_na->iaid_duid.data,
+					       (unsigned char *)
+					       ia_na->iaid_duid.data,
 				               ia_na->iaid_duid.len, 
 					       ia_na, MDL);
 				write_ia_na(ia_na);
@@ -1717,14 +1719,14 @@ lease_to_client(struct data_string *reply_ret,
 		 * into our reply packet. Defined in RFC 3315, section 22.4.
 		 */
 		/* option number */
-		putShort(reply_data+reply_ofs, D6O_IA_NA);
+		putShort((unsigned char *)reply_data+reply_ofs, D6O_IA_NA);
 		/* option length */
-		putUShort(reply_data+reply_ofs+2, len + 12);
+		putUShort((unsigned char *)reply_data+reply_ofs+2, len + 12);
 		/* IA_NA, copied from the client */
 		memcpy(reply_data+reply_ofs+4, cli_enc_opt_data.data, 4);
 		/* T1 and T2, set previously */
-		putULong(reply_data+reply_ofs+8, t1);
-		putULong(reply_data+reply_ofs+12, t2);
+		putULong((unsigned char *)reply_data+reply_ofs+8, t1);
+		putULong((unsigned char *)reply_data+reply_ofs+12, t2);
 
 		/*
 		 * Get ready for next IA_NA.
@@ -1801,7 +1803,6 @@ exit:
 static void
 dhcpv6_solicit(struct data_string *reply_ret, struct packet *packet) {
 	struct data_string client_id;
-	struct option_cache *oc;
 
 	/* 
 	 * Validate our input.
@@ -2151,14 +2152,14 @@ ia_na_nomatch_decline(const struct data_string *client_id,
 	 * section 22.4.  
 	 */
 	/* option number */
-	putUShort(reply_data+(*reply_ofs), D6O_IA_NA);
+	putUShort((unsigned char *)reply_data+(*reply_ofs), D6O_IA_NA);
 	/* option length */
-	putUShort(reply_data+(*reply_ofs)+2, len + 12);
+	putUShort((unsigned char *)reply_data+(*reply_ofs)+2, len + 12);
 	/* IA_NA, copied from the client */
 	memcpy(reply_data+(*reply_ofs)+4, ia_na_id, 4);
 	/* t1 and t2, odd that we need them, but here it is */
-	putULong(reply_data+(*reply_ofs)+8, 0);
-	putULong(reply_data+(*reply_ofs)+12, 0);
+	putULong((unsigned char *)reply_data+(*reply_ofs)+8, 0);
+	putULong((unsigned char *)reply_data+(*reply_ofs)+12, 0);
 
 	/*
 	 * Get ready for next IA_NA.
@@ -2186,8 +2187,6 @@ iterate_over_ia_na(struct data_string *reply_ret,
 	struct option_state *cli_enc_opt_state;
 	struct host_decl *host;
 	struct option_state *host_opt_state;
-	char tmp_addr[INET6_ADDRSTRLEN];
-	int len;
 	struct data_string iaaddr;
 	struct data_string fixed_addr;
 	int iaaddr_is_found;
@@ -2255,8 +2254,8 @@ iterate_over_ia_na(struct data_string *reply_ret,
 	 */
 	oc = lookup_option(&dhcpv6_universe, opt_state, D6O_SERVERID);
 	if (oc == NULL) {
-		if (!save_option_buffer(&dhcpv6_universe, opt_state, 
-					NULL, (char *)server_duid.data, 
+		if (!save_option_buffer(&dhcpv6_universe, opt_state, NULL, 
+					(unsigned char *)server_duid.data, 
 					server_duid.len, D6O_SERVERID, 0)) {
 			log_error("iterate_over_ia_na: "
 				  "error saving server identifier.");
@@ -2369,7 +2368,8 @@ iterate_over_ia_na(struct data_string *reply_ret,
 			/*
 			 * Find existing IA_NA.
 			 */
-			if (ia_na_make_key(&key, iaid, client_id->data,
+			if (ia_na_make_key(&key, iaid, 
+					   (char *)client_id->data,
 					   client_id->len, 
 					   MDL) != ISC_R_SUCCESS) {
 				log_fatal("iterate_over_ia_na: no memory for "
@@ -2378,7 +2378,8 @@ iterate_over_ia_na(struct data_string *reply_ret,
 
 			existing_ia_na = NULL;
 			if (ia_na_hash_lookup(&existing_ia_na, ia_active, 
-					      (char *)key.data, key.len, MDL)) {
+					      (unsigned char *)key.data, 
+					      key.len, MDL)) {
 				/* 
 				 * Make sure this address is in the IA_NA.
 				 */
@@ -2557,14 +2558,14 @@ ia_na_nomatch_release(const struct data_string *client_id,
 	 * section 22.4.  
 	 */
 	/* option number */
-	putUShort(reply_data+(*reply_ofs), D6O_IA_NA);
+	putUShort((unsigned char *)reply_data+(*reply_ofs), D6O_IA_NA);
 	/* option length */
-	putUShort(reply_data+(*reply_ofs)+2, len + 12);
+	putUShort((unsigned char *)reply_data+(*reply_ofs)+2, len + 12);
 	/* IA_NA, copied from the client */
 	memcpy(reply_data+(*reply_ofs)+4, ia_na_id, 4);
 	/* t1 and t2, odd that we need them, but here it is */
-	putULong(reply_data+(*reply_ofs)+8, 0);
-	putULong(reply_data+(*reply_ofs)+12, 0);
+	putULong((unsigned char *)reply_data+(*reply_ofs)+8, 0);
+	putULong((unsigned char *)reply_data+(*reply_ofs)+12, 0);
 
 	/*
 	 * Get ready for next IA_NA.
@@ -2699,7 +2700,7 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 		goto exit;
 	}
 
-	if (!packet6_len_okay(enc_opt_data.data, enc_opt_data.len)) {
+	if (!packet6_len_okay((char *)enc_opt_data.data, enc_opt_data.len)) {
 		log_error("dhcpv6_forw_relay: encapsulated packet too short.");
 		goto exit;
 	}
@@ -2921,8 +2922,6 @@ log_packet_in(const struct packet *packet) {
 	u_int32_t tid;
 	char tmp_addr[INET6_ADDRSTRLEN];
 	const void *addr;
-	struct option_cache *oc;
-	struct data_string tmp_ds;
 
 	memset(&s, 0, sizeof(s));
 

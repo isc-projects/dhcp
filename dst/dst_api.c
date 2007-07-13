@@ -1,5 +1,5 @@
 #ifndef LINT
-static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/dst_api.c,v 1.2 2007/05/29 18:11:55 each Exp $";
+static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/dst_api.c,v 1.3 2007/07/13 06:43:42 shane Exp $";
 #endif
 
 /*
@@ -563,10 +563,10 @@ dst_s_read_public_key(const char *in_name, const unsigned in_id, int in_alg)
 	enckey[--len] = '\0';
 
 	/* remove leading spaces */
-	for (notspace = (char *) enckey; isspace(*notspace); len--)
+	for (notspace = (unsigned char *)enckey; isspace(*notspace); len--)
 		notspace++;
 
-	dlen = b64_pton(notspace, deckey, sizeof(deckey));
+	dlen = b64_pton((char *)notspace, deckey, sizeof(deckey));
 	if (dlen < 0) {
 		EREPORT(("dst_read_public_key: bad return from b64_pton = %d",
 			 dlen));

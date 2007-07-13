@@ -33,11 +33,6 @@
  * ``http://www.nominum.com''.
  */
 
-#ifndef lint
-static char copyright[] =
-"$Id: alloc.c,v 1.28 2007/05/19 19:16:25 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium, Inc.  All rights reserved.\n";
-#endif /* not lint */
-
 #include "dhcpd.h"
 
 #include <omapip/omapip_p.h>
@@ -65,10 +60,10 @@ void *
 dmalloc(unsigned size, const char *file, int line) {
 	unsigned char *foo;
 	unsigned len;
-	int i;
 	void **bar;
 #if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL) || \
 		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
+	int i;
 	struct dmalloc_preamble *dp;
 #endif
 

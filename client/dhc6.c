@@ -22,11 +22,6 @@
  *   http://www.isc.org/
  */
 
-#ifndef lint
-static char ocopyright[] =
-"$Id: dhc6.c,v 1.6 2007/06/06 22:57:31 each Exp $ Copyright (c) 2006-2007 Internet Systems Consortium.  All rights reserved.\n";
-#endif /* not lint */
-
 #include "dhcpd.h"
 
 #ifdef DHCPv6
@@ -906,10 +901,9 @@ do_init6(void *input)
 	struct data_string ds;
 	struct data_string ia;
 	struct data_string addr;
-	struct option_cache *oc;
 	TIME elapsed;
 	u_int32_t t1, t2;
-	int idx, len, send_ret, code;
+	int idx, len, send_ret;
 
 	client = input;
 
@@ -998,7 +992,7 @@ do_init6(void *input)
 
 	if ((client->active_lease != NULL) &&
 	    ((old_ia = find_ia(client->active_lease->bindings,
-			       ia.data)) != NULL)) {
+			       (char *)ia.data)) != NULL)) {
 		/* For each address in the old IA, request a binding. */
 		memset(&addr, 0, sizeof(addr));
 		for (old_addr = old_ia->addrs ; old_addr != NULL ;
@@ -1071,11 +1065,7 @@ void
 do_confirm6(void *input)
 {
 	struct client_state *client;
-	struct dhc6_ia *ia;
-	struct dhc6_addr *addr;
 	struct data_string ds;
-	struct data_string ia_data;
-	struct data_string addr_data;
 	int send_ret;
 	TIME elapsed;
 
@@ -1175,8 +1165,6 @@ do_confirm6(void *input)
 void
 start_release6(struct client_state *client)
 {
-	struct data_string packet;
-
         /* Cancel any pending transmissions */
 	cancel_timeout(do_confirm6, client);
 	cancel_timeout(do_select6, client);
@@ -1214,11 +1202,7 @@ do_release6(void *input)
 {
 	struct sockaddr_in6 unicast, *dest_addr = &DHCPv6DestAddr;
 	struct client_state *client;
-	struct dhc6_ia *ia;
-	struct dhc6_addr *addr;
 	struct data_string ds;
-	struct data_string ia_data;
-	struct data_string addr_data;
 	struct option_cache *oc;
         struct dhc6_lease *lease;
 	int send_ret;
@@ -1336,7 +1320,7 @@ status_log(int code, char *scope, const char *additional, int len)
 
 	if (len > 0)
 		log_info("%s status code %s: %s", scope, msg,
-			 print_hex_1(len, additional, 50));
+			 print_hex_1(len, (unsigned char *)additional, 50));
 	else
 		log_info("%s status code %s.", scope, msg);
 }
@@ -1406,7 +1390,7 @@ dhc6_check_status(isc_result_t rval, struct option_state *options,
 		status = dhc6_get_status_code(options, code, &msg);
 
 		if (status == ISC_R_SUCCESS) {
-			status_log(*code, scope, msg.data, msg.len);
+			status_log(*code, scope, (char *)msg.data, msg.len);
 			data_string_forget(&msg, MDL);
 
 			if (*code != STATUS_Success)
@@ -1554,7 +1538,6 @@ dhc6_withdraw_lease(struct client_state *client)
 {
 	struct dhc6_ia *ia;
 	struct dhc6_addr *addr;
-	TIME future;
 
 	if ((client == NULL) || (client->active_lease == NULL))
 		return;
@@ -1671,7 +1654,7 @@ dhc6_check_reply(struct client_state *client, struct dhc6_lease *new)
 	isc_boolean_t (*action)(struct client_state *, isc_result_t, unsigned);
 	struct dhc6_ia *ia;
 	struct dhc6_addr *addr;
-	isc_result_t rval = ISC_R_SUCCESS, status;
+	isc_result_t rval = ISC_R_SUCCESS;
 	unsigned code;
 	int nscore, sscore;
 
@@ -1776,7 +1759,7 @@ dhc6_check_reply(struct client_state *client, struct dhc6_lease *new)
 void
 init_handler(struct packet *packet, struct client_state *client)
 {
-	struct dhc6_lease *lease, **idx;
+	struct dhc6_lease *lease;
 
 	/* In INIT state, we send solicits, we only expect to get
 	 * advertises (we don't support rapid commit yet).
@@ -1946,7 +1929,6 @@ void
 start_selecting6(struct client_state *client)
 {
 	struct dhc6_lease *lease;
-	struct data_string packet;
 
 	if (client->advertised_leases == NULL) {
 		log_error("Can not enter DHCPv6 SELECTING state with no "
@@ -1990,13 +1972,10 @@ do_select6(void *input)
 {
 	struct client_state *client;
 	struct dhc6_lease *lease;
-	struct dhc6_ia *ia;
-	struct dhc6_addr *addr;
-	struct option_cache *oc;
 	struct data_string ds;
-	TIME elapsed, t1, t2;
+	TIME elapsed;
 	int abort = ISC_FALSE;
-	int code, send_ret;
+	int send_ret;
 
 	client = input;
 
@@ -2261,7 +2240,7 @@ dhc6_add_ia(struct client_state *client, struct data_string *packet,
 void
 reply_handler(struct packet *packet, struct client_state *client)
 {
-	struct dhc6_lease *lease, *old;
+	struct dhc6_lease *lease;
 	isc_result_t check_status;
 
 	if (packet->dhcpv6_msg_type != DHCPV6_REPLY)
@@ -2621,7 +2600,7 @@ dhc6_merge_lease(struct dhc6_lease *src, struct dhc6_lease *dst)
 		return;
 
 	for (sia = src->bindings ; sia != NULL ; sia = sia->next) {
-		dia = find_ia(dst->bindings, sia->iaid);
+		dia = find_ia(dst->bindings, (char *)sia->iaid);
 
 		if (dia == NULL) {
 			tia = dhc6_dup_ia(sia, MDL);
@@ -2720,7 +2699,7 @@ start_bound(struct client_state *client)
 	oldia = NULL;
 	for (ia = lease->bindings ; ia != NULL ; ia = ia->next) {
 		if (old != NULL)
-			oldia = find_ia(old->bindings, ia->iaid);
+			oldia = find_ia(old->bindings, (char *)ia->iaid);
 		else
 			oldia = NULL;
 
@@ -2843,7 +2822,7 @@ do_refresh6(void *input)
 	struct data_string ds;
 	struct client_state *client;
 	struct dhc6_lease *lease;
-	TIME elapsed, next;
+	TIME elapsed;
 	int send_ret;
 
 	client = (struct client_state *)input;
@@ -3137,7 +3116,6 @@ static void
 make_client6_options(struct client_state *client, struct option_state **op,
 		     struct dhc6_lease *lease, u_int8_t message)
 {
-	int code;
 	struct option_cache *oc;
 
 	if ((op == NULL) || (client == NULL))

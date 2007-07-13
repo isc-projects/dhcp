@@ -1,5 +1,5 @@
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_update.c,v 1.13 2005/03/17 20:15:20 dhankins Exp $";
+static const char rcsid[] = "$Id: res_update.c,v 1.14 2007/07/13 06:43:42 shane Exp $";
 #endif /* not lint */
 
 /*
@@ -88,7 +88,7 @@ res_nupdate(res_state statp, ns_updrec *rrecp_in) {
 	double answer[PACKETSZ / sizeof (double)];
 	double packet[2*PACKETSZ / sizeof (double)];
 	struct zonegrp *zptr, tgrp;
-	int nzones = 0, nscount = 0;
+	int nscount = 0;
 	unsigned n;
 	unsigned rval;
 	struct sockaddr_in nsaddrs[MAXNS];

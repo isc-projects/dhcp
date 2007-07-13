@@ -30,11 +30,6 @@
  * learn more about Nominum, Inc., see ``http://www.nominum.com''.
  */
 
-#ifndef lint
-static char copyright[] =
-"$Id: ctrace.c,v 1.8 2007/05/19 19:16:24 dhankins Exp $ Copyright (c) 2004,2007 Internet Systems Consortium.  All rights reserved.\n";
-#endif /* not lint */
-
 #include "dhcpd.h"
 
 #if defined (TRACING)

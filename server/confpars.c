@@ -32,14 +32,8 @@
  * ``http://www.nominum.com''.
  */
 
-#ifndef lint
-static char copyright[] =
-"$Id: confpars.c,v 1.172 2007/07/11 14:54:11 shane Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
-#endif /* not lint */
-
 #include "dhcpd.h"
 
-static TIME parsed_time;
 static unsigned char global_host_once = 1;
 
 #if defined (TRACING)
@@ -340,15 +334,12 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 	enum dhcp_token token;
 	const char *val;
 	struct shared_network *share;
-	char *t, *n;
-	struct expression *expr;
-	struct data_string data;
+	char *n;
 	struct hardware hardware;
 	struct executable_statement *et, *ep;
 	struct option *option = NULL;
 	struct option_cache *cache;
 	int lose;
-	struct data_string key_id;
 	int known;
 	isc_result_t status;
 	unsigned code;
@@ -997,7 +988,6 @@ void parse_failover_peer (cfile, group, type)
 					    "load balance settings.");
 			if (token != NUMBER) {
 				parse_warn (cfile, "expecting number");
-			      badsplit:
 				skip_to_rbrace (cfile, 1);
 				dhcp_failover_state_dereference (&peer, MDL);
 				return;
@@ -1569,8 +1559,6 @@ void parse_pool_statement (cfile, group, type)
 
 	/* See if there's already a pool into which we can merge this one. */
 	for (pp = pool -> shared_network -> pools; pp; pp = pp -> next) {
-		struct lease *l;
-
 		if (pp -> group -> statements != pool -> group -> statements)
 			continue;
 #if defined (FAILOVER_PROTOCOL)
@@ -1936,7 +1924,6 @@ int parse_class_declaration (cp, cfile, group, type)
 	char *name;
 	const char *tname;
 	struct executable_statement *stmt = (struct executable_statement *)0;
-	struct expression *expr;
 	int new = 1;
 	isc_result_t status = ISC_R_FAILURE;
 	int matchedonce = 0;
@@ -2456,7 +2443,7 @@ void parse_subnet_declaration (cfile, share)
 {
 	const char *val;
 	enum dhcp_token token;
-	struct subnet *subnet, *t, *u;
+	struct subnet *subnet;
 	struct iaddr iaddr;
 	unsigned char addr [4];
 	unsigned len = sizeof addr;
@@ -2519,6 +2506,10 @@ void parse_subnet_declaration (cfile, share)
 
 void
 parse_subnet6_declaration(struct parse *cfile, struct shared_network *share) {
+#if !defined(DHCPv6)
+	parse_warn(cfile, "No DHCPv6 support.");
+	skip_to_semi(cfile);
+#else /* defined(DHCPv6) */
 	struct subnet *subnet;
 	isc_result_t status;
 	enum dhcp_token token;
@@ -2528,12 +2519,7 @@ parse_subnet6_declaration(struct parse *cfile, struct shared_network *share) {
 	const static int mask[] = { 0x00, 0x80, 0xC0, 0xE0, 
 				    0xF0, 0xF8, 0xFC, 0xFE };
 	struct iaddr iaddr;
-	struct ipv6_pool *pool;
 
-#if !defined(DHCPv6)
-	parse_warn(cfile, "No DHCPv6 support.");
-	skip_to_semi(cfile);
-#else /* defined(DHCPv6) */
 	subnet = NULL;
 	status = subnet_allocate(&subnet, MDL);
 	if (status != ISC_R_SUCCESS) {
@@ -2787,8 +2773,6 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 	char tbuf [32];
 	struct lease *lease;
 	struct executable_statement *on;
-	struct expression *exp;
-	struct data_string ds;
 	int lose;
 	TIME t;
 	char *s;
@@ -3221,7 +3205,6 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 
 			token = peek_token (&val, (unsigned *)0, cfile);
 			if (token == STRING) {
-			    unsigned char *tuid;
 			    token = next_token (&val, &buflen, cfile);
 			    binding -> value -> type = binding_data;
 			    binding -> value -> value.data.len = buflen;
@@ -3378,7 +3361,6 @@ void parse_address_range (cfile, group, type, inpool, lpchain)
 	int dynamic = 0;
 	struct subnet *subnet;
 	struct shared_network *share;
-	struct pool *p;
 	struct pool *pool;
 	isc_result_t status;
 
@@ -3760,11 +3742,15 @@ int parse_allow_deny (oc, cfile, flag)
 
 void
 parse_ia_na_declaration(struct parse *cfile) {
+#if !defined(DHCPv6)
+	parse_warn(cfile, "No DHCPv6 support.");
+	skip_to_semi(cfile);
+#else /* defined(DHCPv6) */
 	enum dhcp_token token;
 	struct ia_na *ia_na;
 	const char *val;
 	struct ia_na *old_ia_na;
-	int len;
+	unsigned int len;
 	u_int32_t iaid;
 	struct iaddr iaddr;
 	binding_state_t state;
@@ -3772,12 +3758,7 @@ parse_ia_na_declaration(struct parse *cfile) {
 	struct iaaddr *iaaddr;
 	struct ipv6_pool *pool;
 	char addr_buf[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
-	struct data_string uid;
 
-#if !defined(DHCPv6)
-	parse_warn(cfile, "No DHCPv6 support.");
-	skip_to_semi(cfile);
-#else /* defined(DHCPv6) */
 	token = next_token(&val, &len, cfile);
 	if (token != STRING) {
 		parse_warn(cfile, "corrupt lease file; "
@@ -3941,10 +3922,10 @@ parse_ia_na_declaration(struct parse *cfile) {
 	 */
 	old_ia_na = NULL;
 	if (ia_na_hash_lookup(&old_ia_na, ia_active,
-			      (char *)ia_na->iaid_duid.data,
+			      (unsigned char *)ia_na->iaid_duid.data,
 			      ia_na->iaid_duid.len, MDL)) {
 		ia_na_hash_delete(ia_active, 
-				  (char *)ia_na->iaid_duid.data,
+				  (unsigned char *)ia_na->iaid_duid.data,
 				  ia_na->iaid_duid.len, MDL);
 		ia_na_remove_all_iaaddr(old_ia_na, MDL);
 		ia_na_dereference(&old_ia_na, MDL);
@@ -3954,7 +3935,8 @@ parse_ia_na_declaration(struct parse *cfile) {
 	 * If we have addresses, add this, otherwise don't bother.
 	 */
 	if (ia_na->num_iaaddr > 0) {
-		ia_na_hash_add(ia_active, (char *)ia_na->iaid_duid.data,
+		ia_na_hash_add(ia_active, 
+			       (unsigned char *)ia_na->iaid_duid.data,
 			       ia_na->iaid_duid.len, ia_na, MDL);
 	}
 	ia_na_dereference(&ia_na, MDL);
@@ -3974,7 +3956,7 @@ void
 parse_server_duid(struct parse *cfile) {
 	enum dhcp_token token;
 	const char *val;
-	int len;
+	unsigned int len;
 	struct data_string duid;
 
 	token = next_token(&val, &len, cfile);
@@ -3989,7 +3971,7 @@ parse_server_duid(struct parse *cfile) {
 	if (!buffer_allocate(&duid.buffer, duid.len, MDL)) {
 		log_fatal("Out of memory storing DUID");
 	}
-	duid.data = (char *)duid.buffer->data;
+	duid.data = (unsigned char *)duid.buffer->data;
 	memcpy(duid.buffer->data, val, len);
 
 	set_server_duid(&duid);
@@ -4019,7 +4001,7 @@ void
 parse_server_duid_conf(struct parse *cfile) {
 	enum dhcp_token token;
 	const char *val;
-	int len;
+	unsigned int len;
 	u_int32_t enterprise_number;
 	int ll_type;
 	struct data_string ll_addr;
@@ -4068,7 +4050,7 @@ parse_server_duid_conf(struct parse *cfile) {
         	if (!buffer_allocate(&duid.buffer, duid.len, MDL)) {
 			log_fatal("Out of memory storing DUID");
 		}
-		duid.data = (char *)duid.buffer->data;
+		duid.data = (unsigned char *)duid.buffer->data;
 		putUShort(duid.buffer->data, DUID_EN);
  		putULong(duid.buffer->data + 2, enterprise_number);
 		memcpy(duid.buffer->data + 6, val, len);
@@ -4120,7 +4102,7 @@ parse_server_duid_conf(struct parse *cfile) {
         		if (!buffer_allocate(&duid.buffer, duid.len, MDL)) {
 				log_fatal("Out of memory storing DUID");
 			}
-			duid.data = (char *)duid.buffer->data;
+			duid.data = (unsigned char *)duid.buffer->data;
 			putUShort(duid.buffer->data, DUID_LL);
  			putULong(duid.buffer->data + 2, ll_type);
 			memcpy(duid.buffer->data + 4, 
@@ -4184,7 +4166,7 @@ parse_server_duid_conf(struct parse *cfile) {
         		if (!buffer_allocate(&duid.buffer, duid.len, MDL)) {
 				log_fatal("Out of memory storing DUID");
 			}
-			duid.data = (char *)duid.buffer->data;
+			duid.data = (unsigned char *)duid.buffer->data;
 			putUShort(duid.buffer->data, DUID_LLT);
  			putULong(duid.buffer->data + 2, ll_type);
  			putULong(duid.buffer->data + 4, llt_time);
@@ -4224,7 +4206,7 @@ parse_server_duid_conf(struct parse *cfile) {
         	if (!buffer_allocate(&duid.buffer, duid.len, MDL)) {
 			log_fatal("Out of memory storing DUID");
 		}
-		duid.data = (char *)duid.buffer->data;
+		duid.data = (unsigned char *)duid.buffer->data;
 		putUShort(duid.buffer->data, duid_type_num);
 		memcpy(duid.buffer->data + 2, val, len);
 

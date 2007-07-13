@@ -33,11 +33,6 @@
  * ``http://www.nominum.com''.
  */
 
-#ifndef lint
-static char copyright[] =
-"$Id: convert.c,v 1.4 2007/05/19 19:16:26 dhankins Exp $ Copyright (c) 2004,2007 Internet Systems Consortium.  All rights reserved.\n";
-#endif /* not lint */
-
 #include "dhcpd.h"
 
 #include <omapip/omapip_p.h>
@@ -167,7 +162,7 @@ int binary_to_ascii (outbuf, inbuf, base, width)
 	u_int32_t number;
 	static char h2a [] = "0123456789abcdef";
 	int power = converted_length (inbuf, base, width);
-	int i, j;
+	int i;
 
 	if (base > 16)
 		return 0;

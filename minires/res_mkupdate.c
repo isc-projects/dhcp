@@ -27,7 +27,7 @@
  */
 
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_mkupdate.c,v 1.10 2007/05/19 19:16:25 dhankins Exp $";
+static const char rcsid[] = "$Id: res_mkupdate.c,v 1.11 2007/07/13 06:43:42 shane Exp $";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -109,7 +109,7 @@ res_nmkupdate(res_state statp,
 	u_int16_t rtype, rclass;
 	u_int32_t n1, rttl;
 	u_char *dnptrs[20], **dpp, **lastdnptr;
-	unsigned siglen, certlen;
+	unsigned certlen;
 	int keylen;
 	unsigned buflen = *blp;
 	u_char *buf = (unsigned char *)bp;
@@ -483,6 +483,7 @@ res_nmkupdate(res_state statp,
 		    {
 			int sig_type, success, dateerror;
 			u_int32_t exptime, timesigned;
+			unsigned siglen;
 
 			/* type */
 			if ((n = getword_str(buf2, sizeof buf2,

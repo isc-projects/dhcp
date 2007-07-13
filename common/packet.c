@@ -31,11 +31,6 @@
  * still be disabled.
  */
 
-#ifndef lint
-static char copyright[] =
-"$Id: packet.c,v 1.48 2007/05/19 19:16:24 dhankins Exp $ Copyright (c) 2004,2005,2007 Internet Systems Consortium.  All rights reserved.\n";
-#endif /* not lint */
-
 #include "dhcpd.h"
 
 #if defined (PACKET_ASSEMBLY) || defined (PACKET_DECODING)

@@ -32,11 +32,6 @@
  * ``http://www.nominum.com''.
  */
 
-#ifndef lint
-static char copyright[] =
-"$Id: discover.c,v 1.60 2007/06/08 14:58:20 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
-#endif /* not lint */
-
 #include "dhcpd.h"
 
 #define BSD_COMP		/* needed on Solaris for SIOCGLIFNUM */
@@ -891,10 +886,13 @@ discover_interfaces(int state) {
 	struct iface_info info;
 	int err;
 
-	struct interface_info *tmp, *ip;
+	struct interface_info *tmp;
 	struct interface_info *last, *next;
 
-	char abuf[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
+#ifdef DHCPv6
+        char abuf[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
+#endif /* DHCPv6 */
+
 
 	struct subnet *subnet;
 	int ir;
@@ -902,8 +900,6 @@ discover_interfaces(int state) {
 	int wifcount = 0;
 
 	static int setup_fallback = 0;
-
-	int sock;
 
 	if (!begin_iface_scan(&ifaces)) {
 		log_fatal("Can't get list of interfaces.");
@@ -1358,7 +1354,8 @@ got_one_v6(omapi_object_t *h) {
 	}
 	ip = (struct interface_info *)h;
 
-	result = receive_packet6(ip, buf, sizeof(buf), &from, &to);
+	result = receive_packet6(ip, (unsigned char *)buf, sizeof(buf),
+				 &from, &to);
 	if (result < 0) {
 		log_error("receive_packet6() failed on %s: %m", ip->name);
 		return ISC_R_UNEXPECTED;
@@ -1393,7 +1390,6 @@ isc_result_t dhcp_interface_set_value  (omapi_object_t *h,
 {
 	struct interface_info *interface;
 	isc_result_t status;
-	int foo;
 
 	if (h -> type != dhcp_type_interface)
 		return ISC_R_INVALIDARG;
@@ -1436,7 +1432,6 @@ isc_result_t dhcp_interface_destroy (omapi_object_t *h,
 					 const char *file, int line)
 {
 	struct interface_info *interface;
-	isc_result_t status;
 
 	if (h -> type != dhcp_type_interface)
 		return ISC_R_INVALIDARG;
@@ -1466,8 +1461,6 @@ isc_result_t dhcp_interface_signal_handler (omapi_object_t *h,
 					    const char *name, va_list ap)
 {
 	struct interface_info *ip, *interface;
-	struct client_config *config;
-	struct client_state *client;
 	isc_result_t status;
 
 	if (h -> type != dhcp_type_interface)

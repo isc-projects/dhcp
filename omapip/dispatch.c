@@ -35,6 +35,7 @@
 #include "dhcpd.h"
 
 #include <omapip/omapip_p.h>
+#include <sys/time.h>
 
 static omapi_io_object_t omapi_io_states;
 time_t cur_time;

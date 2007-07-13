@@ -32,13 +32,10 @@
  * ``http://www.nominum.com''.
  */
 
-#ifndef lint
-static char copyright[] =
-"$Id: execute.c,v 1.51 2007/05/19 19:16:24 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
-#endif /* not lint */
-
 #include "dhcpd.h"
 #include <omapip/omapip_p.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 int execute_statements (result, packet, lease, client_state,
 			in_options, out_options, scope, statements)
@@ -54,8 +51,6 @@ int execute_statements (result, packet, lease, client_state,
 	struct executable_statement *r, *e, *next;
 	int rc;
 	int status;
-	unsigned long num;
-	struct binding_scope *outer;
 	struct binding *binding;
 	struct data_string ds;
 	struct binding_scope *ns;
@@ -363,7 +358,6 @@ int execute_statements (result, packet, lease, client_state,
 					binding -> next = (*scope) -> bindings;
 					(*scope) -> bindings = binding;
 				    } else {
-				       badalloc:
 					dfree (binding, MDL);
 					binding = (struct binding *)0;
 				    }
@@ -606,8 +600,6 @@ int executable_statement_dereference (ptr, file, line)
 	const char *file;
 	int line;
 {
-	struct executable_statement *bp;
-
 	if (!ptr || !*ptr) {
 		log_error ("%s(%d): null pointer", file, line);
 #if defined (POINTER_DEBUG)
@@ -739,8 +731,6 @@ void write_statements (file, statements, indent)
 {
 	struct executable_statement *r, *x;
 	struct expression *expr;
-	int result;
-	int status;
 	const char *s, *t, *dot;
 	int col;
 
@@ -1014,10 +1004,8 @@ int find_matching_case (struct executable_statement **ep,
 {
 	int status, sub;
 	struct executable_statement *s;
-	unsigned long foo;
 
 	if (is_data_expression (expr)) {
-		struct executable_statement *e;
 		struct data_string cd, ds;
 		memset (&ds, 0, sizeof ds);
 		memset (&cd, 0, sizeof cd);
@@ -1091,7 +1079,6 @@ int executable_statement_foreach (struct executable_statement *stmt,
 {
 	struct executable_statement *foo;
 	int ok = 0;
-	int result;
 
 	for (foo = stmt; foo; foo = foo -> next) {
 	    if ((*callback) (foo, vp, condp) != 0)

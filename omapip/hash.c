@@ -32,11 +32,6 @@
  * ``http://www.nominum.com''.
  */
 
-#ifndef lint
-static char copyright[] =
-"$Id: hash.c,v 1.16 2007/05/29 18:11:56 each Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
-#endif /* not lint */
-
 #include "dhcpd.h"
 
 #include <omapip/omapip_p.h>
@@ -106,12 +101,13 @@ void free_hash_table (tp, file, line)
 	const char *file;
 	int line;
 {
-	int i;
-	struct hash_bucket *hbc, *hbn = (struct hash_bucket *)0;
 	struct hash_table *ptr = *tp;
 
 #if defined (DEBUG_MEMORY_LEAKAGE) || \
 		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
+	int i;
+	struct hash_bucket *hbc, *hbn = (struct hash_bucket *)0;
+
 	for (i = 0; i < ptr -> hash_count; i++) {
 	    for (hbc = ptr -> buckets [i]; hbc; hbc = hbn) {
 		hbn = hbc -> next;
@@ -200,8 +196,9 @@ void free_hash_bucket (ptr, file, line)
 	const char *file;
 	int line;
 {
-	struct hash_bucket *hp;
 #if defined (DEBUG_MALLOC_POOL)
+	struct hash_bucket *hp;
+
 	for (hp = free_hash_buckets; hp; hp = hp -> next) {
 		if (hp == ptr) {
 			log_error ("hash bucket freed twice!");
@@ -352,7 +349,7 @@ hash_report(struct hash_table *table)
 	struct hash_bucket *bp;
 
 	if (table->hash_count == 0)
-		return (char *) "Invalid hash table.";
+		return (unsigned char *) "Invalid hash table.";
 
 	for (i = 0 ; i < table->hash_count ; i++) {
 		curlen = 0;
@@ -381,9 +378,10 @@ hash_report(struct hash_table *table)
 	    pct > 2147483647 ||
 	    minlen > 2147483647 ||
 	    maxlen > 2147483647)
-		return (char *) "Report out of range for display.";
+		return (unsigned char *) "Report out of range for display.";
 
-	sprintf(retbuf, "Contents/Size (%%): %u/%u (%u%%). Min/max: %u/%u",
+	sprintf((char *)retbuf, 
+		"Contents/Size (%%): %u/%u (%u%%). Min/max: %u/%u",
 		contents, table->hash_count, pct, minlen, maxlen);
 
 	return retbuf;
