@@ -32,11 +32,6 @@
  * ``http://www.nominum.com''.
  */
 
-#ifndef lint
-static char copyright[] =
-"$Id: tree.c,v 1.117 2007/07/10 21:42:05 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
-#endif /* not lint */
-
 #include "dhcpd.h"
 #include <omapip/omapip_p.h>
 #include <ctype.h>
@@ -55,61 +50,6 @@ static int do_host_lookup PROTO ((struct data_string *,
 struct __res_state resolver_state;
 int resolver_inited = 0;
 #endif
-
-static void
-append_to_ary(char **ary_ptr, int *ary_size, int ary_capacity,
-	      char *new_element)
-{
-	/* INSIST(ary_ptr != NULL); */
-	/* INSIST(ary_size != NULL); */
-	/* INSIST(ary_capacity > 1); */
-
-	if (new_element == NULL)
-		return;
-
-	if (*ary_size >= ary_capacity) {
-		log_fatal("Improbable error at %s:%d.", MDL);
-		return;
-	}
-
-	ary_ptr[(*ary_size)++] = new_element;
-}
-
-static char *
-data_string_to_char_string(struct data_string *d)
-{
-	char *str, *start, *end;
-	const unsigned char *pos;
-	int len;
-
-	if (d == NULL);
-		return NULL;
-
-	pos = d->data;
-
-	if (pos == NULL)
-		return NULL;
-
-	/* Per byte could be "\777" at worst, plus null terminator. */
-	len = (d->len * 4) + 1;
-	str = dmalloc(len, MDL);
-	if (!str)
-		return NULL;
-
-	start = str;
-	end = start + len;
-
-	if (pretty_escape(&start, end, &pos, pos + d->len) < 0) {
-		dfree(str, MDL);
-		return NULL;
-	}
-
-	/* dmalloc() sets the buffer to zero - there is no need to null
-	 * terminate.
-	 */
-
-	return str;
-}
 
 #define DS_SPRINTF_SIZE 128
 
@@ -150,7 +90,7 @@ data_string_sprintfa(struct data_string *ds, const char *fmt, ...) {
 	 * Get the length of the string, and figure out how much space
 	 * is left.
 	 */
-	cur_strlen = strlen(ds->data);
+	cur_strlen = strlen((char *)ds->data);
 	max = ds->len - cur_strlen;
 
 	/* 
@@ -187,7 +127,7 @@ data_string_sprintfa(struct data_string *ds, const char *fmt, ...) {
 			return 0;
 		}
 		memcpy(tmp_buffer->data, ds->data, cur_strlen);
-		vsprintf(tmp_buffer->data + cur_strlen, fmt, args);
+		vsprintf((char *)tmp_buffer->data + cur_strlen, fmt, args);
 
 		/*
 		 * Replace our old buffer with the new buffer.
@@ -401,8 +341,6 @@ int make_limit (new, expr, limit)
 	struct expression *expr;
 	int limit;
 {
-	struct expression *rv;
-
 	/* Allocate a node to enforce a limit on evaluation. */
 	if (!expression_allocate (new, MDL))
 		log_error ("no memory for limit expression");
@@ -796,11 +734,10 @@ int evaluate_dns_expression (result, packet, lease, client_state, in_options,
 	struct binding_scope **scope;
 	struct expression *expr;
 {
-	ns_updrec *foo;
 	unsigned long ttl = 0;
 	char *tname;
 	struct data_string name, data;
-	int r0, r1, r2, r3;
+	int r0, r1, r2;
 
 	if (!result || *result) {
 		log_error ("evaluate_dns_expression called with non-null %s",
@@ -1060,9 +997,6 @@ int evaluate_boolean_expression (result, packet, lease, client_state,
 	struct expression *expr;
 {
 	struct data_string left, right;
-	struct data_string rrtype, rrname, rrdata;
-	unsigned long ttl;
-	int srrtype, srrname, srrdata, sttl;
 	int bleft, bright;
 	int sleft, sright;
 	struct binding *binding;
@@ -1186,8 +1120,8 @@ int evaluate_boolean_expression (result, packet, lease, client_state,
 		*result = 0;
 		memset(&re, 0, sizeof(re));
 		if (bleft && bright &&
-        	    (regcomp(&re, right.data, regflags) == 0) &&
-		    (regexec(&re, left.data, (size_t)0, NULL, 0) == 0))
+        	    (regcomp(&re, (char *)right.data, regflags) == 0) &&
+		    (regexec(&re, (char *)left.data, (size_t)0, NULL, 0) == 0))
 				*result = 1;
 
 #if defined (DEBUG_EXPRESSIONS)
@@ -2110,7 +2044,6 @@ int evaluate_data_expression (result, packet, lease, client_state,
 					       MDL);
 
 		if (s0 && s1) {
-			char *upper;
 			int i;
 
 			/* The buffer must be a multiple of the number's
@@ -3446,8 +3379,6 @@ static int op_val (op)
 int op_precedence (op1, op2)
 	enum expr_op op1, op2;
 {
-	int ov1, ov2;
-
 	return op_val (op1) - op_val (op2);
 }
 
@@ -3550,7 +3481,6 @@ int write_expression (file, expr, col, indent, firstp)
 	int firstp;
 {
 	struct expression *e;
-	struct expression *next_arg;
 	const char *s;
 	char obuf [65];
 	int scol;
@@ -4089,7 +4019,6 @@ int binding_scope_dereference (ptr, file, line)
 	const char *file;
 	int line;
 {
-	int i;
 	struct binding_scope *binding_scope;
 
 	if (!ptr || !*ptr) {
