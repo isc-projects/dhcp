@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-		            Version 3.1.0rc2
-			      July 3, 2007
+		             Version 3.1.0
+			     July 13, 2007
 
 			      Release Notes
 
@@ -9,22 +9,33 @@
 Version 3.1.x of the ISC DHCP Distribution includes the following major
 new features compared to its 3.0.x derivative:
 
-	- Failover protocol 'MAC Address Affinity' to reduce pool churn.
-	- Support for the 'reserved' and 'bootp' failover flags, which
-	  means in lay terms that static allocations can be made to
-	  clients in which 'on events' can be supported.
-	- Several other failover optimizations and changes.
-	- Management of class and subclass statements via OMAPI.
-	- Many new configuration statement functions.
-	- Initial formal support for VIVCO/VIVSO options.
+      - A significantly enhanced Failover protocol implementation, which:
+         - Implements MAC Address Affinity to reduce the frequency of
+           clients being assigned new IP addresses;
+         - Supports the assignment of failover-protected addresses to
+           legacy BOOTP clients;
+         - Implements a dynamic lease reservation system that provides
+           improved accounting of the use of fixed address assignments,
+           by allocating fixed addresses out of the pool of dynamic
+           leases; and
+         - Further improves tools and reduces operator oversight
+           necessary for maintaining a functioning system.
+      - Support for DHCP Leasequery, and the VIVCO/VIVSO options, which
+         makes easy and comfortable integration with DOCSIS devices and
+         the environment in which they are used.
+      - Management of class and subclass statements via OMAPI.
+      - Several server configuration options related to dynamic DNS
+         behavior
+      - Other new configuration functions, including "execute()",
+        which runs a shell command from within a dhcpd or dhclient
+        configuration file
 
-For a full list of new features added in this release, please observe
-the changes list directly following this section.
+For a full list of new features added in this release, please see the
+changes list directly following this section.
 
 For information on how to install, configure and run this software,
 as well as how to find documentation and report bugs, please consult
 the README file.
-
 
 			Changes since 3.1.0rc1
 
