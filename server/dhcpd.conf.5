@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.80.4.5 2007/05/23 23:30:33 each Exp $
+.\" $Id: dhcpd.conf.5,v 1.80.4.6 2007/07/20 19:18:44 dhankins Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -509,13 +509,9 @@ failover.  A pool declaration that utilizes failover would look like this:
 .nf
 pool {
 	failover peer "foo";
-	deny dynamic bootp clients;
 	\fIpool specific parameters\fR
 };
 .fi
-.PP
-Dynamic BOOTP leases are not compatible with failover, and, as such,
-you need to disallow BOOTP in pools that you are using failover for.
 .PP
 The  server currently  does very  little  sanity checking,  so if  you
 configure it wrong, it will just  fail in odd ways.  I would recommend
