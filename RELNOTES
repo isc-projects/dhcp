@@ -78,6 +78,7 @@ Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
 
+
 			Changes since 3.0.6
 
 - Bug in octal parsing fixed. Thanks to Bernd Fuhrmann for the report
@@ -90,6 +91,11 @@ and for prodding me into improving it.
   Knispel for the bug report and fix.
 
 - Fixed file descriptor leak on listen failure. Thanks to Tom Clark.
+
+- Failover binding acks are now transmitted before new binding updates (which
+  may, very rarely, be related to a lease on the ack queue).  This eliminates
+  a lease database inconsistency bug, as the remote system relies upon the
+  most recent message it received from its peer.
 
 			Changes since 3.0.6rc1
 

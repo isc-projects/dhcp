@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.48 2007/05/01 20:42:56 each Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.49 2007/08/07 18:47:48 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2352,6 +2352,12 @@ isc_result_t dhcp_failover_send_updates (dhcp_failover_state_t *state)
 	/* Can't update peer if we're not talking to it! */
 	if (!state -> link_to_peer)
 		return ISC_R_SUCCESS;
+
+	/* If there are acks pending, transmit them prior to potentialy
+	 * sending new updates for the same lease.
+	 */
+	if (state->toack_queue_head != NULL)
+	        dhcp_failover_send_acks(state);
 
 	while ((state -> partner.max_flying_updates >
 		state -> cur_unacked_updates) && state -> update_queue_head) {
