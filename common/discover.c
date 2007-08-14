@@ -233,7 +233,7 @@ begin_iface_scan(struct iface_conf_list *ifaces) {
 	int lifnum;
 #endif
 
-	ifaces->sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	ifaces->sock = socket(local_family, SOCK_DGRAM, IPPROTO_UDP);
 	if (ifaces->sock < 0) {
 		log_error("Error creating socket to list interfaces; %m");
 		return 0;
@@ -1152,12 +1152,24 @@ discover_interfaces(int state) {
 			       ? tmp -> shared_network -> subnets
 			       : (struct subnet *)0);
 		     subnet; subnet = subnet -> next_sibling) {
-			if (!subnet -> interface_address.len) {
-				/* Set the interface address for this subnet
-				   to the first address we found. */
-				subnet -> interface_address.len = 4;
-				memcpy (subnet -> interface_address.iabuf,
-					&tmp->addresses[0].s_addr, 4);
+			/* Set the interface address for this subnet
+			   to the first address we found. */
+		     	if (subnet->interface_address.len == 0) {
+				if (tmp->address_count > 0) {
+					subnet->interface_address.len = 4;
+					memcpy(subnet->interface_address.iabuf,
+					       &tmp->addresses[0].s_addr, 4);
+				} else if (tmp->v6address_count > 0) {
+					subnet->interface_address.len = 16;
+					memcpy(subnet->interface_address.iabuf,
+					       &tmp->v6addresses[0].s6_addr, 
+					       16);
+				} else {
+					/* XXX: should be one */
+					log_error("%s missing an interface "
+						  "address", tmp->name);
+					continue;
+				}
 			}
 		}
 

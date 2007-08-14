@@ -53,6 +53,9 @@ suggested fixes to <dhcp-users@isc.org>.
 
 			Changes since 4.0.0a2
 
+- Fix for startup where there are no IPv4 addresses on an interface.
+  Thanks to Marcus Goller for reporting the bug.
+
 - Fixed file descriptor leak on listen failure. Thanks to Tom Clark.
 
 - Bug in server configuration parser caused server to get stuck on
