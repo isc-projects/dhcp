@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.159.16.6 2007/08/15 13:10:04 shane Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.159.16.7 2007/08/15 15:09:01 shane Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1509,7 +1509,7 @@ void parse_pool_statement (cfile, group, type)
 			 * the parse_statement() reads all available tokens
 			 * and leaves us at the end.
 			 */
-			parse_warn("unexpected end of file");
+			parse_warn(cfile, "unexpected end of file");
 			return;
 
 		      default:
