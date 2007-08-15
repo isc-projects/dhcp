@@ -37,6 +37,10 @@ For information on how to install, configure and run this software,
 as well as how to find documentation and report bugs, please consult
 the README file.
 
+			Changes since 3.1.0
+
+- Fixed file descriptor leak on listen failure. Thanks to Tom Clark.
+
 			Changes since 3.1.0rc1
 
 - The parse warning that 'deny dyanmic bootp;' must be configured for
@@ -1401,7 +1405,6 @@ the README file.
   using omapi to manipulate leases.
 
 - Fix some bugs and omissions in omshell.
-
 
 		Changes since 3.0 Release Candidate 5
 
