@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.105.8.1 2007/05/29 17:49:44 each Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.105.8.2 2007/08/15 13:04:15 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -371,7 +371,7 @@ static enum dhcp_token read_string (cfile)
 				} else
 					goto again;
 			} else {
-				if (c >= '0' && c <= '9') {
+				if (c >= '0' && c <= '7') {
 					value = value * 8 + (c - '0');
 				} else {
 				    if (value != 0) {

@@ -41,6 +41,9 @@ the README file.
 
 - Fixed file descriptor leak on listen failure. Thanks to Tom Clark.
 
+- Bug in octal parsing fixed. Thanks to Bernd Fuhrmann for the report
+  and fix.
+
 			Changes since 3.1.0rc1
 
 - The parse warning that 'deny dyanmic bootp;' must be configured for
