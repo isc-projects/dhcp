@@ -39,6 +39,10 @@ the README file.
 
 			Changes since 3.1.0
 
+- Bug in server configuration parser caused server to get stuck on
+  startup for certain bad pool declarations. Thanks to Guillaume
+  Knispel for the bug report and fix.
+
 - Fixed file descriptor leak on listen failure. Thanks to Tom Clark.
 
 - Bug in octal parsing fixed. Thanks to Bernd Fuhrmann for the report
