@@ -18,9 +18,11 @@ AC_DEFINE_UNQUOTED([DHCP_BYTE_ORDER], [$byte_order],
 # DHCPv6 is off by default
 AC_ARG_ENABLE(dhcpv6,
 	AC_HELP_STRING([--enable-dhcpv6],
-		       [enable support for DHCPv6 (default is NO)]),
+		       [enable support for DHCPv6 (default is yes)]))
+if test "$enable_dhcpv6" != "no"; then
 	AC_DEFINE([DHCPv6], [1], 
-		  [Define to 1 to include DHCPv6 support.]))
+		  [Define to 1 to include DHCPv6 support.])
+fi
 
 # Allow specification of alternate state files
 AC_ARG_WITH(srv-lease-file,

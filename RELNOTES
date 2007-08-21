@@ -64,6 +64,9 @@ suggested fixes to <dhcp-users@isc.org>.
 
 - Code cleaned to remove warnings reported by "gcc -Wall".
 
+- DHCPv6 is now the default. You can disable DHCPv6 support using the
+  "--disable-dhcpv6" flag when you run the configure script.
+
 			Changes since 4.0.0a1
 
 - Bug in octal parsing fixed. Thanks to Bernd Fuhrmann for the report
