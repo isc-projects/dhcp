@@ -1283,7 +1283,7 @@ Optional Features:
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --disable-dependency-tracking  speeds up one-time build
   --enable-dependency-tracking   do not reject slow dependency extractors
-  --enable-dhcpv6         enable support for DHCPv6 (default is NO)
+  --enable-dhcpv6         enable support for DHCPv6 (default is yes)
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -4302,12 +4302,15 @@ _ACEOF
 # Check whether --enable-dhcpv6 was given.
 if test "${enable_dhcpv6+set}" = set; then
   enableval=$enable_dhcpv6;
+fi
+
+if test "$enable_dhcpv6" != "no"; then
+
 cat >>confdefs.h <<\_ACEOF
 #define DHCPv6 1
 _ACEOF
 
 fi
-
 
 # Allow specification of alternate state files
 
