@@ -672,7 +672,10 @@ add_lease6(struct ipv6_pool *pool, struct iaaddr *iaaddr,
 	struct iaaddr *test_iaaddr;
 	struct iaaddr *tmp_iaaddr;
 
-	iaaddr->state = FTS_ACTIVE;
+	/* If a state was not assigned by the caller, assume active. */
+	if (iaaddr->state == 0)
+		iaaddr->state = FTS_ACTIVE;
+
 	iaaddr->valid_lifetime_end_time = valid_lifetime_end_time;
 	ipv6_pool_reference(&iaaddr->ipv6_pool, pool, MDL);
 
@@ -683,11 +686,26 @@ add_lease6(struct ipv6_pool *pool, struct iaaddr *iaaddr,
 	test_iaaddr = NULL;
 	if (iaaddr_hash_lookup(&test_iaaddr, pool->addrs,
 			       &iaaddr->addr, sizeof(iaaddr->addr), MDL)) {
-		isc_heap_delete(pool->active_timeouts, test_iaaddr->heap_index);
+		/* XXX: we should probably ask the iaaddr what heap it is on
+		 * (as a consistency check).
+		 * XXX: we should probably have one function to "put this lease
+		 * on its heap" rather than doing these if's everywhere.  If
+		 * you add more states to this list, don't.
+		 */
+		if ((test_iaaddr->state == FTS_ACTIVE) ||
+		    (test_iaaddr->state == FTS_ABANDONED)) {
+			isc_heap_delete(pool->active_timeouts,
+					test_iaaddr->heap_index);
+			pool->num_active--;
+		} else {
+			isc_heap_delete(pool->inactive_timeouts,
+					test_iaaddr->heap_index);
+			pool->num_inactive--;
+		}
+
 		iaaddr_hash_delete(pool->addrs, &test_iaaddr->addr, 
 				   sizeof(test_iaaddr->addr), MDL);
-		pool->num_active--;
-		
+
 		/*
 		 * We're going to do a bit of evil trickery here.
 		 *
@@ -706,9 +724,20 @@ add_lease6(struct ipv6_pool *pool, struct iaaddr *iaaddr,
 	 */
 	tmp_iaaddr = NULL;
 	iaaddr_reference(&tmp_iaaddr, iaaddr, MDL);
-        iaaddr_hash_add(pool->addrs, &tmp_iaaddr->addr, 
+	iaaddr_hash_add(pool->addrs, &tmp_iaaddr->addr, 
 			sizeof(tmp_iaaddr->addr), iaaddr, MDL);
-	insert_result = isc_heap_insert(pool->active_timeouts, tmp_iaaddr);
+	if ((tmp_iaaddr->state == FTS_ACTIVE) ||
+	    (tmp_iaaddr->state == FTS_ABANDONED)) {
+		insert_result = isc_heap_insert(pool->active_timeouts,
+						tmp_iaaddr);
+		if (insert_result == ISC_R_SUCCESS)
+			pool->num_active++;
+	} else {
+		insert_result = isc_heap_insert(pool->inactive_timeouts,
+						tmp_iaaddr);
+		if (insert_result == ISC_R_SUCCESS)
+			pool->num_inactive++;
+	}
 	if (insert_result != ISC_R_SUCCESS) {
 		iaaddr_hash_delete(pool->addrs, &iaaddr->addr, 
 				   sizeof(iaaddr->addr), MDL);
@@ -721,10 +750,6 @@ add_lease6(struct ipv6_pool *pool, struct iaaddr *iaaddr,
 	 * is a reference in the heap/hash, after all.
 	 */
 
-	/*
-	 * And we're done.
-	 */
-	pool->num_active++;
 	return ISC_R_SUCCESS;
 }
 
@@ -898,7 +923,7 @@ mark_address_unavailable(struct ipv6_pool *pool, const struct in6_addr *addr) {
 	result = iaaddr_allocate(&dummy_iaaddr, MDL);
 	if (result == ISC_R_SUCCESS) {
 		dummy_iaaddr->addr = *addr;
-        	iaaddr_hash_add(pool->addrs, &dummy_iaaddr->addr,
+		iaaddr_hash_add(pool->addrs, &dummy_iaaddr->addr,
 				sizeof(*addr), dummy_iaaddr, MDL);
 	}
 	return result;

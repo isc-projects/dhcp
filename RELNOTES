@@ -51,6 +51,7 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and
 may not work on other platforms. Please report any problems and 
 suggested fixes to <dhcp-users@isc.org>.
 
+
 			Changes since 4.0.0a2
 
 - Fix for startup where there are no IPv4 addresses on an interface.
@@ -66,6 +67,10 @@ suggested fixes to <dhcp-users@isc.org>.
 
 - DHCPv6 is now the default. You can disable DHCPv6 support using the
   "--disable-dhcpv6" flag when you run the configure script.
+
+- An internal database inconsistency bug was repaired where the server
+  would segfault if a client attempted to renew a lease that had been
+  loaded from persistent storage.
 
 			Changes since 4.0.0a1
 

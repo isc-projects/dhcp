@@ -3901,18 +3901,6 @@ parse_ia_na_declaration(struct parse *cfile) {
 			return;
 		}
 		add_lease6(pool, iaaddr, end_time);
-		switch (state) {
-			case FTS_ABANDONED:
-				release_lease6(pool, iaaddr);
-				break;
-			case FTS_EXPIRED:
-				decline_lease6(pool, iaaddr);
-				iaaddr->state = FTS_EXPIRED;
-				break;
-			case FTS_RELEASED:
-				release_lease6(pool, iaaddr);
-				break;
-		}
 		ipv6_pool_dereference(&pool, MDL);
 		iaaddr_dereference(&iaaddr, MDL);
 	}
