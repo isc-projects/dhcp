@@ -1543,15 +1543,10 @@ int add_option(struct option_state *options,
        	       void *data,
        	       unsigned int data_len);
 
-int add_option(struct option_state *options,
-	       unsigned int option_num,
-	       void *data,
-	       unsigned int data_len);
-
 /* dhcpd.c */
 extern TIME cur_time;
 
-int ddns_update_style;
+extern int ddns_update_style;
 
 extern const char *path_dhcpd_conf;
 extern const char *path_dhcpd_db;
@@ -1566,7 +1561,7 @@ void cleanup PROTO ((void));
 void lease_pinged PROTO ((struct iaddr, u_int8_t *, int));
 void lease_ping_timeout PROTO ((void *));
 int dhcpd_interface_setup_hook (struct interface_info *ip, struct iaddr *ia);
-enum dhcp_shutdown_state shutdown_state;
+extern enum dhcp_shutdown_state shutdown_state;
 isc_result_t dhcp_io_shutdown (omapi_object_t *, void *);
 isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
 				     control_object_state_t newstate);
@@ -1844,10 +1839,6 @@ void get_server_source_address(struct in_addr *from,
 			       struct option_state *options,
 			       struct packet *packet);
 
-void get_server_source_address(struct in_addr *from,
-			       struct option_state *options,
-       			       struct packet *packet);
-
 /* dhcpv6.c */
 isc_boolean_t server_duid_isset(void);
 void copy_server_duid(struct data_string *ds, const char *file, int line);
@@ -1861,7 +1852,7 @@ void dhcpv6(struct packet *);
 void bootp PROTO ((struct packet *));
 
 /* memory.c */
-int (*group_write_hook) (struct group_object *);
+extern int (*group_write_hook) (struct group_object *);
 extern struct group *root_group;
 extern group_hash_t *group_name_hash;
 isc_result_t delete_group (struct group_object *, int);
@@ -1919,9 +1910,6 @@ struct option *new_option PROTO ((const char *, const char *, int));
 int option_reference(struct option **dest, struct option *src,
 		     const char * file, int line);
 int option_dereference(struct option **dest, const char *file, int line);
-int group_allocate (struct group **, const char *, int);
-int group_reference (struct group **, struct group *, const char *, int);
-int group_dereference (struct group **, const char *, int);
 struct universe *new_universe PROTO ((const char *, int));
 void free_universe PROTO ((struct universe *, const char *, int));
 void free_domain_search_list PROTO ((struct domain_search_list *,
@@ -2224,7 +2212,7 @@ extern u_int16_t remote_port;
 extern int (*dhcp_interface_setup_hook) (struct interface_info *,
 					 struct iaddr *);
 extern int (*dhcp_interface_discovery_hook) (struct interface_info *);
-isc_result_t (*dhcp_interface_startup_hook) (struct interface_info *);
+extern isc_result_t (*dhcp_interface_startup_hook) (struct interface_info *);
 
 extern void (*bootp_packet_handler) PROTO ((struct interface_info *,
 					    struct dhcp_packet *, unsigned,
@@ -2236,9 +2224,9 @@ extern void (*dhcpv6_packet_handler)(struct interface_info *,
 extern struct timeout *timeouts;
 extern omapi_object_type_t *dhcp_type_interface;
 #if defined (TRACING)
-trace_type_t *interface_trace;
-trace_type_t *inpacket_trace;
-trace_type_t *outpacket_trace;
+extern trace_type_t *interface_trace;
+extern trace_type_t *inpacket_trace;
+extern trace_type_t *outpacket_trace;
 #endif
 extern struct interface_info **interface_vector;
 extern int interface_count;
@@ -2291,11 +2279,11 @@ extern struct universe vsio_universe;
 extern int dhcp_option_default_priority_list [];
 extern int dhcp_option_default_priority_list_count;
 extern const char *hardware_types [256];
-int universe_count, universe_max;
-struct universe **universes;
+extern int universe_count, universe_max;
+extern struct universe **universes;
 extern universe_hash_t *universe_hash;
 void initialize_common_option_spaces PROTO ((void));
-struct universe *config_universe;
+extern struct universe *config_universe;
 
 /* stables.c */
 #if defined (FAILOVER_PROTOCOL)
@@ -2419,15 +2407,12 @@ void dhcpv4_client_assignments(void);
 void dhcpv6_client_assignments(void);
 
 /* dhc6.c */
-void form_duid(struct data_string *duid, char *file, int line);
-void dhc6_lease_destroy(struct dhc6_lease *lease, char *file, int line);
+void form_duid(struct data_string *duid, const char *file, int line);
+void dhc6_lease_destroy(struct dhc6_lease *lease, const char *file, int line);
 void start_init6(struct client_state *client);
 void start_confirm6(struct client_state *client);
 void start_release6(struct client_state *client);
 void start_selecting6(struct client_state *client);
-isc_result_t write_client6_lease(struct client_state *client,
-				 struct dhc6_lease *lease,
-				 int rewrite, int sync);
 void unconfigure6(struct client_state *client, const char *reason);
 
 /* db.c */
@@ -2587,8 +2572,8 @@ isc_result_t ddns_remove_fwd(struct data_string *,
 
 /* resolv.c */
 extern char path_resolv_conf [];
-struct name_server *name_servers;
-struct domain_search_list *domains;
+extern struct name_server *name_servers;
+extern struct domain_search_list *domains;
 
 void read_resolv_conf PROTO ((TIME));
 struct name_server *first_name_server PROTO ((void));
@@ -2604,7 +2589,7 @@ struct class unknown_class;
 struct class known_class;
 struct collection default_collection;
 struct collection *collections;
-struct executable_statement *default_classification_rules;
+extern struct executable_statement *default_classification_rules;
 
 void classification_setup PROTO ((void));
 void classify_client PROTO ((struct packet *));
@@ -2644,7 +2629,6 @@ int executable_statement_foreach (struct executable_statement *,
 					   void *, int), void *, int);
 
 /* comapi.c */
-extern omapi_object_type_t *dhcp_type_interface;
 extern omapi_object_type_t *dhcp_type_group;
 extern omapi_object_type_t *dhcp_type_shared_network;
 extern omapi_object_type_t *dhcp_type_subnet;
@@ -2765,24 +2749,6 @@ isc_result_t dhcp_lease_create (omapi_object_t **,
 				omapi_object_t *);
 isc_result_t dhcp_lease_remove (omapi_object_t *,
 				omapi_object_t *);
-isc_result_t dhcp_group_set_value  (omapi_object_t *, omapi_object_t *,
-				    omapi_data_string_t *,
-				    omapi_typed_data_t *);
-isc_result_t dhcp_group_get_value (omapi_object_t *, omapi_object_t *,
-				   omapi_data_string_t *,
-				   omapi_value_t **); 
-isc_result_t dhcp_group_destroy (omapi_object_t *, const char *, int);
-isc_result_t dhcp_group_signal_handler (omapi_object_t *,
-					const char *, va_list);
-isc_result_t dhcp_group_stuff_values (omapi_object_t *,
-				      omapi_object_t *,
-				      omapi_object_t *);
-isc_result_t dhcp_group_lookup (omapi_object_t **,
-				omapi_object_t *, omapi_object_t *);
-isc_result_t dhcp_group_create (omapi_object_t **,
-				omapi_object_t *);
-isc_result_t dhcp_group_remove (omapi_object_t *,
-				omapi_object_t *);
 isc_result_t dhcp_host_set_value  (omapi_object_t *, omapi_object_t *,
 				   omapi_data_string_t *,
 				   omapi_typed_data_t *);
@@ -2855,39 +2821,6 @@ isc_result_t dhcp_subclass_create (omapi_object_t **,
 				   omapi_object_t *);
 isc_result_t dhcp_subclass_remove (omapi_object_t *,
 				   omapi_object_t *);
-isc_result_t dhcp_shared_network_set_value  (omapi_object_t *,
-					     omapi_object_t *,
-					     omapi_data_string_t *,
-					     omapi_typed_data_t *);
-isc_result_t dhcp_shared_network_get_value (omapi_object_t *, omapi_object_t *,
-					    omapi_data_string_t *,
-					    omapi_value_t **); 
-isc_result_t dhcp_shared_network_destroy (omapi_object_t *, const char *, int);
-isc_result_t dhcp_shared_network_signal_handler (omapi_object_t *,
-						 const char *, va_list);
-isc_result_t dhcp_shared_network_stuff_values (omapi_object_t *,
-					       omapi_object_t *,
-					       omapi_object_t *);
-isc_result_t dhcp_shared_network_lookup (omapi_object_t **,
-					 omapi_object_t *, omapi_object_t *);
-isc_result_t dhcp_shared_network_create (omapi_object_t **,
-					 omapi_object_t *);
-isc_result_t dhcp_subnet_set_value  (omapi_object_t *, omapi_object_t *,
-				     omapi_data_string_t *,
-				     omapi_typed_data_t *);
-isc_result_t dhcp_subnet_get_value (omapi_object_t *, omapi_object_t *,
-				    omapi_data_string_t *,
-				    omapi_value_t **); 
-isc_result_t dhcp_subnet_destroy (omapi_object_t *, const char *, int);
-isc_result_t dhcp_subnet_signal_handler (omapi_object_t *,
-					 const char *, va_list);
-isc_result_t dhcp_subnet_stuff_values (omapi_object_t *,
-				       omapi_object_t *,
-				       omapi_object_t *);
-isc_result_t dhcp_subnet_lookup (omapi_object_t **,
-				 omapi_object_t *, omapi_object_t *);
-isc_result_t dhcp_subnet_create (omapi_object_t **,
-				 omapi_object_t *);
 isc_result_t dhcp_interface_set_value (omapi_object_t *,
 				       omapi_object_t *,
 				       omapi_data_string_t *,

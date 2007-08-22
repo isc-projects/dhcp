@@ -4,7 +4,22 @@ AC_INIT([DHCP], [4.0.0a2], [dhcp-users@isc.org])
 # like AUTHORS, COPYING, and such
 AM_INIT_AUTOMAKE([foreign])
 
+# We want to turn on warnings if we are using gcc and the user did 
+# not specify CFLAGS. The autoconf check for the C compiler sets the
+# CFLAGS if gcc is used, so we will save it before we run that check.
+SAVE_CFLAGS="$CFLAGS"
+
+# Now find our C compiler.
 AC_PROG_CC
+
+# If we have gcc, and AC_PROG_CC changed the flags, then we know the
+# user did not specify any flags. Add warnings in this case.
+if test "$GCC" = "yes"; then
+	if test "$CFLAGS" != "$SAVE_CFLAGS"; then
+		CFLAGS="$CFLAGS -Wall -Werror -fno-strict-aliasing"
+	fi
+fi
+
 AC_PROG_RANLIB
 AC_CONFIG_HEADERS([includes/config.h])
 
@@ -183,10 +198,15 @@ AC_CHECK_MEMBER(struct msghdr.msg_control,,
 	 AC_CHECK_MEMBER(struct msghdr.msg_control,,
 	 	[AC_MSG_ERROR([Missing msg_control member in 
 			       msg_control structure.])],
-		[#include <sys/types.h>
-	 	 #include <sys/socket.h>])],
-	[#include <sys/types.h>
-	 #include <sys/socket.h>])
+		[
+#include <sys/types.h>
+#include <sys/socket.h>
+		])
+	],
+	[
+#include <sys/types.h>
+#include <sys/socket.h>
+	])
 
 AC_OUTPUT([
   Makefile

@@ -1216,16 +1216,18 @@ discover_interfaces(int state) {
 			continue;
 		if (tmp -> rfdesc == -1)
 			continue;
-		if (local_family == AF_INET) {
-			status = omapi_register_io_object((omapi_object_t *)tmp,
-							  if_readsocket, 
-							  0, got_one, 0, 0);
-#ifdef DHCPv6
-		} else {
+#ifdef DHCPv6 
+		if (local_family == AF_INET6) {
 			status = omapi_register_io_object((omapi_object_t *)tmp,
 							  if_readsocket, 
 							  0, got_one_v6, 0, 0);
+		} else {
+#else
+		{
 #endif /* DHCPv6 */
+			status = omapi_register_io_object((omapi_object_t *)tmp,
+							  if_readsocket, 
+							  0, got_one, 0, 0);
 		}
 		if (status != ISC_R_SUCCESS)
 			log_fatal ("Can't register I/O handle for %s: %s",

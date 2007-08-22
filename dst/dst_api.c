@@ -1,5 +1,5 @@
 #ifndef LINT
-static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/dst_api.c,v 1.3 2007/07/13 06:43:42 shane Exp $";
+static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/dst_api.c,v 1.4 2007/08/22 13:41:37 shane Exp $";
 #endif
 
 /*
@@ -832,7 +832,8 @@ dst_s_read_private_key_file(char *name, DST_KEY *pk_key, unsigned in_id,
 	int cnt, alg, len, major, minor, file_major, file_minor;
 	int id;
 	char filename[PATH_MAX];
-	u_char in_buff[RAW_KEY_SIZE], *p;
+	u_char in_buff[RAW_KEY_SIZE];
+	char *p;
 	FILE *fp;
 
 	if (name == NULL || pk_key == NULL) {
@@ -865,14 +866,14 @@ dst_s_read_private_key_file(char *name, DST_KEY *pk_key, unsigned in_id,
 	if (memcmp(in_buff, "Private-key-format: v", 20) != 0)
 		goto fail;
 	len = cnt;
-	p = in_buff;
+	p = (char *)in_buff;
 
 	if (!dst_s_verify_str((const char **) &p, "Private-key-format: v")) {
 		EREPORT(("dst_s_read_private_key_file(): Not a Key file/Decrypt failed %s\n", name));
 		goto fail;
 	}
 	/* read in file format */
-	sscanf((char *)p, "%d.%d", &file_major, &file_minor);
+	sscanf(p, "%d.%d", &file_major, &file_minor);
 	sscanf(KEY_FILE_FORMAT, "%d.%d", &major, &minor);
 	if (file_major < 1) {
 		EREPORT(("dst_s_read_private_key_file(): Unknown keyfile %d.%d version for %s\n",
@@ -888,7 +889,7 @@ dst_s_read_private_key_file(char *name, DST_KEY *pk_key, unsigned in_id,
 	if (!dst_s_verify_str((const char **) &p, "Algorithm: "))
 		goto fail;
 
-	if (sscanf((char *)p, "%d", &alg) != 1)
+	if (sscanf(p, "%d", &alg) != 1)
 		goto fail;
 	while (*p++ != '\n') ;	/* skip to end of line */
 
@@ -901,7 +902,7 @@ dst_s_read_private_key_file(char *name, DST_KEY *pk_key, unsigned in_id,
 		goto fail;
 
 	id = pk_key->dk_func->from_file_fmt(pk_key, (char *)p,
-					    (unsigned)(&in_buff[len] - p));
+					    (unsigned)(&in_buff[len] - (u_char *)p));
 	if (id < 0)
 		goto fail;
 

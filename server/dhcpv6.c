@@ -1007,6 +1007,12 @@ lease_to_client(struct data_string *reply_ret,
 	ia_na = NULL;
 	lease = NULL;
 
+	/*
+	 * Silence compiler warnings.
+	 */
+	valid_lifetime = 0;
+	preferred_lifetime = 0;
+
 	/* 
 	 * Set up reply.
 	 */
@@ -2175,7 +2181,7 @@ iterate_over_ia_na(struct data_string *reply_ret,
 		   struct packet *packet,
 		   const struct data_string *client_id,
 		   const struct data_string *server_id,
-		   char *packet_type,
+		   const char *packet_type,
 		   void (*ia_na_match)(),
 		   void (*ia_na_nomatch)()) {
 	struct option_state *opt_state;

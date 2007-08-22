@@ -160,4 +160,3 @@ isc_result_t omapi_array_lookup (char **ptr, omapi_array_t *array, int index,
 	return ISC_R_NOTFOUND;
 }
 
-OMAPI_ARRAY_TYPE_DECL(omapi_object, omapi_object_t);

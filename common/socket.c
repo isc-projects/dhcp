@@ -120,17 +120,8 @@ if_register_socket(struct interface_info *info, int family, int do_multicast) {
 	 * address family. 
 	 */ 
 	memset(&name, 0, sizeof(name));
-	if (family == AF_INET) {
-		struct sockaddr_in *addr = (struct sockaddr_in *)&name; 
-		addr->sin_family = AF_INET;
-		addr->sin_port = local_port;
-		memcpy(&addr->sin_addr,
-		       &local_address,
-		       sizeof(addr->sin_addr));
-		name_len = sizeof(*addr);
-		domain = PF_INET;
 #ifdef DHCPv6
-	} else { 
+	if (family == AF_INET6) {
 		struct sockaddr_in6 *addr = (struct sockaddr_in6 *)&name; 
 		addr->sin6_family = AF_INET6;
 		addr->sin6_port = local_port;
@@ -139,7 +130,18 @@ if_register_socket(struct interface_info *info, int family, int do_multicast) {
 		       sizeof(addr->sin6_addr));
 		name_len = sizeof(*addr);
 		domain = PF_INET6;
+	} else { 
+#else 
+	{
 #endif /* DHCPv6 */
+		struct sockaddr_in *addr = (struct sockaddr_in *)&name; 
+		addr->sin_family = AF_INET;
+		addr->sin_port = local_port;
+		memcpy(&addr->sin_addr,
+		       &local_address,
+		       sizeof(addr->sin_addr));
+		name_len = sizeof(*addr);
+		domain = PF_INET;
 	}
 
 	/* Make a socket... */

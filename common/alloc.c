@@ -411,7 +411,7 @@ void free_pair (foo, file, line)
 {
 	foo -> cdr = free_pairs;
 	free_pairs = foo;
-	dmalloc_reuse (free_pairs, (char *)0, 0, 0);
+	dmalloc_reuse (free_pairs, __FILE__, __LINE__, 0);
 }
 
 #if defined (DEBUG_MEMORY_LEAKAGE) || \
@@ -485,7 +485,7 @@ void free_expression (expr, file, line)
 {
 	expr -> data.not = free_expressions;
 	free_expressions = expr;
-	dmalloc_reuse (free_expressions, (char *)0, 0, 0);
+	dmalloc_reuse (free_expressions, __FILE__, __LINE__, 0);
 }
 
 #if defined (DEBUG_MEMORY_LEAKAGE) || \
@@ -1134,7 +1134,7 @@ int packet_dereference (ptr, file, line)
 	}
 	packet -> raw = (struct dhcp_packet *)free_packets;
 	free_packets = packet;
-	dmalloc_reuse (free_packets, (char *)0, 0, 0);
+	dmalloc_reuse (free_packets, __FILE__, __LINE__, 0);
 	return 1;
 }
 

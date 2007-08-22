@@ -206,7 +206,7 @@ isc_result_t dns_zone_lookup (struct dns_zone **zone, const char *name)
 	if (name [len - 1] != '.') {
 		tname = dmalloc ((unsigned)len + 2, MDL);
 		if (!tname)
-			return ISC_R_NOMEMORY;;
+			return ISC_R_NOMEMORY;
 		strcpy (tname, name);
 		tname [len] = '.';
 		tname [len + 1] = 0;

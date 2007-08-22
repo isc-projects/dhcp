@@ -22,10 +22,8 @@
  */
 
 #ifndef lint
-static const char rcsid[] = "$Id: ns_verify.c,v 1.7 2005/03/17 20:15:18 dhankins Exp $";
+static const char rcsid[] = "$Id: ns_verify.c,v 1.8 2007/08/22 13:41:37 shane Exp $";
 #endif
-
-#define time(x)		trace_mr_time (x)
 
 /* Import. */
 
@@ -43,6 +41,8 @@ static const char rcsid[] = "$Id: ns_verify.c,v 1.7 2005/03/17 20:15:18 dhankins
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
+
+#define time(x)		trace_mr_time (x)
 
 #include "minires/minires.h"
 #include "arpa/nameser.h"

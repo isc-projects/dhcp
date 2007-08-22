@@ -474,7 +474,7 @@ struct enumeration_value dhcpv6_message_values[] = {
 };
 
 /* Some code refers to a different table. */
-char *dhcpv6_type_names[] = {
+const char *dhcpv6_type_names[] = {
 	NULL,
 	"Solicit",
 	"Advertise",

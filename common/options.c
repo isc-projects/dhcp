@@ -2229,7 +2229,7 @@ collect_oro(struct option_cache *oc,
 	    void *void_oro) {
 	struct data_string *oro = (struct data_string *)void_oro;
 
-	putUShort((unsigned char *)(oro->data + oro->len), oc->option->code);
+	putUShort(oro->buffer->data + oro->len, oc->option->code);
 	oro->len += 2;
 }
 
@@ -2285,7 +2285,7 @@ build_server_oro(struct data_string *server_oro,
 			while (o != NULL) {
 				if (o->universe == &dhcpv6_universe) {
 					unsigned char *tmp;
-					tmp = (unsigned char *)server_oro->data;
+					tmp = server_oro->buffer->data;
 					putUShort(tmp + server_oro->len,
 						  o->code);
 					server_oro->len += 2;
@@ -2635,7 +2635,7 @@ int option_space_encapsulate (result, packet, lease, client_state,
 	int status = 0;
 
 	universe_hash_lookup(&u, universe_hash, 
-			     (char *)name->data, name->len, MDL);
+			     (const char *)name->data, name->len, MDL);
 	if (u == NULL) {
 		log_error("option_space_encapsulate: option space %.*s does "
 			  "not exist, but is configured.",
@@ -3659,7 +3659,7 @@ do_packet6(struct interface_info *interface, const char *packet,
 	msg_type = packet[0];
 	if ((msg_type == DHCPV6_RELAY_FORW) || 
 	    (msg_type == DHCPV6_RELAY_REPL)) {
-		relay = (struct dhcpv6_relay_packet *)packet;
+		relay = (const struct dhcpv6_relay_packet *)packet;
 		decoded_packet->dhcpv6_msg_type = relay->msg_type;
 
 		/* relay-specific data */
@@ -3678,7 +3678,7 @@ do_packet6(struct interface_info *interface, const char *packet,
 			return;
 		}
 	} else {
-		msg = (struct dhcpv6_packet *)packet;
+		msg = (const struct dhcpv6_packet *)packet;
 		decoded_packet->dhcpv6_msg_type = msg->msg_type;
 
 		/* message-specific data */

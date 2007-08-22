@@ -2416,14 +2416,14 @@ void write_lease_option (struct option_cache *oc,
 /* Write an option cache to the lease store. */
 static void
 write_options(struct client_state *client, struct option_state *options,
-	      char *preamble)
+	      const char *preamble)
 {
 	int i;
 
 	for (i = 0; i < options->universe_count; i++) {
 		option_space_foreach(NULL, NULL, client, NULL, options,
-				     &global_scope, universes[i], preamble,
-				     write_lease_option);
+				     &global_scope, universes[i], 
+				     (char *)preamble, write_lease_option);
 	}
 }
 

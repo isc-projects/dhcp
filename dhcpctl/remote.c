@@ -118,8 +118,8 @@ dhcpctl_status dhcpctl_new_object (dhcpctl_handle *h,
 	isc_result_t status;
 
 	m = (dhcpctl_remote_object_t *)0;
-	status = omapi_object_allocate ((omapi_object_t **)&m,
-					dhcpctl_remote_type, 0, MDL);
+	status = omapi_object_allocate((omapi_object_t **)&m,
+				       dhcpctl_remote_type, 0, MDL);
 	if (status != ISC_R_SUCCESS)
 		return status;
 

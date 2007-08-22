@@ -1002,7 +1002,7 @@ int evaluate_boolean_expression (result, packet, lease, client_state,
 	struct binding *binding;
 	struct binding_value *bv, *obv;
 #ifdef HAVE_REGEX_H
-	int reg_st, regflags = REG_EXTENDED | REG_NOSUB;
+	int regflags = REG_EXTENDED | REG_NOSUB;
 	regex_t re;
 #endif
 
@@ -1139,7 +1139,15 @@ int evaluate_boolean_expression (result, packet, lease, client_state,
 			data_string_forget(&right, MDL);
 
 		regfree(&re);
-		return reg_st;
+
+		/*
+		 * If we have bleft and bright then we have a good
+		 * syntax, otherwise not.
+		 *
+		 * XXX: we don't warn on invalid regular expression 
+		 *      syntax, should we?
+		 */
+		return bleft && bright;
 #else
 		/* It shouldn't be possible to configure a regex operator
 		 * when there's no support.

@@ -20,6 +20,8 @@
  *   <info@isc.org>
  *   http://www.isc.org/
  */
+#ifndef MINIRES_H
+#define MINIRES_H
 
 #include "cdefs.h"
 #include "osdep.h"
@@ -128,8 +130,6 @@ void  res_buildservicelist (void);
 void res_destroyservicelist (void);
 void res_buildprotolist(void);
 void res_destroyprotolist(void);
-int res_servicenumber(const char *);
-int res_protocolnumber(const char *);
 const char *res_protocolname(int);
 const char *res_servicename(u_int16_t, const char *);
 u_int32_t ns_datetosecs (const char *cp, int *errp);
@@ -194,11 +194,8 @@ isc_result_t ns_sign_tcp_init (void *, const unsigned char *,
 			       unsigned, ns_tcp_tsig_state *);
 isc_result_t ns_sign_tcp (unsigned char *,
 			  unsigned *, unsigned, int, ns_tcp_tsig_state *, int);
-int ns_name_pton (const char *, unsigned char *, size_t);
 int ns_name_pack (const unsigned char *, unsigned char *,
 		  unsigned, const unsigned char **, const unsigned char **);
-int ns_name_compress (const char *, unsigned char *,
-		      size_t, const unsigned char **, const unsigned char **);
 int ns_name_skip (const unsigned char **, const unsigned char *);
 int ns_subdomain (const char *, const char *);
 unsigned char *ns_find_tsig (unsigned char *, unsigned char *);
@@ -232,3 +229,5 @@ isc_result_t ns_rcode_to_isc (int);
 #if defined (TRACING)
 void trace_mr_statp_setup (res_state);
 #endif
+
+#endif /* MINIRES_H */

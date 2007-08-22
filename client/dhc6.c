@@ -33,11 +33,12 @@ struct option *iaaddr_option = NULL;
 struct option *elapsed_option = NULL;
 
 static struct dhc6_lease *dhc6_dup_lease(struct dhc6_lease *lease,
-					 char *file, int line);
-static struct dhc6_ia *dhc6_dup_ia(struct dhc6_ia *ia, char *file, int line);
+					 const char *file, int line);
+static struct dhc6_ia *dhc6_dup_ia(struct dhc6_ia *ia, 
+				   const char *file, int line);
 static struct dhc6_addr *dhc6_dup_addr(struct dhc6_addr *addr,
-				       char *file, int line);
-static void dhc6_ia_destroy(struct dhc6_ia *ia, char *file, int line);
+				       const char *file, int line);
+static void dhc6_ia_destroy(struct dhc6_ia *ia, const char *file, int line);
 static isc_result_t dhc6_parse_ia_na(struct dhc6_ia **pia,
 				     struct packet *packet,
 				     struct option_state *options);
@@ -68,7 +69,8 @@ void do_expire(void *input);
 static void make_client6_options(struct client_state *client,
 				 struct option_state **op,
 				 struct dhc6_lease *lease, u_int8_t message);
-static void script_write_params6(struct client_state *client, char *prefix,
+static void script_write_params6(struct client_state *client, 
+				 const char *prefix,
 				 struct option_state *options);
 
 /* The "best" default DUID, since we cannot predict any information
@@ -85,7 +87,7 @@ static void script_write_params6(struct client_state *client, char *prefix,
  * address this "one daemon model."
  */
 void
-form_duid(struct data_string *duid, char *file, int line)
+form_duid(struct data_string *duid, const char *file, int line)
 {
 	struct interface_info *ip;
 	int len;
@@ -350,7 +352,7 @@ valid_reply(struct packet *packet, struct client_state *client)
 /* Create a complete copy of a DHCPv6 lease structure.
  */
 static struct dhc6_lease *
-dhc6_dup_lease(struct dhc6_lease *lease, char *file, int line)
+dhc6_dup_lease(struct dhc6_lease *lease, const char *file, int line)
 {
 	struct dhc6_lease *copy;
 	struct dhc6_ia **insert_ia, *ia;
@@ -387,7 +389,7 @@ dhc6_dup_lease(struct dhc6_lease *lease, char *file, int line)
 /* Duplicate an IA structure.
  */
 static struct dhc6_ia *
-dhc6_dup_ia(struct dhc6_ia *ia, char *file, int line)
+dhc6_dup_ia(struct dhc6_ia *ia, const char *file, int line)
 {
 	struct dhc6_ia *copy;
 	struct dhc6_addr **insert_addr, *addr;
@@ -422,7 +424,7 @@ dhc6_dup_ia(struct dhc6_ia *ia, char *file, int line)
 /* Duplicate an IAADDR structure.
  */
 static struct dhc6_addr *
-dhc6_dup_addr(struct dhc6_addr *addr, char *file, int line)
+dhc6_dup_addr(struct dhc6_addr *addr, const char *file, int line)
 {
 	struct dhc6_addr *copy;
 
@@ -719,7 +721,7 @@ dhc6_parse_addrs(struct dhc6_addr **paddr, struct packet *packet,
 
 /* Clean up a lease object and deallocate all its parts. */
 void
-dhc6_lease_destroy(struct dhc6_lease *lease, char *file, int line)
+dhc6_lease_destroy(struct dhc6_lease *lease, const char *file, int line)
 {
 	struct dhc6_ia *ia, *nia;
 
@@ -744,7 +746,7 @@ dhc6_lease_destroy(struct dhc6_lease *lease, char *file, int line)
 
 /* Traverse the addresses list, and destroy their contents. */
 static void
-dhc6_ia_destroy(struct dhc6_ia *ia, char *file, int line)
+dhc6_ia_destroy(struct dhc6_ia *ia, const char *file, int line)
 {
 	struct dhc6_addr *addr, *naddr;
 
@@ -992,7 +994,7 @@ do_init6(void *input)
 
 	if ((client->active_lease != NULL) &&
 	    ((old_ia = find_ia(client->active_lease->bindings,
-			       (char *)ia.data)) != NULL)) {
+			       (char *)ia.buffer->data)) != NULL)) {
 		/* For each address in the old IA, request a binding. */
 		memset(&addr, 0, sizeof(addr));
 		for (old_addr = old_ia->addrs ; old_addr != NULL ;
@@ -1204,7 +1206,6 @@ do_release6(void *input)
 	struct client_state *client;
 	struct data_string ds;
 	struct option_cache *oc;
-        struct dhc6_lease *lease;
 	int send_ret;
 
 	client = input;
@@ -1221,10 +1222,11 @@ do_release6(void *input)
 	 * Check whether the server has sent a unicast option; if so, we can
 	 * use the address it specified.
 	 */
-	oc = lookup_option(&dhcpv6_universe, lease->options, D6O_UNICAST);
+	oc = lookup_option(&dhcpv6_universe, 
+			   client->active_lease->options, D6O_UNICAST);
 	if (oc && evaluate_option_cache(&ds, NULL, NULL, NULL,
-                                        lease->options, NULL, &global_scope,
-					oc, MDL)) {
+                                        client->active_lease->options, 
+					NULL, &global_scope, oc, MDL)) {
 		if (ds.len < 16) {
 			log_error("Invalid unicast option length %d.", ds.len);
 		} else {
@@ -1285,9 +1287,9 @@ do_release6(void *input)
  * to info level.
  */
 static void
-status_log(int code, char *scope, const char *additional, int len)
+status_log(int code, const char *scope, const char *additional, int len)
 {
-	char *msg = NULL;
+	const char *msg = NULL;
 
 	switch(code) {
 	      case STATUS_Success:
@@ -1320,7 +1322,8 @@ status_log(int code, char *scope, const char *additional, int len)
 
 	if (len > 0)
 		log_info("%s status code %s: %s", scope, msg,
-			 print_hex_1(len, (unsigned char *)additional, 50));
+			 print_hex_1(len, 
+			 	     (const unsigned char *)additional, 50));
 	else
 		log_info("%s status code %s.", scope, msg);
 }
@@ -1373,7 +1376,7 @@ dhc6_get_status_code(struct option_state *options, unsigned *code,
  */
 static isc_result_t
 dhc6_check_status(isc_result_t rval, struct option_state *options,
-		  char *scope, unsigned *code)
+		  const char *scope, unsigned *code)
 {
 	struct data_string msg;
 	isc_result_t status;
@@ -2353,7 +2356,7 @@ reply_handler(struct packet *packet, struct client_state *client)
  * over-written by the later versions.
  */
 static void
-dhc6_marshall_values(char *prefix, struct client_state *client,
+dhc6_marshall_values(const char *prefix, struct client_state *client,
 		     struct dhc6_lease *lease, struct dhc6_ia *ia,
 		     struct dhc6_addr *addr)
 {
@@ -2656,7 +2659,7 @@ start_bound(struct client_state *client)
 	struct dhc6_ia *ia, *oldia;
 	struct dhc6_addr *addr, *oldaddr;
 	struct dhc6_lease *lease, *old;
-	char *reason;
+	const char *reason;
 	TIME dns_update_offset = 1;
 
 	lease = client->active_lease;
@@ -3089,7 +3092,6 @@ do_expire(void *input)
 void
 unconfigure6(struct client_state *client, const char *reason)
 {
-	struct dhc6_lease *lease;
 	struct dhc6_ia *ia;
 	struct dhc6_addr *addr;
 
@@ -3099,7 +3101,8 @@ unconfigure6(struct client_state *client, const char *reason)
 	for (ia = client->active_lease->bindings ; ia != NULL ; ia = ia->next) {
 		for (addr = ia->addrs ; addr != NULL ; addr = addr->next) {
 			script_init(client, reason, NULL);
-			dhc6_marshall_values("old_", client, lease, ia, addr);
+			dhc6_marshall_values("old_", client, 
+					     client->active_lease, ia, addr);
 			script_go(client);
 		 
 			if (client->config->do_forward_update)
@@ -3200,7 +3203,7 @@ make_client6_options(struct client_state *client, struct option_state **op,
  * generic lines.
  */
 static void
-script_write_params6(struct client_state *client, char *prefix,
+script_write_params6(struct client_state *client, const char *prefix,
 		     struct option_state *options)
 {
 	struct envadd_state es;

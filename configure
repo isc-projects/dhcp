@@ -2232,6 +2232,12 @@ am__tar='${AMTAR} chof - "$$tardir"'; am__untar='${AMTAR} xf -'
 
 
 
+# We want to turn on warnings if we are using gcc and the user did
+# not specify CFLAGS. The autoconf check for the C compiler sets the
+# CFLAGS if gcc is used, so we will save it before we run that check.
+SAVE_CFLAGS="$CFLAGS"
+
+# Now find our C compiler.
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
@@ -3320,6 +3326,15 @@ else
   am__fastdepCC_FALSE=
 fi
 
+
+
+# If we have gcc, and AC_PROG_CC changed the flags, then we know the
+# user did not specify any flags. Add warnings in this case.
+if test "$GCC" = "yes"; then
+	if test "$CFLAGS" != "$SAVE_CFLAGS"; then
+		CFLAGS="$CFLAGS -Wall -Werror -fno-strict-aliasing"
+	fi
+fi
 
 if test -n "$ac_tool_prefix"; then
   # Extract the first word of "${ac_tool_prefix}ranlib", so it can be a program name with args.
@@ -6281,8 +6296,10 @@ _ACEOF
 cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
+
 #include <sys/types.h>
-	 #include <sys/socket.h>
+#include <sys/socket.h>
+
 
 int
 main ()
@@ -6322,8 +6339,10 @@ _ACEOF
 cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
+
 #include <sys/types.h>
-	 #include <sys/socket.h>
+#include <sys/socket.h>
+
 
 int
 main ()
@@ -6384,8 +6403,10 @@ _ACEOF
 cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
+
 #include <sys/types.h>
-	 	 #include <sys/socket.h>
+#include <sys/socket.h>
+
 
 int
 main ()
@@ -6425,8 +6446,10 @@ _ACEOF
 cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
+
 #include <sys/types.h>
-	 	 #include <sys/socket.h>
+#include <sys/socket.h>
+
 
 int
 main ()
@@ -6479,6 +6502,7 @@ echo "$as_me: error: Missing msg_control member in
 			       msg_control structure." >&2;}
    { (exit 1); exit 1; }; }
 fi
+
 
 fi
 

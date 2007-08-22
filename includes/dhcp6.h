@@ -94,7 +94,7 @@
 #define DHCPV6_RELAY_FORW	   12
 #define DHCPV6_RELAY_REPL	   13
 
-extern char *dhcpv6_type_names[];
+extern const char *dhcpv6_type_names[];
 extern const int dhcpv6_type_name_max;
 
 /* DUID type definitions (RFC3315 section 9).
