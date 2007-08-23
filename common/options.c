@@ -2594,7 +2594,7 @@ store_option(struct data_string *result, struct universe *universe,
 						  "refers to unknown "
 						  "option space '%.*s'.",
 						  oc->option->code,
-						  end - start, start);
+						  (int)(end - start), start);
 					break;
 				}
 
