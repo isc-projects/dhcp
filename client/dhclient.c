@@ -1207,6 +1207,7 @@ void dhcpoffer (packet)
 	struct interface_info *ip = packet -> interface;
 	struct client_state *client;
 	struct client_lease *lease, *lp;
+	struct option **req;
 	int i;
 	int stop_selecting;
 	const char *name = packet -> packet_type ? "DHCPOFFER" : "BOOTREPLY";
@@ -1238,29 +1239,34 @@ void dhcpoffer (packet)
 	sprintf (obuf, "%s from %s", name, piaddr (packet -> client_addr));
 
 
-	/* If this lease doesn't supply the minimum required parameters,
-	   blow it off. */
-	if (client -> config -> required_options) {
-	    for (i = 0; client -> config -> required_options [i]; i++) {
-		if (!lookup_option
-		    (&dhcp_universe, packet -> options,
-		     client -> config -> required_options [i])) {
-		    struct option *option = NULL;
-		    unsigned code = client->config->required_options[i];
+	/* If this lease doesn't supply the minimum required DHCPv4 parameters,
+	 * ignore it.
+	 */
+	req = client->config->required_options;
+	if (req != NULL) {
+		for (i = 0 ; req[i] != NULL ; i++) {
+			if ((req[i]->universe == &dhcp_universe) &&
+			    !lookup_option(&dhcp_universe, packet->options,
+					   req[i]->code)) {
+				struct option *option = NULL;
+				unsigned code = req[i]->code;
 
-		    option_code_hash_lookup(&option, dhcp_universe.code_hash,
-					    &code, 0, MDL);
+				option_code_hash_lookup(&option,
+							dhcp_universe.code_hash,
+							&code, 0, MDL);
 
-		    if (option)
-			log_info("%s: no %s option.", obuf, option->name);
-		    else
-			log_info("%s: no unknown-%u option.", obuf, code);
+				if (option)
+					log_info("%s: no %s option.", obuf,
+						 option->name);
+				else
+					log_info("%s: no unknown-%u option.",
+						 obuf, code);
 
-		    option_dereference(&option, MDL);
+				option_dereference(&option, MDL);
 
-		    return;
+				return;
+			}
 		}
-	    }
 	}
 
 	/* If we've already seen this lease, don't record it again. */
@@ -1957,14 +1963,11 @@ void send_release (cpp)
 				      (struct hardware *)0);
 }
 
-void make_client_options (client, lease, type, sid, rip, prl, op)
-	struct client_state *client;
-	struct client_lease *lease;
-	u_int8_t *type;
-	struct option_cache *sid;
-	struct iaddr *rip;
-	u_int32_t *prl;
-	struct option_state **op;
+void
+make_client_options(struct client_state *client, struct client_lease *lease,
+		    u_int8_t *type, struct option_cache *sid,
+		    struct iaddr *rip, struct option **prl,
+		    struct option_state **op)
 {
 	unsigned i;
 	struct option_cache *oc;
@@ -2014,20 +2017,28 @@ void make_client_options (client, lease, type, sid, rip, prl, op)
 	option_dereference(&option, MDL);
 
 	if (prl) {
-		/* Figure out how many parameters were requested. */
-		for (i = 0; prl [i]; i++)
-			;
-		if (!buffer_allocate (&bp, i, MDL))
+		int len;
+
+		/* Probe the length of the list. */
+		len = 0;
+		for (i = 0 ; prl[i] != NULL ; i++)
+			if (prl[i]->universe == &dhcp_universe)
+				len++;
+
+		if (!buffer_allocate (&bp, len, MDL))
 			log_error ("can't make parameter list buffer.");
 		else {
 			unsigned code = DHO_DHCP_PARAMETER_REQUEST_LIST;
 
-			for (i = 0; prl [i]; i++)
-				bp -> data [i] = prl [i];
+			len = 0;
+			for (i = 0 ; prl[i] != NULL ; i++)
+				if (prl[i]->universe == &dhcp_universe)
+					bp->data[len++] = prl[i]->code;
+
 			if (!(option_code_hash_lookup(&option,
 						      dhcp_universe.code_hash,
 						      &code, 0, MDL) &&
-			      make_const_option_cache(&oc, &bp, NULL, i,
+			      make_const_option_cache(&oc, &bp, NULL, len,
 						      option, MDL)))
 				log_error ("can't make option cache");
 			else {
@@ -2210,8 +2221,8 @@ void make_decline (client, lease)
 
 	oc = lookup_option (&dhcp_universe, lease -> options,
 			    DHO_DHCP_SERVER_IDENTIFIER);
-	make_client_options (client, lease, &decline, oc,
-			     &lease -> address, (u_int32_t *)0, &options);
+	make_client_options(client, lease, &decline, oc, &lease->address,
+			    NULL, &options);
 
 	/* Set up the option buffer... */
 	memset (&client -> packet, 0, sizeof (client -> packet));
@@ -2267,9 +2278,7 @@ void make_release (client, lease)
 
 	oc = lookup_option (&dhcp_universe, lease -> options,
 			    DHO_DHCP_SERVER_IDENTIFIER);
-	make_client_options (client, lease, &request, oc,
-			     (struct iaddr *)0, (u_int32_t *)0,
-			     &options);
+	make_client_options(client, lease, &request, oc, NULL, NULL, &options);
 
 	/* Set up the option buffer... */
 	client -> packet_length =

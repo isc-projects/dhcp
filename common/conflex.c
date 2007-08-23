@@ -709,6 +709,8 @@ intern(char *atom, enum dhcp_token dfv) {
 			return ALIAS;
 		if (!strcasecmp (atom + 1, "lgorithm"))
 			return ALGORITHM;
+		if (!strcasecmp (atom + 1, "lso"))
+			return TOKEN_ALSO;
 		if (!strcasecmp (atom + 1, "bandoned"))
 			return TOKEN_ABANDONED;
 		if (!strcasecmp (atom + 1, "dd"))

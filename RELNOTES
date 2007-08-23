@@ -72,6 +72,10 @@ suggested fixes to <dhcp-users@isc.org>.
   would segfault if a client attempted to renew a lease that had been
   loaded from persistent storage.
 
+- 'request' and 'also request' syntaxes have been added to accomodate
+  the DHCPv6 client configuration.  'send dhcp6.oro' is no longer
+  necessary.
+
 			Changes since 4.0.0a1
 
 - Bug in octal parsing fixed. Thanks to Bernd Fuhrmann for the report

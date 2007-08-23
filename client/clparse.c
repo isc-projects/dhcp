@@ -37,16 +37,8 @@
 
 struct client_config top_level_config;
 
-u_int32_t default_requested_options [] = {
-	DHO_SUBNET_MASK,
-	DHO_BROADCAST_ADDRESS,
-	DHO_TIME_OFFSET,
-	DHO_ROUTERS,
-	DHO_DOMAIN_NAME,
-	DHO_DOMAIN_NAME_SERVERS,
-	DHO_HOST_NAME,
-	0
-};
+#define NUM_DEFAULT_REQUESTED_OPTS	9
+struct option *default_requested_options[NUM_DEFAULT_REQUESTED_OPTS + 1];
 
 static void parse_client_default_duid(struct parse *cfile);
 static void parse_client6_lease_statement(struct parse *cfile);
@@ -65,6 +57,62 @@ isc_result_t read_client_conf ()
 	struct client_config *config;
 	struct interface_info *ip;
 	isc_result_t status;
+	unsigned code;
+
+	/* Initialize the default request list. */
+	memset(default_requested_options, 0, sizeof(default_requested_options));
+
+	/* 1 */
+	code = DHO_SUBNET_MASK;
+	option_code_hash_lookup(&default_requested_options[0],
+				dhcp_universe.code_hash, &code, 0, MDL);
+
+	/* 2 */
+	code = DHO_BROADCAST_ADDRESS;
+	option_code_hash_lookup(&default_requested_options[1],
+				dhcp_universe.code_hash, &code, 0, MDL);
+
+	/* 3 */
+	code = DHO_TIME_OFFSET;
+	option_code_hash_lookup(&default_requested_options[2],
+				dhcp_universe.code_hash, &code, 0, MDL);
+
+	/* 4 */
+	code = DHO_ROUTERS;
+	option_code_hash_lookup(&default_requested_options[3],
+				dhcp_universe.code_hash, &code, 0, MDL);
+
+	/* 5 */
+	code = DHO_DOMAIN_NAME;
+	option_code_hash_lookup(&default_requested_options[4],
+				dhcp_universe.code_hash, &code, 0, MDL);
+
+	/* 6 */
+	code = DHO_DOMAIN_NAME_SERVERS;
+	option_code_hash_lookup(&default_requested_options[5],
+				dhcp_universe.code_hash, &code, 0, MDL);
+
+	/* 7 */
+	code = DHO_HOST_NAME;
+	option_code_hash_lookup(&default_requested_options[6],
+				dhcp_universe.code_hash, &code, 0, MDL);
+
+	/* 8 */
+	code = D6O_NAME_SERVERS;
+	option_code_hash_lookup(&default_requested_options[7],
+				dhcpv6_universe.code_hash, &code, 0, MDL);
+
+	/* 9 */
+	code = D6O_DOMAIN_SEARCH;
+	option_code_hash_lookup(&default_requested_options[8],
+				dhcpv6_universe.code_hash, &code, 0, MDL);
+
+	for (code = 0 ; code < NUM_DEFAULT_REQUESTED_OPTS ; code++) {
+		if (default_requested_options[code] == NULL)
+			log_fatal("Unable to find option definition for "
+				  "index %u during default parameter request "
+				  "assembly.", code);
+	}
 
 	/* Initialize the top level client configuration. */
 	memset (&top_level_config, 0, sizeof top_level_config);
@@ -231,6 +279,8 @@ void read_client_leases ()
 	PREPEND option-decl |
 	APPEND option-decl |
 	hardware-declaration |
+	ALSO REQUEST option-list |
+	ALSO REQUIRE option-list |
 	REQUEST option-list |
 	REQUIRE option-list |
 	TIMEOUT number |
@@ -259,6 +309,8 @@ void parse_client_statement (cfile, ip, config)
 	int known;
 	int tmp, i;
 	isc_result_t status;
+	int listlen;
+	struct option ***append_list, **new_list, **cat_list;
 
 	switch (peek_token (&val, (unsigned *)0, cfile)) {
 	      case INCLUDE:
@@ -295,6 +347,73 @@ void parse_client_statement (cfile, ip, config)
 			break;
 		}
 		parse_key (cfile);
+		return;
+
+	      case TOKEN_ALSO:
+		/* consume ALSO */
+		next_token(&val, NULL, cfile);
+
+		/* consume type of ALSO list. */
+		token = next_token(&val, NULL, cfile);
+
+		if (token == REQUEST) {
+			append_list = &config->requested_options;
+		} else if (token == REQUIRE) {
+			append_list = &config->required_options;
+		} else {
+			parse_warn(cfile, "expected REQUEST or REQUIRE list");
+			skip_to_semi(cfile);
+			return;
+		}
+
+		/* If there is no list, cut the concat short. */
+		if (*append_list == NULL) {
+			parse_option_list(cfile, append_list);
+			return;
+		}
+
+		/* Count the length of the existing list. */
+		for (i = 0 ; (*append_list)[i] != NULL ; i++)
+			; /* This space intentionally left blank. */
+
+		/* If there's no codes on the list, cut the concat short. */
+		if (i == 0) {
+			parse_option_list(cfile, append_list);
+			return;
+		}
+
+		tmp = parse_option_list(cfile, &new_list);
+
+		if (tmp == 0 || new_list == NULL)
+			return;
+
+		/* Allocate 'i + tmp' buckets plus a terminator. */
+		cat_list = dmalloc(sizeof(struct option *) * (i + tmp + 1),
+				   MDL);
+
+		if (cat_list == NULL) {
+			log_error("Unable to allocate memory for new "
+				  "request list.");
+			skip_to_semi(cfile);
+			return;
+		}
+
+		for (i = 0 ; (*append_list)[i] != NULL ; i++)
+			option_reference(&cat_list[i], (*append_list)[i], MDL);
+
+		tmp = i;
+
+		for (i = 0 ; new_list[i] != 0 ; i++)
+			option_reference(&cat_list[tmp++], new_list[i], MDL);
+
+		cat_list[tmp] = 0;
+
+		/* XXX: We cannot free the old list, because it may have been
+		 * XXX: assigned from an outer configuration scope (or may be
+		 * XXX: the static default setting).
+		 */
+		*append_list = cat_list;
+
 		return;
 
 		/* REQUIRE can either start a policy statement or a
@@ -415,7 +534,7 @@ void parse_client_statement (cfile, ip, config)
 	      case REQUEST:
 		token = next_token (&val, (unsigned *)0, cfile);
 		if (config -> requested_options == default_requested_options)
-			config -> requested_options = (u_int32_t *)0;
+			config -> requested_options = NULL;
 		parse_option_list (cfile, &config -> requested_options);
 		return;
 
@@ -612,9 +731,8 @@ void parse_client_statement (cfile, ip, config)
 /* option-list :== option_name |
    		   option_list COMMA option_name */
 
-void parse_option_list (cfile, list)
-	struct parse *cfile;
-	u_int32_t **list;
+int
+parse_option_list(struct parse *cfile, struct option ***list)
 {
 	int ix;
 	int token;
@@ -634,25 +752,18 @@ void parse_option_list (cfile, list)
 			parse_warn (cfile, "%s: expected option name.", val);
 			token = next_token (&val, (unsigned *)0, cfile);
 			skip_to_semi (cfile);
-			return;
+			return 0;
 		}
 		status = parse_option_name(cfile, 0, NULL, &option);
 		if (status != ISC_R_SUCCESS || option == NULL) {
 			parse_warn (cfile, "%s: expected option name.", val);
-			return;
-		}
-		if (option -> universe != &dhcp_universe) {
-			parse_warn (cfile,
-				"%s.%s: Only global options allowed.",
-				option -> universe -> name, option->name );
-			skip_to_semi (cfile);
-			option_dereference(&option, MDL);
-			return;
+			return 0;
 		}
 		r = new_pair (MDL);
 		if (!r)
 			log_fatal ("can't allocate pair for option code.");
-		r -> car = (caddr_t)(long)option -> code;
+		/* XXX: we should probably carry a reference across this */
+		r->car = (caddr_t)option;
 		option_dereference(&option, MDL);
 		r -> cdr = (pair)0;
 		if (p)
@@ -666,20 +777,21 @@ void parse_option_list (cfile, list)
 	if (token != SEMI) {
 		parse_warn (cfile, "expecting semicolon.");
 		skip_to_semi (cfile);
-		return;
+		return 0;
 	}
 	/* XXX we can't free the list here, because we may have copied
 	   XXX it from an outer config state. */
-	*list = (u_int32_t *)0;
+	*list = NULL;
 	if (ix) {
-		*list = dmalloc ((ix + 1) * sizeof **list, MDL);
+		*list = dmalloc ((ix + 1) * sizeof(struct option *), MDL);
 		if (!*list)
 			log_error ("no memory for option list.");
 		else {
 			ix = 0;
 			for (q = p; q; q = q -> cdr)
-				(*list) [ix++] = (u_int32_t)(long)q -> car;
-			(*list) [ix] = 0;
+				option_reference(&(*list)[ix++],
+						 (struct option *)q->car, MDL);
+			(*list)[ix] = NULL;
 		}
 		while (p) {
 			q = p -> cdr;
@@ -687,6 +799,8 @@ void parse_option_list (cfile, list)
 			p = q;
 		}
 	}
+
+	return ix;
 }
 
 /* interface-declaration :==

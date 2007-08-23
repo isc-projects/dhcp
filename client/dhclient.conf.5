@@ -1,4 +1,4 @@
-.\"	$Id: dhclient.conf.5,v 1.20 2007/05/19 19:16:23 dhankins Exp $
+.\"	$Id: dhclient.conf.5,v 1.21 2007/08/23 16:06:08 dhankins Exp $
 .\"
 .\" Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
@@ -179,14 +179,16 @@ are called \fIDHCP Options\fR.  DHCP Options are defined in
 .B request
 .I statement
 .PP
- \fBrequest [ \fIoption\fR ] [\fB,\fI ... \fIoption\fR ]\fB;\fR
+ \fB[ also ] request [ [ \fIoption-space\fR . ] \fIoption\fR ] [\fB,\fI ... ]\fB;\fR
 .PP
 The request statement causes the client to request that any server
 responding to the client send the client its values for the specified
 options.   Only the option names should be specified in the request
 statement - not option parameters.   By default, the DHCP server
 requests the subnet-mask, broadcast-address, time-offset, routers,
-domain-name, domain-name-servers and host-name options. 
+domain-name, domain-name-servers and host-name options.  Note that if
+you enter a 'request' statement, you over-ride this default and these
+options will not be requested.
 .PP
 In some cases, it may be desirable to send no parameter request list
 at all.   To do this, simply write the request statement but specify
@@ -196,15 +198,30 @@ no parameters:
 	request;
 .fi
 .PP
+In most cases, it is desirable to simply add one option to the request
+list which is of interest to the client in question.  In this case, it
+is best to 'also request' the additional options:
+.PP
+.nf
+	also request domain-search, dhcp6.sip-servers-addresses;
+.fi
+.PP
 .I The
 .B require
 .I statement
 .PP
- \fBrequire [ \fIoption\fR ] [\fB,\fI ... \fIoption ]\fB;\fR
+ \fB[ also ] require [ [ \fIoption-space\fR . ] \fIoption\fR ] [\fB,\fI ... ]\fB;\fR
 .PP
 The require statement lists options that must be sent in order for an
 offer to be accepted.   Offers that do not contain all the listed
-options will be ignored.
+options will be ignored.  There is no default require list.
+.PP
+.nf
+	require name-servers;
+
+	interface eth0 {
+		also require domain-search;
+	}
 .PP
 .I The
 .B send

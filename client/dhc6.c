@@ -27,10 +27,15 @@
 #ifdef DHCPv6
 
 struct sockaddr_in6 DHCPv6DestAddr;
+
+/* Option definition structures that are used by the software - declared
+ * here once and assigned at startup to save lookups.
+ */
 struct option *clientid_option = NULL;
+struct option *elapsed_option = NULL;
 struct option *ia_na_option = NULL;
 struct option *iaaddr_option = NULL;
-struct option *elapsed_option = NULL;
+struct option *oro_option = NULL;
 
 static struct dhc6_lease *dhc6_dup_lease(struct dhc6_lease *lease,
 					 const char *file, int line);
@@ -162,6 +167,11 @@ dhcpv6_client_assignments(void)
 				     dhcpv6_universe.code_hash, &code, 0, MDL))
 		log_fatal("Unable to find the CLIENTID option definition.");
 
+	code = D6O_ELAPSED_TIME;
+	if (!option_code_hash_lookup(&elapsed_option,
+				     dhcpv6_universe.code_hash, &code, 0, MDL))
+		log_fatal("Unable to find the ELAPSED_TIME option definition.");
+
 	code = D6O_IA_NA;
 	if (!option_code_hash_lookup(&ia_na_option, dhcpv6_universe.code_hash,
 				     &code, 0, MDL))
@@ -172,10 +182,10 @@ dhcpv6_client_assignments(void)
 				     &code, 0, MDL))
 		log_fatal("Unable to find the IAADDR option definition.");
 
-	code = D6O_ELAPSED_TIME;
-	if (!option_code_hash_lookup(&elapsed_option,
-				     dhcpv6_universe.code_hash, &code, 0, MDL))
-		log_fatal("Unable to find the ELAPSED_TIME option definition.");
+	code = D6O_ORO;
+	if (!option_code_hash_lookup(&oro_option, dhcpv6_universe.code_hash,
+				     &code, 0, MDL))
+		log_fatal("Unable to find the ORO option definition.");
 
 #ifndef __CYGWIN32__ /* XXX */
 	endservent();
@@ -790,23 +800,42 @@ insert_lease(struct dhc6_lease **head, struct dhc6_lease *new)
 /* Not really clear what to do here yet.
  */
 static int
-dhc6_score_lease(struct dhc6_lease *lease)
+dhc6_score_lease(struct client_state *client, struct dhc6_lease *lease)
 {
 	struct dhc6_ia *ia;
 	struct dhc6_addr *addr;
+	struct option **req;
+	int i;
 
 	if (lease->score)
 		return lease->score;
 
 	lease->score = 1;
 
-#if 0 /* XXX: oro is a bit...weird...still */
-	for (i = 0 ; i < oro_len ; i++) {
-		if (lookup_option(&dhcpv6_universe, lease->options,
-				  oro[i]) != NULL)
-			lease->score++;
+	/* If this lease lacks a required option, dump it. */
+	/* XXX: we should be able to cache the failure... */
+	req = client->config->required_options;
+	if (req != NULL) {
+		for (i = 0 ; req[i] != NULL ; i++) {
+			if (lookup_option(&dhcpv6_universe, lease->options,
+					  req[i]->code) == NULL) {
+				lease->score = 0;
+				return lease->score;
+			}
+		}
 	}
-#endif
+
+	/* If this lease contains a requested option, improve its
+	 * score.
+	 */
+	req = client->config->requested_options;
+	if (req != NULL) {
+		for (i = 0 ; req[i] != NULL ; i++) {
+			if (lookup_option(&dhcpv6_universe, lease->options,
+					  req[i]->code) != NULL)
+				lease->score++;
+		}
+	}
 
 	for (ia = lease->bindings ; ia != NULL ; ia = ia->next) {
 		lease->score += 50;
@@ -1708,8 +1737,8 @@ dhc6_check_reply(struct client_state *client, struct dhc6_lease *new)
 		/* Compare the new lease with the selected lease to make
 		 * sure there is no risky business.
 		 */
-		nscore = dhc6_score_lease(new);
-		sscore = dhc6_score_lease(client->selected_lease);
+		nscore = dhc6_score_lease(client, new);
+		sscore = dhc6_score_lease(client, client->selected_lease);
 		if ((client->advertised_leases != NULL) &&
 		    (nscore < (sscore / 2))) {
 			/* XXX: An attacker might reply this way to make
@@ -1799,7 +1828,8 @@ init_handler(struct packet *packet, struct client_state *client)
 	 * should not if the advertise contains less than one IA and address.
 	 */
 	if ((client->txcount > 1) ||
-	    ((lease->pref == 255) && (dhc6_score_lease(lease) > 150))) {
+	    ((lease->pref == 255) &&
+	    (dhc6_score_lease(client, lease) > 150))) {
 		log_debug("RCV:  Advertisement immediately selected.");
 		cancel_timeout(do_init6, client);
 		start_selecting6(client);
@@ -1837,7 +1867,7 @@ init_handler(struct packet *packet, struct client_state *client)
  * server identifiers and to select the numerically lower one.
  */
 static struct dhc6_lease *
-dhc6_best_lease(struct dhc6_lease **head)
+dhc6_best_lease(struct client_state *client, struct dhc6_lease **head)
 {
 	struct dhc6_lease **rpos, *rval, **candp, *cand;
 	int cscore, rscore;
@@ -1847,7 +1877,7 @@ dhc6_best_lease(struct dhc6_lease **head)
 
 	rpos = head;
 	rval = *rpos;
-	rscore = dhc6_score_lease(rval);
+	rscore = dhc6_score_lease(client, rval);
 	candp = &rval->next;
 	cand = *candp;
 
@@ -1858,7 +1888,7 @@ dhc6_best_lease(struct dhc6_lease **head)
 		  rscore, (unsigned)rval->pref);
 
 	for (; cand != NULL ; candp = &cand->next, cand = *candp) {
-		cscore = dhc6_score_lease(cand);
+		cscore = dhc6_score_lease(client, cand);
 
 		log_debug("PRC:  X-- Candidate %s (s: %d, p: %u).",
 			  print_hex_1(cand->server_id.len,
@@ -1942,7 +1972,7 @@ start_selecting6(struct client_state *client)
 	log_debug("PRC: Selecting best advertised lease.");
 	client->state = S_SELECTING;
 
-	lease = dhc6_best_lease(&client->advertised_leases);
+	lease = dhc6_best_lease(client, &client->advertised_leases);
 
 	if (lease == NULL)
 		log_fatal("Impossible error at %s:%d.", MDL);
@@ -3120,6 +3150,9 @@ make_client6_options(struct client_state *client, struct option_state **op,
 		     struct dhc6_lease *lease, u_int8_t message)
 {
 	struct option_cache *oc;
+	struct option **req;
+	struct data_string oro;
+	int buflen, i;
 
 	if ((op == NULL) || (client == NULL))
 		return;
@@ -3127,8 +3160,10 @@ make_client6_options(struct client_state *client, struct option_state **op,
 	if (*op)
 		option_state_dereference(op, MDL);
 
+	/* Create a cache to carry options to transmission. */
 	option_state_allocate(op, MDL);
 
+	/* Create and store an 'elapsed time' option in the cache. */
 	oc = NULL;
 	if (option_cache_allocate(&oc, MDL)) {
 		const unsigned char *cdata;
@@ -3174,6 +3209,98 @@ make_client6_options(struct client_state *client, struct option_state **op,
 			save_option(&dhcpv6_universe, *op, oc);
 	}
 
+	/* 'send dhcp6.oro foo;' syntax we used in 4.0.0a1/a2 has been
+	 * deprecated by adjustments to the 'request' syntax also used for
+	 * DHCPv4.
+	 */
+	if (lookup_option(&dhcpv6_universe, *op, D6O_ORO) == NULL)
+		log_error("'send dhcp6.oro' syntax is deprecated, please "
+			  "use the 'request' syntax ("man dhclient.conf").");
+
+	/* Construct and store an ORO (Option Request Option).  It is a
+	 * fatal error to fail to send an ORO (of at least zero length).
+	 *
+	 * Discussion:  RFC3315 appears to be inconsistent in its statements
+	 * of whether or not the ORO is mandatory.  In section 18.1.1
+	 * ("Creation and Transmission of Request Messages"):
+	 *
+	 *    The client MUST include an Option Request option (see section
+	 *    22.7) to indicate the options the client is interested in
+	 *    receiving.  The client MAY include options with data values as
+	 *    hints to the server about parameter values the client would like
+	 *    to have returned.
+	 *
+	 * This MUST is missing from the creation/transmission of other
+	 * messages (such as Renew and Rebind), and the section 22.7 ("Option
+	 * Request Option" format and definition):
+	 *
+	 *    A client MAY include an Option Request option in a Solicit,
+	 *    Request, Renew, Rebind, Confirm or Information-request message to
+	 *    inform the server about options the client wants the server to
+	 *    send to the client.  A server MAY include an Option Request
+	 *    option in a Reconfigure option to indicate which options the
+	 *    client should request from the server.
+	 *
+	 * seems to relax the requirement from MUST to MAY (and still other
+	 * language in RFC3315 supports this).
+	 *
+	 * In lieu of a clarification of RFC3315, we will conform with the
+	 * MUST.  Instead of an absent ORO, we will if there are no options
+	 * to request supply an empty ORO.  Theoretically, an absent ORO is
+	 * difficult to interpret (does the client want all options or no
+	 * options?).  A zero-length ORO is intuitively clear: requesting
+	 * nothing.
+	 */
+	memset(&oro, 0, sizeof(oro));
+	buflen = 32;
+	if (!buffer_allocate(&oro.buffer, buflen, MDL))
+		log_fatal("Out of memory constructing DHCPv6 ORO.");
+	oro.data = oro.buffer->data;
+	req = client->config->requested_options;
+	if (req != NULL) {
+		for (i = 0 ; req[i] != NULL ; i++) {
+			if (buflen == oro.len) {
+				struct buffer *tmpbuf = NULL;
+
+				buflen += 32;
+
+				/* Shell game. */
+				buffer_reference(&tmpbuf, oro.buffer, MDL);
+				buffer_dereference(&oro.buffer, MDL);
+
+				if (!buffer_allocate(&oro.buffer, buflen, MDL))
+					log_fatal("Out of memory resizing "
+						  "DHCPv6 ORO buffer.");
+
+				oro.data = oro.buffer->data;
+
+				memcpy(oro.buffer->data, tmpbuf->data,
+				       oro.len);
+
+				buffer_dereference(&tmpbuf, MDL);
+			}
+
+			if (req[i]->universe == &dhcpv6_universe) {
+				/* Append the code to the ORO. */
+				putUShort(oro.buffer->data + oro.len,
+					  req[i]->code);
+				oro.len += 2;
+			}
+		}
+	}
+
+	oc = NULL;
+	if (option_cache_allocate(&oc, MDL) &&
+	    make_const_data(&oc->expression, oro.data, oro.len, 0, 0, MDL)) {
+		option_reference(&oc->option, oro_option, MDL);
+		save_option(&dhcpv6_universe, *op, oc);
+	} else {
+		log_fatal("Unable to create ORO option cache.");
+	}
+
+	data_string_forget(&oro, MDL);
+
+	/* Bring in any configured options to send. */
 	if (client->config->on_transmission)
 		execute_statements_in_scope(NULL, NULL, NULL, client,
 					    lease ? lease->options : NULL,
@@ -3186,7 +3313,8 @@ make_client6_options(struct client_state *client, struct option_state **op,
 	 * way (may as well fail early).
 	 */
 	if (lookup_option(&dhcpv6_universe, *op, D6O_ORO) == NULL)
-		log_fatal("You must configure a dhcp6.oro!");
+		log_fatal("Internal inconsistency: no dhcp6.oro in transmit "
+			  "state.");
 }
 
 /* A clone of the DHCPv4 script_write_params() minus the DHCPv4-specific

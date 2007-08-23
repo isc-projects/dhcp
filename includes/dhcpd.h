@@ -931,8 +931,8 @@ struct client_config {
 	 */
 	struct group *on_transmission;
 
-	u_int32_t *required_options; /* Options server must supply. */
-	u_int32_t *requested_options; /* Options to request from server. */
+	struct option **required_options;  /* Options that MUST be present. */
+	struct option **requested_options; /* Options to request (ORO/PRL). */
 
 	TIME timeout;			/* Start to panic if we don't get a
 					   lease in this time period when
@@ -2357,7 +2357,7 @@ void bind_lease PROTO ((struct client_state *));
 void make_client_options PROTO ((struct client_state *,
 				 struct client_lease *, u_int8_t *,
 				 struct option_cache *, struct iaddr *,
-				 u_int32_t *, struct option_state **));
+				 struct option **, struct option_state **));
 void make_discover PROTO ((struct client_state *, struct client_lease *));
 void make_request PROTO ((struct client_state *, struct client_lease *));
 void make_decline PROTO ((struct client_state *, struct client_lease *));
@@ -2507,7 +2507,7 @@ void read_client_leases PROTO ((void));
 void parse_client_statement PROTO ((struct parse *, struct interface_info *,
 				    struct client_config *));
 int parse_X PROTO ((struct parse *, u_int8_t *, unsigned));
-void parse_option_list PROTO ((struct parse *, u_int32_t **));
+int parse_option_list PROTO ((struct parse *, struct option ***));
 void parse_interface_declaration PROTO ((struct parse *,
 					 struct client_config *, char *));
 int interface_or_dummy PROTO ((struct interface_info **, const char *));
