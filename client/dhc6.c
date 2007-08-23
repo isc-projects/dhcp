@@ -3215,7 +3215,7 @@ make_client6_options(struct client_state *client, struct option_state **op,
 	 */
 	if (lookup_option(&dhcpv6_universe, *op, D6O_ORO) == NULL)
 		log_error("'send dhcp6.oro' syntax is deprecated, please "
-			  "use the 'request' syntax ("man dhclient.conf").");
+			  "use the 'request' syntax (\"man dhclient.conf\").");
 
 	/* Construct and store an ORO (Option Request Option).  It is a
 	 * fatal error to fail to send an ORO (of at least zero length).
