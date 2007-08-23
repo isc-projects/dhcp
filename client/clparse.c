@@ -309,7 +309,6 @@ void parse_client_statement (cfile, ip, config)
 	int known;
 	int tmp, i;
 	isc_result_t status;
-	int listlen;
 	struct option ***append_list, **new_list, **cat_list;
 
 	switch (peek_token (&val, (unsigned *)0, cfile)) {
