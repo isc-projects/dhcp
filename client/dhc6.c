@@ -1044,7 +1044,7 @@ do_init6(void *input)
 
 	log_info("XMT: Solicit on %s, interval %ld",
 		 client->name ? client->name : client->interface->name,
-		 client->RT);
+		 (long int)client->RT);
 
 	send_ret = send_packet6(client->interface,
 				ds.data, ds.len, &DHCPv6DestAddr);
@@ -1145,7 +1145,7 @@ do_confirm6(void *input)
 
 	log_info("XMT: Confirm on %s, interval %ld.",
 		 client->name ? client->name : client->interface->name,
-		 client->RT);
+		 (long int)client->RT);
 
 	send_ret = send_packet6(client->interface, ds.data, ds.len,
 				&DHCPv6DestAddr);
@@ -1268,7 +1268,7 @@ do_release6(void *input)
 	/* Transmit and wait. */
 	log_info("XMT: Release on %s, interval %ld.",
 		 client->name ? client->name : client->interface->name,
-		 client->RT);
+		 (long int)client->RT);
 
 	send_ret = send_packet6(client->interface, ds.data, ds.len,
 				&DHCPv6DestAddr);
@@ -2068,7 +2068,7 @@ do_select6(void *input)
 
 	log_info("XMT: Request on %s, interval %ld",
 		 client->name ? client->name : client->interface->name,
-		 client->RT);
+		 (long int)client->RT);
 
 	send_ret = send_packet6(client->interface,
 				ds.data, ds.len, &DHCPv6DestAddr);
@@ -2917,7 +2917,7 @@ do_refresh6(void *input)
 	log_info("XMT: %s on %s, interval %ld",
 		 dhcpv6_type_names[client->refresh_type],
 		 client->name ? client->name : client->interface->name,
-		 client->RT);
+		 (long int)client->RT);
 
 	send_ret = send_packet6(client->interface, ds.data, ds.len, dest_addr);
 

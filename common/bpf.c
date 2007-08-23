@@ -226,9 +226,10 @@ void if_register_receive (info)
 {
 	int flag = 1;
 	struct bpf_version v;
-	u_int32_t addr;
 	struct bpf_program p;
+#ifdef NEED_OSF_PFILT_HACKS
 	u_int32_t bits;
+#endif
 #ifdef DEC_FDDI
 	int link_layer;
 #endif /* DEC_FDDI */
@@ -356,7 +357,6 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	double ip [32];
 	struct iovec iov [3];
 	int result;
-	int fudge;
 
 	if (!strcmp (interface -> name, "fallback"))
 		return send_fallback (interface, packet, raw,
