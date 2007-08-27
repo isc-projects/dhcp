@@ -4825,7 +4825,7 @@ struct option *option;
                  * not an array of pairs of IP addresses, or something like
                  * that.
                  */
-		int uniform = option -> format [1] == 'A';
+		int uniform = 0;
 
 	      and_again:
 		/* Set fmt to start of format for 'A' and one char back
@@ -4837,9 +4837,10 @@ struct option *option;
 			fmt = option->format;
 
 		/* 'a' means always uniform */
-		uniform |= (fmt [1] == 'a');
+		if ((fmt[0] != '\0') && (tolower(fmt[1]) == 'a')) 
+			uniform = 1;
 
-		for ( ; *fmt; fmt++) {
+		do {
 			if ((*fmt == 'A') || (*fmt == 'a'))
 				break;
 			if (*fmt == 'o')
@@ -4860,7 +4861,12 @@ struct option *option;
 			}
                         if (tmp)
 				expression_dereference (&tmp, MDL);
-		}
+
+			if (*fmt != '\0')
+				fmt++;
+
+		} while (*fmt != '\0');
+
 		if ((*fmt == 'A') || (*fmt == 'a')) {
 			token = peek_token (&val, (unsigned *)0, cfile);
 			/* Comma means: continue with next element in array */
@@ -4904,13 +4910,16 @@ int parse_option_statement (result, cfile, lookups, option, op)
 	int lose;
 
 	token = peek_token (&val, (unsigned *)0, cfile);
-	if (token == SEMI) {
+	if ((token == SEMI) && (option->format[0] != '\0')) {
 		/* Eat the semicolon... */
+		/*
+		 * XXXSK: I'm not sure why we should ever get here, but we 
+		 * 	  do during our startup. This confuses things if
+		 * 	  we are parsing a zero-length option, so don't
+		 * 	  eat the semicolon token in that case.
+		 */
 		token = next_token (&val, (unsigned *)0, cfile);
-		goto done;
-	}
-
-	if (token == EQUAL) {
+	} else if (token == EQUAL) {
 		/* Eat the equals sign. */
 		token = next_token (&val, (unsigned *)0, cfile);
 
@@ -4926,16 +4935,11 @@ int parse_option_statement (result, cfile, lookups, option, op)
 			}
 			return 0;
 		}
-
-		/* We got a valid expression, so use it. */
-		goto done;
+	} else {
+		if (! parse_option_data(&expr, cfile, lookups, option))
+			return 0;
 	}
 
-	/* Parse the option data... */
-        if (! parse_option_data(&expr, cfile, lookups, option))
-                return 0;
-
-      done:
 	if (!parse_semi (cfile))
 		return 0;
 	if (!executable_statement_allocate (result, MDL))
@@ -5189,6 +5193,17 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 			goto bad_flag;
 		}
 		if (!make_const_data (&t, buf, 1, 0, 1, MDL))
+			return 0;
+		break;
+
+	      case '\0': /* Zero-length option. */
+	        buf[0] = '\0';
+		if (!make_const_data(&t,        /* expression */
+				     buf,       /* buffer */ 
+				     0,         /* length */ 
+				     0,         /* terminated */ 
+				     1,         /* allocate */ 
+				     MDL)) 
 			return 0;
 		break;
 

@@ -76,6 +76,10 @@ suggested fixes to <dhcp-users@isc.org>.
   the DHCPv6 client configuration.  'send dhcp6.oro' is no longer
   necessary.
 
+- Bug fixed where configuration file parsing did not work with 
+  zero-length options; this made it impossible to set the 
+  rapid-commit option.
+
 			Changes since 4.0.0a1
 
 - Bug in octal parsing fixed. Thanks to Bernd Fuhrmann for the report
