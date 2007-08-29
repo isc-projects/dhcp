@@ -240,7 +240,7 @@ get_raw_token(struct parse *cfile) {
 	int c;
 	enum dhcp_token ttok;
 	static char tb [2];
-	int l, p, u;
+	int l, p;
 
 	do {
 		l = cfile -> line;
