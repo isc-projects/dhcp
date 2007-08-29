@@ -36,6 +36,7 @@
 #include <ctype.h>
 
 static int get_char PROTO ((struct parse *));
+static void unget_char(struct parse *, int);
 static void skip_to_eol PROTO ((struct parse *));
 static enum dhcp_token read_whitespace(int c, struct parse *cfile);
 static enum dhcp_token read_string PROTO ((struct parse *));
@@ -203,7 +204,7 @@ static int get_char (cfile)
 /*
  * Return a character to our input buffer.
  */
-static int 
+static void
 unget_char(struct parse *cfile, int c) {
 	if (c != EOF) {
 		cfile->bufix--;
