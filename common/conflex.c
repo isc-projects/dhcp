@@ -201,6 +201,19 @@ static int get_char (cfile)
 }
 
 /*
+ * Return a character to our input buffer.
+ */
+static int 
+unget_char(struct parse *cfile, int c) {
+	if (c != EOF) {
+		cfile->bufix--;
+		cfile->ugflag = 1;	/* do not put characters into
+					   our error buffer on the next
+					   call to get_char() */
+	}
+}
+
+/*
  * GENERAL NOTE ABOUT TOKENS
  *
  * We normally only want non-whitespace tokens. There are some 
@@ -231,7 +244,6 @@ get_raw_token(struct parse *cfile) {
 	do {
 		l = cfile -> line;
 		p = cfile -> lpos;
-		u = cfile -> ugflag;
 
 		c = get_char (cfile);
 		if (!((c == '\n') && cfile->eol_token) && 
@@ -451,9 +463,7 @@ read_whitespace(int c, struct parse *cfile) {
 	/*
 	 * Put the last (non-whitespace) character back.
 	 */
-	if (c != EOF) {
-		cfile->bufix--;
-	}
+	unget_char(cfile, c);
 
 	/*
 	 * Return our token.
@@ -617,10 +627,7 @@ static enum dhcp_token read_number (c, cfile)
 			 * token.  If not EOF, rewind the file one byte so
 			 * the next token is read from there.
 			 */
-			if(c != EOF) {
-				cfile->bufix--;
-				cfile->ugflag = 1;
-			}
+			unget_char(cfile, c);
 			goto end_read;
 
 		    default:
@@ -655,10 +662,7 @@ static enum dhcp_token read_num_or_name (c, cfile)
 		c = get_char (cfile);
 		if (!isascii (c) ||
 		    (c != '-' && c != '_' && !isalnum (c))) {
-			if (c != EOF) {
-				cfile -> bufix--;
-				cfile -> ugflag = 1;
-			}
+		    	unget_char(cfile, c);
 			break;
 		}
 		if (!isxdigit (c))

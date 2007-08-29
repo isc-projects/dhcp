@@ -254,6 +254,23 @@ struct parse {
 	const char *tlname;
 	int eol_token;
 
+	/*
+	 * In order to give nice output when we have a parsing error 
+	 * in our file, we keep track of where we are in the line so
+	 * that we can show the user.
+	 *
+	 * We need to keep track of two lines, because we can look 
+	 * ahead, via the "peek" function, to the next line sometimes.
+	 *
+	 * The "line1" and "line2" variables act as buffers for this 
+	 * information. The "lpos" variable tells us where we are in the
+	 * line.
+	 *
+	 * When we "put back" a character from the parsing context, we
+	 * do not want to have the character appear twice in the error
+	 * output. So, we set a flag, the "ugflag", which the
+	 * get_char() function uses to check for this condition.
+	 */
 	char line1 [81];
 	char line2 [81];
 	int lpos;
