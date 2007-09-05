@@ -38,7 +38,7 @@ release, which will be addressed shortly:
 
 - The client and server can only operate DHCPv4 or DHCPv6 at a time,
   not both.  To use both protcols simultaneously, two instances of the
-  relevant daemon is required, one with the '-6' command line option.
+  relevant daemon are required, one with the '-6' command line option.
 
 For information on how to install, configure and run this software,
 as well as how to find documentation and report bugs, please consult
