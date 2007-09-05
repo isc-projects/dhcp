@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static const char rcsid[] = "$Id: ns_verify.c,v 1.8 2007/08/22 13:41:37 shane Exp $";
+static const char rcsid[] = "$Id: ns_verify.c,v 1.9 2007/09/05 17:32:10 dhankins Exp $";
 #endif
 
 /* Import. */

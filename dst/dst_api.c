@@ -1,9 +1,10 @@
 #ifndef LINT
-static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/dst_api.c,v 1.4 2007/08/22 13:41:37 shane Exp $";
+static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/dst_api.c,v 1.5 2007/09/05 17:32:10 dhankins Exp $";
 #endif
 
 /*
  * Portions Copyright (c) 1995-1998 by Trusted Information Systems, Inc.
+ * Portions Copyright (c) 2007 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
