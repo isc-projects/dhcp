@@ -569,9 +569,16 @@ main(int argc, char **argv) {
 	/*
 	 * Remove addresses from our pools that we should not issue
 	 * to clients.
+	 *
+	 * We currently have no support for this in IPv4. It is not 
+	 * as important in IPv4, as making pools with ranges that 
+	 * leave out interfaces and hosts is fairly straightforward
+	 * using range notation, but not so handy with CIDR notation.
 	 */
-	mark_hosts_unavailable();
-	mark_interfaces_unavailable();
+	if (local_family == AF_INET6) {
+		mark_hosts_unavailable();
+		mark_interfaces_unavailable();
+	}
 #endif /* DHCPv6 */
 
 
