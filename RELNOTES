@@ -81,6 +81,9 @@ suggested fixes to <dhcp-users@isc.org>.
   zero-length options; this made it impossible to set the 
   rapid-commit option.
 
+- Bogus messages about host records with IPv4 fixed-addresses being of
+  non-128-bits in length were removed.
+
 			Changes since 4.0.0a1
 
 - Bug in octal parsing fixed. Thanks to Bernd Fuhrmann for the report
