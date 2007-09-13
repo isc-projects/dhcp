@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-			  Version 3.0.4-PBSG0
-			   September 22, 2006
+			  Version 3.0.4-PBSG1
+			   September 13, 2007
 
 			     Release Notes
 
@@ -85,6 +85,11 @@ and for prodding me into improving it.
 
 - Failover servers try harder to retransmit binding updates upon entering
   NORMAL state.
+
+- POOLREQ messages received within 30 seconds of one another are ignored.
+
+- 'lease imbalance' messages are not logged unless rebalance was actually
+  attempted ("ten percent" rule).
 
 			Changes since 3.0.4rc1
 

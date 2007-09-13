@@ -286,6 +286,7 @@ typedef struct _dhcp_failover_state {
 	TIME last_timestamp_received;	/* The last timestamp we sent that
 					   has been returned by our partner. */
 	TIME skew;	/* The skew between our clock and our partner's. */
+	TIME last_POOLREQ;
 	struct lease *update_queue_head; /* List of leases we haven't sent
 					    to peer. */
 	struct lease *update_queue_tail;
