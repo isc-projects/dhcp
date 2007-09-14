@@ -14,7 +14,7 @@ documented in the man page. Several changes have been made to the
 configuration file as well, which are also documented in the man
 pages.
 
-There are a number of DHCPv6 limitiations and features missing in this
+There are a number of DHCPv6 limitations and features missing in this
 release, which will be addressed shortly:
 
 - Only Solaris, Linux, FreeBSD, NetBSD, and OpenBSD are supported.
@@ -37,7 +37,7 @@ release, which will be addressed shortly:
 - Dynamically allocated leases do not respond to Confirm messages.
 
 - The client and server can only operate DHCPv4 or DHCPv6 at a time,
-  not both.  To use both protcols simultaneously, two instances of the
+  not both.  To use both protocols simultaneously, two instances of the
   relevant daemon are required, one with the '-6' command line option.
 
 For information on how to install, configure and run this software,
@@ -73,7 +73,7 @@ suggested fixes to <dhcp-users@isc.org>.
   would segfault if a client attempted to renew a lease that had been
   loaded from persistent storage.
 
-- 'request' and 'also request' syntaxes have been added to accomodate
+- 'request' and 'also request' syntaxes have been added to accommodate
   the DHCPv6 client configuration.  'send dhcp6.oro' is no longer
   necessary.
 
@@ -152,7 +152,7 @@ suggested fixes to <dhcp-users@isc.org>.
 - Corrected a segmentation violation in DHCPv4 socket processing.
 
 - dhclient will now fork() into the background once it binds to an
-  IPv6 address, or immediately if the -n flag is supplised.
+  IPv6 address, or immediately if the -n flag is supplied.
 
 - -q is now the default behaviour on dhclient, with -d or -v enabling
   non-quiet (stderr logging) mode.
@@ -294,7 +294,7 @@ suggested fixes to <dhcp-users@isc.org>.
   The new selected values provide more of a zero sum (increasing the size
   of tables likely to be populated, decreasing the size of tables unlikely).
 
-- Lease structures appear in three spearate hashes: by IP address, by UID,
+- Lease structures appear in three separate hashes: by IP address, by UID,
   and by hardware address.  One type of table was used for all three, and
   improvements to IP address hashing were applied to all three (so UID and
   hardware addresses were treated like 4-byte integers).  There are now two
@@ -579,7 +579,7 @@ suggested fixes to <dhcp-users@isc.org>.
 
 			Changes since 3.0.4b2
 
-- Null-termination sensing for certain clients that unfortunatley require
+- Null-termination sensing for certain clients that unfortunately require
   it in DHCPINFORM processing was repaired.
 
 - The host-name option and a few others were moved from "X" format to "t"
@@ -628,7 +628,7 @@ suggested fixes to <dhcp-users@isc.org>.
   leases to allocate.
 
 - Fixed a bug in dhcrelay agent addition code that suppressed trailing
-  PAD options - it was suppressing only one trailng PAD option, rather
+  PAD options - it was suppressing only one trailing PAD option, rather
   than the entire block of them.
 
 ! Fixed some unlikely overlapping-region memcpy() bugs in dhcrelay agent
@@ -667,7 +667,7 @@ suggested fixes to <dhcp-users@isc.org>.
   these interfaces.  Thanks to Marius Gedminas and Andrew Pollock of Debian.
 
 - Some previously undocumented reasons for dhclient-script invoking has
-  been doucmented in the dhclient-script.8 manpage.
+  been documented in the dhclient-script.8 manpage.
 
 - Failover potential expiry calculations (TSTP) have been corrected.  Results
   should be substantially more consistent, and proper given the constraints.
@@ -715,7 +715,7 @@ suggested fixes to <dhcp-users@isc.org>.
 - File handlers on configuration state (config files and lease dbs) should
   be treated consistently, regardless of whether TRACING is defined or not.
 
-- The linux build environment has had some minor improvements - better
+- The Linux build environment has had some minor improvements - better
   sensing of 64-bit pointer sizes (only used for establishing an icmp_id),
   and corrections to #if operators regarding LINUX_MAJOR should it ever
   move to 3.[01].x.
@@ -751,7 +751,7 @@ suggested fixes to <dhcp-users@isc.org>.
 			Changes since 3.0.2
 
 - A bug was fixed where a server might load balance a DHCP REQUEST to its
-  peer after already choosing not to load balance the preceeding DISCOVER.
+  peer after already choosing not to load balance the preceding DISCOVER.
   The peer cannot allocate the originating server's lease.
 
 - In the case where a secondary server lost its stable storage while the
@@ -826,7 +826,7 @@ suggested fixes to <dhcp-users@isc.org>.
 
 			Changes since 3.0.2rc2
 
-- Two varaibles introduced in 3.0.2b1 were used without being initialized
+- Two variables introduced in 3.0.2b1 were used without being initialized
   in the case where neither the FILE nor SNAME fields were available for
   overloading.  This was repaired.
 
@@ -999,7 +999,7 @@ suggested fixes to <dhcp-users@isc.org>.
   both finding and solving the problem.
 
 ! CAN-2004-0461 - CERT VU#654390: Once the above was closed, an opening
-  in log_*() functions was evidented, on some specific platforms where
+  in log_*() functions was evidenced, on some specific platforms where
   vsnprintf() was not believed to be available and calls were wrapped to
   sprintf() instead.  Again, credit goes to Gregory Duchemin for finding
   the problem.  Calls to snprintf() are now linked to a distribution-local
@@ -1031,7 +1031,7 @@ suggested fixes to <dhcp-users@isc.org>.
   to a patch from Burt Silverman.
 
 - The 'ping timeout' debugs from rc12 were removed to -DDEBUG only,
-  and reformatted to correct a compilation error on solaris platforms.
+  and reformatted to correct a compilation error on Solaris platforms.
 
 - A patch was applied which fixes a case where leases read from the
   leases database do not properly over-ride previously read leases.
@@ -1050,7 +1050,7 @@ suggested fixes to <dhcp-users@isc.org>.
 - A failover bug relating to identifying peers by name length instead of
   by name was fixed.
 
-- Delcaring failover configs within shared-network statements should no
+- Declaring failover configs within shared-network statements should no
   longer result in error.
 
 - The -nw command line option to dhclient now works.
@@ -2178,7 +2178,7 @@ suggested fixes to <dhcp-users@isc.org>.
 		Changes since 3.0 Beta 2 Patchlevel 3
 
 - In the DHCP client, execute client statements prior to using the values
-  of options, so that the client configuration can overried, e.g., the
+  of options, so that the client configuration can overridden, e.g., the
   lease renewal time.
 
 - Fix a reference counting error that would result in very reproducible

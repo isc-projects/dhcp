@@ -333,7 +333,7 @@ more information, consult the vconfig man pages.
 ISC DHCP will now work correctly on newer versions of SCO out of the
 box (tested on OpenServer 5.05b, assumed to work on UnixWare 7).
 
-Older versions of SCO have the same problem as linux (described earlier).
+Older versions of SCO have the same problem as Linux (described earlier).
 The thing is, SCO *really* doesn't want to let you add a host route to
 the all-ones broadcast address.
 
@@ -460,7 +460,7 @@ responding to all other requests for support upon ISC's mailing lists
 on a best-effort basis.
 
 However, ISC DHCP has attracted a fairly sizable following on the
-Internet, which means that there are a lot of knowledgable users who
+Internet, which means that there are a lot of knowledgeable users who
 may be able to help you if you get stuck.  These people generally
 read the dhcp-users@isc.org mailing list.  Be sure to provide as much
 detail in your query as possible.
