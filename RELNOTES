@@ -52,6 +52,9 @@ the README file.
 - Log messages when failover peer names mismatch have been improved to
   point out the problem.
 
+- Manpage entries in dhcp-options.5 for the 'domain-list' format have
+  been updated.
+
 			Changes since 3.1.0rc1
 
 - The parse warning that 'deny dyanmic bootp;' must be configured for

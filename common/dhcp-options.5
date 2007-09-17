@@ -1,4 +1,4 @@
-.\"	$Id: dhcp-options.5,v 1.31.14.2 2007/05/23 23:30:32 each Exp $
+.\"	$Id: dhcp-options.5,v 1.31.14.3 2007/09/17 17:58:54 dhankins Exp $
 .\"
 .\" Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
@@ -413,13 +413,19 @@ The domain-name-servers option specifies a list of Domain Name System
 should be listed in order of preference.
 .RE
 .PP
-.B option \fBdomain-search\fR \fIstring\fR\fB;\fR
+.B option \fBdomain-search\fR \fIdomain-list\fR\fB;\fR
 .RS 0.25i
 .PP
 The domain-search option specifies a 'search list' of Domain Names to be
 used by the client to locate not-fully-qualified domain names.  The difference
 between this option and historic use of the domain-name option for the same
 ends is that this option is encoded in RFC1035 compressed labels on the wire.
+For example:
+.nf
+.sp 1
+  option domain-search "example.com", "sales.example.com",
+                       "eng.example.com";
+.fi
 .RE
 .PP
 .B option \fBextensions-path\fR \fItext\fR\fB;\fR
@@ -1446,6 +1452,29 @@ values must be between 0 and FF.   For example:
 
 option sql-identification-token code 195 = string;
 option sql-identification-token 17:23:19:a6:42:ea:99:7c:22;
+
+.fi
+.PP
+.B DOMAIN-LIST
+.PP
+.B option
+.I new-name
+.B code
+.I new-code
+.B =
+.B domain-list
+.B ;
+.PP
+An option whose type is \fBdomain-list\fR is an RFC1035 formatted (on the
+wire, "DNS Format") list of domain names, separated by root labels.
+.PP
+Note that when
+.B domain-list
+formatted options are output as environment variables to
+.B dhclient-script(8),
+the standard DNS \-escape mechanism is used: they are decimal.  This is
+appropriate for direct use in e.g. /etc/resolv.conf.
+.nf
 
 .fi
 .PP
