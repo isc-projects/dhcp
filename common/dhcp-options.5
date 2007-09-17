@@ -1,4 +1,4 @@
-.\"	$Id: dhcp-options.5,v 1.38 2007/06/28 18:29:49 dhankins Exp $
+.\"	$Id: dhcp-options.5,v 1.39 2007/09/17 17:52:01 dhankins Exp $
 .\"
 .\" Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
@@ -415,13 +415,19 @@ The domain-name-servers option specifies a list of Domain Name System
 should be listed in order of preference.
 .RE
 .PP
-.B option \fBdomain-search\fR \fIstring\fR\fB;\fR
+.B option \fBdomain-search\fR \fIdomain-list\fR\fB;\fR
 .RS 0.25i
 .PP
 The domain-search option specifies a 'search list' of Domain Names to be
 used by the client to locate not-fully-qualified domain names.  The difference
 between this option and historic use of the domain-name option for the same
 ends is that this option is encoded in RFC1035 compressed labels on the wire.
+For example:
+.nf
+.sp 1
+  option domain-search "example.com", "sales.example.com",
+                       "eng.example.com";
+.fi
 .RE
 .PP
 .B option \fBextensions-path\fR \fItext\fR\fB;\fR
@@ -1840,6 +1846,13 @@ When in doubt, omit the \fBcompressed\fR keyword.  When the software recieves
 an option that is compressed and the \fBcompressed\fR keyword is omitted, it
 will still decompress the option (relative to the option contents field).  The
 keyword only controls whether or not transmitted packets are compressed.
+.PP
+Note that when
+.B domain-list
+formatted options are output as environment variables to
+.B dhclient-script(8),
+the standard DNS \-escape mechanism is used: they are decimal.  This is
+appropriate for direct use in eg /etc/resolv.conf.
 .nf
 
 .fi
