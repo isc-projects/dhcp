@@ -55,6 +55,9 @@ suggested fixes to <dhcp-users@isc.org>.
 
 			Changes since 4.0.0a2
 
+- The DHCP server no longer requires a "ddns-update-style" statement, 
+  and now defaults to "none", which means DNS updates are disabled.
+
 - Fix for startup where there are no IPv4 addresses on an interface.
   Thanks to Marcus Goller for reporting the bug.
 

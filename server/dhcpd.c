@@ -870,15 +870,7 @@ void postconf_initialization (int quiet)
 			data_string_forget (&db, MDL);
 		}
 	} else {
-		log_info ("%s", "");
-		log_error ("** You must add a global ddns-update-style %s%s.",
-			   "statement to ", path_dhcpd_conf);
-		log_error ("   To get the same behaviour as in 3.0b2pl11 %s",
-			   "and previous");
-		log_error ("   versions, add a line that says \"%s\"",
-			   "ddns-update-style ad-hoc;");
-		log_fatal ("   Please read the dhcpd.conf manual page %s",
-			   "for more information. **");
+		ddns_update_style = DDNS_UPDATE_STYLE_NONE;
 	}
 
 	oc = lookup_option (&server_universe, options, SV_LOG_FACILITY);

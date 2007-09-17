@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.87 2007/07/20 19:18:24 dhankins Exp $
+.\" $Id: dhcpd.conf.5,v 1.88 2007/09/17 10:13:07 shane Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -1997,7 +1997,8 @@ parameter must be one of \fBad-hoc\fR, \fBinterim\fR or \fBnone\fR.
 The \fIddns-update-style\fR statement is only meaningful in the outer
 scope - it is evaluated once after reading the dhcpd.conf file, rather
 than each time a client is assigned an IP address, so there is no way
-to use different DNS update styles for different clients.
+to use different DNS update styles for different clients. The default
+is \fBnone\fR.
 .RE
 .PP
 .B The  
