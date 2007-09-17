@@ -52,10 +52,14 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and
 may not work on other platforms. Please report any problems and 
 suggested fixes to <dhcp-users@isc.org>.
 
+
 			Changes since 4.0.0a3
 
 - The DHCP server no longer requires a "ddns-update-style" statement, 
   and now defaults to "none", which means DNS updates are disabled.
+
+- Log messages when failover peer names mismatch have been improved to
+  point out the problem.
 
 			Changes since 4.0.0a2
 

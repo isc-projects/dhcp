@@ -276,6 +276,8 @@ isc_result_t dhcp_failover_link_signal (omapi_object_t *h,
 	dhcp_failover_link_t *link;
 	omapi_object_t *c;
 	dhcp_failover_state_t *s, *state = (dhcp_failover_state_t *)0;
+	char *sname;
+	int slen;
 
 	if (h -> type != dhcp_type_failover_link) {
 		/* XXX shouldn't happen.   Put an assert here? */
@@ -490,19 +492,32 @@ isc_result_t dhcp_failover_link_signal (omapi_object_t *h,
 			if (dhcp_failover_state_match_by_name(s,
 			    &link->imsg->relationship_name))
 				state = s;
-		    }		
+		    }
 
 		    /* If we can't find a failover protocol state
 		       for this remote host, drop the connection */
 		    if (!state) {
-			    errmsg = "unknown server";
+			    errmsg = "unknown failover relationship name";
 			    reason = FTR_INVALID_PARTNER;
 
 			  badconnect:
 				/* XXX Send a refusal message first?
 				   XXX Look in protocol spec for guidance. */
-			    log_error ("Failover CONNECT from %s: %s",
-				       state? state->name : "unknown", errmsg);
+
+			    if (state != NULL) {
+				sname = state->name;
+				slen = strlen(sname);
+			    } else if (link->imsg->options_present &
+				       FTB_RELATIONSHIP_NAME) {
+				sname = link->imsg->relationship_name.data;
+				slen = link->imsg->relationship_name.count;
+			    } else {
+				sname = "unknown";
+				slen = strlen(sname);
+			    }
+
+			    log_error("Failover CONNECT from %.*s: %s",
+				      slen, sname, errmsg);
 			    dhcp_failover_send_connectack
 				    ((omapi_object_t *)link, state,
 				     reason, errmsg);
@@ -572,7 +587,7 @@ isc_result_t dhcp_failover_link_signal (omapi_object_t *h,
 		break;
 
 	      default:
-		/* XXX should never get here.   Assertion? */
+		log_fatal("Impossible case at %s:%d.", MDL);
 		break;
 	}
 	return ISC_R_SUCCESS;
@@ -1260,6 +1275,7 @@ isc_result_t dhcp_failover_state_signal (omapi_object_t *o,
 					link);
 		} else if (link -> imsg -> type == FTM_CONNECTACK) {
 		    const char *errmsg;
+		    char errbuf[1024];
 		    int reason;
 
 		    cancel_timeout (dhcp_failover_link_startup_timeout,
@@ -1282,14 +1298,19 @@ isc_result_t dhcp_failover_state_signal (omapi_object_t *o,
 			omapi_disconnect (link -> outer, 1);
 			return ISC_R_SUCCESS;
 		    }
-				      
+
 		    if (!dhcp_failover_state_match_by_name(state,
 			&link->imsg->relationship_name)) {
-			errmsg = "unknown server";
+			/* XXX: Overflow results in log truncation, safe. */
+			snprintf(errbuf, sizeof(errbuf), "remote failover "
+				 "relationship name %.*s does not match",
+				 link->imsg->relationship_name.count,
+				 link->imsg->relationship_name.data);
+			errmsg = errbuf;
 			reason = FTR_INVALID_PARTNER;
 		      badconnectack:
-			log_error ("Failover CONNECTACK from %s: %s",
-				   state ? state->name : "unknown", errmsg);
+			log_error("Failover CONNECTACK from %s: %s",
+				  state->name, errmsg);
 			dhcp_failover_send_disconnect ((omapi_object_t *)link,
 						       reason, errmsg);
 			omapi_disconnect (link -> outer, 0);
