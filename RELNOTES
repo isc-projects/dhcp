@@ -52,11 +52,12 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and
 may not work on other platforms. Please report any problems and 
 suggested fixes to <dhcp-users@isc.org>.
 
-
-			Changes since 4.0.0a2
+			Changes since 4.0.0a3
 
 - The DHCP server no longer requires a "ddns-update-style" statement, 
   and now defaults to "none", which means DNS updates are disabled.
+
+			Changes since 4.0.0a2
 
 - Fix for startup where there are no IPv4 addresses on an interface.
   Thanks to Marcus Goller for reporting the bug.
