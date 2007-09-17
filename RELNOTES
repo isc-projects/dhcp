@@ -37,6 +37,7 @@ For information on how to install, configure and run this software,
 as well as how to find documentation and report bugs, please consult
 the README file.
 
+
 			Changes since 3.1.0
 
 - Bug in server configuration parser caused server to get stuck on
@@ -47,6 +48,9 @@ the README file.
 
 - Bug in octal parsing fixed. Thanks to Bernd Fuhrmann for the report
   and fix.
+
+- Log messages when failover peer names mismatch have been improved to
+  point out the problem.
 
 			Changes since 3.1.0rc1
 
