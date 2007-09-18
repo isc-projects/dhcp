@@ -509,7 +509,8 @@ isc_result_t dhcp_failover_link_signal (omapi_object_t *h,
 				slen = strlen(sname);
 			    } else if (link->imsg->options_present &
 				       FTB_RELATIONSHIP_NAME) {
-				sname = link->imsg->relationship_name.data;
+				sname = (char *)link->imsg->
+						relationship_name.data;
 				slen = link->imsg->relationship_name.count;
 			    } else {
 				sname = "unknown";
@@ -1304,7 +1305,7 @@ isc_result_t dhcp_failover_state_signal (omapi_object_t *o,
 			/* XXX: Overflow results in log truncation, safe. */
 			snprintf(errbuf, sizeof(errbuf), "remote failover "
 				 "relationship name %.*s does not match",
-				 link->imsg->relationship_name.count,
+				 (int)link->imsg->relationship_name.count,
 				 link->imsg->relationship_name.data);
 			errmsg = errbuf;
 			reason = FTR_INVALID_PARTNER;
