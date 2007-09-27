@@ -5502,10 +5502,18 @@ peer_wants_lease(struct lease *lp)
 		return 0;
 
 	if (lp->uid_len)
-		hbaix = loadb_p_hash (lp->uid, lp->uid_len);
-	else
-		hbaix = loadb_p_hash (lp->hardware_addr.hbuf,
-				      lp->hardware_addr.hlen);
+		hbaix = loadb_p_hash(lp->uid, lp->uid_len);
+	else if (lp->hardware_addr.hlen > 1)
+		/* Skip the first byte, which is the hardware type, and is
+		 * not included during actual load balancing checks above
+		 * since it is separate from the packet header chaddr field.
+		 * The remainder of the hardware address should be identical
+		 * to the chaddr contents.
+		 */
+		hbaix = loadb_p_hash(lp->hardware_addr.hbuf + 1,
+				     lp->hardware_addr.hlen - 1);
+	else /* Consistent 50/50 split */
+		return(lp->ip_addr.iabuf[lp->ip_addr.len-1] & 0x01);
 
 	hm = state->hba[(hbaix >> 3) & 0x1F] & (1 << (hbaix & 0x07));
 

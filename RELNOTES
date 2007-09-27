@@ -213,6 +213,16 @@ suggested fixes to <dhcp-users@isc.org>.
   were transmitted to it, and what frames are being carried through it which
   it should not intercept.
 
+			Changes since 3.1.0 (Maintenance)
+
+- A bug was repaired where MAC Address Affinity for virgin leases always
+  mapped to the primary.  Virgin leases now have an interleaved preference
+  between primary and secondary.
+
+- A bug was repaired where MAC Address Affinity for clients with no client
+  identifier was sometimes mishashed to the peer.  Load balancing during
+  runtime and pool rebalancing were opposing.
+
 			Changes since 3.1.0rc1
 
 - The parse warning that 'deny dyanmic bootp;' must be configured for
