@@ -223,6 +223,8 @@ suggested fixes to <dhcp-users@isc.org>.
   identifier was sometimes mishashed to the peer.  Load balancing during
   runtime and pool rebalancing were opposing.
 
+- An assertion in lease counting relating to reserved leases was repaired.
+
 			Changes since 3.1.0rc1
 
 - The parse warning that 'deny dyanmic bootp;' must be configured for
