@@ -76,7 +76,7 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static const char sccsid[] = "@(#)res_init.c	8.1 (Berkeley) 6/7/93";
-static const char rcsid[] = "$Id: res_init.c,v 1.9 2007/09/05 17:32:10 dhankins Exp $";
+static const char rcsid[] = "$Id: res_init.c,v 1.10 2007/10/01 14:47:35 explorer Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 #include <sys/types.h>
@@ -321,7 +321,7 @@ minires_vinit(res_state statp, int preinit) {
 			    break;
 			net = cp;
 			while (*cp && !ISSORTMASK(*cp) && *cp != ';' &&
-			       isascii(*cp) && !isspace(*cp))
+			       isascii((int)*cp) && !isspace((int)*cp))
 				cp++;
 			n = *cp;
 			*cp = 0;
@@ -331,7 +331,7 @@ minires_vinit(res_state statp, int preinit) {
 				*cp++ = n;
 				net = cp;
 				while (*cp && *cp != ';' &&
-					isascii(*cp) && !isspace(*cp))
+					isascii((int)*cp) && !isspace((int)*cp))
 				    cp++;
 				n = *cp;
 				*cp = 0;

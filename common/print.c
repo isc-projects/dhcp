@@ -45,7 +45,7 @@ char *quotify_string (const char *s, const char *file, int line)
 	for (sp = s; sp && *sp; sp++) {
 		if (*sp == ' ')
 			len++;
-		else if (!isascii (*sp) || !isprint (*sp))
+		else if (!isascii ((int)*sp) || !isprint ((int)*sp))
 			len += 4;
 		else if (*sp == '"' || *sp == '\\')
 			len += 2;
@@ -59,7 +59,7 @@ char *quotify_string (const char *s, const char *file, int line)
 		for (sp = s; sp && *sp; sp++) {
 			if (*sp == ' ')
 				*nsp++ = ' ';
-			else if (!isascii (*sp) || !isprint (*sp)) {
+			else if (!isascii ((int)*sp) || !isprint ((int)*sp)) {
 				sprintf (nsp, "\\%03o",
 					 *(const unsigned char *)sp);
 				nsp += 4;

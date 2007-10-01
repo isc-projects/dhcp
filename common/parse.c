@@ -343,7 +343,7 @@ int parse_ip_addr (cfile, addr)
 static int
 is_hex_string(const char *s) {
 	while (*s != '\0') {
-		if (!isxdigit(*s)) {
+		if (!isxdigit((int)*s)) {
 			return 0;
 		}
 		s++;
@@ -4837,7 +4837,7 @@ struct option *option;
 			fmt = option->format;
 
 		/* 'a' means always uniform */
-		if ((fmt[0] != '\0') && (tolower(fmt[1]) == 'a')) 
+		if ((fmt[0] != '\0') && (tolower((int)fmt[1]) == 'a')) 
 			uniform = 1;
 
 		do {
