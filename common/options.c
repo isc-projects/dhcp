@@ -621,19 +621,29 @@ int cons_options (inpacket, outpacket, lease, client_state,
 					prl -> data [i];
 		}
 
-		/* If the client doesn't request this option explicitly,
+		/* If the client doesn't request the FQDN option explicitly,
 		 * to indicate priority, consider it lowest priority.  Fit
-		 * in the packet if there is space.
+		 * in the packet if there is space.  Note that the option
+		 * may only be included if the client supplied one.
 		 */
-		if (priority_len < PRIORITY_COUNT)
+		if ((priority_len < PRIORITY_COUNT) &&
+		    (lookup_option(&dhcp_universe, inpacket->options,
+				   DHO_FQDN) != NULL))
 			priority_list[priority_len++] = DHO_FQDN;
 
 		/* Some DHCP Servers will give the subnet-mask option if
 		 * it is not on the parameter request list - so some client
 		 * implementations have come to rely on this - so we will
 		 * also make sure we supply this, at lowest priority.
+		 *
+		 * This is only done in response to DHCPDISCOVER or
+		 * DHCPREQUEST messages, to avoid providing the option on
+		 * DHCPINFORM or DHCPLEASEQUERY responses (if the client
+		 * didn't request it).
 		 */
-		if (priority_len < PRIORITY_COUNT)
+		if ((priority_len < PRIORITY_COUNT) &&
+		    ((inpacket->packet_type == DHCPDISCOVER) ||
+		     (inpacket->packet_type == DHCPREQUEST)))
 			priority_list[priority_len++] = DHO_SUBNET_MASK;
 
 	} else {
@@ -1104,11 +1114,11 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 
 	memset (&od, 0, sizeof od);
 
-	/* Eliminate duplicate options in the parameter request list.
-	   There's got to be some clever knuthian way to do this:
-	   Eliminate all but the first occurance of a value in an array
-	   of values without otherwise disturbing the order of the array. */
+	/* Eliminate duplicate options from the parameter request list.
+	 * Enforce RFC-mandated ordering of options that are present.
+	 */
 	for (i = 0; i < priority_len - 1; i++) {
+		/* Eliminate duplicates. */
 		tto = 0;
 		for (ix = i + 1; ix < priority_len + tto; ix++) {
 			if (tto)
@@ -1117,6 +1127,33 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 			if (priority_list [i] == priority_list [ix]) {
 				tto++;
 				priority_len--;
+			}
+		}
+
+		/* Enforce ordering of SUBNET_MASK options, according to
+		 * RFC2132 Section 3.3:
+		 *
+		 *   If both the subnet mask and the router option are
+		 *   specified in a DHCP reply, the subnet mask option MUST
+		 *   be first.
+		 *
+		 * This guidance does not specify what to do if the client
+		 * PRL explicitly requests the options out of order, it is
+		 * a general statement.
+		 */
+		if (priority_list[i] == DHO_SUBNET_MASK) {
+			for (ix = i - 1 ; ix >= 0 ; ix--) {
+				/* We know that anything before 'i' can only
+				 * appear once.  So shovel the options to make
+				 * room to bubble the subnet mask ahead, and
+				 * then break out of the loop, we're done.
+				 */
+				if (priority_list[ix] == DHO_ROUTERS) {
+					memmove(priority_list + ix + 1,
+					        priority_list + ix, i - ix);
+					priority_list[ix] = DHO_SUBNET_MASK;
+					break;
+				}
 			}
 		}
 	}

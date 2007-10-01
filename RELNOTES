@@ -225,6 +225,15 @@ suggested fixes to <dhcp-users@isc.org>.
 
 - An assertion in lease counting relating to reserved leases was repaired.
 
+- The subnet-mask option inclusion now conforms with RFC2132 section 3.3;
+  it will only appear prior to the routers option if it is present on the
+  Parameter-Request-List.  The subnet-mask option will also only be
+  included by default (if it is not on the PRL) in response to DISCOVER
+  or REQUEST messages.
+
+- The FQDN option is only supplied if the client supplied an FQDN option or
+  if the FQDN option was explicitly requested on the PRL.
+
 			Changes since 3.1.0rc1
 
 - The parse warning that 'deny dyanmic bootp;' must be configured for
