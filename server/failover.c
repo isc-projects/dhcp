@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.63.56.11 2007/09/27 15:29:21 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.63.56.12 2007/10/03 20:18:43 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1320,7 +1320,7 @@ isc_result_t dhcp_failover_state_signal (omapi_object_t *o,
 			/* XXX: Overflow results in log truncation, safe. */
 			snprintf(errbuf, sizeof(errbuf), "remote failover "
 				 "relationship name %.*s does not match",
-				 link->imsg->relationship_name.count,
+				 (int)link->imsg->relationship_name.count,
 				 link->imsg->relationship_name.data);
 			errmsg = errbuf;
 			reason = FTR_INVALID_PARTNER;
