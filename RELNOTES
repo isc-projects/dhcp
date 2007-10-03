@@ -61,6 +61,10 @@ suggested fixes to <dhcp-users@isc.org>.
 - Log messages when failover peer names mismatch have been improved to
   point out the problem.
 
+- Bug where server advertised a IPv6 address in response to a SOLICIT 
+  but would not return the address in response to a REQUEST. Thanks to
+  Dennis Kou for finding the bug.
+
 			Changes since 4.0.0a2
 
 - Fix for startup where there are no IPv4 addresses on an interface.

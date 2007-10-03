@@ -834,6 +834,7 @@ pick_v6_address(struct iaaddr **addr,
 	int i;
 	int start_pool;
 	unsigned int attempts;
+	char tmp_buf[INET6_ADDRSTRLEN];
 
 	/*
 	 * First, find the link address where the packet from the client
@@ -861,7 +862,8 @@ pick_v6_address(struct iaaddr **addr,
 		       first_link_addr, sizeof(*first_link_addr));
 		subnet = NULL;
 		if (!find_subnet(&subnet, tmp_addr, MDL)) {
-			log_debug("No subnet found for link-address %s.",
+			log_debug("Unable to pick client address: "
+				  "no subnet found for link-address %s.",
 				  piaddr(tmp_addr));
 			return ISC_R_NOTFOUND;
 		}
@@ -887,6 +889,8 @@ pick_v6_address(struct iaaddr **addr,
 	 */
 	if (shared_network->ipv6_pools == NULL) {
 		shared_network_dereference(&shared_network, MDL);
+		log_debug("Unable to pick client address: "
+			  "no IPv6 pools on this shared network");
 		return ISC_R_NORESOURCES;
 	}
 
@@ -903,9 +907,16 @@ pick_v6_address(struct iaaddr **addr,
 				ipv6_pool_reference(pool, p, MDL);
 				shared_network_dereference(&shared_network, 
 							   MDL);
+				log_debug("Picking requested address %s",
+					  inet_ntop(AF_INET6, 
+					  	    requested_iaaddr->data,
+					  	    tmp_buf, sizeof(tmp_buf)));
 				return ISC_R_SUCCESS;
 			}
 		}
+		log_debug("NOT picking requested address %s",
+			  inet_ntop(AF_INET6, requested_iaaddr->data,
+			  	    tmp_buf, sizeof(tmp_buf)));
 	}
 
 	/*
@@ -937,6 +948,9 @@ pick_v6_address(struct iaaddr **addr,
 			shared_network->last_ipv6_pool = i;
 
 			shared_network_dereference(&shared_network, MDL);
+			log_debug("Picking pool address %s",
+				  inet_ntop(AF_INET6, &((*addr)->addr),
+				  	    tmp_buf, sizeof(tmp_buf)));
 			return ISC_R_SUCCESS;
 		}
 
@@ -951,6 +965,7 @@ pick_v6_address(struct iaaddr **addr,
 	 * Presumably that means we have no addresses for the client.
 	 */
 	shared_network_dereference(&shared_network, MDL);
+	log_debug("Unable to pick client address: no addresses available");
 	return ISC_R_NORESOURCES;
 }
 
@@ -1617,6 +1632,12 @@ lease_to_client(struct data_string *reply_ret,
 						     lease, /* XXX */ NULL,
 						     opt_state);
 				}
+			/* 
+			 * On SOLICIT, we want to forget this lease since we're
+			 * not actually doing anything with it.
+			 */
+			} else {
+				release_lease6(lease->ipv6_pool, lease);
 			}
 
 		} else {

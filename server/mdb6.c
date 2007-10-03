@@ -724,10 +724,10 @@ add_lease6(struct ipv6_pool *pool, struct iaaddr *iaaddr,
 	 */
 	tmp_iaaddr = NULL;
 	iaaddr_reference(&tmp_iaaddr, iaaddr, MDL);
-	iaaddr_hash_add(pool->addrs, &tmp_iaaddr->addr, 
-			sizeof(tmp_iaaddr->addr), iaaddr, MDL);
 	if ((tmp_iaaddr->state == FTS_ACTIVE) ||
 	    (tmp_iaaddr->state == FTS_ABANDONED)) {
+		iaaddr_hash_add(pool->addrs, &tmp_iaaddr->addr, 
+				sizeof(tmp_iaaddr->addr), iaaddr, MDL);
 		insert_result = isc_heap_insert(pool->active_timeouts,
 						tmp_iaaddr);
 		if (insert_result == ISC_R_SUCCESS)
