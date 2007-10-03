@@ -86,6 +86,7 @@ void bootp (packet)
 
 	if (!lease || ((lease->flags & STATIC_LEASE) == 0)) {
 		struct host_decl *h;
+
 		/* We didn't find an applicable fixed-address host
 		   declaration.  Just in case we may be able to dynamically
 		   assign an address, see if there's a host declaration
@@ -117,12 +118,39 @@ void bootp (packet)
 					packet -> shared_network -> pools,
 					&peer_has_leases);
 
-		if (lease)
-			ack_lease (packet, lease, 0, 0, msgbuf, 0, hp);
-		else
-			log_info ("%s: BOOTP from dynamic client and no "
-				  "dynamic leases", msgbuf);
+		if (lease == NULL) {
+			log_info("%s: BOOTP from dynamic client and no "
+				 "dynamic leases", msgbuf);
+			goto out;
+		}
 
+#if defined(FAILOVER_PROTOCOL)
+		if ((lease->pool != NULL) &&
+		    (lease->pool->failover_peer != NULL)) {
+			dhcp_failover_state_t *peer;
+
+			peer = lease->pool->failover_peer;
+
+			/* If we are in a failover state that bars us from
+			 * answering, do not do so.
+			 * If we are in a cooperative state, load balance
+			 * (all) responses.
+			 */
+			if ((peer->service_state == not_responding) ||
+			    (peer->service_state == service_startup)) {
+				log_info("%s: not responding%s",
+					 msgbuf, peer->nrr);
+				goto out;
+			} else if((peer->service_state == cooperating) &&
+				  !load_balance_mine(packet, peer)) {
+				log_info("%s: load balance to peer %s",
+					 msgbuf, peer->name);
+				goto out;
+			}
+		}
+#endif
+
+		ack_lease (packet, lease, 0, 0, msgbuf, 0, hp);
 		goto out;
 	}
 
