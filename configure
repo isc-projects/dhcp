@@ -2885,7 +2885,7 @@ fi
 # user did not specify any flags. Add warnings in this case.
 if test "$GCC" = "yes"; then
 	if test "$CFLAGS" != "$SAVE_CFLAGS"; then
-		CFLAGS="$CFLAGS -Wall -Werror -fno-strict-aliasing"
+		STD_CWARNINGS="$STD_CWARNINGS -Wall -Werror -fno-strict-aliasing"
 	fi
 fi
 
@@ -6219,6 +6219,10 @@ fi
 
 fi
 
+
+# Append selected warning levels to CFLAGS before substitution (but after
+# AC_TRY_COMPILE & etc).
+CFLAGS="$CFLAGS $STD_CWARNINGS"
 
                                                                                                     ac_config_files="$ac_config_files Makefile client/Makefile common/Makefile dhcpctl/Makefile dst/Makefile includes/Makefile minires/Makefile omapip/Makefile relay/Makefile server/Makefile"
 cat >confcache <<\_ACEOF
