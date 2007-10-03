@@ -16,7 +16,7 @@ AC_PROG_CC
 # user did not specify any flags. Add warnings in this case.
 if test "$GCC" = "yes"; then
 	if test "$CFLAGS" != "$SAVE_CFLAGS"; then
-		CFLAGS="$CFLAGS -Wall -Werror -fno-strict-aliasing"
+		STD_CWARNINGS="$STD_CWARNINGS -Wall -Werror -fno-strict-aliasing"
 	fi
 fi
 
@@ -207,6 +207,10 @@ AC_CHECK_MEMBER(struct msghdr.msg_control,,
 #include <sys/types.h>
 #include <sys/socket.h>
 	])
+
+# Append selected warning levels to CFLAGS before substitution (but after
+# AC_TRY_COMPILE & etc).
+CFLAGS="$CFLAGS $STD_CWARNINGS"
 
 AC_OUTPUT([
   Makefile
