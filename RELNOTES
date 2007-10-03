@@ -74,6 +74,8 @@ the README file.
 - The FQDN option is only supplied if the client supplied an FQDN option or
   if the FQDN option was explicitly requested on the PRL.
 
+- Dynamic BOOTP leases are now load balanced in failover.
+
 			Changes since 3.1.0rc1
 
 - The parse warning that 'deny dyanmic bootp;' must be configured for
