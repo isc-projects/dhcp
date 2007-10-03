@@ -2178,6 +2178,8 @@ int if_register_dlpi PROTO ( (struct interface_info *));
 #endif
 
 #ifdef USE_DLPI_SEND
+int can_unicast_without_arp PROTO ((struct interface_info *));
+int can_receive_unicast_unconfigured PROTO ((struct interface_info *));
 void if_reinitialize_send PROTO ((struct interface_info *));
 void if_register_send PROTO ((struct interface_info *));
 void if_deregister_send PROTO ((struct interface_info *));
@@ -2185,6 +2187,8 @@ ssize_t send_packet PROTO ((struct interface_info *,
 			    struct packet *, struct dhcp_packet *, size_t,
 			    struct in_addr,
 			    struct sockaddr_in *, struct hardware *));
+int supports_multiple_interfaces (struct interface_info *);
+void maybe_setup_fallback PROTO ((void));
 #endif
 #ifdef USE_DLPI_RECEIVE
 void if_reinitialize_receive PROTO ((struct interface_info *));

@@ -122,7 +122,9 @@
 #  define ABS(x) ((x) >= 0 ? (x) : 0-(x))
 # endif
 
+#if defined(USE_DLPI_PFMOD) || defined(USE_DLPI_RAW)
 static int strioctl PROTO ((int fd, int cmd, int timeout, int len, char *dp));
+#endif
 
 #define DLPI_MAXDLBUF		8192	/* Buffer size */
 #define DLPI_MAXDLADDR		1024	/* Max address size */
@@ -136,8 +138,13 @@ static int dlpiattachreq PROTO ((int fd, unsigned long ppa));
 static int dlpibindreq PROTO ((int fd, unsigned long sap, unsigned long max_conind,
 			       unsigned long service_mode, unsigned long conn_mgmt,
 			       unsigned long xidtest));
+#if defined(UNUSED_DLPI_INTERFACE)
+/* These functions are unused at present, but may be used at a later date.
+ * defined out to avoid compiler warnings about unused static functions.
+ */
 static int dlpidetachreq PROTO ((int fd));
 static int dlpiunbindreq PROTO ((int fd));
+#endif
 static int dlpiokack PROTO ((int fd, char *bufp));
 static int dlpiinfoack PROTO ((int fd, char *bufp));
 static int dlpiphysaddrack PROTO ((int fd, char *bufp));
@@ -290,6 +297,7 @@ int if_register_dlpi (info)
 	return sock;
 }
 
+#if defined(USE_DLPI_PFMOD) || defined(USE_DLPI_RAW)
 static int
 strioctl (fd, cmd, timeout, len, dp)
 int fd;
@@ -312,6 +320,7 @@ char *dp;
 	return sio.ic_len;
     }
 }
+#endif /* USE_DPI_PFMOD || USE_DLPI_RAW */
 
 #ifdef USE_DLPI_SEND
 void if_register_send (info)
@@ -514,8 +523,9 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	struct sockaddr_in *to;
 	struct hardware *hto;
 {
-	unsigned hbufp = 0;
+#ifdef USE_DLPI_RAW
 	double hh [32];
+#endif
 	double ih [1536 / sizeof (double)];
 	unsigned char *dbuf = (unsigned char *)ih;
 	unsigned dbuflen;
@@ -615,10 +625,8 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 	unsigned char dbuf [1536];
 	unsigned char srcaddr [DLPI_MAXDLADDR];
 	unsigned long srcaddrlen;
-	int flags = 0;
 	int length = 0;
 	int offset = 0;
-	int rslt;
 	int bufix = 0;
 	int paylen;
 	
@@ -728,8 +736,7 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 static int dlpiunit (ifname)
 	char *ifname;
 {
-	int fd;
-	char *cp, *dp, *ep;
+	char *cp;
 	int unit;
 	
 	if (!ifname) {
@@ -890,8 +897,11 @@ static int dlpibindreq (fd, sap, max_conind, service_mode, conn_mgmt, xidtest)
 	return putmsg (fd, &ctl, (struct strbuf*)NULL, flags);
 }
 
+#if defined(UNUSED_DLPI_INTERFACE)
 /*
- * dlpiunbindreq - send a request to unbind.
+ * dlpiunbindreq - send a request to unbind.  This function is not actually
+ *	used by ISC DHCP, but is included for completeness in case it is
+ *	ever required for new work.
  */
 static int dlpiunbindreq (fd)
 	int fd;
@@ -913,7 +923,9 @@ static int dlpiunbindreq (fd)
 
 
 /*
- * dlpidetachreq - send a request to detach.
+ * dlpidetachreq - send a request to detach.  This function is not actually
+ *	used by ISC DHCP, but is included for completeness in case it is
+ *	ever required for new work.
  */
 static int dlpidetachreq (fd)
 	int fd;
@@ -932,6 +944,7 @@ static int dlpidetachreq (fd)
 	
 	return putmsg (fd, &ctl, (struct strbuf*)NULL, flags);
 }
+#endif /* UNUSED_DLPI_INTERFACE */
 
 
 /*
