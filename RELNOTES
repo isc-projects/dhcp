@@ -65,6 +65,9 @@ suggested fixes to <dhcp-users@isc.org>.
   but would not return the address in response to a REQUEST. Thanks to
   Dennis Kou for finding the bug.
 
+- Fixed an error causing the server to lock up on lease expiration,
+  reported independently by Jothilingam Vasu and Dennis Kou.
+
 			Changes since 4.0.0a2
 
 - Fix for startup where there are no IPv4 addresses on an interface.

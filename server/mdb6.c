@@ -1046,7 +1046,7 @@ schedule_lease_timeout(struct ipv6_pool *pool) {
 		tmp = (struct iaaddr *)isc_heap_element(pool->active_timeouts, 
 							1);
 		if (tmp->valid_lifetime_end_time < next_timeout) {
-			next_timeout = tmp->valid_lifetime_end_time;
+			next_timeout = tmp->valid_lifetime_end_time + 1;
 		}
 	}
 
