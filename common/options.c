@@ -244,7 +244,7 @@ int parse_option_buffer (options, buffer, length, universe)
 
 				nop->data.buffer = NULL;
 				buffer_reference(&nop->data.buffer, bp, MDL);
-				nop->data.data = bp->data;
+				nop->data.data = bp->data + offset;
 				nop->data.len = len;
 
 				option_cache_reference(&op->next, nop, MDL);
