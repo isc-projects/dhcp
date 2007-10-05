@@ -82,6 +82,8 @@ suggested fixes to <dhcp-users@isc.org>.
   as directed in RFC3315 section 18.2.2 - that is, to all clients
   regardless of the existence of bindings.
 
+- A core dump during expired lease cleanup has been repaired.
+
 			Changes since 4.0.0a2
 
 - Fix for startup where there are no IPv4 addresses on an interface.

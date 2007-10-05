@@ -959,6 +959,7 @@ static void
 cleanup_old_expired(struct ipv6_pool *pool) {
 	struct iaaddr *tmp;
 	struct ia_na *ia_na;
+	char addr_buf[INET6_ADDRSTRLEN];
 	
 	while (pool->num_inactive > 0) {
 		tmp = (struct iaaddr *)isc_heap_element(pool->inactive_timeouts,
@@ -972,15 +973,23 @@ cleanup_old_expired(struct ipv6_pool *pool) {
 		pool->num_inactive--;
 
 		ia_na = NULL;
-		ia_na_reference(&ia_na, tmp->ia_na, MDL);
-		ia_na_remove_iaaddr(ia_na, tmp, MDL);
-		iaaddr_dereference(&tmp, MDL);
-		if (ia_na->num_iaaddr <= 0) {
-			ia_na_hash_delete(ia_active, 
-					  (unsigned char*)ia_na->iaid_duid.data,
-					  ia_na->iaid_duid.len, MDL);
+		if (tmp->ia_na == NULL) {
+			inet_ntop(AF_INET6, &tmp->addr, addr_buf, 
+				  sizeof(addr_buf));
+			log_error("%s(%d): no IA_NA cleaning up address %s", 
+				  MDL, addr_buf);
+		} else {
+			ia_na_reference(&ia_na, tmp->ia_na, MDL);
+			ia_na_remove_iaaddr(ia_na, tmp, MDL);
+			if (ia_na->num_iaaddr <= 0) {
+				unsigned char *tmpd = 
+					(unsigned char *)ia_na->iaid_duid.data;
+				ia_na_hash_delete(ia_active, tmpd, 
+					  	  ia_na->iaid_duid.len, MDL);
+			}
+			ia_na_dereference(&ia_na, MDL);
 		}
-		ia_na_dereference(&ia_na, MDL);
+		iaaddr_dereference(&tmp, MDL);
 	}
 }
 
