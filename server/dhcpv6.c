@@ -316,11 +316,10 @@ valid_client_msg(struct packet *packet, struct data_string *client_id) {
 	 */
 	if (packet->unicast) {
 		log_debug("Discarding %s from %s; packet sent unicast "
-			  "(CLIENTID %s, SERVERID %s)", 
+			  "(CLIENTID %s)", 
 			  dhcpv6_type_names[packet->dhcpv6_msg_type],
 			  piaddr(packet->client_addr),
-			  print_hex_1(client_id->len, client_id->data, 60),
-			  print_hex_2(data.len, data.data, 60));
+			  print_hex_1(client_id->len, client_id->data, 60));
 		goto exit;
 	}
 
@@ -381,7 +380,8 @@ exit:
 int
 valid_client_resp(struct packet *packet,
 		  struct data_string *client_id,
-		  struct data_string *server_id) {
+		  struct data_string *server_id)
+{
 	int ret_val;
 	struct option_cache *oc;
 
@@ -470,37 +470,53 @@ int
 valid_client_info_req(struct packet *packet, struct data_string *server_id) {
 	int ret_val;
 	struct option_cache *oc;
-
-	/* INSIST((duid.data != NULL) && (duid.len > 0)); */
+	struct data_string client_id;
+	char client_id_str[80];	/* print_hex_1() uses maximum 60 characters,
+				   plus a few more for extra information */
 
 	ret_val = 0;
 	memset(server_id, 0, sizeof(*server_id));
 
 	/*
+	 * Make a string that we can print out to give more 
+	 * information about the client if we need to.
+	 *
+	 * By RFC 3315, Section 18.1.5 clients SHOULD have a 
+	 * client-id on an Information-request packet, but it 
+	 * is not strictly necessary.
+	 */
+	if (get_client_id(packet, &client_id) == ISC_R_SUCCESS) {
+		snprintf(client_id_str, sizeof(client_id_str), " (CLIENTID %s)",
+			 print_hex_1(client_id.len, client_id.data, 60));
+		data_string_forget(&client_id, MDL);
+	} else {
+		client_id_str[0] = '\0';
+	}
+
+	/*
 	 * Required by RFC 3315, section 15.
 	 */
 	if (packet->unicast) {
-		log_debug("Discarding %s from %s; "
-			  "IA_NA option present", 
+		log_debug("Discarding %s from %s; packet sent unicast%s",
 			  dhcpv6_type_names[packet->dhcpv6_msg_type],
-			  piaddr(packet->client_addr));
+			  piaddr(packet->client_addr), client_id_str);
 		goto exit;
 	}
 
 	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_IA_NA);
 	if (oc != NULL) {
 		log_debug("Discarding %s from %s; "
-			  "IA_NA option present", 
+			  "IA_NA option present%s", 
 			  dhcpv6_type_names[packet->dhcpv6_msg_type],
-			  piaddr(packet->client_addr));
+			  piaddr(packet->client_addr), client_id_str);
 		goto exit;
 	}
 	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_IA_TA);
 	if (oc != NULL) {
 		log_debug("Discarding %s from %s; "
-			  "IA_TA option present", 
+			  "IA_TA option present%s", 
 			  dhcpv6_type_names[packet->dhcpv6_msg_type],
-			  piaddr(packet->client_addr));
+			  piaddr(packet->client_addr), client_id_str);
 		goto exit;
 	}
 
@@ -510,9 +526,9 @@ valid_client_info_req(struct packet *packet, struct data_string *server_id) {
 					   packet->options, NULL,
 					   &global_scope, oc, MDL)) {
 			log_error("Error processing %s from %s; "
-				  "unable to evaluate Server Identifier",
+				  "unable to evaluate Server Identifier%s",
 				  dhcpv6_type_names[packet->dhcpv6_msg_type],
-				  piaddr(packet->client_addr));
+				  piaddr(packet->client_addr), client_id_str);
 			goto exit;
 		}
 		if ((server_duid.len != server_id->len) || 
@@ -520,13 +536,14 @@ valid_client_info_req(struct packet *packet, struct data_string *server_id) {
 		    	    server_duid.len) != 0)) {
 			log_debug("Discarding %s from %s; " 
 				  "not our server identifier "
-				  "(SERVERID %s, server DUID %s)", 
+				  "(SERVERID %s, server DUID %s)%s", 
 				  dhcpv6_type_names[packet->dhcpv6_msg_type],
 				  piaddr(packet->client_addr),
 				  print_hex_1(server_id->len, 
 				  	      server_id->data, 60),
 				  print_hex_2(server_duid.len, 
-				  	      server_duid.data, 60));
+				  	      server_duid.data, 60),
+				  client_id_str);
 			goto exit;
 		}
 	}
@@ -583,7 +600,8 @@ static int
 get_encapsulated_IA_state(struct option_state **enc_opt_state, 
 			  struct data_string *enc_opt_data,
 			  struct packet *packet,
-			  struct option_cache *oc) {
+			  struct option_cache *oc)
+{
 
 	/* 
 	 * Get the raw data for the encapsulated options.
@@ -627,7 +645,8 @@ get_encapsulated_IA_state(struct option_state **enc_opt_state,
 
 static int
 set_status_code(u_int16_t status_code, const char *status_message,
-		struct option_state *opt_state) {
+		struct option_state *opt_state)
+{
 	struct data_string d;
 	int ret_val;
 
@@ -661,7 +680,8 @@ start_reply(struct packet *packet,
 	    const struct data_string *client_id, 
 	    const struct data_string *server_id,
 	    struct option_state **opt_state,
-	    struct dhcpv6_packet *reply) {
+	    struct dhcpv6_packet *reply)
+{
 	struct option_cache *oc;
 	struct data_string server_oro;
 	const unsigned char *server_id_data;
@@ -777,7 +797,8 @@ start_reply(struct packet *packet,
 static isc_result_t
 try_client_v6_address(struct iaaddr **addr, 
 		      struct ipv6_pool *pool,
-		      const struct data_string *requested_addr) {
+		      const struct data_string *requested_addr)
+{
 	struct in6_addr tmp_addr;
 	isc_result_t result;
 
@@ -823,7 +844,8 @@ pick_v6_address(struct iaaddr **addr,
 		struct ipv6_pool **pool,
 		struct packet *packet, 
 		const struct data_string *requested_iaaddr,
-		const struct data_string *client_id) {
+		const struct data_string *client_id)
+{
 	const struct packet *chk_packet;
 	const struct in6_addr *link_addr;
 	const struct in6_addr *first_link_addr;
@@ -976,7 +998,8 @@ static void
 lease_to_client(struct data_string *reply_ret,
 		struct packet *packet, 
 		const struct data_string *client_id,
-		const struct data_string *server_id) {
+		const struct data_string *server_id)
+{
 	struct option_cache *oc;
 	struct data_string packet_oro;
 	struct host_decl *packet_host;
@@ -1826,7 +1849,6 @@ exit:
  * Otherwise we will send an advertise message.
  */
 
-/* TODO: discard unicast messages */
 static void
 dhcpv6_solicit(struct data_string *reply_ret, struct packet *packet) {
 	struct data_string client_id;
@@ -2111,7 +2133,8 @@ dhcpv6_rebind(struct data_string *reply, struct packet *packet) {
 static void
 ia_na_match_decline(const struct data_string *client_id,
 		    const struct data_string *iaaddr,
-		    struct iaaddr *lease) {
+		    struct iaaddr *lease)
+{
 	char tmp_addr[INET6_ADDRSTRLEN];
 
 	log_error("Client %s reports address %s is "
@@ -2132,7 +2155,8 @@ ia_na_nomatch_decline(const struct data_string *client_id,
 		      struct packet *packet,
 		      char *reply_data,
 		      int *reply_ofs,
-		      int reply_len) {
+		      int reply_len)
+{
 	char tmp_addr[INET6_ADDRSTRLEN];
 	struct option_state *host_opt_state;
 	int len;
@@ -2204,7 +2228,8 @@ iterate_over_ia_na(struct data_string *reply_ret,
 		   const struct data_string *server_id,
 		   const char *packet_type,
 		   void (*ia_na_match)(),
-		   void (*ia_na_nomatch)()) {
+		   void (*ia_na_nomatch)())
+{
 	struct option_state *opt_state;
 	struct host_decl *packet_host;
 	struct option_cache *ia;
@@ -2518,7 +2543,8 @@ dhcpv6_decline(struct data_string *reply, struct packet *packet) {
 static void
 ia_na_match_release(const struct data_string *client_id,
 		    const struct data_string *iaaddr,
-		    struct iaaddr *lease) {
+		    struct iaaddr *lease)
+{
 	char tmp_addr[INET6_ADDRSTRLEN];
 
 	log_info("Client %s releases address %s",
@@ -2537,7 +2563,8 @@ ia_na_nomatch_release(const struct data_string *client_id,
 		      struct packet *packet,
 		      char *reply_data,
 		      int *reply_ofs,
-		      int reply_len) {
+		      int reply_len)
+{
 	char tmp_addr[INET6_ADDRSTRLEN];
 	struct option_state *host_opt_state;
 	int len;
@@ -2551,7 +2578,7 @@ ia_na_nomatch_release(const struct data_string *client_id,
 	 */
 	host_opt_state = NULL;
 	if (!option_state_allocate(&host_opt_state, MDL)) {
-		log_error("ia_na_match_release: out of memory "
+		log_error("ia_na_nomatch_release: out of memory "
 			  "allocating option_state.");
 		goto exit;
 	}
@@ -2566,7 +2593,7 @@ ia_na_nomatch_release(const struct data_string *client_id,
 	 * Insure we have enough space
 	 */
 	if (reply_len < (*reply_ofs + 16)) {
-		log_error("ia_na_match_release: "
+		log_error("ia_na_nomatch_release: "
 			  "out of space for reply packet.");
 		goto exit;
 	}
