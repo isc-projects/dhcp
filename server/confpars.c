@@ -36,6 +36,9 @@
 
 static unsigned char global_host_once = 1;
 
+static int parse_binding_value(struct parse *cfile,
+				struct binding_value *value);
+
 #if defined (TRACING)
 trace_type_t *trace_readconf_type;
 trace_type_t *trace_readleases_type;
@@ -2775,9 +2778,9 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 	struct executable_statement *on;
 	int lose;
 	TIME t;
-	char *s;
 	int noequal, newbinding;
 	struct binding *binding;
+	struct binding_value *nv;
 	isc_result_t status;
 	struct option_cache *oc;
 	pair *p;
@@ -3117,7 +3120,7 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 			}
 			executable_statement_dereference (&on, MDL);
 			break;
-			
+
 		      case OPTION:
 		      case SUPERSEDE:
 			noequal = 0;
@@ -3167,6 +3170,7 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 				binding = find_binding (lease -> scope, val);
 			else
 				binding = (struct binding *)0;
+
 			if (!binding) {
 			    if (!lease -> scope)
 				if (!(binding_scope_allocate
@@ -3185,14 +3189,11 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 			    strcpy (binding -> name, val);
 			    newbinding = 1;
 			} else  {
-				if (binding -> value)
-				  binding_value_dereference (&binding -> value,
-							   MDL);
-				newbinding = 0;
+			    newbinding = 0;
 			}
 
-			if (!binding_value_allocate (&binding -> value, MDL))
-				log_fatal ("no memory for binding value.");
+			if (!binding_value_allocate(&nv, MDL))
+				log_fatal("no memory for binding value.");
 
 			if (!noequal) {
 			    token = next_token (&val, (unsigned *)0, cfile);
@@ -3203,91 +3204,28 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 			    }
 			}
 
-			token = peek_token (&val, (unsigned *)0, cfile);
-			if (token == STRING) {
-			    token = next_token (&val, &buflen, cfile);
-			    binding -> value -> type = binding_data;
-			    binding -> value -> value.data.len = buflen;
-			    if (!(buffer_allocate
-				  (&binding -> value -> value.data.buffer,
-				   buflen + 1, MDL)))
-				log_fatal ("No memory for binding.");
-			    memcpy ((char *)
-				    (binding -> value ->
-				     value.data.buffer -> data),
-				    val, buflen + 1);
-			    binding -> value -> value.data.data =
-				binding -> value -> value.data.buffer -> data;
-			    binding -> value -> value.data.terminated = 1;
-			} else if (token == NUMBER_OR_NAME) {
-			    binding -> value -> type = binding_data;
-			    s = ((char *)
-				 (parse_numeric_aggregate
-				  (cfile, (unsigned char *)0,
-				   &binding -> value -> value.data.len,
-				   ':', 16, 8)));
-			    if (!s) {
-				    binding_value_dereference
-					    (&binding -> value, MDL);
-				    lease_dereference (&lease, MDL);
-				    return 0;
-			    }
-			    if (binding -> value -> value.data.len) {
-				if (!(buffer_allocate
-				      (&binding -> value -> value.data.buffer,
-				       binding -> value -> value.data.len + 1,
-				       MDL)))
-					log_fatal ("No memory for binding.");
-				memcpy ((binding -> value ->
-					 value.data.buffer -> data), s,
-					binding -> value -> value.data.len);
-				dfree (s, MDL);
-				binding -> value -> value.data.data =
-				 binding -> value -> value.data.buffer -> data;
-			    }
-			} else if (token == PERCENT) {
-			    token = next_token (&val, (unsigned *)0, cfile);
-			    token = next_token (&val, (unsigned *)0, cfile);
-			    if (token != NUMBER) {
-				    parse_warn (cfile,
-						"expecting decimal number.");
-				    if (token != SEMI)
-					    skip_to_semi (cfile);
-				    binding_value_dereference
-					    (&binding -> value, MDL);
-				    lease_dereference (&lease, MDL);
-				    return 0;
-			    }
-			    binding -> value -> type = binding_numeric;
-			    binding -> value -> value.intval = atol (val);
-			} else if (token == NAME) {
-				token = next_token (&val,
-						    (unsigned *)0, cfile);
-				binding -> value -> type = binding_boolean;
-				if (!strcasecmp (val, "true"))
-					binding -> value -> value.boolean = 1;
-				else if (!strcasecmp (val, "false"))
-					binding -> value -> value.boolean = 0;
-				else
-					goto badbool;
-			} else {
-			      badbool:
-				parse_warn (cfile,
-					    "expecting a constant value.");
-				skip_to_semi (cfile);
-				binding_value_dereference (&binding -> value,
-							   MDL);
-				lease_dereference (&lease, MDL);
+			if (!parse_binding_value(cfile, nv)) {
+				binding_value_dereference(&nv, MDL);
+				lease_dereference(&lease, MDL);
 				return 0;
 			}
-				
+
 			if (newbinding) {
-				binding -> next = lease -> scope -> bindings;
-				lease -> scope -> bindings = binding;
+				binding_value_reference(&binding->value,
+							nv, MDL);
+				binding->next = lease->scope->bindings;
+				lease->scope->bindings = binding;
+			} else {
+				binding_value_dereference(&binding->value, MDL);
+				binding_value_reference(&binding->value,
+							nv, MDL);
 			}
-			parse_semi (cfile);
+
+			binding_value_dereference(&nv, MDL);
+			parse_semi(cfile);
 			break;
 
+			/* case NAME: */
 		      default:
 			if (!strcasecmp (val, "ddns-fwd-name")) {
 				seenbit = 4096;
@@ -3297,7 +3235,9 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 				seenbit = 8192;
 				noequal = 1;
 				goto special_set;
-			}
+			} else
+				parse_warn(cfile, "Unexpected configuration "
+						  "directive.");
 			skip_to_semi (cfile);
 			seenbit = 0;
 			lease_dereference (&lease, MDL);
@@ -3340,6 +3280,95 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 
 	lease_reference (lp, lease, MDL);
 	lease_dereference (&lease, MDL);
+	return 1;
+}
+
+/* Parse the right side of a 'binding value'.
+ *
+ * set foo = "bar"; is a string
+ * set foo = false; is a boolean
+ * set foo = %31; is a numeric value.
+ */
+static int
+parse_binding_value(struct parse *cfile, struct binding_value *value)
+{
+	struct data_string *data;
+	unsigned char *s;
+	const char *val;
+	unsigned buflen;
+	int token;
+
+	if ((cfile == NULL) || (value == NULL))
+		log_fatal("Invalid arguments at %s:%d.", MDL);
+
+	token = peek_token(&val, NULL, cfile);
+	if (token == STRING) {
+		token = next_token(&val, &buflen, cfile);
+
+		value->type = binding_data;
+		value->value.data.len = buflen;
+
+		data = &value->value.data;
+
+		if (!buffer_allocate(&data->buffer, buflen + 1, MDL))
+			log_fatal ("No memory for binding.");
+
+		memcpy(data->buffer->data, val, buflen + 1);
+
+		data->data = data->buffer->data;
+		data->terminated = 1;
+	} else if (token == NUMBER_OR_NAME) {
+		value->type = binding_data;
+
+		data = &value->value.data;
+		s = parse_numeric_aggregate(cfile, NULL, &data->len,
+					    ':', 16, 8);
+		if (s == NULL) {
+			skip_to_semi(cfile);
+			return 0;
+		}
+
+		if (data->len) {
+			if (!buffer_allocate(&data->buffer, data->len + 1,
+					     MDL))
+				log_fatal("No memory for binding.");
+
+			memcpy(data->buffer->data, s, data->len);
+			data->data = data->buffer->data;
+
+			dfree (s, MDL);
+		}
+	} else if (token == PERCENT) {
+		token = next_token(&val, NULL, cfile);
+		token = next_token(&val, NULL, cfile);
+		if (token != NUMBER) {
+			parse_warn(cfile, "expecting decimal number.");
+			if (token != SEMI)
+				skip_to_semi(cfile);
+			return 0;
+		}
+		value->type = binding_numeric;
+		value->value.intval = atol(val);
+	} else if (token == NAME) {
+		token = next_token(&val, NULL, cfile);
+		value->type = binding_boolean;
+		if (!strcasecmp(val, "true"))
+			value->value.boolean = 1;
+		else if (!strcasecmp(val, "false"))
+			value->value.boolean = 0;
+		else {
+			parse_warn(cfile, "expecting true or false");
+			if (token != SEMI)
+				skip_to_semi(cfile);
+			return 0;
+		}
+	} else {
+		parse_warn (cfile, "expecting a constant value.");
+		if (token != SEMI)
+			skip_to_semi (cfile);
+		return 0;
+	}
+
 	return 1;
 }
 
@@ -3758,6 +3787,10 @@ parse_ia_na_declaration(struct parse *cfile) {
 	struct iaaddr *iaaddr;
 	struct ipv6_pool *pool;
 	char addr_buf[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
+	isc_boolean_t newbinding;
+	struct binding_scope *scope=NULL;
+	struct binding *bnd;
+	struct binding_value *nv=NULL;
 
 	token = next_token(&val, &len, cfile);
 	if (token != STRING) {
@@ -3818,7 +3851,9 @@ parse_ia_na_declaration(struct parse *cfile) {
 			token = next_token(&val, NULL, cfile);
 			if (token == RBRACE) break;
 
-			if (token == BINDING) {
+			switch(token) {
+				/* Lease binding state. */
+			     case BINDING:
 				token = next_token(&val, NULL, cfile);
 				if (token != STATE) {
 					parse_warn(cfile, "corrupt lease file; "
@@ -3859,15 +3894,100 @@ parse_ia_na_declaration(struct parse *cfile) {
 							  "expecting "
 							  "semicolon.");
 				}
+				break;
 
-			} else if (token == ENDS) {
+				/* Lease expiration time. */
+			      case ENDS:
 				end_time = parse_date(cfile);
-			} else {
+				break;
+
+				/* Lease binding scopes. */
+			      case TOKEN_SET:
+				token = next_token(&val, NULL, cfile);
+				if ((token != NAME) &&
+				    (token != NUMBER_OR_NAME)) {
+					parse_warn(cfile, "%s is not a valid "
+							  "variable name",
+						   val);
+					skip_to_semi(cfile);
+					continue;
+				}
+
+				if (scope != NULL)
+					bnd = find_binding(scope, val);
+				else {
+					if (!binding_scope_allocate(&scope,
+								    MDL)) {
+						log_fatal("Out of memory for "
+							  "lease binding "
+							  "scope.");
+					}
+
+					bnd = NULL;
+				}
+
+				if (bnd == NULL) {
+					bnd = dmalloc(sizeof(*bnd),
+							  MDL);
+					if (bnd == NULL) {
+						log_fatal("No memory for "
+							  "lease binding.");
+					}
+
+					bnd->name = dmalloc(strlen(val) + 1,
+							    MDL);
+					if (bnd->name == NULL) {
+						log_fatal("No memory for "
+							  "binding name.");
+					}
+					strcpy(bnd->name, val);
+
+					newbinding = ISC_TRUE;
+				} else {
+					newbinding = ISC_FALSE;
+				}
+
+				if (!binding_value_allocate(&nv, MDL)) {
+					log_fatal("no memory for binding "
+						  "value.");
+				}
+
+				token = next_token(NULL, NULL, cfile);
+				if (token != EQUAL) {
+					parse_warn(cfile, "expecting '=' in "
+							  "set statement.");
+					goto binding_err;
+				}
+
+				if (!parse_binding_value(cfile, nv)) {
+				      binding_err:
+					binding_value_dereference(&nv, MDL);
+					binding_scope_dereference(&scope, MDL);
+					return;
+				}
+
+				if (newbinding) {
+					binding_value_reference(&bnd->value,
+								nv, MDL);
+					bnd->next = scope->bindings;
+					scope->bindings = bnd;
+				} else {
+					binding_value_dereference(&bnd->value,
+								  MDL);
+					binding_value_reference(&bnd->value,
+								nv, MDL);
+				}
+
+				binding_value_dereference(&nv, MDL);
+				parse_semi(cfile);
+				break;
+
+			      default:
 				parse_warn(cfile, "corrupt lease file; "
-						  "expecting binding or ends, "
+						  "expecting ia_na contents, "
 						  "got '%s'", val);
 				skip_to_semi(cfile);
-				return;
+				continue;
 			}
 		}
 
@@ -3889,6 +4009,11 @@ parse_ia_na_declaration(struct parse *cfile) {
 		memcpy(&iaaddr->addr, iaddr.iabuf, sizeof(iaaddr->addr));
 		iaaddr->state = state;
 		iaaddr->valid_lifetime_end_time = end_time;
+
+		if (scope != NULL) {
+			binding_scope_reference(&iaaddr->scope, scope, MDL);
+			binding_scope_dereference(&scope, MDL);
+		}
 
 		/* add to our various structures */
 		ia_na_add_iaaddr(ia_na, iaaddr, MDL);

@@ -36,12 +36,67 @@
 #include <ctype.h>
 #include <errno.h>
 
+static isc_result_t write_binding_scope(FILE *db_file, struct binding *bnd,
+					char *prepend);
+
 FILE *db_file;
 
 static int counting = 0;
 static int count = 0;
 TIME write_time;
 int lease_file_is_corrupt = 0;
+
+/* Write a single binding scope value in parsable format.
+ */
+
+static isc_result_t
+write_binding_scope(FILE *db_file, struct binding *bnd, char *prepend) {
+	char *s;
+
+	if ((db_file == NULL) || (bnd == NULL) || (prepend == NULL))
+		return ISC_R_INVALIDARG;
+
+	if (bnd->value->type == binding_data) {
+		if (bnd->value->value.data.data != NULL) {
+			s = quotify_buf(bnd->value->value.data.data,
+					bnd->value->value.data.len, MDL);
+			if (s != NULL) {
+				errno = 0;
+				fprintf(db_file, "%sset %s = \"%s\";",
+					prepend, bnd->name, s);
+				if (errno)
+					return ISC_R_FAILURE;
+
+				dfree(s, MDL);
+			} else {
+			    return ISC_R_FAILURE;
+			}
+		}
+	} else if (bnd->value->type == binding_numeric) {
+		errno = 0;
+		fprintf(db_file, "%sset %s = %%%ld;", prepend,
+			bnd->name, bnd->value->value.intval);
+		if (errno)
+			return ISC_R_FAILURE;
+	} else if (bnd->value->type == binding_boolean) {
+		errno = 0;
+		fprintf(db_file, "%sset %s = %s;", prepend, bnd->name,
+			bnd->value->value.intval ? "true" : "false");
+		if (errno)
+			return ISC_R_FAILURE;
+	} else if (bnd->value->type == binding_dns) {
+		log_error("%s: persistent dns values not supported.",
+			  bnd->name);
+	} else if (bnd->value->type == binding_function) {
+		log_error("%s: persistent functions not supported.",
+			  bnd->name);
+	} else {
+		log_fatal("%s: unknown binding type %d", bnd->name,
+			  bnd->value->type);
+	}
+
+	return ISC_R_SUCCESS;
+}
 
 /* Write the specified lease to the current lease database file. */
 
@@ -152,49 +207,17 @@ int write_lease (lease)
 		} else
 			++errors;
 	}
-	if (lease -> scope) {
-	    for (b = lease -> scope -> bindings; b; b = b -> next) {
-		if (!b -> value)
+
+	if (lease->scope != NULL) {
+	    for (b = lease->scope->bindings; b; b = b->next) {
+		if (!b->value)
 			continue;
-		if (b -> value -> type == binding_data) {
-		    if (b -> value -> value.data.data) {
-			s = quotify_buf (b -> value -> value.data.data,
-					 b -> value -> value.data.len, MDL);
-			if (s) {
-			    errno = 0;
-			    fprintf (db_file, "\n  set %s = \"%s\";",
-				     b -> name, s);
-			    if (errno)
-				++errors;
-			    dfree (s, MDL);
-			} else
-			    ++errors;
-		    }
-		} else if (b -> value -> type == binding_numeric) {
-		    errno = 0;
-		    fprintf (db_file, "\n  set %s = %%%ld;",
-			     b -> name, b -> value -> value.intval);
-		    if (errno)
+
+		if (write_binding_scope(db_file, b, "\n  ") != ISC_R_SUCCESS)
 			++errors;
-		} else if (b -> value -> type == binding_boolean) {
-		    errno = 0;
-		    fprintf (db_file, "\n  set %s = %s;",
-			     b -> name,
-			     b -> value -> value.intval ? "true" : "false");
-		    if (errno)
-			    ++errors;
-		} else if (b -> value -> type == binding_dns) {
-			log_error ("%s: persistent dns values not supported.",
-				   b -> name);
-		} else if (b -> value -> type == binding_function) {
-			log_error ("%s: persistent functions not supported.",
-				   b -> name);
-		} else {
-			log_error ("%s: unknown binding type %d",
-				   b -> name, b -> value -> type);
-		}
 	    }
 	}
+
 	if (lease -> agent_options) {
 	    struct option_cache *oc;
 	    struct data_string ds;
@@ -479,6 +502,7 @@ int write_group (group)
 int
 write_ia_na(const struct ia_na *ia_na) {
 	struct iaaddr *iaaddr;
+	struct binding *bnd;
 	int i;
 	char addr_buf[sizeof("ffff:ffff:ffff:ffff:ffff:ffff.255.255.255.255")];
 	const char *binding_state;
@@ -526,6 +550,10 @@ write_ia_na(const struct ia_na *ia_na) {
 			    binding_state) < 0) {
 			goto error_exit;
 		}
+
+		/* Note that from here on out, the \n is prepended to the
+		 * next write, rather than appended to the current write.
+		 */
 		tval = print_time(iaaddr->valid_lifetime_end_time);
 		if (tval == NULL) {
 			goto error_exit;
@@ -533,6 +561,28 @@ write_ia_na(const struct ia_na *ia_na) {
 		if (fprintf(db_file, "    ends %s", tval) < 0) {
 			goto error_exit;
 		}
+
+		/* Write out any binding scopes: note that 'ends' above does
+		 * not have \n on the end!  We want that.
+		 */
+		if (iaaddr->scope != NULL)
+			bnd = iaaddr->scope->bindings;
+		else
+			bnd = NULL;
+
+		for (; bnd != NULL ; bnd = bnd->next) {
+			if (bnd->value == NULL)
+				continue;
+
+			/* We don't do a regular error_exit because the
+			 * lease db is not corrupt in this case.
+			 */
+			if (write_binding_scope(db_file, bnd,
+						"\n    ") != ISC_R_SUCCESS)
+				goto error_exit;
+				
+		}
+
 		if (fprintf(db_file, "\n  }\n") < 0)
                         goto error_exit;
 	}

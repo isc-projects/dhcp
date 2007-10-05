@@ -1597,8 +1597,6 @@ lease_to_client(struct data_string *reply_ret,
 					       ia_na->iaid_duid.data,
 				               ia_na->iaid_duid.len, 
 					       ia_na, MDL);
-				write_ia_na(ia_na);
-				schedule_lease_timeout(lease->ipv6_pool);
 
 				/* If this constitutes a binding, and we
 				 * are performing ddns updates, then give
@@ -1622,6 +1620,9 @@ lease_to_client(struct data_string *reply_ret,
 						     lease, /* XXX */ NULL,
 						     opt_state);
 				}
+
+				write_ia_na(ia_na);
+                                schedule_lease_timeout(lease->ipv6_pool);
 			/* 
 			 * On SOLICIT, we want to forget this lease since we're
 			 * not actually doing anything with it.

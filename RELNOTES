@@ -84,6 +84,12 @@ suggested fixes to <dhcp-users@isc.org>.
 
 - A core dump during expired lease cleanup has been repaired.
 
+- DDNS updates state information are now stored in 'binding scopes' that
+  follow the leases through their lifecycles.  This enables DDNS teardowns
+  on leases that are assigned and expired inbetween a server restart (the
+  state is recovered from dhcpd.leases).  Arbitrary user-specified binding
+  scopes ('set var = "value";') are not yet supported.
+
 			Changes since 4.0.0a2
 
 - Fix for startup where there are no IPv4 addresses on an interface.

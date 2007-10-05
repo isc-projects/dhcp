@@ -828,6 +828,14 @@ move_lease_to_inactive(struct ipv6_pool *pool, struct iaaddr *addr,
 	old_heap_index = addr->heap_index;
 	insert_result = isc_heap_insert(pool->inactive_timeouts, addr);
 	if (insert_result == ISC_R_SUCCESS) {
+		/* Process events upon expiration. */
+		ddns_removals(NULL, addr);
+
+		/* Binding scopes are no longer valid after expiry or
+		 * release.
+		 */
+		binding_scope_dereference(&addr->scope, MDL);
+
 		iaaddr_hash_delete(pool->addrs, 
 				   &addr->addr, sizeof(addr->addr), MDL);
 		isc_heap_delete(pool->active_timeouts, old_heap_index);

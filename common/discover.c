@@ -289,7 +289,10 @@ int
 next_iface(struct iface_info *info, int *err, struct iface_conf_list *ifaces) {
 	struct LIFREQ *p;
 	struct LIFREQ tmp;
+#if defined(sun) || defined(__linux)
+	/* Pointer used to remove interface aliases. */
 	char *s;
+#endif
 
 	do {
 		if (ifaces->next >= ifaces->num) {
