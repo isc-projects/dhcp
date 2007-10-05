@@ -305,7 +305,7 @@ static struct option dhcpv6_options[] = {
 	/* Client and server DUIDs are opaque fields, but marking them
 	 * up somewhat makes configuration easier.
 	 */
-	{ "client-id", "Nduid-types.X",		&dhcpv6_universe,  1, 1 },
+	{ "client-id", "X",			&dhcpv6_universe,  1, 1 },
 	{ "server-id", "X",			&dhcpv6_universe,  2, 1 },
 
 	/* ia-* options actually have at their ends a space for options

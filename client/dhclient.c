@@ -2511,7 +2511,7 @@ write_client6_lease(struct client_state *client, struct dhc6_lease *lease,
 		return ISC_R_IOERROR;
 
 	for (ia = lease->bindings ; ia != NULL ; ia = ia->next) {
-		stat = fprintf(leaseFile, "  ia_na %s {\n",
+		stat = fprintf(leaseFile, "  ia-na %s {\n",
 			       print_hex_1(4, ia->iaid, 12));
 		if (stat <= 0)
 			return ISC_R_IOERROR;

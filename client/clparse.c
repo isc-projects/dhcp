@@ -242,7 +242,10 @@ void read_client_leases ()
 	if ((file = open (path_dhclient_db, O_RDONLY)) < 0)
 		return;
 	cfile = (struct parse *)0;
-	new_parse (&cfile, file, (char *)0, 0, path_dhclient_db, 0);
+	/* new_parse() may fail if the file is of zero length. */
+	if (new_parse(&cfile, file, (char *)0, 0,
+		      path_dhclient_db, 0) != ISC_R_SUCCESS)
+		return;
 
 	do {
 		token = next_token (&val, (unsigned *)0, cfile);

@@ -325,7 +325,7 @@ valid_reply(struct packet *packet, struct client_state *client)
 	memset(&cid, 0, sizeof(cid));
 
 	if (!lookup_option(&dhcpv6_universe, packet->options, D6O_SERVERID)) {
-		log_error("Advertise without a server identifier received.");
+		log_error("Response without a server identifier received.");
 		rval = ISC_FALSE;
 	}
 
@@ -334,7 +334,7 @@ valid_reply(struct packet *packet, struct client_state *client)
 	    !evaluate_option_cache(&sid, packet, NULL, client, packet->options,
 				   client->sent_options, &global_scope, oc,
 				   MDL)) {
-		log_error("Advertise without a client identifier.");
+		log_error("Response without a client identifier.");
 		rval = ISC_FALSE;
 	}
 
@@ -1731,6 +1731,10 @@ dhc6_check_reply(struct client_state *client, struct dhc6_lease *new)
 				return ISC_R_CANCELED;
 		}
 	}
+
+	/* A Confirm->Reply is unsuitable for comparison to the old lease. */
+	if (client->state == S_REBOOTING)
+		return rval;
 
 	switch (client->state) {
 	      case S_SELECTING:
@@ -3178,6 +3182,14 @@ make_client6_options(struct client_state *client, struct option_state **op,
 		option_cache_dereference(&oc, MDL);
 	}
 
+        /* Bring in any configured options to send. */
+	if (client->config->on_transmission)
+		execute_statements_in_scope(NULL, NULL, NULL, client,
+					    lease ? lease->options : NULL,
+					    *op, &global_scope,
+					    client->config->on_transmission,
+					    NULL);
+
 	/* See if the user configured a DUID in a relevant scope.  If not,
 	 * introduce our default manufactured id.
 	 */
@@ -3213,7 +3225,7 @@ make_client6_options(struct client_state *client, struct option_state **op,
 	 * deprecated by adjustments to the 'request' syntax also used for
 	 * DHCPv4.
 	 */
-	if (lookup_option(&dhcpv6_universe, *op, D6O_ORO) == NULL)
+	if (lookup_option(&dhcpv6_universe, *op, D6O_ORO) != NULL)
 		log_error("'send dhcp6.oro' syntax is deprecated, please "
 			  "use the 'request' syntax (\"man dhclient.conf\").");
 
@@ -3300,17 +3312,9 @@ make_client6_options(struct client_state *client, struct option_state **op,
 
 	data_string_forget(&oro, MDL);
 
-	/* Bring in any configured options to send. */
-	if (client->config->on_transmission)
-		execute_statements_in_scope(NULL, NULL, NULL, client,
-					    lease ? lease->options : NULL,
-					    *op, &global_scope,
-					    client->config->on_transmission,
-					    NULL);
-
 	/* RFC3315 says we MUST inclue an ORO in Requests.  If we have it
-	 * in the cache for one, we have it for both, so it's fatal either
-	 * way (may as well fail early).
+	 * in the cache for Requests, we have it for Solicits, so it's fatal
+	 * either way (may as well fail early on Solicits).
 	 */
 	if (lookup_option(&dhcpv6_universe, *op, D6O_ORO) == NULL)
 		log_fatal("Internal inconsistency: no dhcp6.oro in transmit "
