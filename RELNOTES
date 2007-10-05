@@ -77,6 +77,11 @@ suggested fixes to <dhcp-users@isc.org>.
 - Error in decoding IA_NA option if multiple interfaces are present 
   fixed by Marcus Goller.
 
+- DHCPv6 server Confirm message processing has been enhanced - it no
+  longer replies only to clients with host {} records, it now replies
+  as directed in RFC3315 section 18.2.2 - that is, to all clients
+  regardless of the existence of bindings.
+
 			Changes since 4.0.0a2
 
 - Fix for startup where there are no IPv4 addresses on an interface.

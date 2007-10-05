@@ -103,6 +103,10 @@ extern const int dhcpv6_type_name_max;
 #define DUID_EN		2
 #define DUID_LL		3
 
+/* Offsets into IA_*'s where Option spaces commence.  */
+#define IA_NA_OFFSET 12 /* IAID, T1, T2, all 4 octets each */
+#define IA_TA_OFFSET  4 /* IAID only, 4 octets */
+
 /* 
  * DHCPv6 well-known multicast addressess, from section 5.1 of RFC 3315 
  */

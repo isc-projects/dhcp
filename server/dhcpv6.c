@@ -37,7 +37,14 @@
 /* 
  * Prototypes local to this file.
  */
+static int get_encapsulated_IA_state(struct option_state **enc_opt_state,
+				     struct data_string *enc_opt_data,
+				     struct packet *packet,
+				     struct option_cache *oc,
+				     int offset);
 static void build_dhcpv6_reply(struct data_string *, struct packet *);
+static isc_result_t shared_network_from_packet6(struct shared_network **shared,
+						struct packet *packet);
 
 /*
  * DUID time starts 2000-01-01.
@@ -593,16 +600,18 @@ static const int required_opts_STATUS_CODE[] = {
 };
 
 /*
- * Creates an option state and data string, based on the packet contents,
- * and the specific option defined in the option cache.
+ * Extracts from packet contents an IA_* option, storing the IA structure
+ * in its entirety in enc_opt_data, and storing any decoded DHCPv6 options
+ * in enc_opt_state for later lookup and evaluation.  The 'offset' indicates
+ * where in the IA_* the DHCPv6 options commence.
  */
 static int
 get_encapsulated_IA_state(struct option_state **enc_opt_state, 
 			  struct data_string *enc_opt_data,
 			  struct packet *packet,
-			  struct option_cache *oc)
+			  struct option_cache *oc,
+			  int offset)
 {
-
 	/* 
 	 * Get the raw data for the encapsulated options.
 	 */
@@ -614,7 +623,7 @@ get_encapsulated_IA_state(struct option_state **enc_opt_state,
 			  "error evaluating raw option.");
 		return 0;
 	}
-	if (enc_opt_data->len < 12) {
+	if (enc_opt_data->len < offset) {
 		log_error("get_encapsulated_IA_state: raw option too small.");
 		data_string_forget(enc_opt_data, MDL);
 		return 0;
@@ -631,8 +640,8 @@ get_encapsulated_IA_state(struct option_state **enc_opt_state,
 		return 0;
 	}
 	if (!parse_option_buffer(*enc_opt_state, 
-				 enc_opt_data->data+12, 
-				 enc_opt_data->len-12,
+				 enc_opt_data->data + offset, 
+				 enc_opt_data->len - offset,
 				 &dhcpv6_universe)) {
 		log_error("get_encapsulated_IA_state: error parsing options.");
 		option_state_dereference(enc_opt_state, MDL);
@@ -846,65 +855,23 @@ pick_v6_address(struct iaaddr **addr,
 		const struct data_string *requested_iaaddr,
 		const struct data_string *client_id)
 {
-	const struct packet *chk_packet;
-	const struct in6_addr *link_addr;
-	const struct in6_addr *first_link_addr;
-	struct iaddr tmp_addr;
-	struct subnet *subnet;
 	struct shared_network *shared_network;
 	struct ipv6_pool *p;
+	isc_result_t status;
 	int i;
 	int start_pool;
 	unsigned int attempts;
 	char tmp_buf[INET6_ADDRSTRLEN];
 
-	/*
-	 * First, find the link address where the packet from the client
-	 * first appeared.
+	/* First, find the shared network the client inhabits, so that an
+	 * appropriate address can be selected.
 	 */
-	first_link_addr = NULL;
-	chk_packet = packet->dhcpv6_container_packet;
-	while (chk_packet != NULL) {
-		link_addr = &chk_packet->dhcpv6_link_address;
-		if (!IN6_IS_ADDR_UNSPECIFIED(link_addr) &&
-		    !IN6_IS_ADDR_LINKLOCAL(link_addr)) {
-			first_link_addr = link_addr;
-		}
-		chk_packet = chk_packet->dhcpv6_container_packet;
-	}
-
-	/*
-	 * If there is a link address, find the subnet associated 
-	 * with that, and use that to get the appropriate 
-	 * shared_network.
-	 */
-	if (first_link_addr != NULL) {
-		tmp_addr.len = sizeof(*first_link_addr);
-		memcpy(tmp_addr.iabuf, 
-		       first_link_addr, sizeof(*first_link_addr));
-		subnet = NULL;
-		if (!find_subnet(&subnet, tmp_addr, MDL)) {
-			log_debug("Unable to pick client address: "
-				  "no subnet found for link-address %s.",
-				  piaddr(tmp_addr));
-			return ISC_R_NOTFOUND;
-		}
-		shared_network = NULL;
-		shared_network_reference(&shared_network, 
-					 subnet->shared_network, MDL);
-		subnet_dereference(&subnet, MDL);
-	}
-
-	/* 
-	 * If there is no link address, we will use the interface
-	 * that this packet came in on to pick the shared_network.
-	 */
-	else {
-		shared_network = NULL;
-		shared_network_reference(&shared_network, 
-					 packet->interface->shared_network,
-					 MDL);
-	}
+	shared_network = NULL;
+	status = shared_network_from_packet6(&shared_network, packet);
+	if (status != ISC_R_SUCCESS)
+		return status;
+	else if (shared_network == NULL)
+		return ISC_R_NOTFOUND; /* invarg?  invalid condition... */
 
 	/*
 	 * No pools, we're done.
@@ -1154,7 +1121,7 @@ lease_to_client(struct data_string *reply_ret,
 
 		if (!get_encapsulated_IA_state(&cli_enc_opt_state,
 					       &cli_enc_opt_data,
-					       packet, ia)) {
+					       packet, ia, IA_NA_OFFSET)) {
 			goto exit;
 		}
 
@@ -1899,46 +1866,221 @@ dhcpv6_request(struct data_string *reply_ret, struct packet *packet) {
 	data_string_forget(&server_id, MDL);
 }
 
+/* Find a DHCPv6 packet's shared network from hints in the packet.
+ */
+static isc_result_t
+shared_network_from_packet6(struct shared_network **shared,
+			    struct packet *packet)
+{
+	const struct packet *chk_packet;
+	const struct in6_addr *link_addr, *first_link_addr;
+	struct iaddr tmp_addr;
+	struct subnet *subnet;
+	isc_result_t status;
+
+	if ((shared == NULL) || (*shared != NULL) || (packet == NULL))
+		return ISC_R_INVALIDARG;
+
+	/*
+	 * First, find the link address where the packet from the client
+	 * first appeared (if this packet was relayed).
+	 */
+	first_link_addr = NULL;
+	chk_packet = packet->dhcpv6_container_packet;
+	while (chk_packet != NULL) {
+		link_addr = &chk_packet->dhcpv6_link_address;
+		if (!IN6_IS_ADDR_UNSPECIFIED(link_addr) &&
+		    !IN6_IS_ADDR_LINKLOCAL(link_addr)) {
+			first_link_addr = link_addr;
+		}
+		chk_packet = chk_packet->dhcpv6_container_packet;
+	}
+
+	/*
+	 * If there is a relayed link address, find the subnet associated
+	 * with that, and use that to get the appropriate
+	 * shared_network.
+	 */
+	if (first_link_addr != NULL) {
+		tmp_addr.len = sizeof(*first_link_addr);
+		memcpy(tmp_addr.iabuf,
+		       first_link_addr, sizeof(*first_link_addr));
+		subnet = NULL;
+		if (!find_subnet(&subnet, tmp_addr, MDL)) {
+			log_debug("No subnet found for link-address %s.",
+				  piaddr(tmp_addr));
+			return ISC_R_NOTFOUND;
+		}
+		status = shared_network_reference(shared,
+						  subnet->shared_network, MDL);
+		subnet_dereference(&subnet, MDL);
+
+	/*
+	 * If there is no link address, we will use the interface
+	 * that this packet came in on to pick the shared_network.
+	 */
+	} else {
+		status = shared_network_reference(shared,
+					 packet->interface->shared_network,
+					 MDL);
+	}
+
+	return status;
+}
+
 /*
  * When a client thinks it might be on a new link, it sends a 
  * Confirm message.
+ *
+ * From RFC3315 section 18.2.2:
+ *
+ *   When the server receives a Confirm message, the server determines
+ *   whether the addresses in the Confirm message are appropriate for the
+ *   link to which the client is attached.  If all of the addresses in the
+ *   Confirm message pass this test, the server returns a status of
+ *   Success.  If any of the addresses do not pass this test, the server
+ *   returns a status of NotOnLink.  If the server is unable to perform
+ *   this test (for example, the server does not have information about
+ *   prefixes on the link to which the client is connected), or there were
+ *   no addresses in any of the IAs sent by the client, the server MUST
+ *   NOT send a reply to the client.
  */
 
 /* TODO: discard unicast messages, unless we set unicast option */
 static void
 dhcpv6_confirm(struct data_string *reply_ret, struct packet *packet) {
-	struct data_string client_id;
-	struct option_state *opt_state;
+	struct shared_network *shared;
+	struct subnet *subnet;
+	struct option_cache *ia, *ta, *oc;
+	struct data_string cli_enc_opt_data, iaaddr, client_id, packet_oro;
+	struct option_state *cli_enc_opt_state, *opt_state;
+	struct iaddr cli_addr;
+	int pass;
+	isc_boolean_t inappropriate, has_addrs;
 	char reply_data[65536];
 	struct dhcpv6_packet *reply = (struct dhcpv6_packet *)reply_data;
 	int reply_ofs = (int)((char *)reply->options - (char *)reply);
-	struct option_cache *ia;
-	struct option_cache *oc;
-	/* cli_enc_... variables come from the IA_NA/IA_TA options */
-	struct data_string cli_enc_opt_data;
-	struct option_state *cli_enc_opt_state;
-	struct data_string iaaddr;
-	struct host_decl *host;
-	int num_ia;
-	int num_addr;
-	struct data_string fixed_addr;
-	struct data_string packet_oro;
 
 	/* 
-	 * Validate the message.
+	 * Basic client message validation.
 	 */
+	memset(&client_id, 0, sizeof(client_id));
 	if (!valid_client_msg(packet, &client_id)) {
 		return;
 	}
 
+	/* Do not process Confirms that do not have IA's we do not recognize.
+	 */
+	ia = lookup_option(&dhcpv6_universe, packet->options, D6O_IA_NA);
+	ta = lookup_option(&dhcpv6_universe, packet->options, D6O_IA_TA);
+	if ((ia == NULL) && (ta == NULL))
+		return;
+
 	/* 
 	 * Bit of variable initialization.
 	 */
+	opt_state = cli_enc_opt_state = NULL;
+	memset(&cli_enc_opt_data, 0, sizeof(cli_enc_opt_data));
 	memset(&iaaddr, 0, sizeof(iaaddr));
-	num_ia = 0;
-	num_addr = 0;
-	memset(&fixed_addr, 0, sizeof(fixed_addr));
 	memset(&packet_oro, 0, sizeof(packet_oro));
+
+	/* Determine what shared network the client is connected to.  We
+	 * must not respond if we don't have any information about the
+	 * network the client is on.
+	 */
+	shared = NULL;
+	if ((shared_network_from_packet6(&shared, packet) != ISC_R_SUCCESS) ||
+	    (shared == NULL))
+		goto exit;
+
+	/* If there are no recorded subnets, then we have no
+	 * information about this subnet - ignore Confirms.
+	 */
+	subnet = shared->subnets;
+	if (subnet == NULL)
+		goto exit;
+
+	/* Are the addresses in all the IA's appropriate for that link? */
+	has_addrs = inappropriate = ISC_FALSE;
+	pass = D6O_IA_NA;
+	while(!inappropriate) {
+		/* If we've reached the end of the IA_NA pass, move to the
+		 * IA_TA pass.
+		 */
+		if ((pass == D6O_IA_NA) && (ia == NULL)) {
+			pass = D6O_IA_TA;
+			ia = ta;
+		}
+
+		/* If we've reached the end of all passes, we're done. */
+		if (ia == NULL)
+			break;
+
+		if (((pass == D6O_IA_NA) &&
+		     !get_encapsulated_IA_state(&cli_enc_opt_state,
+						&cli_enc_opt_data,
+						packet, ia, IA_NA_OFFSET)) ||
+		    ((pass == D6O_IA_TA) &&
+		     !get_encapsulated_IA_state(&cli_enc_opt_state,
+						&cli_enc_opt_data,
+						packet, ia, IA_TA_OFFSET))) {
+			goto exit;
+		}
+
+		oc = lookup_option(&dhcpv6_universe, cli_enc_opt_state,
+				   D6O_IAADDR);
+
+		for ( ; oc != NULL ; oc = oc->next) {
+			if (!evaluate_option_cache(&iaaddr, packet, NULL, NULL,
+						   packet->options, NULL,
+						   &global_scope, oc, MDL) ||
+			    (iaaddr.len < 24)) {
+				log_error("dhcpv6_confirm: "
+					  "error evaluating IAADDR.");
+				goto exit;
+			}
+
+			/* Copy out the IPv6 address for processing. */
+			cli_addr.len = 16;
+			memcpy(cli_addr.iabuf, iaaddr.data, 16);
+
+			/* Record that we've processed at least one address. */
+			has_addrs = ISC_TRUE;
+
+			/* Find out if any subnets cover this address. */
+			for (subnet = shared->subnets ; subnet != NULL ;
+			     subnet = subnet->next_sibling) {
+				if (addr_eq(subnet_number(cli_addr,
+							  subnet->netmask),
+					    subnet->net))
+					break;
+			}
+
+			data_string_forget(&iaaddr, MDL);
+
+			/* If we reach the end of the subnet list, and no
+			 * subnet matches the client address, then it must
+			 * be inappropriate to the link (so far as our
+			 * configuration says).  Once we've found one
+			 * inappropriate address, there is no reason to
+			 * continue searching.
+			 */
+			if (subnet == NULL) {
+				inappropriate = ISC_TRUE;
+				break;
+			}
+                }
+
+		option_state_dereference(&cli_enc_opt_state, MDL);
+		data_string_forget(&cli_enc_opt_data, MDL);
+
+		/* Advance to the next IA_*. */
+		ia = ia->next;
+	}
+
+	/* If the client supplied no addresses, do not reply. */
+	if (!has_addrs)
+		goto exit;
 
 	/* 
 	 * Set up reply.
@@ -1948,93 +2090,9 @@ dhcpv6_confirm(struct data_string *reply_ret, struct packet *packet) {
 	}
 
 	/* 
-	 * Search each IA to make sure we know about it.
-	 */
-	ia = lookup_option(&dhcpv6_universe, packet->options, D6O_IA_NA);
-	for (; ia != NULL; ia = ia->next) {
-		num_ia++;
-
-		if (!get_encapsulated_IA_state(&cli_enc_opt_state,
-					       &cli_enc_opt_data,
-					       packet, ia)) {
-			goto exit;
-		}
-
-		memset(&iaaddr, 0, sizeof(iaaddr));
-		oc = lookup_option(&dhcpv6_universe, cli_enc_opt_state, 
-				   D6O_IAADDR);
-		if (oc == NULL) {
-			/* 
-			 * No address with this IA, check next.
-			 */
-			continue;
-		}
-
-		if (!evaluate_option_cache(&iaaddr, packet, 
-					   NULL, NULL, 
-					   packet->options, 
-					   NULL, &global_scope,
-					   oc, MDL)) {
-			log_error("dhcpv6_confirm: "
-		  		  "error evaluating IAADDR.");
-			goto exit;
-		}
-
-		host = NULL;
-		if (!find_hosts_by_uid(&host, 
-				       client_id.data, client_id.len, MDL)) {
-			/*
-			 * RFC 3315, section 18.2.2 implies that when the
-			 * server doesn't know about the client it should
-			 * not send a reply.
-			 */
-			goto exit;
-		}
-
-		/* 
-		 * Find the matching host entry, if any.
-		 */
-		for (; host != NULL; host = host->n_ipaddr) {
-			if (host->fixed_addr == NULL) {
-				continue;
-			} 
-			if (!evaluate_option_cache(&fixed_addr, NULL, 
-						   NULL, NULL, NULL, 
-						   NULL, &global_scope,
-						   host->fixed_addr, 
-						   MDL)) {
-				log_error("dhcpv6_confirm: error "
-					  "evaluating host address.");
-				goto exit;
-			}
-			if ((iaaddr.len >= 16) &&
-			    !memcmp(fixed_addr.data, iaaddr.data, 16)) {
-				data_string_forget(&fixed_addr, MDL);
-				break;
-			}
-			data_string_forget(&fixed_addr, MDL);
-		}
-
-		/* 
-		 * No matching entry found, so this is a bad address.
-		 */
-		if (host != NULL) {
-			num_addr++;
-		}
-
-	}
-
-	/* 
-	 * If we have no addresses from the client, we don't send a reply.
-	 */
-	if (num_addr == 0) {
-		goto exit;
-	}
-
-	/* 
 	 * Set our status.
 	 */
-	if (num_addr < num_ia) {
+	if (inappropriate) {
 		if (!set_status_code(STATUS_NotOnLink, 
 				     "Some of the addresses are not on link.",
 				     opt_state)) {
@@ -2068,13 +2126,21 @@ dhcpv6_confirm(struct data_string *reply_ret, struct packet *packet) {
 	memcpy(reply_ret->buffer->data, reply, reply_ofs);
 
 exit:
-	if (iaaddr.buffer != NULL) {
+	/* Cleanup any stale data strings. */
+	if (cli_enc_opt_data.buffer != NULL)
+		data_string_forget(&cli_enc_opt_data, MDL);
+	if (iaaddr.buffer != NULL)
 		data_string_forget(&iaaddr, MDL);
-	}
-	if (fixed_addr.buffer != NULL) {
-		data_string_forget(&fixed_addr, MDL);
-	}
-	data_string_forget(&client_id, MDL);
+	if (client_id.buffer != NULL)
+		data_string_forget(&client_id, MDL);
+	if (packet_oro.buffer != NULL)
+		data_string_forget(&packet_oro, MDL);
+
+	/* Release any stale option states. */
+	if (cli_enc_opt_state != NULL)
+		option_state_dereference(&cli_enc_opt_state, MDL);
+	if (opt_state != NULL)
+		option_state_dereference(&opt_state, MDL);
 }
 
 /*
@@ -2348,7 +2414,7 @@ iterate_over_ia_na(struct data_string *reply_ret,
 
 		if (!get_encapsulated_IA_state(&cli_enc_opt_state,
 					       &cli_enc_opt_data,
-					       packet, ia)) {
+					       packet, ia, IA_NA_OFFSET)) {
 			goto exit;
 		}
 
