@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-		            Version 4.0.0a3
-			   September 5, 2007
+		            Version 4.0.0b1
+			    October 5, 2007
 
 			      README FILE
 
@@ -92,7 +92,7 @@ directory, it may not have up-to-date information).
 
 			    RELEASE STATUS
 
-This is the third alpha release of ISC DHCP 4.0.0, a feature release
+This is the first BETA release of ISC DHCP 4.0.0, a feature release
 bent to the purpose of implementing DHCPv6.
 
 In this release, the DHCPv6 server should be fully functional on Linux,
@@ -129,12 +129,12 @@ information.   On Digital Unix, type ``man pfilt''.
 To build the DHCP Distribution, unpack the compressed tar file using
 the tar utility and the gzip command - type something like:
 
-	gunzip dhcp-4.0.0a3.tar.gz
-	tar xvf dhcp-4.0.0a3.tar
+	gunzip dhcp-4.0.0b1.tar.gz
+	tar xvf dhcp-4.0.0b1.tar
 
 			    CONFIGURING IT
 
-Now, cd to the dhcp-dhcp-4.0.0a3 subdirectory that you've just
+Now, cd to the dhcp-dhcp-4.0.0b1 subdirectory that you've just
 created and configure the source tree by typing:
 
 	./configure
