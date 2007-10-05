@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.49 2007/08/07 18:47:48 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.50 2007/10/05 19:18:55 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2194,6 +2194,12 @@ int dhcp_failover_pool_rebalance (dhcp_failover_state_t *state)
 	if (state -> me.state != normal || state -> i_am == secondary)
 		return 0;
 
+	/* Do not respond to POOLREQ messages more than once per 30s per
+	 * failover peer.
+	 */
+	if ((state->last_POOLREQ + 30) > cur_time)
+		return 0;
+
 	for (s = shared_networks; s; s = s -> next) {
 	    for (p = s -> pools; p; p = p -> next) {
 		if (p -> failover_peer != state)
@@ -2258,15 +2264,16 @@ int dhcp_failover_pool_rebalance (dhcp_failover_state_t *state)
 		    if (lp)
 			lease_dereference (&lp, MDL);
 
-		}
-		if (lts > 1) {
-			log_info ("lease imbalance - lts = %d", lts);
+		    if (lts > 1) {
+			log_info("lease imbalance - lts = %d", lts);
+		    }
 		}
 	    }
 	}
 	commit_leases();
 	dhcp_failover_send_poolresp (state, leases_queued);
 	dhcp_failover_send_updates (state);
+	state->last_POOLREQ = cur_time;
 	return leases_queued;
 }
 

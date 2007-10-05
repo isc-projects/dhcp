@@ -97,6 +97,11 @@ and for prodding me into improving it.
   a lease database inconsistency bug, as the remote system relies upon the
   most recent message it received from its peer.
 
+- POOLREQ messages received within 30 seconds of one another are ignored.
+
+- 'lease imbalance' messages are not logged unless rebalance was actually
+  attempted ("ten percent" rule).
+
 			Changes since 3.0.6rc1
 
 - supersede_lease() now requeues leases in their respective hardware
