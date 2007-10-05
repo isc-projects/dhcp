@@ -3192,6 +3192,7 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 			    newbinding = 0;
 			}
 
+			nv = NULL;
 			if (!binding_value_allocate(&nv, MDL))
 				log_fatal("no memory for binding value.");
 
