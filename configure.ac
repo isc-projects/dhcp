@@ -162,6 +162,9 @@ AC_SEARCH_LIBS(inet_aton, [socket nsl], ,
 # Check for a standalone regex library.
 AC_SEARCH_LIBS(regcomp, [regex])
 
+# For HP/UX we need -lipv6 for if_nametoindex, perhaps others.
+AC_SEARCH_LIBS(if_nametoindex, [ipv6])
+
 # check for /dev/random (declares HAVE_DEV_RANDOM)
 AC_CHECK_FILE(/dev/random,
 	AC_DEFINE([HAVE_DEV_RANDOM], [1], 

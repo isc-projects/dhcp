@@ -225,8 +225,8 @@ int if_register_dlpi (info)
 		info -> hw_address.hbuf [0] = HTYPE_FDDI;
 		break;
 	      default:
-              log_fatal ("%s: unsupported DLPI MAC type %ld",
-                     info -> name, dlp -> info_ack.dl_mac_type);
+		log_fatal("%s: unsupported DLPI MAC type %lu", info->name,
+			  (unsigned long)dlp->info_ack.dl_mac_type);
 		break;
 	    }
             /*
@@ -1353,8 +1353,8 @@ get_hw_addr(const char *name, struct hardware *hw) {
 			hw->hbuf[0] = HTYPE_FDDI;
 			break;
 		default:
-			log_fatal("%s: unsupported DLPI MAC type %ld",
-				  name, dlp->info_ack.dl_mac_type);
+			log_fatal("%s: unsupported DLPI MAC type %lu", name,
+				  (unsigned long)dlp->info_ack.dl_mac_type);
 	}
 
 	/*
