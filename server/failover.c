@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.63.56.12 2007/10/03 20:18:43 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.63.56.13 2007/10/09 22:33:18 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2379,16 +2379,39 @@ static int dhcp_failover_pool_dobalance(dhcp_failover_state_t *state)
 		pass = 0;
 		lease_reference(&lp, *lq, MDL);
 
-		/* In the case where there are 2 leases, hold is zero, and
-		 * lts is 1 if both leases are on the local server.  If
-		 * there is only 1 lease, both lts and hold are zero.  Let's
-		 * not play ping pong.
-		 */
-		while (lp && (lts > (pass ? hold : -hold))) {
+		while (lp) {
 			if (next)
 			    lease_dereference(&next, MDL);
 			if (lp->next)
 			    lease_reference(&next, lp->next, MDL);
+
+			/*
+			 * Stop if the pool is 'balanced enough.'
+			 *
+			 * The pool is balanced enough if:
+			 *
+			 * 1) We're on the first run through and the peer has
+			 *    its fair share of leases already (lts reaches
+			 *    -hold).
+			 * 2) We're on the second run through, we are shifting
+			 *    never-used leases, and there is a perfectly even
+			 *    balance (lts reaches zero).
+			 * 3) Second run through, we are shifting previously
+			 *    used leases, and the local system has its fair
+			 *    share but no more (lts reaches hold).
+			 *
+			 * Note that this is implemented below in 3,2,1 order.
+			 */
+			if (pass) {
+				if (lp->ends) {
+					if (lts <= hold)
+						break;
+				} else {
+					if (lts <= 0)
+						break;
+				}
+			} else if (lts <= -hold)
+				break;
 
 			if (pass || peer_wants_lease(lp)) {
 			    --lts;
@@ -5537,8 +5560,8 @@ peer_wants_lease(struct lease *lp)
 		 */
 		hbaix = loadb_p_hash(lp->hardware_addr.hbuf + 1,
 				     lp->hardware_addr.hlen - 1);
-	else /* Consistent 50/50 split */
-		return(lp->ip_addr.iabuf[lp->ip_addr.len-1] & 0x01);
+	else /* impossible to categorize into LBA */
+		return 0;
 
 	hm = state->hba[(hbaix >> 3) & 0x1F] & (1 << (hbaix & 0x07));
 
