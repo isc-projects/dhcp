@@ -338,6 +338,7 @@ ia_na_remove_all_iaaddr(struct ia_na *ia_na, const char *file, int line) {
 	int i;
 
 	for (i=0; i<ia_na->num_iaaddr; i++) {
+		ia_na_dereference(&(ia_na->iaaddr[i]->ia_na), file, line);
 		iaaddr_dereference(&(ia_na->iaaddr[i]), file, line);
 	}
 	ia_na->num_iaaddr = 0;
@@ -834,7 +835,9 @@ move_lease_to_inactive(struct ipv6_pool *pool, struct iaaddr *addr,
 		/* Binding scopes are no longer valid after expiry or
 		 * release.
 		 */
-		binding_scope_dereference(&addr->scope, MDL);
+		if (addr->scope != NULL) {
+			binding_scope_dereference(&addr->scope, MDL);
+		}
 
 		iaaddr_hash_delete(pool->addrs, 
 				   &addr->addr, sizeof(addr->addr), MDL);
@@ -967,7 +970,8 @@ static void
 cleanup_old_expired(struct ipv6_pool *pool) {
 	struct iaaddr *tmp;
 	struct ia_na *ia_na;
-	char addr_buf[INET6_ADDRSTRLEN];
+	struct ia_na *ia_na_active;
+	unsigned char *tmpd;
 	
 	while (pool->num_inactive > 0) {
 		tmp = (struct iaaddr *)isc_heap_element(pool->inactive_timeouts,
@@ -980,18 +984,22 @@ cleanup_old_expired(struct ipv6_pool *pool) {
 		isc_heap_delete(pool->inactive_timeouts, tmp->heap_index);
 		pool->num_inactive--;
 
-		ia_na = NULL;
-		if (tmp->ia_na == NULL) {
-			inet_ntop(AF_INET6, &tmp->addr, addr_buf, 
-				  sizeof(addr_buf));
-			log_error("%s(%d): no IA_NA cleaning up address %s", 
-				  MDL, addr_buf);
-		} else {
+		if (tmp->ia_na != NULL) {
+			/*
+			 * Check to see if this IA_NA is in the active list,
+			 * but has no remaining addresses. If so, remove it
+			 * from the active list.
+			 */
+			ia_na = NULL;
 			ia_na_reference(&ia_na, tmp->ia_na, MDL);
 			ia_na_remove_iaaddr(ia_na, tmp, MDL);
-			if (ia_na->num_iaaddr <= 0) {
-				unsigned char *tmpd = 
-					(unsigned char *)ia_na->iaid_duid.data;
+			ia_na_active = NULL;
+			tmpd = (unsigned char *)ia_na->iaid_duid.data;
+			if ((ia_na->num_iaaddr <= 0) &&
+			    (ia_na_hash_lookup(&ia_na_active, ia_active, tmpd,
+			    		       ia_na->iaid_duid.len,
+					       MDL) == 0) &&
+			    (ia_na_active == ia_na)) {
 				ia_na_hash_delete(ia_active, tmpd, 
 					  	  ia_na->iaid_duid.len, MDL);
 			}

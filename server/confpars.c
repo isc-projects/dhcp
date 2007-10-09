@@ -4041,7 +4041,6 @@ parse_ia_na_declaration(struct parse *cfile) {
 		ia_na_hash_delete(ia_active, 
 				  (unsigned char *)ia_na->iaid_duid.data,
 				  ia_na->iaid_duid.len, MDL);
-		ia_na_remove_all_iaaddr(old_ia_na, MDL);
 		ia_na_dereference(&old_ia_na, MDL);
 	}
 
