@@ -57,6 +57,10 @@ suggested fixes to <dhcp-users@isc.org>.
 - A number of bugs with the internal handling of lease state on the 
   server have been fixed. Some of these could cause server crashes.
 
+- The peer_wants_leases() changes pulled up from 3.1.0 were corrected,
+  'never used' leases will no longer consistently shift between servers
+  on every pool rebalance run.
+
 			Changes since 4.0.0a3
 
 - The DHCP server no longer requires a "ddns-update-style" statement, 
