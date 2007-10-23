@@ -437,8 +437,11 @@ ssize_t send_packet6(struct interface_info *interface,
 	struct iovec v;
 	int result;
 	struct in6_pktinfo *pktinfo;
-	char pbuf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
 	struct cmsghdr *cmsg;
+	union {
+		struct cmsghdr cmsg_sizer;
+		u_int8_t pktinfo_sizer[CMSG_SPACE(sizeof(struct in6_pktinfo))];
+	} control_buf;
 
 	/*
 	 * Initialize our message header structure.
@@ -469,8 +472,8 @@ ssize_t send_packet6(struct interface_info *interface,
 	 * source address if we wanted, but we can safely let the
 	 * kernel decide what that should be. 
 	 */
-	m.msg_control = pbuf;
-	m.msg_controllen = sizeof(pbuf);
+	m.msg_control = &control_buf;
+	m.msg_controllen = sizeof(control_buf);
 	cmsg = CMSG_FIRSTHDR(&m);
 	cmsg->cmsg_level = IPPROTO_IPV6;
 	cmsg->cmsg_type = IPV6_PKTINFO;
@@ -530,11 +533,14 @@ receive_packet6(struct interface_info *interface,
 		struct sockaddr_in6 *from, struct in6_addr *to_addr) {
 	struct msghdr m;
 	struct iovec v;
-	char pbuf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
 	int result;
 	struct cmsghdr *cmsg;
 	struct in6_pktinfo *pktinfo;
 	int found_to_addr;
+	union {
+	        struct cmsghdr cmsg_sizer;
+	        u_int8_t pktinfo_sizer[CMSG_SPACE(sizeof(struct in6_pktinfo))];
+	} control_buf;
 
 	/*
 	 * Initialize our message header structure.
@@ -565,8 +571,8 @@ receive_packet6(struct interface_info *interface,
 	 * information (when we initialized the interface), so we
 	 * should get the destination address from that.
 	 */
-	m.msg_control = pbuf;
-	m.msg_controllen = sizeof(pbuf);
+	m.msg_control = &control_buf;
+	m.msg_controllen = sizeof(control_buf);
 
 	result = recvmsg(interface->rfdesc, &m, 0);
 

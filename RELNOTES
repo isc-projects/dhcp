@@ -61,6 +61,9 @@ suggested fixes to <dhcp-users@isc.org>.
   'never used' leases will no longer consistently shift between servers
   on every pool rebalance run.
 
+- sendmsg()/recvmsg() control buffers are now declared in such a way to
+  ensure they are correctly aligned on all (esp. 64-bit) architectures.
+
 			Changes since 4.0.0a3
 
 - The DHCP server no longer requires a "ddns-update-style" statement, 
