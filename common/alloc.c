@@ -1262,11 +1262,9 @@ int binding_scope_reference (ptr, bp, file, line)
 /* Make a copy of the data in data_string, upping the buffer reference
    count if there's a buffer. */
 
-void data_string_copy (dest, src, file, line)
-	struct data_string *dest;
-	struct data_string *src;
-	const char *file;
-	int line;
+void
+data_string_copy(struct data_string *dest, const struct data_string *src,
+		 const char *file, int line)
 {
 	if (src -> buffer) {
 		buffer_reference (&dest -> buffer, src -> buffer, file, line);

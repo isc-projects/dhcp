@@ -1972,8 +1972,8 @@ int option_state_reference PROTO ((struct option_state **,
 				   struct option_state *, const char *, int));
 int option_state_dereference PROTO ((struct option_state **,
 				     const char *, int));
-void data_string_copy PROTO ((struct data_string *,
-			      struct data_string *, const char *, int));
+void data_string_copy(struct data_string *, const struct data_string *,
+		      const char *, int);
 void data_string_forget PROTO ((struct data_string *, const char *, int));
 void data_string_truncate PROTO ((struct data_string *, int));
 int executable_statement_allocate PROTO ((struct executable_statement **,

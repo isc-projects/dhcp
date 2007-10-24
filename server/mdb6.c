@@ -297,7 +297,6 @@ ia_na_add_iaaddr(struct ia_na *ia_na, struct iaaddr *iaaddr,
 	iaaddr_reference(&(ia_na->iaaddr[ia_na->num_iaaddr]), iaaddr, 
 			 file, line);
 	ia_na->num_iaaddr++;
-	ia_na_reference(&iaaddr->ia_na, ia_na, file, line);
 
 	return ISC_R_SUCCESS;
 }

@@ -4018,6 +4018,7 @@ parse_ia_na_declaration(struct parse *cfile) {
 
 		/* add to our various structures */
 		ia_na_add_iaaddr(ia_na, iaaddr, MDL);
+		ia_na_reference(&iaaddr->ia_na, ia_na, MDL);
 		pool = NULL;
 		if (find_ipv6_pool(&pool, &iaaddr->addr) != ISC_R_SUCCESS) {
 			inet_ntop(AF_INET6, &iaaddr->addr, 

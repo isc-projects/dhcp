@@ -64,6 +64,9 @@ suggested fixes to <dhcp-users@isc.org>.
 - sendmsg()/recvmsg() control buffers are now declared in such a way to
   ensure they are correctly aligned on all (esp. 64-bit) architectures.
 
+- The client leasing subsystem was streamlined and corrected to account
+  more closely for changes in client link attachment selection.
+
 			Changes since 4.0.0a3
 
 - The DHCP server no longer requires a "ddns-update-style" statement, 

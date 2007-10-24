@@ -107,6 +107,9 @@ extern const int dhcpv6_type_name_max;
 #define IA_NA_OFFSET 12 /* IAID, T1, T2, all 4 octets each */
 #define IA_TA_OFFSET  4 /* IAID only, 4 octets */
 
+/* Offsets into IAADDR's where Option spaces commence. */
+#define IAADDR_OFFSET 24
+
 /* 
  * DHCPv6 well-known multicast addressess, from section 5.1 of RFC 3315 
  */
@@ -150,6 +153,9 @@ struct dhcpv6_packet {
 	unsigned char transaction_id[3];
 	unsigned char options[0];
 };
+
+/* Offset into DHCPV6 Reply packets where Options spaces commence. */
+#define REPLY_OPTIONS_INDEX 4
 
 /* 
  * Relay packet format, defined in section 7 of RFC 3315 
