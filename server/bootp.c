@@ -218,7 +218,7 @@ void bootp (packet)
 	       lookup_option (&server_universe, options,
 			      SV_ALWAYS_REPLY_RFC1048), MDL))) {
 		memcpy (outgoing.raw -> options,
-			packet -> raw -> options, DHCP_OPTION_LEN);
+			packet -> raw -> options, DHCP_MAX_OPTION_LEN);
 		outgoing.packet_length = BOOTP_MIN_LEN;
 	} else {
 

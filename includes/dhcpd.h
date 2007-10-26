@@ -1399,12 +1399,17 @@ fqdn6_universe_decode(struct option_state *options,
 		      struct universe *u);
 int append_option(struct data_string *dst, struct universe *universe,
 		  struct option *option, struct data_string *src);
-int store_options PROTO ((int *, unsigned char *, unsigned, struct packet *,
-			  struct lease *, struct client_state *,
-			  struct option_state *,
-			  struct option_state *, struct binding_scope **,
-			  unsigned *, int, unsigned, unsigned,
-			  int, const char *));
+int
+store_options(int *ocount,
+	      unsigned char *buffer, unsigned buflen, unsigned index,
+	      struct packet *packet, struct lease *lease,
+	      struct client_state *client_state,
+	      struct option_state *in_options,
+	      struct option_state *cfg_options,
+	      struct binding_scope **scope,
+	      unsigned *priority_list, int priority_len,
+	      unsigned first_cutoff, int second_cutoff, int terminate,
+	      const char *vuname);
 int store_options6(char *, int, struct option_state *, struct packet *,
 		   const int *, struct data_string *);
 int format_has_text(const char *);

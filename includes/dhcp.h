@@ -34,17 +34,19 @@
 #define DHCP_H
 
 #define DHCP_UDP_OVERHEAD	(20 + /* IP header */			\
-			8)   /* UDP header */
+			        8)   /* UDP header */
 #define DHCP_SNAME_LEN		64
 #define DHCP_FILE_LEN		128
 #define DHCP_FIXED_NON_UDP	236
 #define DHCP_FIXED_LEN		(DHCP_FIXED_NON_UDP + DHCP_UDP_OVERHEAD)
 						/* Everything but options. */
-#define DHCP_MTU_MAX		1500
-#define DHCP_OPTION_LEN		(DHCP_MTU_MAX - DHCP_FIXED_LEN)
-
 #define BOOTP_MIN_LEN		300
-#define DHCP_MIN_LEN            548
+
+#define DHCP_MTU_MAX		1500
+#define DHCP_MTU_MIN            576
+
+#define DHCP_MAX_OPTION_LEN	(DHCP_MTU_MAX - DHCP_FIXED_LEN)
+#define DHCP_MIN_OPTION_LEN     (DHCP_MTU_MIN - DHCP_FIXED_LEN)
 
 struct dhcp_packet {
  u_int8_t  op;		/* 0: Message opcode/type */
@@ -61,7 +63,7 @@ struct dhcp_packet {
 	unsigned char chaddr [16];	/* 24: Client hardware address */
 	char sname [DHCP_SNAME_LEN];	/* 40: Server name */
 	char file [DHCP_FILE_LEN];	/* 104: Boot filename */
-	unsigned char options [DHCP_OPTION_LEN];
+	unsigned char options [DHCP_MAX_OPTION_LEN];
 				/* 212: Optional parameters
 			  (actual length dependent on MTU). */
 };

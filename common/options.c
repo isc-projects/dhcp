@@ -505,94 +505,129 @@ int fqdn_universe_decode (struct option_state *options,
 	return 1;
 }
 
-/* cons options into a big buffer, and then split them out into the
-   three separate buffers if needed.  This allows us to cons up a set
-   of vendor options using the same routine. */
-
-int cons_options (inpacket, outpacket, lease, client_state,
-		  mms, in_options, cfg_options,
-		  scope, overload, terminate, bootpp, prl, vuname)
-	struct packet *inpacket;
-	struct dhcp_packet *outpacket;
-	struct lease *lease;
-	struct client_state *client_state;
-	int mms;
-	struct option_state *in_options;
-	struct option_state *cfg_options;
-	struct binding_scope **scope;
-	int overload;	/* Overload flags that may be set. */
-	int terminate;
-	int bootpp;
-	struct data_string *prl;
-	const char *vuname;
+/*
+ * Load all options into a buffer, and then split them out into the three
+ * separate fields in the dhcp packet (options, file, and sname) where
+ * options can be stored.
+ */
+int
+cons_options(struct packet *inpacket, struct dhcp_packet *outpacket,
+	     struct lease *lease, struct client_state *client_state,
+	     int mms, struct option_state *in_options,
+	     struct option_state *cfg_options,
+	     struct binding_scope **scope,
+	     int overload_avail, int terminate, int bootpp,
+	     struct data_string *prl, const char *vuname)
 {
 #define PRIORITY_COUNT 300
-	unsigned priority_list [PRIORITY_COUNT];
+	unsigned priority_list[PRIORITY_COUNT];
 	int priority_len;
-	unsigned char buffer [4096];	/* Really big buffer... */
-	unsigned main_buffer_size, mb_max;
-	unsigned mainbufix, agentix;
-	unsigned option_size;
+	unsigned char buffer[4096], agentopts[1024];
+	unsigned index = 0;
+	unsigned mb_size = 0, mb_max = 0;
+	unsigned option_size = 0, agent_size = 0;
 	unsigned length;
 	int i;
 	struct option_cache *op;
 	struct data_string ds;
 	pair pp, *hash;
-	int need_endopt = 0;
-	int ocount = 0;
-	int ofbuf1=0, ofbuf2=0;
+	int overload_used = 0;
+	int of1 = 0, of2 = 0;
 
-	memset (&ds, 0, sizeof ds);
+	memset(&ds, 0, sizeof ds);
 
-	/* If there's a Maximum Message Size option in the incoming packet
-	   and no alternate maximum message size has been specified, take the
-	   one in the packet. */
+	/*
+	 * If there's a Maximum Message Size option in the incoming packet
+	 * and no alternate maximum message size has been specified, or
+	 * if the one specified in the packet is shorter than the
+	 * alternative, take the one in the packet.
+	 */
 
 	if (inpacket &&
-	    (op = lookup_option (&dhcp_universe, inpacket -> options,
+	    (op = lookup_option(&dhcp_universe, inpacket->options,
 				 DHO_DHCP_MAX_MESSAGE_SIZE))) {
-		evaluate_option_cache (&ds, inpacket,
+		evaluate_option_cache(&ds, inpacket,
 				       lease, client_state, in_options,
 				       cfg_options, scope, op, MDL);
 		if (ds.len >= sizeof (u_int16_t)) {
-			i = getUShort (ds.data);
-
+			i = getUShort(ds.data);
 			if(!mms || (i < mms))
 				mms = i;
 		}
-		data_string_forget (&ds, MDL);
+		data_string_forget(&ds, MDL);
 	}
 
-	/* If the client has provided a maximum DHCP message size,
-	   use that; otherwise, if it's BOOTP, only 64 bytes; otherwise
-	   use up to the minimum IP MTU size (576 bytes). */
-	/* XXX if a BOOTP client specifies a max message size, we will
-	   honor it. */
-
+	/*
+	 * If the client has provided a maximum DHCP message size,
+	 * use that, up to the MTU limit.  Otherwise, if it's BOOTP,
+	 * only 64 bytes; otherwise use up to the minimum IP MTU size
+	 * (576 bytes).
+	 *
+	 * XXX if a BOOTP client specifies a max message size, we will
+	 * honor it.
+	 */
 	if (mms) {
-		main_buffer_size = mms - DHCP_FIXED_LEN;
-
-		/* Enforce a minimum packet size... */
-		if (main_buffer_size < (576 - DHCP_FIXED_LEN))
-			main_buffer_size = 576 - DHCP_FIXED_LEN;
+		if (mms < DHCP_MTU_MIN)
+		        /* Enforce minimum packet size, per RFC 2132 */
+			mb_size = DHCP_MIN_OPTION_LEN;
+		else if (mms > DHCP_MTU_MAX)
+			/*
+			 * TODO: Packets longer than 1500 bytes really
+			 * should be allowed, but it requires upstream
+			 * changes to the way the packet is allocated.  For
+			 * now, we forbid them.  They won't be needed very
+			 * often anyway.
+			 */
+			mb_size = DHCP_MAX_OPTION_LEN;
+		else
+			mb_size = mms - DHCP_FIXED_LEN;
 	} else if (bootpp) {
-		if (inpacket) {
-			main_buffer_size =
-				inpacket -> packet_length - DHCP_FIXED_LEN;
-			if (main_buffer_size < 64)
-				main_buffer_size = 64;
-		} else
-			main_buffer_size = 64;
+		mb_size = 64;
+		if (inpacket != NULL &&
+		    (inpacket->packet_length - DHCP_FIXED_LEN >= 64))
+			mb_size = inpacket->packet_length - DHCP_FIXED_LEN;
 	} else
-		main_buffer_size = 576 - DHCP_FIXED_LEN;
+		mb_size = DHCP_MIN_OPTION_LEN;
 
-	/* Set a hard limit at the size of the output buffer. */
-	mb_max = sizeof(buffer) - (((overload & 1) ? DHCP_FILE_LEN : 0) +
-				   ((overload & 2) ? DHCP_SNAME_LEN : 0));
-	if (main_buffer_size > mb_max)
-		main_buffer_size = mb_max;
+	/*
+	 * If answering a client message, see whether any relay agent
+	 * options were included with the message.  If so, save them
+	 * to copy back in later, and make space in the main buffer
+	 * to accomodate them
+	 */
+	if (client_state == NULL) {
+		priority_list[0] = DHO_DHCP_AGENT_OPTIONS;
+		priority_len = 1;
+		agent_size = store_options(NULL, agentopts, 0,
+					   sizeof(agentopts),
+					   inpacket, lease, client_state,
+					   in_options, cfg_options, scope,
+					   priority_list, priority_len,
+					   0, 0, 0, NULL);
 
-	/* Preload the option priority list with protocol-mandatory options.
+		mb_size += agent_size;
+		if (mb_size > DHCP_MAX_OPTION_LEN)
+			mb_size = DHCP_MAX_OPTION_LEN;
+	}
+
+	/*
+	 * Set offsets for buffer data to be copied into filename
+	 * and servername fields 
+	 */
+	mb_max = mb_size;
+
+	if (overload_avail & 1) {
+		of1 = mb_max;
+		mb_max += DHCP_FILE_LEN;
+	}
+
+	if (overload_avail & 2) {
+		of2 = mb_max;
+		mb_max += DHCP_SNAME_LEN;
+	}
+		
+	/*
+	 * Preload the option priority list with protocol-mandatory options.
 	 * This effectively gives these options the highest priority.
 	 */
 	priority_len = 0;
@@ -603,25 +638,27 @@ int cons_options (inpacket, outpacket, lease, client_state,
 	priority_list[priority_len++] = DHO_DHCP_REQUESTED_ADDRESS;
 	priority_list[priority_len++] = DHO_ASSOCIATED_IP;
 
-	if (prl && prl -> len > 0) {
-		if ((op = lookup_option (&dhcp_universe, cfg_options,
+	if (prl != NULL && prl->len > 0) {
+		if ((op = lookup_option(&dhcp_universe, cfg_options,
 					 DHO_SUBNET_SELECTION))) {
 			if (priority_len < PRIORITY_COUNT)
-				priority_list [priority_len++] =
+				priority_list[priority_len++] =
 					DHO_SUBNET_SELECTION;
 		}
 
-		data_string_truncate (prl, (PRIORITY_COUNT - priority_len));
+		data_string_truncate(prl, (PRIORITY_COUNT - priority_len));
 
-		for (i = 0; i < prl -> len; i++) {
-			/* Prevent client from changing order of delivery
-			   of relay agent information option. */
-			if (prl -> data [i] != DHO_DHCP_AGENT_OPTIONS)
-				priority_list [priority_len++] =
-					prl -> data [i];
+		for (i = 0; i < prl->len; i++) {
+			/*
+			 * Prevent client from changing order of delivery
+			 * of relay agent information option.
+			 */
+			if (prl->data[i] != DHO_DHCP_AGENT_OPTIONS)
+				priority_list[priority_len++] = prl->data[i];
 		}
 
-		/* If the client doesn't request the FQDN option explicitly,
+		/*
+		 * If the client doesn't request the FQDN option explicitly,
 		 * to indicate priority, consider it lowest priority.  Fit
 		 * in the packet if there is space.  Note that the option
 		 * may only be included if the client supplied one.
@@ -631,7 +668,8 @@ int cons_options (inpacket, outpacket, lease, client_state,
 				   DHO_FQDN) != NULL))
 			priority_list[priority_len++] = DHO_FQDN;
 
-		/* Some DHCP Servers will give the subnet-mask option if
+		/*
+		 * Some DHCP Servers will give the subnet-mask option if
 		 * it is not on the parameter request list - so some client
 		 * implementations have come to rely on this - so we will
 		 * also make sure we supply this, at lowest priority.
@@ -645,9 +683,9 @@ int cons_options (inpacket, outpacket, lease, client_state,
 		    ((inpacket->packet_type == DHCPDISCOVER) ||
 		     (inpacket->packet_type == DHCPREQUEST)))
 			priority_list[priority_len++] = DHO_SUBNET_MASK;
-
 	} else {
-		/* First, hardcode some more options that ought to be
+		/*
+		 * First, hardcode some more options that ought to be
 		 * sent first...these are high priority to have in the
 		 * packet.
 		 */
@@ -657,154 +695,131 @@ int cons_options (inpacket, outpacket, lease, client_state,
 		priority_list[priority_len++] = DHO_HOST_NAME;
 		priority_list[priority_len++] = DHO_FQDN;
 
-		/* Append a list of the standard DHCP options from the
-		   standard DHCP option space.  Actually, if a site
-		   option space hasn't been specified, we wind up
-		   treating the dhcp option space as the site option
-		   space, and the first for loop is skipped, because
-		   it's slightly more general to do it this way,
-		   taking the 1Q99 DHCP futures work into account. */
-		if (cfg_options -> site_code_min) {
+		/*
+		 * Append a list of the standard DHCP options from the
+		 * standard DHCP option space.  Actually, if a site
+		 * option space hasn't been specified, we wind up
+		 * treating the dhcp option space as the site option
+		 * space, and the first for loop is skipped, because
+		 * it's slightly more general to do it this way,
+		 * taking the 1Q99 DHCP futures work into account.
+		 */
+		if (cfg_options->site_code_min) {
 		    for (i = 0; i < OPTION_HASH_SIZE; i++) {
-			hash = cfg_options -> universes [dhcp_universe.index];
+			hash = cfg_options->universes[dhcp_universe.index];
 			if (hash) {
-			    for (pp = hash [i]; pp; pp = pp -> cdr) {
-				op = (struct option_cache *)(pp -> car);
-				if (op -> option -> code <
-				    cfg_options -> site_code_min &&
+			    for (pp = hash[i]; pp; pp = pp->cdr) {
+				op = (struct option_cache *)(pp->car);
+				if (op->option->code <
+				     cfg_options->site_code_min &&
 				    priority_len < PRIORITY_COUNT &&
-				    (op -> option -> code !=
-				     DHO_DHCP_AGENT_OPTIONS))
-					priority_list [priority_len++] =
-						op -> option -> code;
+				    op->option->code != DHO_DHCP_AGENT_OPTIONS)
+					priority_list[priority_len++] =
+						op->option->code;
 			    }
 			}
 		    }
 		}
 
-		/* Now cycle through the site option space, or if there
-		   is no site option space, we'll be cycling through the
-		   dhcp option space. */
+		/*
+		 * Now cycle through the site option space, or if there
+		 * is no site option space, we'll be cycling through the
+		 * dhcp option space.
+		 */
 		for (i = 0; i < OPTION_HASH_SIZE; i++) {
-		    hash = (cfg_options -> universes
-			    [cfg_options -> site_universe]);
-		    if (hash)
-			for (pp = hash [i]; pp; pp = pp -> cdr) {
-				op = (struct option_cache *)(pp -> car);
-				if (op -> option -> code >=
-				    cfg_options -> site_code_min &&
+		    hash = cfg_options->universes[cfg_options->site_universe];
+		    if (hash != NULL)
+			for (pp = hash[i]; pp; pp = pp->cdr) {
+				op = (struct option_cache *)(pp->car);
+				if (op->option->code >=
+				     cfg_options->site_code_min &&
 				    priority_len < PRIORITY_COUNT &&
-				    (op -> option -> code !=
-				     DHO_DHCP_AGENT_OPTIONS))
-					priority_list [priority_len++] =
-						op -> option -> code;
+				    op->option->code != DHO_DHCP_AGENT_OPTIONS)
+					priority_list[priority_len++] =
+						op->option->code;
 			}
 		}
 
-		/* Put any spaces that are encapsulated on the list,
+		/*
+		 * Put any spaces that are encapsulated on the list,
 		 * sort out whether they contain values later.
 		 */
-		for (i = 0; i < cfg_options -> universe_count; i++) {
+		for (i = 0; i < cfg_options->universe_count; i++) {
 		    if (universes[i]->enc_opt &&
 			priority_len < PRIORITY_COUNT &&
-			universes [i] -> enc_opt -> universe == &dhcp_universe)
-		    {
-			    if (universes [i] -> enc_opt -> code !=
+			universes[i]->enc_opt->universe == &dhcp_universe) {
+			    if (universes[i]->enc_opt->code !=
 				DHO_DHCP_AGENT_OPTIONS)
-				    priority_list [priority_len++] =
-					    universes [i] -> enc_opt -> code;
+				    priority_list[priority_len++] =
+					    universes[i]->enc_opt->code;
 		    }
 		}
 
-		/* The vendor option space can't stand on its own, so always
-		   add it to the list. */
+		/*
+		 * The vendor option space can't stand on its own, so always
+		 * add it to the list.
+		 */
 		if (priority_len < PRIORITY_COUNT)
-			priority_list [priority_len++] =
+			priority_list[priority_len++] =
 				DHO_VENDOR_ENCAPSULATED_OPTIONS;
 	}
 
-	/* Figure out the overload buffer offset(s). */
-	if (overload) {
-		ofbuf1 = main_buffer_size - 4;
-		if (overload == 3)
-			ofbuf2 = main_buffer_size - 4 + DHCP_FILE_LEN;
-	}
+	/* Put the cookie up front... */
+	memcpy(buffer, DHCP_OPTIONS_COOKIE, 4);
+	index += 4;
 
 	/* Copy the options into the big buffer... */
-	option_size = store_options (&ocount, buffer,
-				     (main_buffer_size - 4 +
-				      ((overload & 1) ? DHCP_FILE_LEN : 0) +
-				      ((overload & 2) ? DHCP_SNAME_LEN : 0)),
-				     inpacket, lease, client_state,
-				     in_options, cfg_options, scope,
-				     priority_list, priority_len,
-				     ofbuf1, ofbuf2, terminate, vuname);
-	/* If store_options failed. */
+	option_size = store_options(&overload_used, buffer, index, mb_max,
+				    inpacket, lease, client_state,
+				    in_options, cfg_options, scope,
+				    priority_list, priority_len,
+				    of1, of2, terminate, vuname);
+
+	/* If store_options() failed */
 	if (option_size == 0)
 		return 0;
-	if (overload) {
-		if (ocount == 1 && (overload & 1))
-			overload = 1;
-		else if (ocount == 1 && (overload & 2))
-			overload = 2;
-		else if (ocount == 3)
-			overload = 3;
-		else
-			overload = 0;
+
+	/* How much was stored in the main buffer? */
+	index += option_size;
+
+	/*
+	 * If we're going to have to overload, store the overload
+	 * option first.
+	 */
+	if (overload_used) {
+		if (mb_size - agent_size - index < 3)
+			return 0;
+
+		buffer[index++] = DHO_DHCP_OPTION_OVERLOAD;
+		buffer[index++] = 1;
+		buffer[index++] = overload_used;
+
+		if (overload_used & 1)
+			memcpy(outpacket->file, &buffer[of1], DHCP_FILE_LEN);
+
+		if (overload_used & 2)
+			memcpy(outpacket->sname, &buffer[of2], DHCP_SNAME_LEN);
 	}
 
-	/* Put the cookie up front... */
-	memcpy (outpacket -> options, DHCP_OPTIONS_COOKIE, 4);
-	mainbufix = 4;
-
-	/* If we're going to have to overload, store the overload
-	   option at the beginning.  If we can, though, just store the
-	   whole thing in the packet's option buffer and leave it at
-	   that. */
-	memcpy (&outpacket -> options [mainbufix],
-		buffer, option_size);
-	mainbufix += option_size;
-	if (overload) {
-		outpacket -> options [mainbufix++] = DHO_DHCP_OPTION_OVERLOAD;
-		outpacket -> options [mainbufix++] = 1;
-		outpacket -> options [mainbufix++] = overload;
-
-		if (overload & 1) {
-			memcpy (outpacket -> file,
-				&buffer [ofbuf1], DHCP_FILE_LEN);
-		}
-		if (overload & 2) {
-			if (ofbuf2) {
-				memcpy (outpacket -> sname, &buffer [ofbuf2],
-					DHCP_SNAME_LEN);
-			} else {
-				memcpy (outpacket -> sname, &buffer [ofbuf1],
-					DHCP_SNAME_LEN);
-			}
-		}
+	/* Now copy in preserved agent options, if any */
+	if (agent_size) {
+		if (mb_size - index >= agent_size) {
+			memcpy(&buffer[index], agentopts, agent_size);
+			index += agent_size;
+		} else
+			log_error("Unable to store relay agent information"
+				  "in reply packet.");
 	}
-	agentix = mainbufix;
-	if (mainbufix < main_buffer_size)
-		need_endopt = 1;
-	length = DHCP_FIXED_NON_UDP + mainbufix;
-
-	/* Now hack in the agent options if there are any. */
-	priority_list [0] = DHO_DHCP_AGENT_OPTIONS;
-	priority_len = 1;
-	agentix +=
-		store_options (0, &outpacket -> options [agentix],
-			       DHCP_OPTION_LEN - agentix,
-			       inpacket, lease, client_state,
-			       in_options, cfg_options, scope,
-			       priority_list, priority_len,
-			       0, 0, 0, (char *)0);
 
 	/* Tack a DHO_END option onto the packet if we need to. */
-	if (agentix < DHCP_OPTION_LEN && need_endopt)
-		outpacket -> options [agentix++] = DHO_END;
+	if (index < mb_size)
+		buffer[index++] = DHO_END;
+
+	/* Copy main buffer into the options buffer of the packet */
+	memcpy(outpacket->options, buffer, index);
 
 	/* Figure out the length. */
-	length = DHCP_FIXED_NON_UDP + agentix;
+	length = DHCP_FIXED_NON_UDP + index;
 	return length;
 }
 
@@ -1066,25 +1081,21 @@ store_options6(char *buf, int buflen,
 	return bufpos;
 }
 
-/* Store all the requested options into the requested buffer. */
-
-int store_options (ocount, buffer, buflen, packet, lease, client_state,
-		   in_options, cfg_options, scope, priority_list, priority_len,
-		   first_cutoff, second_cutoff, terminate, vuname)
-	int *ocount;
-	unsigned char *buffer;
-	unsigned buflen;
-	struct packet *packet;
-	struct lease *lease;
-	struct client_state *client_state;
-	struct option_state *in_options;
-	struct option_state *cfg_options;
-	struct binding_scope **scope;
-	unsigned *priority_list;
-	int priority_len;
-	unsigned first_cutoff, second_cutoff;
-	int terminate;
-	const char *vuname;
+/*
+ * Store all the requested options into the requested buffer.
+ * XXX: ought to be static
+ */
+int
+store_options(int *ocount,
+	      unsigned char *buffer, unsigned index, unsigned buflen,
+	      struct packet *packet, struct lease *lease,
+	      struct client_state *client_state,
+	      struct option_state *in_options,
+	      struct option_state *cfg_options,
+	      struct binding_scope **scope,
+	      unsigned *priority_list, int priority_len,
+	      unsigned first_cutoff, int second_cutoff, int terminate,
+	      const char *vuname)
 {
 	int bufix = 0, six = 0, tix = 0;
 	int i;
@@ -1093,24 +1104,39 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 	int bufend, sbufend;
 	struct data_string od;
 	struct option_cache *oc;
-	struct option *option=NULL;
+	struct option *option = NULL;
 	unsigned code;
 
+	/*
+	 * These arguments are relative to the start of the buffer, so 
+	 * reduce them by the current buffer index, and advance the
+	 * buffer pointer to where we're going to start writing.
+	 */
+	buffer = &buffer[index];
+	buflen -= index;
+	if (first_cutoff)
+		first_cutoff -= index;
+	if (second_cutoff)
+		second_cutoff -= index;
+
+	/* Calculate the start and end of each section of the buffer */
+	bufend = sbufend = buflen;
 	if (first_cutoff) {
 	    if (first_cutoff >= buflen)
 		log_fatal("%s:%d:store_options: Invalid first cutoff.", MDL);
-
 	    bufend = first_cutoff;
-	} else
-	    bufend = buflen;
 
-	if (second_cutoff) {
+	    if (second_cutoff) {
+	        if (second_cutoff >= buflen)
+		    log_fatal("%s:%d:store_options: Invalid second cutoff.",
+			      MDL);
+	        sbufend = second_cutoff;
+	    }
+	} else if (second_cutoff) {
 	    if (second_cutoff >= buflen)
 		log_fatal("%s:%d:store_options: Invalid second cutoff.", MDL);
-
-	    sbufend = second_cutoff;
-	} else
-	    sbufend = buflen;
+	    bufend = second_cutoff;
+	}
 
 	memset (&od, 0, sizeof od);
 
@@ -1428,7 +1454,8 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 		log_fatal("Second buffer overflow in overloaded options.");
 
 	    buffer[first_cutoff + six] = DHO_END;
-	    *ocount |= 1; /* So that caller knows there's data there. */
+	    if (ocount != NULL)
+	    	*ocount |= 1; /* So that caller knows there's data there. */
 	}
 
 	if (second_cutoff && tix) {
@@ -1439,7 +1466,8 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 		log_fatal("Third buffer overflow in overloaded options.");
 
 	    buffer[second_cutoff + tix] = DHO_END;
-	    *ocount |= 2; /* So that caller knows there's data there. */
+	    if (ocount != NULL)
+	    	*ocount |= 2; /* So that caller knows there's data there. */
 	}
 
 	if ((six || tix) && (bufix + 3 > bufend))
@@ -2674,7 +2702,7 @@ int option_space_encapsulate (result, packet, lease, client_state,
 	universe_hash_lookup(&u, universe_hash, 
 			     (const char *)name->data, name->len, MDL);
 	if (u == NULL) {
-		log_error("option_space_encapsulate: option space %.*s does "
+		log_error("option_space_encapsulate: option space '%.*s' does "
 			  "not exist, but is configured.",
 			  (int)name->len, name->data);
 		return status;
@@ -2685,7 +2713,7 @@ int option_space_encapsulate (result, packet, lease, client_state,
 				   in_options, cfg_options, scope, u))
 			status = 1;
 	} else
-		log_error("encapsulation requested for %s with no support.",
+		log_error("encapsulation requested for '%s' with no support.",
 			  name->data);
 
 	return status;
@@ -2695,7 +2723,7 @@ int option_space_encapsulate (result, packet, lease, client_state,
  * placed on the option buffer by the above (configuring a value in
  * the space over-rides any values in the child universe).
  *
- * Note that there are far fewer universes than there will every be
+ * Note that there are far fewer universes than there will ever be
  * options in any universe.  So it is faster to traverse the
  * configured universes, checking if each is encapsulated in the
  * current universe, and if so attempting to do so.
