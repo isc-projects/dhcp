@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.76.2.1 2007/10/03 20:16:06 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.76.2.2 2007/10/26 22:55:38 each Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -222,7 +222,7 @@ void bootp (packet)
 	       lookup_option (&server_universe, options,
 			      SV_ALWAYS_REPLY_RFC1048), MDL))) {
 		memcpy (outgoing.raw -> options,
-			packet -> raw -> options, DHCP_OPTION_LEN);
+			packet -> raw -> options, DHCP_MAX_OPTION_LEN);
 		outgoing.packet_length = BOOTP_MIN_LEN;
 	} else {
 

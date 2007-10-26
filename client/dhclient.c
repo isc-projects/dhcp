@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.143.2.6 2007/05/22 20:37:04 each Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.143.2.7 2007/10/26 22:55:37 each Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1292,7 +1292,7 @@ struct client_lease *packet_to_lease (packet, client)
 	if (!(i & 2) && packet -> raw -> sname [0]) {
 		unsigned len;
 		/* Don't count on the NUL terminator. */
-		for (len = 0; len < 64; len++)
+		for (len = 0; len < DHCP_SNAME_LEN; len++)
 			if (!packet -> raw -> sname [len])
 				break;
 		lease -> server_name = dmalloc (len + 1, MDL);
@@ -1311,7 +1311,7 @@ struct client_lease *packet_to_lease (packet, client)
 	if (!(i & 1) && packet -> raw -> file [0]) {
 		unsigned len;
 		/* Don't count on the NUL terminator. */
-		for (len = 0; len < 64; len++)
+		for (len = 0; len < DHCP_FILE_LEN; len++)
 			if (!packet -> raw -> file [len])
 				break;
 		lease -> filename = dmalloc (len + 1, MDL);
