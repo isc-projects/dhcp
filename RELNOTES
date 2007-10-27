@@ -40,6 +40,11 @@ the README file.
 
 			Changes since 3.1.0
 
+- Fixed a buffer overflow error which could have allowed a denial
+  of service under unusual server configurations
+
+- Eliminated a spurious error message from the client
+
 - Bug in server configuration parser caused server to get stuck on
   startup for certain bad pool declarations. Thanks to Guillaume
   Knispel for the bug report and fix.
