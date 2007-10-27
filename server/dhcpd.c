@@ -202,7 +202,6 @@ main(int argc, char **argv) {
 	int cftest = 0;
 	int lftest = 0;
 #ifndef DEBUG
-	int pidfilewritten = 0;
 	int pid;
 	char pbuf [20];
 	int daemon = 1;
@@ -629,27 +628,31 @@ main(int argc, char **argv) {
 
 	/* Read previous pid file. */
 	if ((i = open (path_dhcpd_pid, O_RDONLY)) >= 0) {
-		status = read (i, pbuf, (sizeof pbuf) - 1);
+		status = read(i, pbuf, (sizeof pbuf) - 1);
 		close (i);
 		if (status > 0) {
-			pbuf [status] = 0;
-			pid = atoi (pbuf);
+			pbuf[status] = 0;
+			pid = atoi(pbuf);
 
-			/* If the previous server process is not still running,
-			   write a new pid file immediately. */
-			if (pid && (pid == getpid() || kill (pid, 0) < 0)) {
-				unlink (path_dhcpd_pid);
-				if ((i = open (path_dhcpd_pid,
-					O_WRONLY | O_CREAT, 0644)) >= 0) {
-				    sprintf (pbuf, "%d\n", (int)getpid ());
-				    write (i, pbuf, strlen (pbuf));
-				    close (i);
-				    pidfilewritten = 1;
-				}
-			} else
-				log_fatal ("There's already a DHCP server running.");
+			/*
+                         * If there was a previous server process and it's
+                         * is still running, abort
+                         */
+			if (!pid || (pid != getpid() && kill(pid, 0) == 0))
+				log_fatal("There's already a "
+                                          "DHCP server running.");
 		}
 	}
+
+        /* Write new pid file. */
+        if ((i = open(path_dhcpd_pid, O_WRONLY|O_CREAT|O_TRUNC, 0644)) >= 0) {
+                sprintf(pbuf, "%d\n", (int) getpid());
+                write(i, pbuf, strlen(pbuf));
+                close(i);
+        } else {
+                log_error("Can't create PID file %s: %m.", path_dhcpd_pid);
+        }
+
 
 	/* If we were requested to log to stdout on the command line,
 	   keep doing so; otherwise, stop. */
@@ -657,21 +660,6 @@ main(int argc, char **argv) {
 		log_perror = 1;
 	else
 		log_perror = 0;
-
-	/* If we didn't write the pid file earlier because we found a
-	   process running the logged pid, but we made it to here,
-	   meaning nothing is listening on the bootp port, then write
-	   the pid file out - what's in it now is bogus anyway. */
-	if (!pidfilewritten) {
-		unlink (path_dhcpd_pid);
-		if ((i = open (path_dhcpd_pid,
-			       O_WRONLY | O_CREAT, 0644)) >= 0) {
-			sprintf (pbuf, "%d\n", (int)getpid ());
-			write (i, pbuf, strlen (pbuf));
-			close (i);
-			pidfilewritten = 1;
-		}
-	}
 
 	if (daemon) {
 		/* Become session leader and get pid... */

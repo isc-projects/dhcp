@@ -138,7 +138,11 @@ main(int argc, char **argv) {
 	dhcp_interface_startup_hook = dhclient_interface_startup_hook;
 
 	for (i = 1; i < argc; i++) {
-		if (!strcmp(argv[i], "-4")) {
+                if (!strcmp(argv[i], "-r")) {
+			release_mode = 1;
+			no_daemon = 1;
+#ifdef DHCPv6
+		} else if (!strcmp(argv[i], "-4")) {
 			if (local_family_set && local_family != AF_INET)
 				log_fatal("Client can only do v4 or v6, not "
 					  "both.");
@@ -150,9 +154,7 @@ main(int argc, char **argv) {
 					  "both.");
 			local_family_set = 1;
 			local_family = AF_INET6;
-		} else if (!strcmp(argv[i], "-r")) {
-			release_mode = 1;
-			no_daemon = 1;
+#endif /* DHCPv6 */
                 } else if (!strcmp (argv [i], "-x")) { /* eXit, no release */
                         release_mode = 0;
                         no_daemon = 0;
@@ -306,10 +308,8 @@ main(int argc, char **argv) {
 			oldpid = (pid_t)temp;
 
 			if (e != 0 && e != EOF) {
-				if (oldpid) {
-					if (kill(oldpid, SIGTERM) == 0)
-						unlink(path_dhclient_pid);
-				}
+				if (oldpid)
+					kill(oldpid, SIGTERM);
 			}
 			fclose(pidfd);
 		}
@@ -555,7 +555,12 @@ static void usage ()
 	log_info (arr);
 	log_info (url);
 
-	log_error ("Usage: dhclient [-1dvrx] [-nw] [-p <port>] %s",
+	log_error ("Usage: dhclient %s %s",
+#ifdef DHCPv6
+                   "[-4|-6] [-1dvrx] [-nw] [-p <port>]",
+#else /* DHCPv6 */
+                   "[-1dvrx] [-nw] [-p <port>]",
+#endif /* DHCPv6 */
 		   "[-s server]");
 	log_error ("                [-cf config-file] [-lf lease-file]%s",
 		   "[-pf pid-file] [-e VAR=val]");
