@@ -81,6 +81,9 @@ and for prodding me into improving it.
 
 			Changes since 3.0.6
 
+- Fixed a buffer overflow error which could have allowed a denial
+  of service under unusual server configurations
+
 - Bug in octal parsing fixed. Thanks to Bernd Fuhrmann for the report
   and fix.
 

@@ -988,12 +988,17 @@ int cons_options PROTO ((struct packet *, struct dhcp_packet *, struct lease *,
 			 int, int, int, struct data_string *, const char *));
 int fqdn_universe_decode (struct option_state *,
 			  const unsigned char *, unsigned, struct universe *);
-int store_options PROTO ((int *, unsigned char *, unsigned, struct packet *,
-			  struct lease *, struct client_state *,
-			  struct option_state *,
-			  struct option_state *, struct binding_scope **,
-			  unsigned *, int, unsigned, unsigned,
-			  int, const char *));
+int
+store_options(int *ocount,
+	      unsigned char *buffer, unsigned buflen, unsigned index,
+	      struct packet *packet, struct lease *lease,
+	      struct client_state *client_state,
+	      struct option_state *in_options,
+	      struct option_state *cfg_options,
+	      struct binding_scope **scope,
+	      unsigned *priority_list, int priority_len,
+	      unsigned first_cutoff, int second_cutoff, int terminate,
+	      const char *vuname);
 int format_has_text(const char *);
 int format_min_length(const char *, struct option_cache *);
 const char *pretty_print_option PROTO ((struct option *, const unsigned char *,
