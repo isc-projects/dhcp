@@ -54,6 +54,11 @@ suggested fixes to <dhcp-users@isc.org>.
 
 			Changes since 4.0.0b1
 
+- Fixed a buffer overflow error which could have allowed a denial
+  of service under unusual server configurations
+
+- Eliminated a spurious error message from the client
+
 - A number of bugs with the internal handling of lease state on the 
   server have been fixed. Some of these could cause server crashes.
 
