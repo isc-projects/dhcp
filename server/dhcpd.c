@@ -314,6 +314,7 @@ main(int argc, char **argv) {
 		} else if (!strcmp (argv [i], "-q")) {
 			quiet = 1;
 			quiet_interface_discovery = 1;
+#ifdef DHCPv6
 		} else if (!strcmp(argv[i], "-4")) {
 			if (local_family_set && (local_family != AF_INET)) {
 				log_fatal("Server cannot run in both IPv4 and "
@@ -328,6 +329,7 @@ main(int argc, char **argv) {
 			}
 			local_family = AF_INET6;
 			local_family_set = 1;
+#endif /* DHCPv6 */
 		} else if (!strcmp (argv [i], "--version")) {
 			log_info("isc-dhcpd-%s", PACKAGE_VERSION);
 			exit (0);
@@ -366,12 +368,33 @@ main(int argc, char **argv) {
 	if (!no_dhcpd_conf && (s = getenv ("PATH_DHCPD_CONF"))) {
 		path_dhcpd_conf = s;
 	}
-	if (!no_dhcpd_db && (s = getenv ("PATH_DHCPD_DB"))) {
-		path_dhcpd_db = s;
-	}
-	if (!no_dhcpd_pid && (s = getenv ("PATH_DHCPD_PID"))) {
-		path_dhcpd_pid = s;
-	}
+
+#ifdef DHCPv6
+        if (local_family == AF_INET6) {
+                /* DHCPv6: override DHCPv4 lease and pid filenames */
+	        if (!no_dhcpd_db) {
+                        if ((s = getenv ("PATH_DHCPD6_DB")))
+		                path_dhcpd_db = s;
+                        else
+		                path_dhcpd_db = _PATH_DHCPD6_DB;
+	        }
+	        if (!no_dhcpd_pid) {
+                        if ((s = getenv ("PATH_DHCPD6_PID")))
+		                path_dhcpd_pid = s;
+                        else
+		                path_dhcpd_pid = _PATH_DHCPD6_PID;
+	        }
+        } else
+#else /* !DHCPv6 */
+        {
+	        if (!no_dhcpd_db && (s = getenv ("PATH_DHCPD_DB"))) {
+		        path_dhcpd_db = s;
+	        }
+	        if (!no_dhcpd_pid && (s = getenv ("PATH_DHCPD_PID"))) {
+		        path_dhcpd_pid = s;
+	        }
+        }
+#endif /* DHCPv6 */
 
         /*
          * convert relative path names to absolute, for files that need
@@ -738,7 +761,7 @@ void postconf_initialization (int quiet)
 		data_string_forget (&db, MDL);
 		path_dhcpd_db = s;
 	}
-	
+
 	oc = lookup_option (&server_universe, options, SV_PID_FILE_NAME);
 	if (oc &&
 	    evaluate_option_cache (&db, (struct packet *)0,
@@ -753,6 +776,44 @@ void postconf_initialization (int quiet)
 		data_string_forget (&db, MDL);
 		path_dhcpd_pid = s;
 	}
+
+#ifdef DHCPv6
+        if (local_family == AF_INET6) {
+                /*
+                 * Override lease file name with dhcpv6 lease file name,
+                 * if it was set; then, do the same with the pid file name
+                 */
+                oc = lookup_option(&server_universe, options,
+                                   SV_DHCPV6_LEASE_FILE_NAME);
+                if (oc &&
+                    evaluate_option_cache(&db, NULL, NULL, NULL,
+				          options, NULL, &global_scope,
+                                          oc, MDL)) {
+                        s = dmalloc (db.len + 1, MDL);
+                        if (!s)
+                                log_fatal ("no memory for lease db filename.");
+                        memcpy (s, db.data, db.len);
+                        s [db.len] = 0;
+                        data_string_forget (&db, MDL);
+                        path_dhcpd_db = s;
+                }
+
+                oc = lookup_option(&server_universe, options,
+                                   SV_DHCPV6_PID_FILE_NAME);
+                if (oc &&
+                    evaluate_option_cache(&db, NULL, NULL, NULL,
+				          options, NULL, &global_scope,
+                                          oc, MDL)) {
+                        s = dmalloc (db.len + 1, MDL);
+                        if (!s)
+                                log_fatal ("no memory for lease db filename.");
+                        memcpy (s, db.data, db.len);
+                        s [db.len] = 0;
+                        data_string_forget (&db, MDL);
+                        path_dhcpd_pid = s;
+                }
+        }
+#endif /* DHCPv6 */
 
 	omapi_port = -1;
 	oc = lookup_option (&server_universe, options, SV_OMAPI_PORT);
@@ -963,7 +1024,11 @@ usage(void) {
 	log_info(arr);
 
 	log_fatal("Usage: dhcpd [-p <UDP port #>] [-f] [-d] [-q] [-t|-T]\n"
+#ifdef DHCPv6
 		  "             [-4|-6] [-cf config-file] [-lf lease-file]\n"
+#else /* !DHCPv6 */
+		  "             [-cf config-file] [-lf lease-file]\n"
+#endif /* DHCPv6 */
 #if defined (TRACING)
 		  "             [-tf trace-output-file]\n"
 		  "             [-play trace-input-file]\n"

@@ -50,10 +50,18 @@ extern int h_errno;
 #include <net/if_arp.h>
 
 #define _PATH_DHCPD_CONF "/usr/local/etc/dhcpd.conf"
-#define _PATH_DHCPD_DB   "/usr/local/etc/dhcp/dhcpd.leases"
 
+#ifndef _PATH_DHCPD_DB
+#define _PATH_DHCPD_DB   "/usr/local/etc/dhcp/dhcpd.leases"
+#endif
+#ifndef _PATH_DHCPD6_DB
+#define _PATH_DHCPD6_DB   "/usr/local/etc/dhcp/dhcpd6.leases"
+#endif
 #ifndef _PATH_DHCPD_PID
 #define _PATH_DHCPD_PID	"/etc/dhcpd.pid"
+#endif
+#ifndef _PATH_DHCPD6_PID
+#define _PATH_DHCPD6_PID "/etc/dhcpd6.pid"
 #endif
 #ifndef _PATH_DHCLIENT_PID
 #define _PATH_DHCLIENT_PID "/etc/dhclient.pid"

@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.88 2007/09/17 10:13:07 shane Exp $
+.\" $Id: dhcpd.conf.5,v 1.89 2007/10/27 19:15:36 each Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -2230,7 +2230,36 @@ statement
 should be the name of the DHCP server's lease file.   By default, this
 is DBDIR/dhcpd.leases.   This statement \fBmust\fR appear in the outer
 scope of the configuration file - if it appears in some other scope,
-it will have no effect.
+it will have no effect.  Furthermore, it has no effect if overridden
+by the
+.B -lf
+flag or the
+.B PATH_DHCPD_DB
+environment variable.
+.RE
+.PP
+The
+.I dhcpv6-lease-file-name
+statement
+.RS 0.25i
+.PP
+.B dhcpv6-lease-file-name \fIname\fB;\fR
+.PP
+.I Name
+is the name of the lease file to use if and only if the server is running
+in DHCPv6 mode.  By default, this is DBDIR/dhcpd6.leases.  This statement,
+like
+.I lease-file-name,
+\fBmust\fR appear in the outer scope of the configuration file.  It
+has no effect if overridden by the
+.B -lf
+flag or the
+.B PATH_DHCPD6_DB
+environment variable.  If
+.I dhcpv6-lease-file-name
+is not specified, but
+.I lease-file-name
+is, the latter value will be used.
 .RE
 .PP
 The
@@ -2422,8 +2451,36 @@ statement
 should be the name of the DHCP server's process ID file.   This is the
 file in which the DHCP server's process ID is stored when the server
 starts.   By default, this is RUNDIR/dhcpd.pid.   Like the
-lease-file-name statement, this statement must appear in the outer scope
-of the configuration file.
+.I lease-file-name
+statement, this statement must appear in the outer scope
+of the configuration file.  It has no effect if overridden by the
+.B -pf
+flag or the
+.B PATH_DHCPD_PID
+environment variable.
+.PP
+The
+.I dhcpv6-pid-file-name
+statement
+.RS 0.25i
+.PP
+.B dhcpv6-pid-file-name \fIname\fB;\fR
+.PP
+.I Name
+is the name of the pid file to use if and only if the server is running
+in DHCPv6 mode.  By default, this is DBDIR/dhcpd6.pid.  This statement,
+like
+.I pid-file-name,
+\fBmust\fR appear in the outer scope of the configuration file.  It
+has no effect if overridden by the
+.B -pf
+flag or the
+.B PATH_DHCPD6_PID
+environment variable.  If
+.I dhcpv6-pid-file-name
+is not specified, but
+.I pid-file-name
+is, the latter value will be used.
 .RE
 .PP
 The

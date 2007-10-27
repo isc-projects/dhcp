@@ -235,6 +235,8 @@ static struct option server_options[] = {
 	{ "do-reverse-updates", "f",		&server_universe,  51, 1 },
 	{ "fqdn-reply", "f",			&server_universe,  52, 1 },
 	{ "preferred-lifetime", "T",		&server_universe,  53, 1 },
+	{ "dhcpv6-lease-file-name", "t",	&server_universe,  54, 1 },
+	{ "dhcpv6-pid-file-name", "t",		&server_universe,  55, 1 },
 	{ NULL, NULL, NULL, 0, 0 }
 };
 

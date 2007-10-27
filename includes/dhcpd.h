@@ -618,6 +618,8 @@ struct lease_state {
 #define SV_DO_REVERSE_UPDATES		51
 #define SV_FQDN_REPLY			52
 #define SV_PREFER_LIFETIME		53
+#define SV_DHCPV6_LEASE_FILE_NAME       54
+#define SV_DHCPV6_PID_FILE_NAME         55
 
 #if !defined (DEFAULT_PING_TIMEOUT)
 # define DEFAULT_PING_TIMEOUT 1
@@ -1224,9 +1226,14 @@ typedef unsigned char option_mask [16];
 #define _PATH_DHCPD_CONF	"dhcpd.conf"
 #undef _PATH_DHCPD_DB
 #define _PATH_DHCPD_DB		"dhcpd.leases"
+#undef _PATH_DHCPD6_DB
+#define _PATH_DHCPD6_DB		"dhcpd6.leases"
 #undef _PATH_DHCPD_PID
 #define _PATH_DHCPD_PID		"dhcpd.pid"
+#undef _PATH_DHCPD6_PID
+#define _PATH_DHCPD6_PID	"dhcpd6.pid"
 #else /* !DEBUG */
+
 #ifndef _PATH_DHCPD_CONF
 #define _PATH_DHCPD_CONF	"/etc/dhcpd.conf"
 #endif /* DEBUG */
@@ -1235,10 +1242,19 @@ typedef unsigned char option_mask [16];
 #define _PATH_DHCPD_DB		LOCALSTATEDIR"/db/dhcpd.leases"
 #endif
 
+#ifndef _PATH_DHCPD6_DB
+#define _PATH_DHCPD6_DB		LOCALSTATEDIR"/db/dhcpd6.leases"
+#endif
+
 #ifndef _PATH_DHCPD_PID
 #define _PATH_DHCPD_PID		LOCALSTATEDIR"/run/dhcpd.pid"
 #endif
+
+#ifndef _PATH_DHCPD6_PID
+#define _PATH_DHCPD6_PID	LOCALSTATEDIR"/run/dhcpd6.pid"
 #endif
+
+#endif /* DEBUG */
 
 #ifndef _PATH_DHCLIENT_CONF
 #define _PATH_DHCLIENT_CONF	"/etc/dhclient.conf"

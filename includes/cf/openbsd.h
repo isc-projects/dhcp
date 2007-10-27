@@ -63,8 +63,14 @@ extern int h_errno;
 #ifndef _PATH_DHCPD_PID
 #define _PATH_DHCPD_PID	"/var/run/dhcpd.pid"
 #endif
+#ifndef _PATH_DHCPD6_PID
+#define _PATH_DHCPD6_PID "/var/run/dhcpd6.pid"
+#endif
 #ifndef _PATH_DHCPD_DB
 #define _PATH_DHCPD_DB "/var/db/dhcpd.leases"
+#endif
+#ifndef _PATH_DHCPD6_DB
+#define _PATH_DHCPD6_DB "/var/db/dhcpd6.leases"
 #endif
 #ifndef _PATH_DHCLIENT_PID
 #define _PATH_DHCLIENT_PID "/var/run/dhclient.pid"

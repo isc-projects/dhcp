@@ -80,6 +80,9 @@ extern int h_errno;
 #ifndef _PATH_DHCPD_PID
 #define _PATH_DHCPD_PID 	"/etc/dhcpd.pid"
 #endif
+#ifndef _PATH_DHCPD6_PID
+#define _PATH_DHCPD6_PID 	"/etc/dhcpd6.pid"
+#endif
 #ifndef _PATH_DHCLIENT_PID
 #define _PATH_DHCLIENT_PID  "/etc/dhclient.pid"
 #endif
@@ -91,6 +94,9 @@ extern int h_errno;
 #endif
 #ifndef _PATH_DHCPD_DB
 #define _PATH_DHCPD_DB      "/etc/dhcpd.leases"
+#endif
+#ifndef _PATH_DHCPD6_DB
+#define _PATH_DHCPD6_DB      "/etc/dhcpd6.leases"
 #endif
 #ifndef _PATH_DHCLIENT_DB
 #define _PATH_DHCLIENT_DB   "/etc/dhclient.leases"

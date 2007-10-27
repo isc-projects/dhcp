@@ -85,6 +85,9 @@ extern int h_errno;
 #ifndef _PATH_DHCPD_DB
 #define _PATH_DHCPD_DB		"/var/state/dhcp/dhcpd.leases"
 #endif
+#ifndef _PATH_DHCPD6_DB
+#define _PATH_DHCPD6_DB		"/var/state/dhcp/dhcpd6.leases"
+#endif
 
 #ifndef _PATH_DHCLIENT_DB
 #define _PATH_DHCLIENT_DB	"/var/state/dhcp/dhclient.leases"

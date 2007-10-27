@@ -54,6 +54,10 @@ suggested fixes to <dhcp-users@isc.org>.
 
 			Changes since 4.0.0b1
 
+- Use different paths for PID and lease files when running in DHCPv4
+  or DHCPv6 mode, so that servers for both protcols can be run
+  simultaneously on a single interface.
+
 - Fixed a buffer overflow error which could have allowed a denial
   of service under unusual server configurations
 

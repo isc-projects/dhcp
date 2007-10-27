@@ -75,8 +75,14 @@
 #ifndef _PATH_DHCPD_PID
 #define _PATH_DHCPD_PID	"//e/etc/dhcpd.pid"
 #endif
+#ifndef _PATH_DHCPD6_PID
+#define _PATH_DHCPD6_PID "//e/etc/dhcpd6.pid"
+#endif
 #ifndef _PATH_DHCPD_DB
 #define _PATH_DHCPD_DB "//e/etc/dhcpd.leases"
+#endif
+#ifndef _PATH_DHCPD6_DB
+#define _PATH_DHCPD6_DB "//e/etc/dhcpd6.leases"
 #endif
 #ifndef _PATH_DHCPD_CONF
 #define _PATH_DHCPD_CONF "//e/etc/dhcpd.conf"

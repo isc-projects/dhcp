@@ -80,6 +80,9 @@ typedef unsigned long u_int64_t;
 #ifndef _PATH_DHCPD_PID
 #define _PATH_DHCPD_PID	"/var/run/dhcpd.pid"
 #endif
+#ifndef _PATH_DHCPD6_PID
+#define _PATH_DHCPD6_PID "/var/run/dhcpd6.pid"
+#endif
 #ifndef _PATH_DHCLIENT_PID
 #define _PATH_DHCLIENT_PID "/var/run/dhclient.pid"
 #endif
