@@ -1382,7 +1382,7 @@ lookup_fqdn6_option(struct universe *universe, struct option_state *options,
 		    unsigned code);
 void
 save_fqdn6_option(struct universe *universe, struct option_state *options,
-		  struct option_cache *oc);
+		  struct option_cache *oc, isc_boolean_t appendp);
 void
 delete_fqdn6_option(struct universe *universe, struct option_state *options,
 		    int code);
@@ -1452,12 +1452,17 @@ struct option_cache *next_hashed_option(struct universe *,
 int save_option_buffer (struct universe *, struct option_state *,
 			struct buffer *, unsigned char *, unsigned,
 			unsigned, int);
+int append_option_buffer(struct universe *, struct option_state *,
+			 struct buffer *, unsigned char *, unsigned,
+			 unsigned, int);
 void build_server_oro(struct data_string *, struct option_state *, 
 		      const char *, int);
-void save_option PROTO ((struct universe *,
-			 struct option_state *, struct option_cache *));
-void save_hashed_option PROTO ((struct universe *,
-				struct option_state *, struct option_cache *));
+void save_option(struct universe *, struct option_state *,
+		 struct option_cache *);
+void also_save_option(struct universe *, struct option_state *,
+		      struct option_cache *);
+void save_hashed_option(struct universe *, struct option_state *,
+			struct option_cache *, isc_boolean_t appendp);
 void delete_option PROTO ((struct universe *, struct option_state *, int));
 void delete_hashed_option PROTO ((struct universe *,
 				  struct option_state *, int));
@@ -1544,8 +1549,8 @@ int linked_option_get PROTO ((struct data_string *, struct universe *,
 int linked_option_state_dereference PROTO ((struct universe *,
 					    struct option_state *,
 					    const char *, int));
-void save_linked_option (struct universe *, struct option_state *,
-			 struct option_cache *);
+void save_linked_option(struct universe *, struct option_state *,
+			struct option_cache *, isc_boolean_t appendp);
 void linked_option_space_foreach (struct packet *, struct lease *,
 				  struct client_state *,
 				  struct option_state *,

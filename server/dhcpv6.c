@@ -756,7 +756,6 @@ start_reply(struct packet *packet,
 	    struct dhcpv6_packet *reply)
 {
 	struct option_cache *oc;
-	struct data_string server_oro;
 	const unsigned char *server_id_data;
 	int server_id_len;
 
@@ -876,21 +875,6 @@ start_reply(struct packet *packet,
 			return 0;
 		}
 	}
-
-	/*
-	 * Set the ORO for the main packet.
-	 */
-	build_server_oro(&server_oro, *opt_state, MDL);
-	if (!save_option_buffer(&dhcpv6_universe, *opt_state,
-				server_oro.buffer, 
-				(unsigned char *)server_oro.data,
-				server_oro.len, D6O_ORO, 0)) {
-		log_error("start_reply: error saving server ORO.");
-		data_string_forget(&server_oro, MDL);
-		option_state_dereference(opt_state, MDL);
-		return 0;
-	}
-	data_string_forget(&server_oro, MDL);
 
 	return 1;
 }
@@ -1951,11 +1935,14 @@ reply_process_is_addressed(struct reply_state *reply,
 		reply->valid = reply->send_valid;
 
 #if 0
-	/* XXX: Old 4.0.0 alpha code would change the host {} record
-	 * XXX: uid upon lease assignment.  I think this was an error;
-	 * XXX: it doesn't make sense to me now in retrospect to change
-	 * XXX: what is essentially configuration state with network
-	 * XXX: supplied values.
+	/*
+	 * XXX: Old 4.0.0 alpha code would change the host {} record
+	 * XXX: uid upon lease assignment.  This was intended to cover the
+	 * XXX: case where a client first identifies itself using vendor
+	 * XXX: options in a solicit, or request, but later neglects to include
+	 * XXX: these options in a Renew or Rebind.  It is not clear that this
+	 * XXX: is required, and has some startling ramnifications (such as
+	 * XXX: how to recover this dynamic host {} state across restarts).
 	 */
 	if (reply->host != NULL)
 		change_host_uid(host, reply->client_id->data,
@@ -2021,9 +2008,9 @@ reply_process_send_addr(struct reply_state *reply, struct iaddr *addr) {
 	putULong(data.buffer->data + 16, reply->send_prefer);
 	putULong(data.buffer->data + 20, reply->send_valid);
 
-	if (!save_option_buffer(&dhcpv6_universe, reply->reply_ia,
-				data.buffer, data.buffer->data,
-				data.len, D6O_IAADDR, 0)) {
+	if (!append_option_buffer(&dhcpv6_universe, reply->reply_ia,
+				  data.buffer, data.buffer->data,
+				  data.len, D6O_IAADDR, 0)) {
 		log_error("reply_process_ia: unable to save IAADDR "
 			  "option");
 		status = ISC_R_FAILURE;
