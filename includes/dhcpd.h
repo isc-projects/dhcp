@@ -752,9 +752,11 @@ struct permit {
 		permit_unauthenticated_clients,
 		permit_all_clients,
 		permit_dynamic_bootp_clients,
-		permit_class
+		permit_class,
+		permit_after
 	} type;
 	struct class *class;
+	TIME after;	/* date after which this clause applies */
 };
 
 struct pool {
@@ -775,6 +777,9 @@ struct pool {
 	int free_leases;
 	int backup_leases;
 	int index;
+	TIME valid_from;        /* deny pool use before this date */
+	TIME valid_until;       /* deny pool use after this date */
+
 #if defined (FAILOVER_PROTOCOL)
 	dhcp_failover_state_t *failover_peer;
 #endif
@@ -1691,6 +1696,7 @@ unsigned char *parse_numeric_aggregate PROTO ((struct parse *,
 void convert_num PROTO ((struct parse *, unsigned char *, const char *,
 			 int, unsigned));
 TIME parse_date PROTO ((struct parse *));
+TIME parse_date_core(struct parse *);
 isc_result_t parse_option_name PROTO ((struct parse *, int, int *,
 				       struct option **));
 void parse_option_space_decl PROTO ((struct parse *));

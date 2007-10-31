@@ -732,6 +732,8 @@ intern(char *atom, enum dhcp_token dfv) {
 			return TOKEN_ACTIVE;
 		if (!strcasecmp (atom + 1, "tsfp"))
 			return ATSFP;
+                if (!strcasecmp (atom + 1, "fter"))
+                        return AFTER;
 		break;
 	      case 'b':
 		if (!strcasecmp (atom + 1, "ackup"))

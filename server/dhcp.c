@@ -1451,6 +1451,8 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 	TIME ping_timeout;
 	TIME lease_cltt;
 	struct in_addr from;
+	TIME remaining_time;
+	struct iaddr cip;
 
 	unsigned i, j;
 	int s1;
@@ -2072,12 +2074,61 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 			data_string_forget(&d1, MDL);
 		}
 
+		/* a client requests an address which is not yet active*/
+		if (lease->pool && lease->pool->valid_from && 
+                    cur_time < lease->pool->valid_from) {
+			/* NAK leases before pool activation date */
+			cip.len = 4;
+			memcpy (cip.iabuf, &lt->ip_addr.iabuf, 4);
+			nak_lease(packet, &cip);
+			free_lease_state (state, MDL);
+			lease_dereference (&lt, MDL);
+			if (host)
+				host_dereference (&host, MDL);
+			return;
+			
+		}
+
+		/* CC:
+		a) NAK current lease if past the expiration date
+		b) extend lease only up to the expiration date, but not
+		below min-lease-time
+		Setting min-lease-time is essential for this to work!
+		The value of min-lease-time determines the lenght
+		of the transition window:
+		A client renewing a second before the deadline will
+		get a min-lease-time lease. Since the current ip might not
+		be routable after the deadline, the client will
+		be offline until it DISCOVERS again. Otherwise it will
+		receive a NAK at T/2.
+		A min-lease-time of 6 seconds effectively switches over
+		all clients in this pool very quickly.
+			*/
+ 
+		if (lease->pool && lease->pool->valid_until) {
+			if (cur_time >= lease->pool->valid_until) {
+				/* NAK leases after pool expiration date */
+				cip.len = 4;
+				memcpy (cip.iabuf, &lt->ip_addr.iabuf, 4);
+				nak_lease(packet, &cip);
+				free_lease_state (state, MDL);
+				lease_dereference (&lt, MDL);
+				if (host)
+					host_dereference (&host, MDL);
+				return;
+			}
+			remaining_time = lease->pool->valid_until - cur_time;
+			if (lease_time > remaining_time)
+				lease_time = remaining_time;
+		}
+ 
 		if (lease_time < min_lease_time) {
 			if (min_lease_time)
 				lease_time = min_lease_time;
 			else
 				lease_time = default_lease_time;
 		}
+
 
 #if defined (FAILOVER_PROTOCOL)
 		/* Okay, we know the lease duration.   Now check the
@@ -3838,6 +3889,11 @@ int permitted (packet, permit_list)
 				     p -> class))
 					return 1;
 			}
+			break;
+
+		      case permit_after:
+			if (cur_time > p->after)
+				return 1;
 			break;
 		}
 	}

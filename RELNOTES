@@ -59,6 +59,12 @@ suggested fixes to <dhcp-users@isc.org>.
   them, if advertised by the client.  It still only seeks to allocate one
   new address.
 
+- Relative time may now be used as a qualifier for 'allow' and 'deny' access
+  control lists.  These directives may be used to assist in re-addressing
+  address pools without having to constantly reconfigure the server.  Please
+  see 'man dhcpd.conf' for more information on allow/deny 'after time' syntax.
+  Thanks to a patch from Christof Chen.
+
 			Changes since 4.0.0b1
 
 - Use different paths for PID and lease files when running in DHCPv4

@@ -843,13 +843,15 @@ void convert_num (cfile, buf, str, base, size)
  *		NUMBER COLON NUMBER COLON NUMBER NUMBER SEMI |
  *	    NEVER
  *
- * Dates are stored in GMT or with a timezone offset; first number is day
+ * Dates are stored in UTC or with a timezone offset; first number is day
  * of week; next is year/month/day; next is hours:minutes:seconds on a
  * 24-hour clock, followed by the timezone offset in seconds, which is
  * optional.
  */
 
-TIME parse_date (cfile)
+/* just parse the date */
+TIME 
+parse_date_core(cfile)
 	struct parse *cfile;
 {
 	int guess;
@@ -1008,10 +1010,6 @@ TIME parse_date (cfile)
 	} else
 		tzoff = 0;
 
-	/* Make sure the date ends in a semicolon... */
-	if (!parse_semi (cfile))
-		return 0;
-
 	/* Guess the time value... */
 	guess = ((((((365 * (year - 70) +	/* Days in years since '70 */
 		      (year - 69) / 4 +		/* Leap days since '70 */
@@ -1035,6 +1033,22 @@ TIME parse_date (cfile)
 
 	return guess;
 }
+
+/* Wrapper to consume the semicolon after the date */
+TIME 
+parse_date(cfile)
+       struct parse *cfile;
+{
+       int guess;
+       guess = parse_date_core(cfile);
+
+       /* Make sure the date ends in a semicolon... */
+       if (!parse_semi(cfile))
+               return 0;
+       return guess;
+}
+
+
 
 /*
  * option-name :== IDENTIFIER |

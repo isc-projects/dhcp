@@ -1344,6 +1344,8 @@ void parse_pool_statement (cfile, group, type)
 	int declaration = 0;
 	isc_result_t status;
 	struct lease *lpchain = (struct lease *)0, *lp;
+	TIME t;
+	int is_allow = 0;
 
 	pool = (struct pool *)0;
 	status = pool_allocate (&pool, MDL);
@@ -1440,6 +1442,8 @@ void parse_pool_statement (cfile, group, type)
 			break;
 		      case ALLOW:
 			permit_head = &pool -> permit_list;
+			/* remember the clause which leads to get_permit */
+			is_allow = 1;
 		      get_permit:
 			permit = new_permit (MDL);
 			if (!permit)
@@ -1522,6 +1526,24 @@ void parse_pool_statement (cfile, group, type)
 						    "no such class: %s", val);
 				break;
 
+			      case AFTER:
+				if (pool->valid_from || pool->valid_until) {
+					parse_warn(cfile,
+						    "duplicate \"after\" clause.");
+					skip_to_semi(cfile);
+					free_permit(permit, MDL);
+					continue;
+				}
+				t = parse_date_core(cfile);
+				permit->type = permit_after;
+				permit->after = t;
+				if (is_allow) {
+					pool->valid_from = t;
+				} else {
+					pool->valid_until = t;
+				}
+				break;
+
 			      default:
 				parse_warn (cfile, "expecting permit type.");
 				skip_to_semi (cfile);
@@ -1535,6 +1557,8 @@ void parse_pool_statement (cfile, group, type)
 
 		      case DENY:
 			permit_head = &pool -> prohibit_list;
+			/* remember the clause which leads to get_permit */
+			is_allow = 0; 
 			goto get_permit;
 			
 		      case RBRACE:

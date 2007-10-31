@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.89 2007/10/27 19:15:36 each Exp $
+.\" $Id: dhcpd.conf.5,v 1.90 2007/10/31 19:13:33 dhankins Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -1831,6 +1831,18 @@ pool declaration for some reason, but hold it in reserve, or when you
 want to renumber your network quickly, and thus want the server to
 force all clients that have been allocated addresses from this pool to
 obtain new addresses immediately when they next renew.
+.PP
+ \fBafter \fItime\fR\fB;\fR
+.PP
+If specified, this statement either allows or prevents allocation from
+this pool after a given date. This can be used when you want to move
+clients from one pool to another. The server adjusts the regular lease
+time so that the latest expiry time is at the given time+min-lease-time.
+A short min-lease-time enforces a step change, whereas a longer
+min-lease-time allows for a gradual change.
+\fItime\fR is either second since epoch, or a UTC time string e.g.
+4 2007/08/24 09:14:32 or a string with time zone offset in seconds
+e.g. 4 2007/08/24 11:14:32 -7200
 .SH REFERENCE: PARAMETERS
 The
 .I adaptive-lease-time-threshold
