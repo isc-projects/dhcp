@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.211.2.6 2007/05/21 22:13:50 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.211.2.7 2007/11/02 22:07:06 each Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -638,7 +638,7 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 	}
 
 	/* If the address the client asked for is ours, but it wasn't
-           available for the client, NAK it. */
+	   available for the client, NAK it. */
 	if (!lease && ours) {
 		log_info ("%s: lease %s unavailable.", msgbuf, piaddr (cip));
 		nak_lease (packet, &cip);
@@ -673,8 +673,8 @@ void dhcprelease (packet, ms_nulltp)
 
 
 	/* DHCPRELEASE must not specify address in requested-address
-           option, but old protocol specs weren't explicit about this,
-           so let it go. */
+	   option, but old protocol specs weren't explicit about this,
+	   so let it go. */
 	if ((oc = lookup_option (&dhcp_universe, packet -> options,
 				 DHO_DHCP_REQUESTED_ADDRESS))) {
 		log_info ("DHCPRELEASE from %s specified requested-address.",
@@ -1830,30 +1830,27 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 			if (i == packet -> class_count)
 				unbill_class (lease, lease -> billing_class);
 		}
-		
+
 		/* If we don't have an active billing, see if we need
 		   one, and if we do, try to do so. */
-		if (!lease -> billing_class) {
-			for (i = 0; i < packet -> class_count; i++) {
-				if (packet -> classes [i] -> lease_limit)
-					break;
-			}
-			if (i != packet -> class_count) {
-				for (i = 0; i < packet -> class_count; i++)
-					if ((packet -> 
-					     classes [i] -> lease_limit) &&
-					    bill_class (lease,
-							packet -> classes [i]))
+		if (lease->billing_class == NULL) {
+			int bill = 0;
+			for (i = 0; i < packet->class_count; i++) {
+				if (packet->classes[i]->lease_limit) {
+					bill++;
+					if (bill_class(lease,
+						       packet->classes[i]))
 						break;
-				if (i == packet -> class_count) {
-					log_info ("%s: no available billing",
-						  msg);
-					free_lease_state (state, MDL);
-					if (host)
-						host_dereference (&host, MDL);
-					/* XXX possibly not necessary: */
-					return;
 				}
+			}
+			if (bill != 0 && i == packet->class_count) {
+				log_info("%s: no available billing: lease "
+					 "limit reached in all matching "
+					 "classes", msg);
+				free_lease_state(state, MDL);
+				if (host)
+					host_dereference(&host, MDL);
+				return;
 			}
 
 			/* If this is an offer, undo the billing.  We go
@@ -2444,7 +2441,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 	}
 
 	/* Now, if appropriate, put in DHCP-specific options that
-           override those. */
+	   override those. */
 	if (state -> offer) {
 		i = DHO_DHCP_MESSAGE_TYPE;
 		oc = (struct option_cache *)0;
@@ -3708,7 +3705,7 @@ int mockup_lease (struct lease **lp, struct packet *packet,
    a lease at all. */
 
 int allocate_lease (struct lease **lp, struct packet *packet,
-                    struct pool *pool, int *peer_has_leases)
+		    struct pool *pool, int *peer_has_leases)
 {
 	struct lease *lease = (struct lease *)0;
 	struct lease *candl = (struct lease *)0;

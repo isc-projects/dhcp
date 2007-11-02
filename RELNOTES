@@ -40,6 +40,8 @@ the README file.
 
 			Changes since 3.1.0
 
+- Clarified error message when lease limit exceeded
+
 - Fixed a buffer overflow error which could have allowed a denial
   of service under unusual server configurations
 
