@@ -55,6 +55,8 @@ suggested fixes to <dhcp-users@isc.org>.
 
 			Changes since 4.0.0b2
 
+- Clarified error message when lease limit exceeded
+
 - The server will now include multiple IA_NA's and multiple IAADDRs within
   them, if advertised by the client.  It still only seeks to allocate one
   new address.
