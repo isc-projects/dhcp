@@ -57,10 +57,6 @@ suggested fixes to <dhcp-users@isc.org>.
 
 - Clarified error message when lease limit exceeded
 
-- The server will now include multiple IA_NA's and multiple IAADDRs within
-  them, if advertised by the client.  It still only seeks to allocate one
-  new address.
-
 - Relative time may now be used as a qualifier for 'allow' and 'deny' access
   control lists.  These directives may be used to assist in re-addressing
   address pools without having to constantly reconfigure the server.  Please

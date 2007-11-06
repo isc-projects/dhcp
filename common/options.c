@@ -43,10 +43,6 @@ static int pretty_text(char **, char *, const unsigned char **,
 			 const unsigned char *, int);
 static int pretty_domain(char **, char *, const unsigned char **,
 			 const unsigned char *);
-static int prepare_option_buffer(struct universe *universe, struct buffer *bp,
-				 unsigned char *buffer, unsigned length,
-				 unsigned code, int terminatep,
-				 struct option_cache **opp);
 
 /* Parse all available options out of the specified packet. */
 
@@ -2147,64 +2143,15 @@ struct option_cache *lookup_hashed_option (universe, options, code)
 	return (struct option_cache *)0;
 }
 
-/* Save a specified buffer into an option cache. */
-int
-save_option_buffer(struct universe *universe, struct option_state *options,
-		   struct buffer *bp, unsigned char *buffer, unsigned length,
-		   unsigned code, int terminatep)
+int save_option_buffer (struct universe *universe,
+			struct option_state *options,
+			struct buffer *bp,
+			unsigned char *buffer, unsigned length,
+			unsigned code, int tp)
 {
-	struct option_cache *op = NULL;
-	int status = 1;
-
-	status = prepare_option_buffer(universe, bp, buffer, length, code,
-				       terminatep, &op);
-
-	if (status == 0)
-		goto cleanup;
-
-	save_option(universe, options, op);
-
-    cleanup:
-	if (op != NULL)
-		option_cache_dereference(&op, MDL);
-
-	return status;
-}
-
-/* Append a specified buffer onto the tail of an option cache. */
-int
-append_option_buffer(struct universe *universe, struct option_state *options,
-		     struct buffer *bp, unsigned char *buffer, unsigned length,
-		     unsigned code, int terminatep)
-{
-	struct option_cache *op = NULL;
-	int status = 1;
-
-	status = prepare_option_buffer(universe, bp, buffer, length, code,
-				       terminatep, &op);
-
-	if (status == 0)
-		goto cleanup;
-
-	also_save_option(universe, options, op);
-
-      cleanup:
-	if (op != NULL)
-		option_cache_dereference(&op, MDL);
-
-	return status;
-}
-
-/* Create/copy a buffer into a new option cache. */
-static int
-prepare_option_buffer(struct universe *universe, struct buffer *bp,
-		      unsigned char *buffer, unsigned length, unsigned code,
-		      int terminatep, struct option_cache **opp)
-{
-	struct buffer *lbp = NULL;
+	struct buffer *lbp = (struct buffer *)0;
+	struct option_cache *op = (struct option_cache *)0;
 	struct option *option = NULL;
-	struct option_cache *op;
-	int status = 1;
 
 	/* Code sizes of 8, 16, and 32 bits are allowed. */
 	switch(universe->tag_size) {
@@ -2252,28 +2199,26 @@ prepare_option_buffer(struct universe *universe, struct buffer *bp,
 		option->refcnt = 1;
 	}
 
-	if (!option_cache_allocate (opp, MDL)) {
+	if (!option_cache_allocate (&op, MDL)) {
 		log_error("No memory for option code %s.%s.",
 			  universe->name, option->name);
-		status = 0;
-		goto cleanup;
+		option_dereference(&option, MDL);
+		return 0;
 	}
-
-	/* Pointer rather than double pointer makes for less parens. */
-	op = *opp;
 
 	option_reference(&op->option, option, MDL);
 
 	/* If we weren't passed a buffer in which the data are saved and
 	   refcounted, allocate one now. */
 	if (!bp) {
-		if (!buffer_allocate (&lbp, length + terminatep, MDL)) {
+		if (!buffer_allocate (&lbp, length + tp, MDL)) {
 			log_error ("no memory for option buffer.");
 
-			status = 0;
-			goto cleanup;
+			option_cache_dereference (&op, MDL);
+			option_dereference(&option, MDL);
+			return 0;
 		}
-		memcpy (lbp -> data, buffer, length + terminatep);
+		memcpy (lbp -> data, buffer, length + tp);
 		bp = lbp;
 		buffer = &bp -> data [0]; /* Refer to saved buffer. */
 	}
@@ -2286,7 +2231,7 @@ prepare_option_buffer(struct universe *universe, struct buffer *bp,
 	op -> data.data = buffer;
 	op -> data.len = length;
 
-	if (terminatep) {
+	if (tp) {
 		/* NUL terminate (we can get away with this because we (or
 		   the caller!) allocated one more than the buffer size, and
 		   because the byte following the end of an option is always
@@ -2312,8 +2257,11 @@ prepare_option_buffer(struct universe *universe, struct buffer *bp,
 		}
 	}
 
+	/* Now store the option. */
+	save_option (universe, options, op);
+
 	/* And let go of our references. */
-      cleanup:
+	option_cache_dereference (&op, MDL);
 	option_dereference(&option, MDL);
 
 	return 1;
@@ -2350,10 +2298,6 @@ collect_oro(struct option_cache *oc,
 	oro->len += 2;
 }
 
-/* build_server_oro() is presently unusued, but may be used at a future date
- * with support for Reconfigure messages (as a hint to the client about new
- * option value contents).
- */
 void
 build_server_oro(struct data_string *server_oro, 
 		 struct option_state *options,
@@ -2418,31 +2362,20 @@ build_server_oro(struct data_string *server_oro,
 	}
 }
 
-/* Wrapper function to put an option cache into an option state. */
-void
-save_option(struct universe *universe, struct option_state *options,
-	    struct option_cache *oc)
+void save_option (struct universe *universe,
+		  struct option_state *options, struct option_cache *oc)
 {
-	if (universe->save_func)
-		(*universe->save_func)(universe, options, oc, ISC_FALSE);
+	if (universe -> save_func)
+		(*universe -> save_func) (universe, options, oc);
 	else
-		log_error("can't store options in %s space.", universe->name);
+		log_error ("can't store options in %s space.",
+			   universe -> name);
 }
 
-/* Wrapper function to append an option cache into an option state's list. */
-void
-also_save_option(struct universe *universe, struct option_state *options,
-		 struct option_cache *oc)
-{
-	if (universe->save_func)
-		(*universe->save_func)(universe, options, oc, ISC_TRUE);
-	else
-		log_error("can't store options in %s space.", universe->name);
-}
-
-void
-save_hashed_option(struct universe *universe, struct option_state *options,
-		   struct option_cache *oc, isc_boolean_t appendp)
+void save_hashed_option (universe, options, oc)
+	struct universe *universe;
+	struct option_state *options;
+	struct option_cache *oc;
 {
 	int hashix;
 	pair bptr;
@@ -2474,22 +2407,12 @@ save_hashed_option(struct universe *universe, struct option_state *options,
 				break;
 		}
 
-		/* Deal with collisions on the hash list. */
+		/* If we find one, dereference it and put the new one
+		   in its place. */
 		if (bptr) {
 			ocloc = (struct option_cache **)&bptr->car;
 
-			/*
-			 * If appendp is set, append it onto the tail of the
-			 * ->next list.  If it is not set, rotate it into
-			 * position at the head of the list.
-			 */
-			if (appendp) {
-				while ((*ocloc)->next != NULL)
-					ocloc = &(*ocloc)->next;
-			} else {
-				option_cache_dereference(ocloc, MDL);
-			}
-
+			option_cache_dereference(ocloc, MDL);
 			option_cache_reference(ocloc, oc, MDL);
 			return;
 		}
@@ -3130,35 +3053,44 @@ int fqdn_option_space_encapsulate (result, packet, lease, client_state,
 	return status;
 }
 
-/*
- * Trap invalid attempts to inspect FQND6 contents.
+/* Shill to the DHCPv4 fqdn option cache any lookups in the fqdn6 universe.
+ *
+ * XXX: Is this necessary?  There shouldn't be any lookups directly...
  */
 struct option_cache *
 lookup_fqdn6_option(struct universe *universe, struct option_state *options,
 		    unsigned code)
 {
 	log_fatal("Impossible condition at %s:%d.", MDL);
-	return NULL;
+
+	return fqdn_universe.lookup_func(&fqdn_universe, options, code);
 }
 
-/*
- * Trap invalid attempts to save options directly to FQDN6 rather than FQDN.
+/* Shill to the DHCPv4 fqdn option cache any direct saves to the fqdn6
+ * universe.
+ *
+ * XXX: Should this even be possible?  Never excercised code?
  */
 void
 save_fqdn6_option(struct universe *universe, struct option_state *options,
-		  struct option_cache *oc, isc_boolean_t appendp)
+		  struct option_cache *oc)
 {
 	log_fatal("Impossible condition at %s:%d.", MDL);
+
+	fqdn_universe.save_func(&fqdn_universe, options, oc);
 }
 
-/*
- * Trap invalid attempts to delete an option out of the FQDN6 universe.
+/* Shill to the DHCPv4 fqdn option cache any attempts to remove entries.
+ *
+ * XXX: Again...should this even be possible?
  */
 void
 delete_fqdn6_option(struct universe *universe, struct option_state *options,
 		    int code)
 {
 	log_fatal("Impossible condition at %s:%d.", MDL);
+
+	fqdn_universe.delete_func(&fqdn_universe, options, code);
 }
 
 /* Shill to the DHCPv4 fqdn option cache any attempts to traverse the
@@ -3463,9 +3395,10 @@ void hashed_option_space_foreach (struct packet *packet, struct lease *lease,
 	}
 }
 
-void
-save_linked_option(struct universe *universe, struct option_state *options,
-		   struct option_cache *oc, isc_boolean_t appendp)
+void save_linked_option (universe, options, oc)
+	struct universe *universe;
+	struct option_state *options;
+	struct option_cache *oc;
 {
 	pair *tail;
 	struct option_chain_head *head;
@@ -3489,12 +3422,7 @@ save_linked_option(struct universe *universe, struct option_state *options,
 		ocloc = (struct option_cache **)&(*tail)->car;
 
 		if (oc->option->code == (*ocloc)->option->code) {
-			if (appendp) {
-				while ((*ocloc)->next != NULL)
-					ocloc = &(*ocloc)->next;
-			} else {
-				option_cache_dereference(ocloc, MDL);
-			}
+			option_cache_dereference(ocloc, MDL);
 			option_cache_reference(ocloc, oc, MDL);
 			return;
 		}

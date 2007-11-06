@@ -304,7 +304,7 @@ struct universe {
 					     struct option_state *,
 					     unsigned);
 	void (*save_func) (struct universe *, struct option_state *,
-			   struct option_cache *, isc_boolean_t);
+			   struct option_cache *);
 	void (*foreach) (struct packet *,
 			 struct lease *, struct client_state *,
 			 struct option_state *, struct option_state *,
