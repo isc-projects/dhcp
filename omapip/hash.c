@@ -348,6 +348,9 @@ hash_report(struct hash_table *table)
 	unsigned i;
 	struct hash_bucket *bp;
 
+	if (table == NULL)
+		return (unsigned char *) "No table.";
+
 	if (table->hash_count == 0)
 		return (unsigned char *) "Invalid hash table.";
 
