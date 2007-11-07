@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: hash.c,v 1.11.16.2 2007/05/29 17:49:44 each Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: hash.c,v 1.11.16.3 2007/11/07 20:56:57 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include <omapip/omapip_p.h>
@@ -347,6 +347,9 @@ hash_report(struct hash_table *table)
 	unsigned curlen, pct, contents=0, minlen=UINT_MAX, maxlen=0;
 	unsigned i;
 	struct hash_bucket *bp;
+
+	if (table == NULL)
+		return (unsigned char *) "No table.";
 
 	if (table->hash_count == 0)
 		return (char *) "Invalid hash table.";
