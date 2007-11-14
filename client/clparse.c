@@ -1177,8 +1177,7 @@ void parse_client_lease_declaration (cfile, lease, ipp, clientp)
 	      case OPTION:
 		oc = (struct option_cache *)0;
 		if (parse_option_decl (&oc, cfile)) {
-			save_option (oc -> option -> universe,
-				     lease -> options, oc);
+			save_option(oc->option->universe, lease->options, oc);
 			option_cache_dereference (&oc, MDL);
 		}
 		return;

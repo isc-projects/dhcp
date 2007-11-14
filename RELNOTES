@@ -63,6 +63,10 @@ suggested fixes to <dhcp-users@isc.org>.
   see 'man dhcpd.conf' for more information on allow/deny 'after time' syntax.
   Thanks to a patch from Christof Chen.
 
+- The server will now include multiple IA_NA's and multiple IAADDRs within
+  them, if advertised by the client.  It still only seeks to allocate one
+  new address.
+
 			Changes since 4.0.0b1
 
 - Use different paths for PID and lease files when running in DHCPv4

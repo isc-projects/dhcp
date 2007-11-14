@@ -756,7 +756,6 @@ start_reply(struct packet *packet,
 	    struct dhcpv6_packet *reply)
 {
 	struct option_cache *oc;
-	struct data_string server_oro;
 	const unsigned char *server_id_data;
 	int server_id_len;
 
@@ -876,21 +875,6 @@ start_reply(struct packet *packet,
 			return 0;
 		}
 	}
-
-	/*
-	 * Set the ORO for the main packet.
-	 */
-	build_server_oro(&server_oro, *opt_state, MDL);
-	if (!save_option_buffer(&dhcpv6_universe, *opt_state,
-				server_oro.buffer, 
-				(unsigned char *)server_oro.data,
-				server_oro.len, D6O_ORO, 0)) {
-		log_error("start_reply: error saving server ORO.");
-		data_string_forget(&server_oro, MDL);
-		option_state_dereference(opt_state, MDL);
-		return 0;
-	}
-	data_string_forget(&server_oro, MDL);
 
 	return 1;
 }
@@ -1160,6 +1144,7 @@ reply_process_ia(struct reply_state *reply, struct option_cache *ia) {
 	packet_ia = NULL;
 	memset(&ia_data, 0, sizeof(ia_data));
 	memset(&data, 0, sizeof(data));
+	/* Note that find_client_address() may set reply->lease. */
 
 	/* Make sure there is at least room for the header. */
 	if ((reply->cursor + IA_NA_OFFSET + 4) > sizeof(reply->buf)) {
@@ -1434,11 +1419,10 @@ reply_process_ia(struct reply_state *reply, struct option_cache *ia) {
 							  NULL, NULL,
 							reply->packet->options,
 							  reply->opt_state,
-							  &reply->lease->scope,
+							  &tmp->scope,
 							  oc, MDL)) {
 				ddns_updates(reply->packet, NULL, NULL,
-					     reply->lease, NULL,
-					     reply->opt_state);
+					     tmp, NULL, reply->opt_state);
 			}
 		}
 
@@ -1472,6 +1456,8 @@ reply_process_ia(struct reply_state *reply, struct option_cache *ia) {
 		ia_na_dereference(&reply->ia_na, MDL);
 	if (reply->old_ia != NULL)
 		ia_na_dereference(&reply->old_ia, MDL);
+	if (reply->lease != NULL)
+		iaaddr_dereference(&reply->lease, MDL);
 	if (reply->fixed.data != NULL)
 		data_string_forget(&reply->fixed, MDL);
 
@@ -1523,9 +1509,7 @@ reply_process_addr(struct reply_state *reply, struct option_cache *addr) {
 		goto cleanup;
 	}
 
-	tmp_addr.len = 16;
-	memcpy(tmp_addr.iabuf, iaaddr.data, 16);
-
+	/* The first 16 bytes are the IPv6 address. */
 	pref_life = getULong(iaaddr.data + 16);
 	valid_life = getULong(iaaddr.data + 20);
 
@@ -1541,10 +1525,15 @@ reply_process_addr(struct reply_state *reply, struct option_cache *addr) {
 	 * Clients may choose to send :: as an address, with the idea to give
 	 * hints about preferred-lifetime or valid-lifetime.
 	 */
+	tmp_addr.len = 16;
+	memset(tmp_addr.iabuf, 0, 16);
 	if (!memcmp(iaaddr.data, tmp_addr.iabuf, 16)) {
 		/* Status remains success; we just ignore this one. */
 		goto cleanup;
 	}
+
+	/* tmp_addr len remains 16 */
+	memcpy(tmp_addr.iabuf, iaaddr.data, 16);
 
 	/*
 	 * Verify that this address is on the client's network.
@@ -1764,6 +1753,7 @@ address_is_owned(struct reply_state *reply, struct iaddr *addr) {
  */
 static isc_result_t
 reply_process_try_addr(struct reply_state *reply, struct iaddr *addr) {
+	isc_result_t status = ISC_R_FAILURE;
 	struct ipv6_pool *pool;
 	int i;
 	struct data_string data_addr;
@@ -1778,14 +1768,16 @@ reply_process_try_addr(struct reply_state *reply, struct iaddr *addr) {
 	data_addr.data = addr->iabuf;
 
 	for (i = 0 ; (pool = reply->shared->ipv6_pools[i]) != NULL ; i++) {
-		if (try_client_v6_address(&reply->lease, pool, &data_addr) ==
-								ISC_R_SUCCESS)
+		status = try_client_v6_address(&reply->lease, pool,
+					       &data_addr);
+		if (status == ISC_R_SUCCESS)
 			break;
 	}
 
 	/* Note that this is just pedantry.  There is no allocation to free. */
 	data_string_forget(&data_addr, MDL);
-	return ISC_R_SUCCESS;
+	/* Return just the most recent status... */
+	return status;
 }
 
 /* Look around for an address to give the client.  First, look through the
@@ -1951,11 +1943,14 @@ reply_process_is_addressed(struct reply_state *reply,
 		reply->valid = reply->send_valid;
 
 #if 0
-	/* XXX: Old 4.0.0 alpha code would change the host {} record
-	 * XXX: uid upon lease assignment.  I think this was an error;
-	 * XXX: it doesn't make sense to me now in retrospect to change
-	 * XXX: what is essentially configuration state with network
-	 * XXX: supplied values.
+	/*
+	 * XXX: Old 4.0.0 alpha code would change the host {} record
+	 * XXX: uid upon lease assignment.  This was intended to cover the
+	 * XXX: case where a client first identifies itself using vendor
+	 * XXX: options in a solicit, or request, but later neglects to include
+	 * XXX: these options in a Renew or Rebind.  It is not clear that this
+	 * XXX: is required, and has some startling ramnifications (such as
+	 * XXX: how to recover this dynamic host {} state across restarts).
 	 */
 	if (reply->host != NULL)
 		change_host_uid(host, reply->client_id->data,
@@ -2021,9 +2016,9 @@ reply_process_send_addr(struct reply_state *reply, struct iaddr *addr) {
 	putULong(data.buffer->data + 16, reply->send_prefer);
 	putULong(data.buffer->data + 20, reply->send_valid);
 
-	if (!save_option_buffer(&dhcpv6_universe, reply->reply_ia,
-				data.buffer, data.buffer->data,
-				data.len, D6O_IAADDR, 0)) {
+	if (!append_option_buffer(&dhcpv6_universe, reply->reply_ia,
+				  data.buffer, data.buffer->data,
+				  data.len, D6O_IAADDR, 0)) {
 		log_error("reply_process_ia: unable to save IAADDR "
 			  "option");
 		status = ISC_R_FAILURE;
