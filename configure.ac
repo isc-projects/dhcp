@@ -219,6 +219,7 @@ AC_OUTPUT([
   Makefile
   client/Makefile
   common/Makefile
+  common/tests/Makefile
   dhcpctl/Makefile
   dst/Makefile
   includes/Makefile
@@ -226,5 +227,6 @@ AC_OUTPUT([
   omapip/Makefile
   relay/Makefile
   server/Makefile
+  tests/Makefile
 ])
 
