@@ -1922,7 +1922,7 @@ dhc6_best_lease(struct client_state *client, struct dhc6_lease **head)
 		 * no further tie to break.
 		 */
 		if ((rscore < 150) && (cscore >= 150)) {
-			log_debug("PRC:  | X-- Selected, has bndings.");
+			log_debug("PRC:  | X-- Selected, has bindings.");
 		} else if (cand->pref < rval->pref) {
 			log_debug("PRC:  | X-- Rejected, lower preference.");
 			continue;
@@ -2310,7 +2310,7 @@ reply_handler(struct packet *packet, struct client_state *client)
 			return;
 	}
 
-	/* We're done retransmititng at this point. */
+	/* We're done retransmitting at this point. */
 	cancel_timeout(do_confirm6, client);
 	cancel_timeout(do_select6, client);
 	cancel_timeout(do_refresh6, client);
@@ -2385,7 +2385,7 @@ reply_handler(struct packet *packet, struct client_state *client)
  * calls this function to marshall an environment variable set that includes
  * the most-specific option values related to that IAADDR in particular.
  *
- * To acheive this, we load environment variables for the root options space,
+ * To achieve this, we load environment variables for the root options space,
  * then the IA, then the IAADDR.  Any duplicate option names will be
  * over-written by the later versions.
  */
