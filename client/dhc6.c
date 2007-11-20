@@ -249,31 +249,32 @@ dhc6_rand(TIME base)
 	return rval;
 }
 
-/* Get a new dhcpv6_transaction_id and store it to the client state. */
+/* Initialize message exchange timers (set RT from Initial-RT). */
 static void
-dhc6_new_xid(struct client_state *client)
+dhc6_retrans_init(struct client_state *client)
 {
 	int xid;
 
-	if (RAND_MAX >= 0x00ffffff)
-		xid = random();
-	else if (RAND_MAX >= 0x0000ffff)
-		xid = (random() << 16) | random();
-	else
-		xid = (random() << 24) | (random() << 16) | random();
+	/* Initialize timers. */
+	client->start_time = cur_time;
+	client->txcount = 0;
+	client->RT = client->IRT + dhc6_rand(client->IRT);
+
+	/* Generate a new random 24-bit transaction ID for this exchange. */
+
+#if (RAND_MAX >= 0x00ffffff)
+	xid = random();
+#elif (RAND_MAX >= 0x0000ffff)
+	xid = (random() << 16) ^ random();
+#elif (RAND_MAX >= 0x000000ff)
+	xid = (random() << 16) ^ (random() << 8) ^ random();
+#else
+# error "Random number generator of less than 8 bits not supported."
+#endif
 
 	client->dhcpv6_transaction_id[0] = (xid >> 16) & 0xff;
 	client->dhcpv6_transaction_id[1] = (xid >>  8) & 0xff;
 	client->dhcpv6_transaction_id[2] =  xid        & 0xff;
-}
-
-/* Set RT from initial RT. */
-static void
-dhc6_retrans_init(struct client_state *client)
-{
-	client->start_time = cur_time;
-	client->txcount = 0;
-	client->RT = client->IRT + dhc6_rand(client->IRT);
 }
 
 /* Advance the DHCPv6 retransmission state once. */
@@ -857,9 +858,6 @@ start_init6(struct client_state *client)
 	log_debug("PRC: Soliciting for leases (INIT).");
 	client->state = S_INIT;
 
-	/* Fetch a 24-bit transaction ID. */
-	dhc6_new_xid(client);
-
 	/* Initialize timers, RFC3315 section 17.1.2. */
 	client->IRT = SOL_TIMEOUT;
 	client->MRT = SOL_MAX_RT;
@@ -903,9 +901,6 @@ start_confirm6(struct client_state *client)
 
 	log_debug("PRC: Confirming active lease (INIT-REBOOT).");
 	client->state = S_REBOOTING;
-
-	/* Fetch a 24-bit transaction ID. */
-	dhc6_new_xid(client);
 
 	/* Initialize timers, RFC3315 section 17.1.3. */
 	client->IRT = CNF_TIMEOUT;
@@ -1209,9 +1204,6 @@ start_release6(struct client_state *client)
          * any subsequently transmitted message."  So unconfigure now.
          */
         unconfigure6(client, "RELEASE6");
-
-	/* Fetch a 24-bit transaction ID. */
-	dhc6_new_xid(client);
 
 	/* Set timers per RFC3315 section 18.1.1. */
 	client->IRT = REL_TIMEOUT;
@@ -1982,9 +1974,6 @@ start_selecting6(struct client_state *client)
 		log_fatal("Impossible error at %s:%d.", MDL);
 
 	client->selected_lease = lease;
-
-	/* Fetch a 24-bit transaction ID. */
-	dhc6_new_xid(client);
 
 	/* Set timers per RFC3315 section 18.1.1. */
 	client->IRT = REQ_TIMEOUT;

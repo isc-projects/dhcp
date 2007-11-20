@@ -69,6 +69,9 @@ suggested fixes to <dhcp-users@isc.org>.
   address per IA by default, which can be adjusted through the
   "limit-addrs-per-ia" configuration option.
 
+- The DHCPv6 client now issues fresh transaction IDs on Renew and Rebind
+  message exchanges, rather than using the most recent ID.
+
 			Changes since 4.0.0b2
 
 - Clarified error message when lease limit exceeded
