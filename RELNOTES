@@ -65,6 +65,10 @@ suggested fixes to <dhcp-users@isc.org>.
   order to avoid cascading renewals in the event a server elects not to
   extend one of multiple IAADDR leases.
 
+- The server now limits clients that request multiple addresses to one
+  address per IA by default, which can be adjusted through the
+  "limit-addrs-per-ia" configuration option.
+
 			Changes since 4.0.0b2
 
 - Clarified error message when lease limit exceeded

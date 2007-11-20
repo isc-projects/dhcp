@@ -49,7 +49,8 @@ struct reply_state {
 
 	/* IA level persistent state */
 	unsigned ia_count;
-	isc_boolean_t client_addressed, static_lease;
+	unsigned client_addresses;
+	isc_boolean_t static_lease;
 	struct ia_na *ia_na;
 	struct ia_na *old_ia;
 	struct option_state *reply_ia;
@@ -1244,7 +1245,7 @@ reply_process_ia(struct reply_state *reply, struct option_cache *ia) {
 	oc = lookup_option(&dhcpv6_universe, packet_ia, D6O_IAADDR);
 	reply->valid = reply->prefer = 0xffffffff;
 	reply->client_valid = reply->client_prefer = 0;
-	reply->client_addressed = ISC_FALSE;
+	reply->client_addresses = 0;
 	for (; oc != NULL ; oc = oc->next) {
 		status = reply_process_addr(reply, oc);
 
@@ -1267,7 +1268,7 @@ reply_process_ia(struct reply_state *reply, struct option_cache *ia) {
 	 * If we fell through the above and never gave the client
 	 * an address, give it one now.
 	 */
-	if ((status != ISC_R_CANCELED) && !reply->client_addressed) {
+	if ((status != ISC_R_CANCELED) && (reply->client_addresses == 0)) {
 		status = find_client_address(reply);
 
 		/*
@@ -1482,6 +1483,7 @@ reply_process_addr(struct reply_state *reply, struct option_cache *addr) {
 	struct group *group;
 	struct subnet *subnet;
 	struct iaddr tmp_addr;
+	struct option_cache *oc;
 	struct data_string iaaddr, data;
 	isc_result_t status = ISC_R_SUCCESS;
 
@@ -1689,6 +1691,47 @@ reply_process_addr(struct reply_state *reply, struct option_cache *addr) {
 		group = reply->shared->group;
 	}
 
+	/*
+	 * If client_addresses is nonzero, then the reply_process_is_addressed
+	 * function has executed configuration state into the reply option
+	 * cache.  We will use that valid cache to derive configuration for
+	 * whether or not to engage in additional addresses, and similar.
+	 */
+	if (reply->client_addresses != 0) {
+		unsigned limit = 1;
+
+		/*
+		 * Does this client have "enough" addresses already?  Default
+		 * to one.  Everybody gets one, and one should be enough for
+		 * anybody.
+		 */
+		oc = lookup_option(&server_universe, reply->opt_state,
+				   SV_LIMIT_ADDRS_PER_IA);
+		if (oc != NULL) {
+			if (!evaluate_option_cache(&data, reply->packet,
+						   NULL, NULL,
+						   reply->packet->options,
+						   reply->opt_state,
+						   scope, oc, MDL) ||
+			    (data.len != 4)) {
+				log_error("reply_process_ia: unable to "
+					  "evaluate addrs-per-ia value.");
+				status = ISC_R_FAILURE;
+				goto cleanup;
+			}
+
+			limit = getULong(data.data);
+			data_string_forget(&data, MDL);
+		}
+
+		/*
+		 * If we wish to limit the client to a certain number of
+		 * addresses, then omit the address from the reply.
+		 */
+		if (reply->client_addresses >= limit)
+			goto cleanup;
+	}
+
 	status = reply_process_is_addressed(reply, scope, group);
 	if (status != ISC_R_SUCCESS)
 		goto cleanup;
@@ -1889,12 +1932,10 @@ reply_process_is_addressed(struct reply_state *reply,
 	oc = lookup_option(&server_universe, reply->opt_state,
 			   SV_DEFAULT_LEASE_TIME);
 	if (oc != NULL) {
-		if (!evaluate_option_cache(&data, reply->packet, NULL,
-					   NULL,
+		if (!evaluate_option_cache(&data, reply->packet, NULL, NULL,
 					   reply->packet->options,
 					   reply->opt_state,
-					   &reply->lease->scope,
-					   oc, MDL) ||
+					   scope, oc, MDL) ||
 		    (data.len != 4)) {
 			log_error("reply_process_ia: uanble to "
 				  "evaluate default lease time");
@@ -1918,12 +1959,10 @@ reply_process_is_addressed(struct reply_state *reply,
 	oc = lookup_option(&server_universe, reply->opt_state,
 			   SV_PREFER_LIFETIME);
 	if (oc != NULL) {
-		if (!evaluate_option_cache(&data, reply->packet, NULL,
-					   NULL,
+		if (!evaluate_option_cache(&data, reply->packet, NULL, NULL,
 					   reply->packet->options,
 					   reply->opt_state,
-					   &reply->lease->scope,
-					   oc, MDL) ||
+					   scope, oc, MDL) ||
 		    (data.len != 4)) {
 			log_error("reply_process_ia: unable to "
 				  "evaluate preferred lease time");
@@ -1989,7 +2028,7 @@ reply_process_is_addressed(struct reply_state *reply,
 		data_string_forget(&data, MDL);
 
 	if (status == ISC_R_SUCCESS)
-		reply->client_addressed = ISC_TRUE;
+		reply->client_addresses++;
 
 	return status;
 }

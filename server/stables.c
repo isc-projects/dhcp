@@ -237,6 +237,7 @@ static struct option server_options[] = {
 	{ "preferred-lifetime", "T",		&server_universe,  53, 1 },
 	{ "dhcpv6-lease-file-name", "t",	&server_universe,  54, 1 },
 	{ "dhcpv6-pid-file-name", "t",		&server_universe,  55, 1 },
+	{ "limit-addrs-per-ia", "L",		&server_universe,  56, 1 },
 	{ NULL, NULL, NULL, 0, 0 }
 };
 

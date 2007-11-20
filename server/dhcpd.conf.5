@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.90 2007/10/31 19:13:33 dhankins Exp $
+.\" $Id: dhcpd.conf.5,v 1.91 2007/11/20 18:34:37 dhankins Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -2248,6 +2248,22 @@ by the
 flag or the
 .B PATH_DHCPD_DB
 environment variable.
+.RE
+.PP
+The
+.I limit-addrs-per-ia
+statement
+.RS 0.25i
+.PP
+.B limit-addrs-per-ia \fInumber\fB;\fR
+.PP
+By default, the DHCPv6 server will limit clients to one IAADDR per IA
+option, meaning one address.  If you wish to permit clients to hang onto
+multiple addresses at a time, configure a larger \fInumber\fR here.
+.PP
+Note that there is no present method to configure the server to forcibly
+configure the client with one IP address per each subnet on a shared network.
+This is left to future work.
 .RE
 .PP
 The

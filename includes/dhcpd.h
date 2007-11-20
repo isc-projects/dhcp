@@ -620,6 +620,7 @@ struct lease_state {
 #define SV_PREFER_LIFETIME		53
 #define SV_DHCPV6_LEASE_FILE_NAME       54
 #define SV_DHCPV6_PID_FILE_NAME         55
+#define SV_LIMIT_ADDRS_PER_IA		56
 
 #if !defined (DEFAULT_PING_TIMEOUT)
 # define DEFAULT_PING_TIMEOUT 1
