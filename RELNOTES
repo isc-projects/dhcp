@@ -53,6 +53,18 @@ may not work on other platforms. Please report any problems and
 suggested fixes to <dhcp-users@isc.org>.
 
 
+			Changes since 4.0.0b3
+
+- If the client had multiple addresses, and one expired (was not renewed
+  by the server), the client would continue to attempt to renew the same
+  old address over and over.  Now, the client will omit any expired
+  addresses from future Confirm, Renew, or Rebind messages.
+
+- dhclient -6 will now select renew/rebind timers based upon the longest
+  address expiration time rather than the shortest expiration time, in
+  order to avoid cascading renewals in the event a server elects not to
+  extend one of multiple IAADDR leases.
+
 			Changes since 4.0.0b2
 
 - Clarified error message when lease limit exceeded

@@ -2186,6 +2186,14 @@ dhc6_add_ia(struct client_state *client, struct data_string *packet,
                 }
 
 		for (addr = ia->addrs ; addr != NULL ; addr = addr->next) {
+			/*
+			 * Do not confirm expired addresses, do not request
+			 * expired addresses (but we keep them around for
+			 * solicit).
+			 */
+			if (addr->flags & DHC6_ADDR_EXPIRED)
+				continue;
+
 			if (addr->address.len != 16) {
 				log_error("Illegal IPv6 address length (%d), "
 					  "ignoring.  (%s:%d)",
@@ -2455,6 +2463,11 @@ dhc6_check_times(struct client_state *client)
 	cancel_timeout(do_expire, client);
 
 	for(ia = lease->bindings ; ia != NULL ; ia = ia->next) {
+		TIME this_ia_lo_expire, this_ia_hi_expire, use_expire;
+
+		this_ia_lo_expire = MAX_TIME;
+		this_ia_hi_expire = 0;
+
 		for (addr = ia->addrs ; addr != NULL ; addr = addr->next) {
 			if(!(addr->flags & DHC6_ADDR_DEPREFFED)) {
 				if (addr->preferred_life == 0xffffffff)
@@ -2468,27 +2481,41 @@ dhc6_check_times(struct client_state *client)
 			}
 
 			if (!(addr->flags & DHC6_ADDR_EXPIRED)) {
+				/* Find EPOCH-relative expiration. */
 				if (addr->max_life == 0xffffffff)
 					tmp = MAX_TIME;
 				else
 					tmp = addr->starts + addr->max_life;
 
-				if (tmp > hi_expire)
-					hi_expire = tmp;
-				if (tmp < lo_expire)
-					lo_expire = tmp;
+				/* Make the times ia->starts relative. */
+				tmp -= ia->starts;
+
+				if (tmp > this_ia_hi_expire)
+					this_ia_hi_expire = tmp;
+				if (tmp < this_ia_lo_expire)
+					this_ia_lo_expire = tmp;
 
 				has_addrs = ISC_TRUE;
 			}
 		}
 
-		if (ia->renew == 0) {
-			if (lo_expire != MAX_TIME)
-				tmp = (lo_expire - ia->starts) / 2;
-			else
-				tmp = client->config->requested_lease / 2;
+		/* These times are ia->starts relative. */
+		if (this_ia_lo_expire <= (this_ia_hi_expire / 2))
+			use_expire = this_ia_hi_expire;
+		else
+			use_expire = this_ia_lo_expire;
 
-			tmp += ia->starts;
+		/*
+		 * If the auto-selected expiration time is "infinite", or
+		 * zero, assert a reasonable default.
+		 */
+		if ((use_expire == MAX_TIME) || (use_expire <= 1))
+			use_expire = client->config->requested_lease / 2;
+		else
+			use_expire /= 2;
+
+		if (ia->renew == 0) {
+			tmp = ia->starts + use_expire;
 		} else if(ia->renew == 0xffffffff)
 			tmp = MAX_TIME;
 		else
@@ -2498,12 +2525,8 @@ dhc6_check_times(struct client_state *client)
 			renew = tmp;
 
 		if (ia->rebind == 0) {
-			if (lo_expire != MAX_TIME)
-				tmp = (lo_expire - ia->starts) / 2;
-			else
-				tmp = client->config->requested_lease / 2;
-
-			tmp += ia->starts + (tmp / 2);
+			/* Set rebind to 3/4 expiration interval. */
+			tmp = ia->starts + use_expire + (use_expire / 2);
 		} else if (ia->renew == 0xffffffff)
 			tmp = MAX_TIME;
 		else
@@ -2511,6 +2534,18 @@ dhc6_check_times(struct client_state *client)
 
 		if (tmp < rebind)
 			rebind = tmp;
+
+		/*
+		 * Return expiration ranges to EPOCH relative for event
+		 * scheduling (add_timeout()).
+		 */
+		this_ia_hi_expire += ia->starts;
+		this_ia_lo_expire += ia->starts;
+
+		if (this_ia_hi_expire > hi_expire)
+			hi_expire = this_ia_hi_expire;
+		if (this_ia_lo_expire < lo_expire)
+			lo_expire = this_ia_lo_expire;
 	}
 
 	/* If there are no addresses, give up, go to INIT.
