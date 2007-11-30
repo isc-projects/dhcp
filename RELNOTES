@@ -72,6 +72,8 @@ suggested fixes to <dhcp-users@isc.org>.
 - The DHCPv6 client now issues fresh transaction IDs on Renew and Rebind
   message exchanges, rather than using the most recent ID.
 
+- The DHCPv6 server now replies to Information-Request messages.
+
 			Changes since 4.0.0b2
 
 - Clarified error message when lease limit exceeded
