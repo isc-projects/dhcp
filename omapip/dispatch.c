@@ -496,7 +496,7 @@ isc_result_t omapi_io_get_value (omapi_object_t *h,
 
 /* omapi_io_destroy (object, MDL);
  *
- *	Find the requsted IO [object] and remove it from the list of io
+ *	Find the requested IO [object] and remove it from the list of io
  * states, causing the cleanup functions to destroy it.  Note that we must
  * hold a reference on the object while moving its ->next reference and
  * removing the reference in the chain to the target object...otherwise it

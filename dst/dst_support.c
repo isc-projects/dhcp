@@ -1,4 +1,4 @@
-static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/dst_support.c,v 1.2 2007/10/27 19:15:32 each Exp $";
+static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/dst_support.c,v 1.3 2007/11/30 21:51:43 fdupont Exp $";
 
 
 /*
@@ -133,7 +133,7 @@ dst_s_verify_str(const char **buf, const char *str)
  *     byte order conversion.
  * Parameters
  *     buf     Pointer to encoded input string. Pointer is updated if
- *	   function is successfull.
+ *	   function is successful.
  *     loc     Output area.
  *     loclen  Size in bytes of output area.
  * Return
@@ -225,13 +225,13 @@ dst_s_id_calc(const u_char *key, const unsigned keysize)
 }
 
 /* 
- * dst_s_dns_key_id() Function to calculated DNSSEC footprint from KEY reocrd
+ * dst_s_dns_key_id() Function to calculated DNSSEC footprint from KEY record
  *   rdata (all of  record)
  * Input:
  *	dns_key_rdata: the raw data in wire format 
  *      rdata_len: the size of the input data 
  * Output:
- *      the key footprint/id calcuated from the key data 
+ *      the key footprint/id calculated from the key data 
  */ 
 u_int16_t
 dst_s_dns_key_id(const u_char *dns_key_rdata, const unsigned rdata_len)

@@ -65,13 +65,13 @@ struct reply_state {
 	 */
 	u_int32_t renew, rebind, prefer, valid;
 
-	/* Client-rqeuested valid and preferred lifetimes. */
+	/* Client-requested valid and preferred lifetimes. */
 	u_int32_t client_valid, client_prefer;
 
 	/* Chosen values to transmit for valid and preferred lifetimes. */
 	u_int32_t send_valid, send_prefer;
 
-	/* Index into the data field that has been sonsumed. */
+	/* Index into the data field that has been consumed. */
 	unsigned cursor;
 
 	union reply_buffer {
@@ -1005,7 +1005,7 @@ pick_v6_address(struct iaaddr **addr, struct shared_network *shared_network,
  * reply that contains all that we know about the client's correct lease
  * (or projected lease).
  *
- * Solicit - "Soft" binding, ignore uknown addresses or bindings, just
+ * Solicit - "Soft" binding, ignore unknown addresses or bindings, just
  *	     send what we "may" give them on a request.
  *
  * Request - "Hard" binding, but ignore supplied addresses (just provide what
@@ -1940,7 +1940,7 @@ reply_process_is_addressed(struct reply_state *reply,
 					   reply->opt_state,
 					   scope, oc, MDL) ||
 		    (data.len != 4)) {
-			log_error("reply_process_ia: uanble to "
+			log_error("reply_process_ia: unable to "
 				  "evaluate default lease time");
 			status = ISC_R_FAILURE;
 			goto cleanup;
@@ -1991,7 +1991,7 @@ reply_process_is_addressed(struct reply_state *reply,
 	 * XXX: case where a client first identifies itself using vendor
 	 * XXX: options in a solicit, or request, but later neglects to include
 	 * XXX: these options in a Renew or Rebind.  It is not clear that this
-	 * XXX: is required, and has some startling ramnifications (such as
+	 * XXX: is required, and has some startling ramifications (such as
 	 * XXX: how to recover this dynamic host {} state across restarts).
 	 */
 	if (reply->host != NULL)
@@ -2047,7 +2047,7 @@ reply_process_send_addr(struct reply_state *reply, struct iaddr *addr) {
 	/* Now append the lease. */
 	data.len = IAADDR_OFFSET;
 	if (!buffer_allocate(&data.buffer, data.len, MDL)) {
-		log_error("reply_process_ia: out of memory alloating "
+		log_error("reply_process_ia: out of memory allocating "
 			  "new IAADDR buffer.");
 		status = ISC_R_NOMEMORY;
 		goto cleanup;
@@ -2920,7 +2920,7 @@ exit:
  * address we gave it.
  *
  * Since we're only dealing with fixed leases for now, there's not
- * much we can do, other that log the occurrance.
+ * much we can do, other that log the occurrence.
  * 
  * When we start issuing addresses from pools, then we will have to
  * record our declined addresses and issue another. In general with
@@ -3134,7 +3134,7 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 	struct data_string interface_id;
 
 	/* 
-	 * Intialize variables for early exit.
+	 * Initialize variables for early exit.
 	 */
 	memset(&enc_opt_data, 0, sizeof(enc_opt_data));
 	enc_packet = NULL;

@@ -168,7 +168,7 @@ isc_result_t find_failover_peer (peer, name, file, line)
    specified for each failover object, there could be as many as one
    listener object for each secondary failover_state object. */
 
-/* This, then, is the implemention of the failover link object. */
+/* This, then, is the implementation of the failover link object. */
 
 isc_result_t dhcp_failover_link_initiate (omapi_object_t *h)
 {
@@ -2121,7 +2121,7 @@ isc_result_t dhcp_failover_peer_state_changed (dhcp_failover_state_t *state,
 			break;
 
 			/* If we're in communications-interrupted and an
-			   amnesiac peer connects, go to the partner_down
+			   amnesic peer connects, go to the partner_down
 			   state immediately. */
 		      case recover:
 			dhcp_failover_set_state (state, partner_down);
@@ -2564,7 +2564,7 @@ isc_result_t dhcp_failover_send_updates (dhcp_failover_state_t *state)
 	if (!state -> link_to_peer)
 		return ISC_R_SUCCESS;
 
-	/* If there are acks pending, transmit them prior to potentialy
+	/* If there are acks pending, transmit them prior to potentially
 	 * sending new updates for the same lease.
 	 */
 	if (state->toack_queue_head != NULL)
@@ -5153,7 +5153,7 @@ isc_result_t dhcp_failover_process_bind_ack (dhcp_failover_state_t *state,
 		write_lease(lease);
 		/* Commit the lease only after a two-second timeout,
 		   so that if we get a bunch of acks in quick
-		   successtion (e.g., when stealing leases from the
+		   succession (e.g., when stealing leases from the
 		   secondary), we do not do an immediate commit for
 		   each one. */
 		add_timeout(cur_time + 2,

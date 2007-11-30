@@ -969,7 +969,7 @@ do_init6(void *input)
 	else
 		client->elapsed = elapsed * 100;
 
-	log_debug("XMT: Forming Solicit, %u ms elapsed.",
+	log_debug("XMT: Forming Solicit, %u0 ms elapsed.",
 		  (unsigned)client->elapsed);
 
 	client->elapsed = htons(client->elapsed);
@@ -1144,7 +1144,7 @@ do_confirm6(void *input)
 	else
 		client->elapsed = elapsed * 100;
 
-	log_debug("XMT: Forming Confirm, %u ms elapsed.",
+	log_debug("XMT: Forming Confirm, %u0 ms elapsed.",
 		  (unsigned)client->elapsed);
 
 	client->elapsed = htons(client->elapsed);
@@ -2069,7 +2069,7 @@ do_select6(void *input)
 	else
 		client->elapsed = elapsed * 100;
 
-	log_debug("XMT: Forming Request, %u ms elapsed.",
+	log_debug("XMT: Forming Request, %u0 ms elapsed.",
 		  (unsigned)client->elapsed);
 
 	client->elapsed = htons(client->elapsed);
@@ -2951,7 +2951,7 @@ do_refresh6(void *input)
 	else
 		client->elapsed = elapsed * 100;
 
-	log_debug("XMT: Forming %s, %u ms elapsed.",
+	log_debug("XMT: Forming %s, %u0 ms elapsed.",
 		  dhcpv6_type_names[client->refresh_type],
 		  (unsigned)client->elapsed);
 

@@ -153,7 +153,7 @@
 */
 
 /* As pointed out by Wei Dai <weidai@eskimo.com>, the above can be
- * simplified to the code below.  Wei attributes these optimisations
+ * simplified to the code below.  Wei attributes these optimizations
  * to Peter Gutmann's SHS code, and he attributes it to Rich Schroeppel.
  */
 #define	F(x,y,z)	((((y) ^ (z)) & (x)) ^ (z))

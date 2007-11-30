@@ -1,5 +1,5 @@
 #ifndef LINT
-static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/dst_api.c,v 1.5 2007/09/05 17:32:10 dhankins Exp $";
+static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/dst_api.c,v 1.6 2007/11/30 21:51:43 fdupont Exp $";
 #endif
 
 /*
@@ -24,7 +24,7 @@ static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/dst_api.c,v 1.5 2007
  * This is the only file that needs to be changed if the crypto system is
  * changed.  Exported functions are:
  * void dst_init()	 Initialize the toolkit
- * int  dst_check_algorithm()   Function to determines if alg is suppored.
+ * int  dst_check_algorithm()   Function to determines if alg is supported.
  * int  dst_compare_keys()      Function to compare two keys for equality.
  * int  dst_sign_data()         Incremental signing routine.
  * int  dst_verify_data()       Incremental verify routine.
@@ -35,8 +35,8 @@ static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/dst_api.c,v 1.5 2007
  *				KEY structure.
  * int dst_key_to_dnskey() 	Function to return a public key in DNS 
  *				format binary
- * DST_KEY *dst_buffer_to_key() Converst a data in buffer to KEY
- * int *dst_key_to_buffer()	Writes out DST_KEY key matterial in buffer
+ * DST_KEY *dst_buffer_to_key() Convert a data in buffer to KEY
+ * int *dst_key_to_buffer()	Writes out DST_KEY key material in buffer
  * void dst_free_key()       	Releases all memory referenced by key structure
  */
 
@@ -241,7 +241,7 @@ dst_compare_keys(const DST_KEY *key1, const DST_KEY *key2)
  *	      The location to which the signature will be written.
  *	sig_len Length of the signature field in bytes.
  * Return
- *	 0      Successfull INIT or Update operation
+ *	 0      Successful INIT or Update operation
  *	>0      success FINAL (sign) operation
  *	<0      failure
  */
@@ -320,8 +320,8 @@ dst_verify_data(const int mode, DST_KEY *in_key, void **context,
  *	in_id	    The id of the private key.
  *	options     DST_FORCE_READ  Read from disk - don't use a previously
  *				      read key.
- *		  DST_CAN_SIGN    The key must be useable for signing.
- *		  DST_NO_AUTHEN   The key must be useable for authentication.
+ *		  DST_CAN_SIGN    The key must be usable for signing.
+ *		  DST_NO_AUTHEN   The key must be usable for authentication.
  *		  DST_STANDARD    Return any key 
  *  Returns
  *	NULL	If there is no key found in the current directory or
@@ -337,7 +337,7 @@ dst_read_key(const char *in_keyname, const unsigned in_id,
 	DST_KEY *dg_key = NULL, *pubkey = NULL;
 
 	if (!dst_check_algorithm(in_alg)) { /* make sure alg is available */
-		EREPORT(("dst_read_private_key(): Algorithm %d not suppored\n",
+		EREPORT(("dst_read_private_key(): Algorithm %d not supported\n",
 			 in_alg));
 		return (NULL);
 	}
@@ -377,7 +377,7 @@ dst_write_key(const DST_KEY *key, const int type)
 	if (key == NULL) 
 		return (0);
 	if (!dst_check_algorithm(key->dk_alg)) { /* make sure alg is available */
-		EREPORT(("dst_write_key(): Algorithm %d not suppored\n", 
+		EREPORT(("dst_write_key(): Algorithm %d not supported\n", 
 			 key->dk_alg));
 		return (UNSUPPORTED_KEYALG);
 	}
@@ -462,7 +462,7 @@ dst_s_write_private_key(const DST_KEY *key)
  *		      filename of the key file to be read.
  *  Returns
  *	NULL	    If the key does not exist or no name is supplied.
- *	NON-NULL	Initalized key structure if the key exists.
+ *	NON-NULL	Initialized key structure if the key exists.
  */
 
 static DST_KEY *
@@ -536,7 +536,7 @@ dst_s_read_public_key(const char *in_name, const unsigned in_id, int in_alg)
 	while ((c = getc(fp)) != EOF)
 		if (!isspace(c))
 			break;
-	ungetc(c, fp);		/* return the charcter to the input field */
+	ungetc(c, fp);		/* return the character to the input field */
 	/* Handle hex!! FIXME.  */
 
 	if (fscanf(fp, "%d %d %d", &flags, &proto, &alg) != 3) {
@@ -639,7 +639,7 @@ dst_s_write_public_key(const DST_KEY *key)
  *  dst_dnskey_to_public_key
  *	This function converts the contents of a DNS KEY RR into a DST
  *	key structure.
- *  Paramters
+ *  Parameters
  *	len	 Length of the RDATA of the KEY RR RDATA
  *	rdata	 A pointer to the the KEY RR RDATA.
  *	in_name     Key name to be stored in key structure.
@@ -661,7 +661,7 @@ dst_dnskey_to_key(const char *in_name,
 		return (NULL);
 	alg = (u_int8_t) rdata[DST_KEY_ALG];
 	if (!dst_check_algorithm(alg)) { /* make sure alg is available */
-		EREPORT(("dst_dnskey_to_key(): Algorithm %d not suppored\n",
+		EREPORT(("dst_dnskey_to_key(): Algorithm %d not supported\n",
 			 alg));
 		return (NULL);
 	}
@@ -679,7 +679,7 @@ dst_dnskey_to_key(const char *in_name,
 		start += 2;
 	}
 	/*
-	 * now point to the begining of the data representing the encoding
+	 * now point to the beginning of the data representing the encoding
 	 * of the key
 	 */
 	if (key_st->dk_func && key_st->dk_func->from_dns_key) {
@@ -687,7 +687,7 @@ dst_dnskey_to_key(const char *in_name,
 						  len - start) > 0)
 			return (key_st);
 	} else
-		EREPORT(("dst_dnskey_to_public_key(): unsuppored alg %d\n",
+		EREPORT(("dst_dnskey_to_public_key(): unsupported alg %d\n",
 			 alg));
 
 	SAFE_FREE(key_st);
@@ -718,7 +718,7 @@ dst_key_to_dnskey(const DST_KEY *key, u_char *out_storage,
 		return (-1);
 
 	if (!dst_check_algorithm(key->dk_alg)) { /* make sure alg is available */
-		EREPORT(("dst_key_to_dnskey(): Algorithm %d not suppored\n",
+		EREPORT(("dst_key_to_dnskey(): Algorithm %d not supported\n",
 			 key->dk_alg));
 		return (UNSUPPORTED_KEYALG);
 	}
@@ -777,7 +777,7 @@ dst_buffer_to_key(const char *key_name,		/* name of the key */
 	DST_KEY *dkey = NULL; 
 
 	if (!dst_check_algorithm(alg)) { /* make sure alg is available */
-		EREPORT(("dst_buffer_to_key(): Algorithm %d not suppored\n", alg));
+		EREPORT(("dst_buffer_to_key(): Algorithm %d not supported\n", alg));
 		return (NULL);
 	}
 
@@ -800,7 +800,7 @@ int
 dst_key_to_buffer(DST_KEY *key, u_char *out_buff, unsigned buf_len)
 {
 	int len;
-  /* this function will extrac the secret of HMAC into a buffer */
+  /* this function will extract the secret of HMAC into a buffer */
 	if(key == NULL) 
 		return (0);
 	if(key->dk_func != NULL && key->dk_func != NULL) {
@@ -822,7 +822,7 @@ dst_key_to_buffer(DST_KEY *key, u_char *out_buff, unsigned buf_len)
  *     pk_key  Structure that the key is returned in.
  *     in_id   Key identifier (tag)
  * Return
- *     1 if everthing works
+ *     1 if everything works
  *     0 if there is any problem
  */
 
@@ -963,7 +963,7 @@ dst_generate_key(const char *name, const int bits, const int exp,
 		return (NULL);
 
 	if (!dst_check_algorithm(alg)) { /* make sure alg is available */
-		EREPORT(("dst_generate_key(): Algorithm %d not suppored\n", alg));
+		EREPORT(("dst_generate_key(): Algorithm %d not supported\n", alg));
 		return (NULL);
 	}
 
@@ -1020,7 +1020,7 @@ dst_free_key(DST_KEY *f_key)
 
 /*
  * dst_sig_size
- *	Return the maximim size of signature from the key specified in bytes
+ *	Return the maximum size of signature from the key specified in bytes
  * Parameters
  *      key 
  * Returns

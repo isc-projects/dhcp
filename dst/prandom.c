@@ -1,5 +1,5 @@
 #ifndef LINT
-static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/prandom.c,v 1.5 2007/09/05 17:32:10 dhankins Exp $";
+static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/prandom.c,v 1.6 2007/11/30 21:51:43 fdupont Exp $";
 #endif
 /*
  * Portions Copyright (c) 1995-1998 by Trusted Information Systems, Inc.
@@ -47,8 +47,8 @@ static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/prandom.c,v 1.5 2007
 #endif
 
 /* 
- * the constant below is a prime number to make fixed data structues like 
- * stat and time wrap over blocks. This adds certain uncertanty to what is 
+ * the constant below is a prime number to make fixed data structures like 
+ * stat and time wrap over blocks. This adds certain randomness to what is
  * in each digested block. 
  * The prime number 2879 has the special property that when 
  * divided by 2,4 and 6 the result is also a prime numbers
@@ -59,14 +59,14 @@ static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/prandom.c,v 1.5 2007
 #endif
 
 /* 
- * This constant dictatates how many bits we shift to the right before using a 
+ * This constant dictates how many bits we shift to the right before using a 
  */
 #ifndef DST_SHIFT
 #define DST_SHIFT 9
 #endif
 
 /*
- * An initalizer that is as bad as any other with half the bits set 
+ * An initializer that is as bad as any other with half the bits set 
  */
 #ifndef DST_RANDOM_PATTERN
 #define DST_RANDOM_PATTERN 0x8765CA93
@@ -172,7 +172,7 @@ static const char *files[] = {
 /*  
  *  these two data structure are used to process input data into digests, 
  *
- *  The first structure is containts a pointer to a DST HMAC key 
+ *  The first structure contains a pointer to a DST HMAC key 
  *  the variables accompanying are used for 
  *	step : select every step byte from input data for the hash
  *	block: number of data elements going into each hash
@@ -186,7 +186,7 @@ typedef struct hash {
 } prand_hash;
 
 /*
- *  This data structure controlls number of hashes and keeps track of 
+ *  This data structure controls number of hashes and keeps track of 
  *  overall progress in generating correct number of bytes of output.
  *	output  : array to store the output data in
  *	needed  : how many bytes of output are needed
@@ -228,7 +228,7 @@ static u_int32_t ran_cnt = (DST_RANDOM_PATTERN >> 10);
 
 /* 
  * setting the quick_random generator to particular values or if both 
- * input parameters are 0 then set it to initial vlaues
+ * input parameters are 0 then set it to initial values
  */
 
 void
@@ -312,7 +312,7 @@ do_time(dst_work *work)
  *
  * do_ls() does not visit subdirectories
  * if attacker has access to machine it can guess most of the values seen
- * thus it is important to only visit directories that are freqently updated
+ * thus it is important to only visit directories that are frequently updated
  * Attacker that has access to the network can see network traffic 
  * when NFS mounted directories are accessed and know exactly the data used
  * but may not know exactly in what order data is used. 
@@ -375,7 +375,7 @@ do_ls(dst_work *work)
 		file_name[dir_len + len] = 0x0;
 		/* for all entries in dir get the stats */
 		if (stat(file_name, &buf) == 0) {
-			n++;	/* count successfull stat calls */
+			n++;	/* count successful stat calls */
 			/* copy non static fields */
 			dir_info.uid   += buf.st_uid;
 			dir_info.gid   += buf.st_gid;
@@ -509,7 +509,7 @@ force_hash(dst_work *work, prand_hash *hash)
 
 	/* 
 	 * if more than half a block then add data to output 
-	 * otherwise adde the digest to the next hash 
+	 * otherwise add the digest to the next hash 
 	 */
 	if ((hash->digested * 2) > hash->block) {
 		i = dst_sign_data(SIG_MODE_FINAL, hash->key, &hash->ctx,
@@ -528,7 +528,7 @@ force_hash(dst_work *work, prand_hash *hash)
 /* 
  * This function takes the input data does the selection of data specified
  * by the hash control block.
- * The step varialbe in the work sturcture determines which 1/step bytes
+ * The step variable in the work structure determines which 1/step bytes
  * are used, 
  *
  */
@@ -550,7 +550,7 @@ do_hash(dst_work *work, prand_hash *hash, const u_char *input, unsigned size)
 		tmp = tp;
 		for (cnt = 0, i = hash->curr; i < size; i += hash->step, cnt++)
 			*(tp++) = input[i];
-		/* calcutate the starting point in the next input set */
+		/* calculate the starting point in the next input set */
 		hash->curr = (hash->step - (i - size)) % hash->step;
 	}
 	/* digest the data in block sizes */
@@ -604,7 +604,7 @@ my_digest(dst_work *work, const u_char *input, unsigned size)
 
 /*
  * this function gets some semi random data and sets that as an HMAC key
- * If we get a valid key this function returns that key initalized
+ * If we get a valid key this function returns that key initialized
  * otherwise it returns NULL;
  */
 static prand_hash *
@@ -622,7 +622,7 @@ get_hmac_key(int step, int block)
 	if (buff == NULL)
 		return (NULL);
 	/* do not memset the allocated memory to get random bytes there */
-	/* time of day is somewhat random  expecialy in the last bytes */
+	/* time of day is somewhat random  especially in the last bytes */
 	gettimeofday((struct timeval *) &buff[n], NULL);
 	n += sizeof(struct timeval);
 
@@ -684,7 +684,7 @@ get_hmac_key(int step, int block)
  * This function goes out and from various sources tries to generate enough
  * semi random data that a hash function can generate a random data. 
  * This function will iterate between the two main random source sources, 
- *  information from programs and directores in random order. 
+ *  information from programs and directories in random order. 
  * This function return the number of bytes added to the random output buffer. 
  */
 static unsigned
@@ -761,8 +761,8 @@ own_random(dst_work *work)
  * of randomness to the caller it will use the best available sources of 
  * randomness.
  * The current order is to use /dev/random, precalculated randomness, and 
- * finaly use some system calls and programs to generate semi random data that 
- * is then digested to generate randomness. 
+ * finally use some system calls and programs to generate semi random data
+ * that is then digested to generate randomness. 
  * This function is thread safe as each thread uses its own context, but
  * concurrent treads will affect each other as they update shared state 
  * information.
@@ -770,7 +770,7 @@ own_random(dst_work *work)
  * that is not a multiple of the output of the hash function used. 
  * 
  * If /dev/random is not available this function is not suitable to generate 
- * large ammounts of data, rather it is suitable to seed a pseudo-random 
+ * large amounts of data, rather it is suitable to seed a pseudo-random 
  * generator 
  * Returns the number of bytes put in the output buffer 
  */
@@ -872,8 +872,8 @@ dst_s_random(u_char *output, unsigned size)
  * counters that is incremented between digest operations
  * each increment operation amortizes to 2 bits changed in that value
  * for 5 counters thus the input will amortize to have 10 bits changed 
- * The counters are initaly set using the strong random function above
- * the HMAC key is selected by the same methold as the HMAC keys for the 
+ * The counters are initially set using the strong random function above
+ * the HMAC key is selected by the same method as the HMAC keys for the 
  * strong random function. 
  * Each set of counters is used for 2^25 operations 
  * 
@@ -928,13 +928,13 @@ dst_s_semi_random(u_char *output, unsigned size)
 			semi_loc += out;
 		}
 	}
-/* generate more randome stuff */
+/* generate more random stuff */
 	while (out < size) {
 		/* 
 		 * modify at least one bit by incrementing at least one counter
 		 * based on the last bit of the last counter updated update
 		 * the next one.
-		 * minimaly this  operation will modify at least 1 bit, 
+		 * minimally this  operation will modify at least 1 bit, 
 		 * amortized 2 bits
 		 */
 		for (n = 0; n < DST_NUMBER_OF_COUNTERS; n++)

@@ -403,7 +403,7 @@ static struct option dhcpv6_options[] = {
 	 * intents and purposes we only need to treat the entire field
 	 * like a globally unique identifier (and if we create such an
 	 * option, ensure the first 4 bytes are our enterprise-id followed
-	 * by a globlaly unique ID so long as you're within that enterprise
+	 * by a globally unique ID so long as you're within that enterprise
 	 * id).  So we'll use "X" for now unless someone grumbles.
 	 */
 	{ "remote-id", "X",			&dhcpv6_universe, 37, 1 },
@@ -469,7 +469,7 @@ struct enumeration_value dhcpv6_message_values[] = {
 	{ "RECONFIGURE", 10 },
 	{ "INFORMATION-REQUEST", 11 },
 	{ "RELAY-FORW", 12 },
-	{ "RELY-REPL", 13 },
+	{ "RELAY-REPL", 13 },
 	{ NULL, 0 }
 };
 
@@ -866,7 +866,7 @@ void initialize_common_option_spaces()
 	 * universe as they're configured - except during startup.
 	 * Since we know how many we put down in .c files, we can
 	 * allocate a more-than-right-sized buffer now, leaving some
-	 * space for user-configged option spaces.
+	 * space for user-configured option spaces.
 	 *
 	 * 1: dhcp_universe (dhcpv4 options)
 	 * 2: nwip_universe (dhcpv4 NWIP option)
@@ -1341,7 +1341,7 @@ void initialize_common_option_spaces()
 			  &vsio_universe, MDL);
 	universe_hash_add(universe_hash, isc6_universe.name, 0,
 			  &isc6_universe, MDL);
-/* This should not be neccessary.  Listing here just for consistency.
+/* This should not be necessary.  Listing here just for consistency.
  *	universe_hash_add(universe_hash, fqdn6_universe.name, 0,
  *			  &fqdn6_universe, MDL);
  */

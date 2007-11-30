@@ -36,14 +36,14 @@ typedef struct dst_key {
 	unsigned dk_flags;     /* and the flags of the public key */
 	unsigned dk_id;        /* identifier of the key */
 	void	*dk_KEY_struct; /* pointer to key in crypto pkg fmt */
-	struct dst_func *dk_func; /* point to cryptto pgk specific function table */
+	struct dst_func *dk_func; /* point to crypto pgk specific function table */
 } DST_KEY;
 #define HAS_DST_KEY 
 
 #include <isc-dhcp/dst.h>
 /* 
  * define what crypto systems are supported for RSA, 
- * BSAFE is prefered over RSAREF; only one can be set at any time
+ * BSAFE is preferred over RSAREF; only one can be set at any time
  */
 #if defined(BSAFE) && defined(RSAREF)
 # error "Cannot have both BSAFE and RSAREF defined"

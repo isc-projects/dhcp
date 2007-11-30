@@ -163,7 +163,7 @@ int parse_option_buffer (options, buffer, length, universe)
 		 * have a length field, unless it's a DHCPv6 zero-length
 		 * options space (eg any of the enterprise-id'd options).
 		 *
-		 * Zero-length-size option spaces basicaly consume the
+		 * Zero-length-size option spaces basically consume the
 		 * entire options buffer, so have at it.
 		 */
 		if (universe->get_length != NULL)
@@ -597,7 +597,7 @@ cons_options(struct packet *inpacket, struct dhcp_packet *outpacket,
 	 * If answering a client message, see whether any relay agent
 	 * options were included with the message.  If so, save them
 	 * to copy back in later, and make space in the main buffer
-	 * to accomodate them
+	 * to accommodate them
 	 */
 	if (client_state == NULL) {
 		priority_list[0] = DHO_DHCP_AGENT_OPTIONS;
@@ -811,7 +811,7 @@ cons_options(struct packet *inpacket, struct dhcp_packet *outpacket,
 			memcpy(&buffer[index], agentopts, agent_size);
 			index += agent_size;
 		} else
-			log_error("Unable to store relay agent information"
+			log_error("Unable to store relay agent information "
 				  "in reply packet.");
 	}
 
@@ -1326,7 +1326,7 @@ store_options(int *ocount,
 		    length += encapsulation.len;
 
 		    /* od.len can be nonzero if we got here without an
-		     * oc (cache lookup failed), but did have an enapculated
+		     * oc (cache lookup failed), but did have an encapsulated
 		     * simple encapsulation space.
 		     */
 		    if (!od.len) {
@@ -2229,7 +2229,7 @@ prepare_option_buffer(struct universe *universe, struct buffer *bp,
 		break;
 
 	      default:
-		log_fatal("Inconstent universe tag size at %s:%d.", MDL);
+		log_fatal("Inconsistent universe tag size at %s:%d.", MDL);
 	}
 
 	option_code_hash_lookup(&option, universe->code_hash, &code, 0, MDL);
@@ -3313,7 +3313,7 @@ fqdn6_universe_decode(struct option_state *options,
 
 	/* Save the contents of the option in a buffer.  There are 3
 	 * one-byte values we record from the packet, so we go ahead
-	 * and allocate a bigger buffer to accomodate them.  But the
+	 * and allocate a bigger buffer to accommodate them.  But the
 	 * 'length' we got (because it is a DNS encoded string) is
 	 * one longer than we need...so we only add two extra octets.
 	 */

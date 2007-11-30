@@ -382,7 +382,7 @@ isc_result_t enter_host (hd, dynamicp, commit)
 					 hd->host_id_option, MDL);
 			if (!host_new_hash(&h_id_info->values_hash, 
 					   HOST_HASH_SIZE, MDL)) {
-				log_fatal("No memory for host-identifer "
+				log_fatal("No memory for host-identifier "
 					  "option hash.");
 			}
 			h_id_info->next = host_id_info;
@@ -1224,7 +1224,7 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
       just_move_it:
 #if defined (FAILOVER_PROTOCOL)
 	/* Atsfp should be cleared upon any state change that implies
-	 * propogation whether supersede_lease was given a copy lease
+	 * propagation whether supersede_lease was given a copy lease
 	 * structure or not (often from the pool_timer()).
 	 */
 	if (propogate)
@@ -2373,7 +2373,7 @@ int lease_enqueue (struct lease *comp)
 	}
 
 	/* This only works during server startup: during runtime, the last
-	 * lease may be dequeued inbetween calls.  If the queue is the same
+	 * lease may be dequeued in between calls.  If the queue is the same
 	 * as was used previously, and the lease structure isn't (this is not
 	 * a re-queue), use that as a starting point for the insertion-sort.
 	 */

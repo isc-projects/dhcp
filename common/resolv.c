@@ -147,7 +147,7 @@ void read_resolv_conf (parse_time)
 			/* We can't actually free the name server structure,
 			   because somebody might be hanging on to it.    If
 			   your /etc/resolv.conf file changes a lot, this
-			   could be a noticable memory leak. */
+			   could be a noticeable memory leak. */
 		} else
 			sl = sp;
 	}

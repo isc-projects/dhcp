@@ -139,7 +139,7 @@ dhcpleasequery(struct packet *packet, int ms_nulltp) {
 	struct lease *lease;
 	int want_associated_ip;
 	int assoc_ip_cnt;
-	u_int32_t assoc_ips[40];  /* XXXSK: arbritrary maximum number of IPs */
+	u_int32_t assoc_ips[40];  /* XXXSK: arbitrary maximum number of IPs */
 	const int nassoc_ips = sizeof(assoc_ips) / sizeof(assoc_ips[0]);
 
 	unsigned char dhcpMsgType;
@@ -231,7 +231,7 @@ dhcpleasequery(struct packet *packet, int ms_nulltp) {
 	allow_leasequery = 0;
 
 	/*
-	 * See if we are authorised to do LEASEQUERY.
+	 * See if we are authorized to do LEASEQUERY.
 	 */
 	oc = lookup_option(&server_universe, options, SV_LEASEQUERY);
 	if (oc != NULL) {

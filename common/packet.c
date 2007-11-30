@@ -250,7 +250,7 @@ decode_udp_ip_header(struct interface_info *interface,
   if ((upp + sizeof(udp)) > endbuf)
 	  return -1;
 
-  /* Copy the UDP header into a stack alined structure for inspection. */
+  /* Copy the UDP header into a stack aligned structure for inspection. */
   memcpy(&udp, upp, sizeof(udp));
 
 #ifdef USERLAND_FILTER

@@ -242,7 +242,7 @@ isc_result_t conf_file_subparse (struct parse *cfile, struct group *group,
 }
 
 /* lease-file :== lease-declarations END_OF_FILE
-   lease-statments :== <nil>
+   lease-statements :== <nil>
    		     | lease-declaration
 		     | lease-declarations lease-declaration */
 
@@ -1850,7 +1850,7 @@ void parse_host_declaration (cfile, group)
 			token = next_token(&val, NULL, cfile);
 			if (token != OPTION) {
 				parse_warn(cfile, 
-					   "host-identifer must be an option");
+					   "host-identifier must be an option");
 				skip_to_rbrace(cfile, 1);
 				break;
 			}
@@ -3022,7 +3022,7 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 				break;
 
 				/* RESERVED and BOOTP states preserved for
-				 * compatiblity with older versions.
+				 * compatibleness with older versions.
 				 */
 			      case TOKEN_RESERVED:
 				new_state = FTS_ACTIVE;
@@ -4133,7 +4133,7 @@ parse_server_duid(struct parse *cfile) {
  * server-duid llt ethernet|ieee802|fddi 213982198 00:16:6F:49:7D:9B;
  * server-duid ll;
  * server-duid ll ethernet|ieee802|fddi 00:16:6F:49:7D:9B;
- * server-duid en 2495 "enterprise-specific-identifer-1234";
+ * server-duid en 2495 "enterprise-specific-identifier-1234";
  */
 void 
 parse_server_duid_conf(struct parse *cfile) {

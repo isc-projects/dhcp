@@ -413,7 +413,7 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 #ifdef DHCPv6
 /* 
  * For both send_packet6() and receive_packet6() we need to use the 
- * sendmsg()/recvmsg() functions rather than the simplier send()/recv()
+ * sendmsg()/recvmsg() functions rather than the simpler send()/recv()
  * functions.
  *
  * In the case of send_packet6(), we need to do this in order to insure

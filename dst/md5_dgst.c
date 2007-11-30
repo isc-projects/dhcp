@@ -308,7 +308,7 @@ MD5_CTX *c;
 	static unsigned char end[4]={0x80,0x00,0x00,0x00};
 	unsigned char *cp=end;
 
-	/* c->num should definitly have room for at least one more byte. */
+	/* c->num should definitely have room for at least one more byte. */
 	p=c->data;
 	j=c->num;
 	i=j>>2;

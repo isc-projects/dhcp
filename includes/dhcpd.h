@@ -102,10 +102,10 @@ typedef time_t TIME;
 #include <omapip/omapip_p.h>
 
 #if !defined (BYTE_NAME_HASH_SIZE)
-# define BYTE_NAME_HASH_SIZE	401	/* Default would be rediculous. */
+# define BYTE_NAME_HASH_SIZE	401	/* Default would be ridiculous. */
 #endif
 #if !defined (BYTE_CODE_HASH_SIZE)
-# define BYTE_CODE_HASH_SIZE	254	/* Default would be rediculous. */
+# define BYTE_CODE_HASH_SIZE	254	/* Default would be ridiculous. */
 #endif
 
 /* Although it is highly improbable that a 16-bit option space might
@@ -121,7 +121,7 @@ typedef time_t TIME;
 #endif
 
 /* Not only is it improbable that the 32-bit spaces might actually use 2^32
- * defined options, it is infeasable.  It would be best for this kind of
+ * defined options, it is infeasible.  It would be best for this kind of
  * space to be dynamically sized.  Instead we size it at the word hash's
  * level.
  */
@@ -146,7 +146,7 @@ typedef time_t TIME;
 #endif
 
 #if !defined (FQDN_HASH_SIZE)
-# define FQDN_HASH_SIZE		13	/* A rediculously small table. */
+# define FQDN_HASH_SIZE		13	/* A ridiculously small table. */
 #endif
 
 /* I really doubt a given installation is going to have more than a few

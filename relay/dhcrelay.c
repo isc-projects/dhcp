@@ -111,7 +111,7 @@ main(int argc, char **argv) {
 
         /* Make sure that file descriptors 0 (stdin), 1, (stdout), and
            2 (stderr) are open. To do this, we assume that when we
-           open a file the lowest available file decriptor is used. */
+           open a file the lowest available file descriptor is used. */
         fd = open("/dev/null", O_RDWR);
         if (fd == 0)
                 fd = open("/dev/null", O_RDWR);

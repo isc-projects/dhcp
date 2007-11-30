@@ -338,7 +338,7 @@ int parse_ip_addr (cfile, addr)
 }	
 
 /*
- * Return true if every character in the string is hexidecimal.
+ * Return true if every character in the string is hexadecimal.
  */
 static int
 is_hex_string(const char *s) {
