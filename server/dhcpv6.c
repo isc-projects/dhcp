@@ -1016,6 +1016,8 @@ pick_v6_address(struct iaaddr **addr, struct shared_network *shared_network,
  *	     an empty IA_NA with a status code of NoBinding or NotOnLink or
  *	     possibly send the address with zeroed lifetimes.
  *
+ * Information-Request - No binding.
+ *
  * The basic structure is to traverse the client-supplied data first, and
  * validate and echo back any contents that can be.  If the client-supplied
  * data does not error out (on renew/rebind as above), but we did not send
@@ -1089,10 +1091,11 @@ lease_to_client(struct data_string *reply_ret,
 	}
 
 	/*
-	 * Make no reply if we gave no resources.  This function is not used
-	 * for Information-Request!
+	 * Make no reply if we gave no resources and is not
+	 * for Information-Request.
 	 */
-	if (reply.ia_count == 0)
+	if ((reply.ia_count == 0) &&
+	    (packet->dhcpv6_msg_type != DHCPV6_INFORMATION_REQUEST))
 		goto exit;
 
 	/*
@@ -3095,7 +3098,8 @@ dhcpv6_information_request(struct data_string *reply, struct packet *packet) {
 	 * don't have any IA_NA or IA_TA that would cause us to
 	 * allocate addresses to the client.
 	 */
-	lease_to_client(reply, packet, &client_id, &server_id);
+	lease_to_client(reply, packet, &client_id,
+			server_id.data != NULL ? &server_id : NULL);
 
 	/*
 	 * Cleanup.
