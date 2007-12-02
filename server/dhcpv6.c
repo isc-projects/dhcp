@@ -1261,7 +1261,7 @@ reply_process_ia(struct reply_state *reply, struct option_cache *ia) {
 		if (status == ISC_R_CANCELED)
 			break;
 
-		if (status != ISC_R_SUCCESS)
+		if ((status != ISC_R_SUCCESS) && (status != ISC_R_ADDRINUSE))
 			goto cleanup;
 	}
 
@@ -1627,7 +1627,8 @@ reply_process_addr(struct reply_state *reply, struct option_cache *addr) {
 			status = reply_process_try_addr(reply, &tmp_addr);
 
 			/* Either error out or skip this address. */
-			if (status != ISC_R_SUCCESS)
+			if ((status != ISC_R_SUCCESS) && 
+			    (status != ISC_R_ADDRINUSE)) 
 				goto cleanup;
 
 			if (reply->lease == NULL) {

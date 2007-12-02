@@ -55,6 +55,11 @@ suggested fixes to <dhcp-users@isc.org>.
 
 			Changes since 4.0.0b3
 
+- When addresses were passed as hints to the server in an IA, they were 
+  incorrectly handled, sometimes being treated as an error. Now the 
+  server will treat these as hints and ignore them if it cannot supply
+  a requested address.
+
 - If the client had multiple addresses, and one expired (was not renewed
   by the server), the client would continue to attempt to renew the same
   old address over and over.  Now, the client will omit any expired
