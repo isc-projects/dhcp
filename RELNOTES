@@ -74,6 +74,9 @@ suggested fixes to <dhcp-users@isc.org>.
 
 - The DHCPv6 server now replies to Information-Request messages.
 
+- A bug was fixed in the dhclient-script for BSDs to correctly carry error
+  codes through some conditions.
+
 			Changes since 4.0.0b2
 
 - Clarified error message when lease limit exceeded
