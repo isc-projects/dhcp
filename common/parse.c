@@ -59,6 +59,7 @@ struct enumeration *find_enumeration (const char *name, int length)
 
 struct enumeration_value *find_enumeration_value (const char *name,
 						  int length,
+						  unsigned *widthp,
 						  const char *value)
 {
 	struct enumeration *e;
@@ -66,6 +67,8 @@ struct enumeration_value *find_enumeration_value (const char *name,
 
 	e = find_enumeration (name, length);
 	if (e) {
+		if (widthp != NULL)
+			*widthp = e->width;
 		for (i = 0; e -> values [i].name; i++) {
 			if (!strcmp (value, e -> values [i].name))
 				return &e -> values [i];
@@ -5103,12 +5106,12 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 				    "identifier expected");
 			goto foo;
 		}
-		e = find_enumeration_value (f, (*fmt) - f, val);
+		e = find_enumeration_value (f, (*fmt) - f, &len, val);
 		if (!e) {
 			parse_warn (cfile, "unknown value");
 			goto foo;
 		}
-		if (!make_const_data (&t, &e -> value, 1, 0, 1, MDL))
+		if (!make_const_data (&t, &e -> value, len, 0, 1, MDL))
 			return 0;
 		break;
 
@@ -5284,6 +5287,12 @@ int parse_option_decl (oc, cfile)
 				break;
 					
 			      case 't': /* Text string... */
+				token = peek_token (&val,
+						    &len, cfile);
+				if (token == SEMI && fmt[1] == 'o') {
+					fmt++;
+					break;
+				}
 				token = next_token (&val,
 						    &len, cfile);
 				if (token != STRING) {
@@ -5335,7 +5344,7 @@ int parse_option_decl (oc, cfile)
 				break;
 
 			      case 'N':
-				f = fmt;
+				f = fmt + 1;
 				fmt = strchr (fmt, '.');
 				if (!fmt) {
 					parse_warn (cfile,
@@ -5350,13 +5359,13 @@ int parse_option_decl (oc, cfile)
 						    "identifier expected");
 					goto parse_exit;
 				}
-				e = find_enumeration_value (f, fmt - f, val);
+				e = find_enumeration_value (f, fmt - f,
+							    &len, val);
 				if (!e) {
 					parse_warn (cfile,
 						    "unknown value");
 					goto parse_exit;
 				}
-				len = 1;
 				dp = &e -> value;
 				goto alloc;
 

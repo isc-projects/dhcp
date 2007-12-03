@@ -82,6 +82,9 @@ suggested fixes to <dhcp-users@isc.org>.
 - A bug was fixed in the dhclient-script for BSDs to correctly carry error
   codes through some conditions.
 
+- The parsing of some options in the dhclient lease file, in particular
+  the success DHCPv6 status-code, was fixed.
+
 			Changes since 4.0.0b2
 
 - Clarified error message when lease limit exceeded

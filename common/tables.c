@@ -335,7 +335,7 @@ static struct option dhcpv6_options[] = {
 						&dhcpv6_universe, 11, 1 },
 #endif
 	{ "unicast", "6",			&dhcpv6_universe, 12, 1 },
-	{ "status-code", "Nstatus-codes.t",	&dhcpv6_universe, 13, 1 },
+	{ "status-code", "Nstatus-codes.to",	&dhcpv6_universe, 13, 1 },
 	{ "rapid-commit", "",			&dhcpv6_universe, 14, 1 },
 #if 0
 	/* XXX: user-class contents are of the form "StA" where the

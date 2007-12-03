@@ -1681,6 +1681,7 @@ int ddns_removals(struct lease *, struct iaaddr *);
 void add_enumeration (struct enumeration *);
 struct enumeration *find_enumeration (const char *, int);
 struct enumeration_value *find_enumeration_value (const char *, int,
+						  unsigned *,
 						  const char *);
 void skip_to_semi PROTO ((struct parse *));
 void skip_to_rbrace PROTO ((struct parse *, int));
