@@ -85,6 +85,9 @@ suggested fixes to <dhcp-users@isc.org>.
 - The parsing of some options in the dhclient lease file, in particular
   the success DHCPv6 status-code, was fixed.
 
+- A bug was fixed that caused the DHCPv6 ORO option to be corrupted with
+  seemingly random values.
+
 			Changes since 4.0.0b2
 
 - Clarified error message when lease limit exceeded

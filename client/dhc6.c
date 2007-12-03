@@ -3179,8 +3179,8 @@ make_client6_options(struct client_state *client, struct option_state **op,
 {
 	struct option_cache *oc;
 	struct option **req;
-	struct data_string oro;
-	int buflen, i;
+	struct buffer *buffer;
+	int buflen, i, oro_len;
 
 	if ((op == NULL) || (client == NULL))
 		return;
@@ -3287,62 +3287,54 @@ make_client6_options(struct client_state *client, struct option_state **op,
 	 * options?).  A zero-length ORO is intuitively clear: requesting
 	 * nothing.
 	 */
-	memset(&oro, 0, sizeof(oro));
+	buffer = NULL;
+	oro_len = 0;
 	buflen = 32;
-	if (!buffer_allocate(&oro.buffer, buflen, MDL))
+	if (!buffer_allocate(&buffer, buflen, MDL))
 		log_fatal("Out of memory constructing DHCPv6 ORO.");
-	oro.data = oro.buffer->data;
 	req = client->config->requested_options;
 	if (req != NULL) {
 		for (i = 0 ; req[i] != NULL ; i++) {
-			if (buflen == oro.len) {
+			if (buflen == oro_len) {
 				struct buffer *tmpbuf = NULL;
 
 				buflen += 32;
 
 				/* Shell game. */
-				buffer_reference(&tmpbuf, oro.buffer, MDL);
-				buffer_dereference(&oro.buffer, MDL);
+				buffer_reference(&tmpbuf, buffer, MDL);
+				buffer_dereference(&buffer, MDL);
 
-				if (!buffer_allocate(&oro.buffer, buflen, MDL))
+				if (!buffer_allocate(&buffer, buflen, MDL))
 					log_fatal("Out of memory resizing "
 						  "DHCPv6 ORO buffer.");
 
-				oro.data = oro.buffer->data;
-
-				memcpy(oro.buffer->data, tmpbuf->data,
-				       oro.len);
+				memcpy(buffer->data, tmpbuf->data, oro_len);
 
 				buffer_dereference(&tmpbuf, MDL);
 			}
 
 			if (req[i]->universe == &dhcpv6_universe) {
 				/* Append the code to the ORO. */
-				putUShort(oro.buffer->data + oro.len,
+				putUShort(buffer->data + oro_len,
 					  req[i]->code);
-				oro.len += 2;
+				oro_len += 2;
 			}
 		}
 	}
 
 	oc = NULL;
-	if (option_cache_allocate(&oc, MDL) &&
-	    make_const_data(&oc->expression, oro.data, oro.len, 0, 0, MDL)) {
-		option_reference(&oc->option, oro_option, MDL);
+	if (make_const_option_cache(&oc, &buffer, NULL, oro_len,
+				    oro_option, MDL)) {
 		save_option(&dhcpv6_universe, *op, oc);
 	} else {
 		log_fatal("Unable to create ORO option cache.");
 	}
 
-	data_string_forget(&oro, MDL);
-
-	/* RFC3315 says we MUST inclue an ORO in Requests.  If we have it
-	 * in the cache for Requests, we have it for Solicits, so it's fatal
-	 * either way (may as well fail early on Solicits).
+	/*
+	 * Note: make_const_option_cache() consumes the buffer, we do not
+	 * need to dereference it (XXX).
 	 */
-	if (lookup_option(&dhcpv6_universe, *op, D6O_ORO) == NULL)
-		log_fatal("Internal inconsistency: no dhcp6.oro in transmit "
-			  "state.");
+	option_cache_dereference(&oc, MDL);
 }
 
 /* A clone of the DHCPv4 script_write_params() minus the DHCPv4-specific
