@@ -88,6 +88,8 @@ suggested fixes to <dhcp-users@isc.org>.
 - A bug was fixed that caused the DHCPv6 ORO option to be corrupted with
   seemingly random values.
 
+- A reference overleak in DHCPv6 shared network processing was repaired.
+
 			Changes since 4.0.0b2
 
 - Clarified error message when lease limit exceeded

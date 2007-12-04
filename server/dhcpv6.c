@@ -947,7 +947,6 @@ pick_v6_address(struct iaaddr **addr, struct shared_network *shared_network,
 	 * No pools, we're done.
 	 */
 	if (shared_network->ipv6_pools == NULL) {
-		shared_network_dereference(&shared_network, MDL);
 		log_debug("Unable to pick client address: "
 			  "no IPv6 pools on this shared network");
 		return ISC_R_NORESOURCES;
@@ -979,7 +978,6 @@ pick_v6_address(struct iaaddr **addr, struct shared_network *shared_network,
 			}
 			shared_network->last_ipv6_pool = i;
 
-			shared_network_dereference(&shared_network, MDL);
 			log_debug("Picking pool address %s",
 				  inet_ntop(AF_INET6, &((*addr)->addr),
 				  	    tmp_buf, sizeof(tmp_buf)));
