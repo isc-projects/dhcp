@@ -39,6 +39,25 @@ if test "$enable_dhcpv6" != "no"; then
 		  [Define to 1 to include DHCPv6 support.])
 fi
 
+###
+### Path fun.  Older versions of DHCP were installed in /usr/sbin, so we
+### need to look there and potentially overwrite by default (but not if
+### the user configures an alternate value).  LOCALSTATEDIR is totally
+### braindead.  No one uses /usr/local/var/db/ nor /usr/local/var/run, and
+### they would be insane for suggesting it.  We need to look in /var/for
+### 'db' and 'state/dhcp' for db files, and /var/run for pid files by
+### default.
+###
+AC_PREFIX_PROGRAM(dhcpd)
+
+# XXX - isn't there SOME WAY to default autoconf to /var instead of
+# /usr/local/var/no/one/has/this/please/stop/trying?
+case "$localstatedir" in
+	'${prefix}/var')
+		localstatedir=/var
+		;;
+esac
+
 # Allow specification of alternate state files
 AC_ARG_WITH(srv-lease-file,
 	AC_HELP_STRING([--with-srv-lease-file=PATH],
@@ -46,12 +65,62 @@ AC_ARG_WITH(srv-lease-file,
 		        (default is LOCALSTATEDIR/db/dhcpd.leases)]),
 	AC_DEFINE_UNQUOTED([_PATH_DHCPD_DB], ["$withval"],
 			   [File for dhcpd leases.]))
+
+echo -n "checking for dhcpd.leases location..."
+if [[ "x$with_srv_lease_file" = "x" ]] ; then
+	if [[ -d "${localstatedir}/db" ]] ; then
+		with_srv_lease_file="${localstatedir}/db/dhcpd.leases"
+	elif [[ -d "${localstatedir}/state" ]] ; then
+		if [[ -d "${localstatedir}/state/dhcp" ]] ; then
+			with_srv_lease_file="${localstatedir}/state/dhcp/dhcpd.leases"
+		else
+			with_srv_lease_file="${localstatedir}/state/dhcpd.leases"
+		fi
+	elif [[ -d "${localstatedir}/lib" ]] ; then
+		if [[ -d "${localstatedir}/lib/dhcp" ]] ; then
+			with_srv_lease_file="${localstatedir}/lib/dhcp/dhcpd.leases"
+		else
+			with_srv_lease_file="${localstatedir}/lib/dhcpd.leases"
+		fi
+	elif [[ -d "${localstatedir}/etc" ]] ; then
+		with_srv_lease_file="${localstatedir}/etc/dhcpd.leases"
+	else
+		with_srv_lease_file="/etc/dhcpd.leases"
+	fi
+fi
+echo "$with_srv_lease_file"
+
 AC_ARG_WITH(cli-lease-file,
 	AC_HELP_STRING([--with-cli-lease-file=PATH],
 		       [File for dhclient leases 
 		        (default is LOCALSTATEDIR/db/dhclient.leases)]),
 	AC_DEFINE_UNQUOTED([_PATH_DHCLIENT_DB], ["$withval"],
 			   [File for dhclient leases.]))
+
+echo -n "checking for dhclient.leases location..."
+if [[ "x$with_cli_lease_file" = "x" ]] ; then
+	if [[ -d "${localstatedir}/db" ]] ; then
+		with_cli_lease_file="${localstatedir}/db/dhclient.leases"
+	elif [[ -d "${localstatedir}/state" ]] ; then
+		if [[ -d "${localstatedir}/state/dhcp" ]] ; then
+			with_cli_lease_file="${localstatedir}/state/dhcp/dhclient.leases"
+		else
+			with_cli_lease_file="${localstatedir}/state/dhclient.leases"
+		fi
+	elif [[ -d "${localstatedir}/lib" ]] ; then
+		if [[ -d "${localstatedir}/lib/dhcp" ]] ; then
+			with_cli_lease_file="${localstatedir}/lib/dhcp/dhclient.leases"
+		else
+			with_cli_lease_file="${localstatedir}/lib/dhclient.leases"
+		fi
+	elif [[ -d "${localstatedir}/etc" ]] ; then
+		with_cli_lease_file="${localstatedir}/etc/dhclient.leases"
+	else
+		with_cli_lease_file="/etc/dhclient.leases"
+	fi
+fi
+echo "$with_cli_lease_file"
+
 AC_ARG_WITH(srv-pid-file,
 	AC_HELP_STRING([--with-srv-pid-file=PATH],
 		       [File for dhcpd process information

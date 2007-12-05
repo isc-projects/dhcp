@@ -90,6 +90,10 @@ suggested fixes to <dhcp-users@isc.org>.
 
 - A reference overleak in DHCPv6 shared network processing was repaired.
 
+- ./configure now autodetects local database locations rather than trying
+  to put dhcpd.leases and dhclient.leases in /usr/local/var/db, which no
+  one ever has.
+
 			Changes since 4.0.0b2
 
 - Clarified error message when lease limit exceeded
