@@ -94,6 +94,10 @@ suggested fixes to <dhcp-users@isc.org>.
   to put dhcpd.leases and dhclient.leases in /usr/local/var/db, which no
   one ever has.
 
+- Regression fix for bug where server advertised a IPv6 address in 
+  response to a SOLICIT but would not return the address in response 
+  to a REQUEST.
+
 			Changes since 4.0.0b2
 
 - Clarified error message when lease limit exceeded

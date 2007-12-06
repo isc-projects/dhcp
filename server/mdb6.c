@@ -344,6 +344,68 @@ ia_na_remove_all_iaaddr(struct ia_na *ia_na, const char *file, int line) {
 }
 
 /*
+ * Compare two IA_NA.
+ */
+isc_boolean_t
+ia_na_equal(const struct ia_na *a, const struct ia_na *b) 
+{
+	isc_boolean_t found;
+	int i, j;
+
+	/*
+	 * Handle cases where one or both of the inputs is NULL.
+	 */
+	if (a == NULL) {
+		if (b == NULL) {
+			return ISC_TRUE;
+		} else {
+			return ISC_FALSE;
+		}
+	}	
+
+	/*
+	 * Check the DUID is the same.
+	 */
+	if (a->iaid_duid.len != b->iaid_duid.len) {
+		return ISC_FALSE;
+	}
+	if (memcmp(a->iaid_duid.data, 
+		   b->iaid_duid.data, a->iaid_duid.len) != 0) {
+		return ISC_FALSE;
+	}
+
+	/*
+	 * Make sure we have the same number of addresses in each.
+	 */
+	if (a->num_iaaddr != b->num_iaaddr) {
+		return ISC_FALSE;
+	}
+
+	/*
+	 * Check that each address is present in both.
+	 */
+	for (i=0; i<a->num_iaaddr; i++) {
+		found = ISC_FALSE;
+		for (j=0; j<a->num_iaaddr; j++) {
+			if (memcmp(&(a->iaaddr[i]->addr),
+			           &(b->iaaddr[j]->addr), 
+				   sizeof(struct in6_addr) == 0)) {
+				found = ISC_TRUE;
+				break;
+			}
+		}
+		if (!found) {
+			return ISC_FALSE;
+		}
+	}
+
+	/*
+	 * These are the same in every way we care about.
+	 */
+	return ISC_TRUE;
+}
+
+/*
  * Helper function for lease heaps.
  * Makes the top of the heap the oldest lease.
  */

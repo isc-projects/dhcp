@@ -1130,7 +1130,7 @@ lease_to_client(struct data_string *reply_ret,
 	reply.cursor = 0;
 }
 
-/* Process a client-supplied IA_NA.  This may append options ot the tail of
+/* Process a client-supplied IA_NA.  This may append options to the tail of
  * the reply packet being built in the reply_state structure.
  */
 static isc_result_t
@@ -1141,12 +1141,16 @@ reply_process_ia(struct reply_state *reply, struct option_cache *ia) {
 	struct option_state *packet_ia;
 	struct option_cache *oc;
 	struct data_string ia_data, data;
+	isc_boolean_t lease_in_database;
 
 	/* Initialize values that will get cleaned up on return. */
 	packet_ia = NULL;
 	memset(&ia_data, 0, sizeof(ia_data));
 	memset(&data, 0, sizeof(data));
-	/* Note that find_client_address() may set reply->lease. */
+	lease_in_database = ISC_FALSE;
+	/* 
+	 * Note that find_client_address() may set reply->lease. 
+	 */
 
 	/* Make sure there is at least room for the header. */
 	if ((reply->cursor + IA_NA_OFFSET + 4) > sizeof(reply->buf)) {
@@ -1395,7 +1399,7 @@ reply_process_ia(struct reply_state *reply, struct option_cache *ia) {
 	 * pool timers for each (if any).
 	 */
 	if ((status != ISC_R_CANCELED) && !reply->static_lease &&
-	    (reply->packet->dhcpv6_msg_type != DHCPV6_SOLICIT) &&
+	    (reply->buf.reply.msg_type == DHCPV6_REPLY) &&
 	    (reply->ia_na->num_iaaddr != 0)) {
 		struct iaaddr *tmp;
 		struct data_string *ia_id;
@@ -1443,6 +1447,23 @@ reply_process_ia(struct reply_state *reply, struct option_cache *ia) {
 			       ia_id->len, reply->ia_na, MDL);
 
 		write_ia_na(reply->ia_na);
+
+		/* 
+		 * Note that we wrote the lease into the database,
+		 * so that we know not to release it when we're done
+		 * with this function.
+		 */
+		lease_in_database = ISC_TRUE;
+
+	/*
+	 * If this is a soft binding, we will check to see if we are 
+	 * suggesting the existing database entry to the client.
+	 */
+	} else if ((status != ISC_R_CANCELED) && !reply->static_lease &&
+	    (reply->old_ia != NULL)) {
+	    	if (ia_na_equal(reply->old_ia, reply->ia_na)) {
+			lease_in_database = ISC_TRUE;
+		}
 	}
 
       cleanup:
@@ -1458,8 +1479,12 @@ reply_process_ia(struct reply_state *reply, struct option_cache *ia) {
 		ia_na_dereference(&reply->ia_na, MDL);
 	if (reply->old_ia != NULL)
 		ia_na_dereference(&reply->old_ia, MDL);
-	if (reply->lease != NULL)
+	if (reply->lease != NULL) {
+		if (!lease_in_database) {
+			release_lease6(reply->lease->ipv6_pool, reply->lease);
+		}
 		iaaddr_dereference(&reply->lease, MDL);
+	}
 	if (reply->fixed.data != NULL)
 		data_string_forget(&reply->fixed, MDL);
 

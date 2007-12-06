@@ -3184,6 +3184,7 @@ isc_result_t ia_na_add_iaaddr(struct ia_na *ia_na, struct iaaddr *iaaddr,
 			      const char *file, int line);
 void ia_na_remove_iaaddr(struct ia_na *ia_na, struct iaaddr *iaaddr,
 			 const char *file, int line);
+isc_boolean_t ia_na_equal(const struct ia_na *a, const struct ia_na *b);
 
 isc_result_t ipv6_pool_allocate(struct ipv6_pool **pool,
 				const struct in6_addr *start_addr, int bits, 
