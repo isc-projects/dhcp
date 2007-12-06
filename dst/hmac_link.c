@@ -1,9 +1,10 @@
 #ifdef HMAC_MD5
 #ifndef LINT
-static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/hmac_link.c,v 1.2 2007/11/30 21:51:43 fdupont Exp $";
+static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/hmac_link.c,v 1.3 2007/12/06 00:50:22 dhankins Exp $";
 #endif
 /*
  * Portions Copyright (c) 1995-1998 by Trusted Information Systems, Inc.
+ * Portions Copyright (c) 2007 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
