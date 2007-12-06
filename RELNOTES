@@ -98,6 +98,10 @@ suggested fixes to <dhcp-users@isc.org>.
   response to a SOLICIT but would not return the address in response 
   to a REQUEST.
 
+- A bug was fixed where the DHCPv6 server puts the NoAddrsAvail status
+  code in the IA_NA was fixed.  The status code now appears in the root
+  level.
+
 			Changes since 4.0.0b2
 
 - Clarified error message when lease limit exceeded

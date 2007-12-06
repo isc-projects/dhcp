@@ -50,6 +50,7 @@ struct reply_state {
 	/* IA level persistent state */
 	unsigned ia_count;
 	unsigned client_addresses;
+	isc_boolean_t ia_addrs_included;
 	isc_boolean_t static_lease;
 	struct ia_na *ia_na;
 	struct ia_na *old_ia;
@@ -1031,6 +1032,7 @@ lease_to_client(struct data_string *reply_ret,
 	static struct reply_state reply;
 	struct option_cache *oc;
 	struct data_string packet_oro;
+	isc_boolean_t no_addrs_avail;
 
 	/* Locate the client.  */
 	if (shared_network_from_packet6(&reply.shared,
@@ -1082,10 +1084,30 @@ lease_to_client(struct data_string *reply_ret,
 	/* Process the client supplied IA_NA's onto the reply buffer. */
 	reply.ia_count = 0;
 	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_IA_NA);
+	no_addrs_avail = ISC_FALSE;
 	for (; oc != NULL ; oc = oc->next) {
-		if (reply_process_ia(&reply, oc) != ISC_R_SUCCESS) {
+		isc_result_t status;
+
+		/* Start counting addresses offered. */
+		reply.client_addresses = 0;
+		reply.ia_addrs_included = ISC_FALSE;
+
+		status = reply_process_ia(&reply, oc);
+
+		/*
+		 * We continue to try other IA's whether we can address
+		 * this one or not.  Any other result is an immediate fail.
+		 */
+		if ((status != ISC_R_SUCCESS) &&
+		    (status != ISC_R_NORESOURCES))
 			goto exit;
-		}
+
+		/*
+		 * If any address can be given to any IA, then do not set the
+		 * NoAddrsAvail status code.
+		 */
+		if (reply.client_addresses == 0)
+			no_addrs_avail = ISC_TRUE;
 	}
 
 	/*
@@ -1094,16 +1116,94 @@ lease_to_client(struct data_string *reply_ret,
 	 */
 	if ((reply.ia_count == 0) &&
 	    (packet->dhcpv6_msg_type != DHCPV6_INFORMATION_REQUEST))
-		goto exit;
+	        goto exit;
 
 	/*
-	 * Having stored the client's IA_NA's, store any options that will
-	 * fit in the remaining space.
+	 * RFC3315 section 17.2.2 (Solicit):
+	 *
+	 * If the server will not assign any addresses to any IAs in a
+	 * subsequent Request from the client, the server MUST send an
+	 * Advertise message to the client that includes only a Status
+	 * Code option with code NoAddrsAvail and a status message for
+	 * the user, a Server Identifier option with the server's DUID,
+	 * and a Client Identifier option with the client's DUID.
+	 *
+	 * Section 18.2.1 (Request):
+	 *
+	 * If the server cannot assign any addresses to an IA in the
+	 * message from the client, the server MUST include the IA in
+	 * the Reply message with no addresses in the IA and a Status
+	 * Code option in the IA containing status code NoAddrsAvail.
+	 *
+	 * Section 18.2.3 (Renew):
+	 *
+	 * The server may choose to change the list of addresses and
+	 * the lifetimes of addresses in IAs that are returned to the
+	 * client.
+	 *
+	 * Section 18.2.4 (Rebind):
+	 *
+	 * Absolutely nothing.
+	 *
+	 * INTERPRETATION;
+	 *
+	 * Solicit and Request are fairly explicit; we send NoAddrsAvail.
+	 * We handle SOLICIT here and REQUEST in the reply_process_ia()
+	 * function (because SOLICIT only counts if we never get around to
+	 * it).
+	 *
+	 * Renew and Rebind are totally undefined.  If we send a reply with
+	 * empty IA's, however, the client will stop renewing or rebinding,
+	 * and this is a problem if they could have gotten addressed from
+	 * another server.  So we ignore client packets...they will eventually
+	 * time out in the worst case.
 	 */
-	reply.cursor += store_options6((char *)reply.buf.data + reply.cursor,
-				       sizeof(reply.buf) - reply.cursor,
-				       reply.opt_state, reply.packet,
-				       required_opts_solicit, &packet_oro);
+	if (no_addrs_avail &&
+	    (reply.packet->dhcpv6_msg_type == DHCPV6_SOLICIT))
+	{
+		/* Set the NoAddrsAvail status code. */
+		if (!set_status_code(STATUS_NoAddrsAvail,
+				     "No addresses available for this "
+				     "interface.", reply.opt_state)) {
+			log_error("lease_to_client: Unable to set "
+				  "NoAddrsAvail status code.");
+			goto exit;
+		}
+
+		/* Rewind the cursor to the start. */
+		reply.cursor = REPLY_OPTIONS_INDEX;
+
+		/*
+		 * Produce a reply that includes;
+		 *
+		 * Status code.
+		 * Server DUID.
+		 * Client DUID.
+		 */
+		reply.cursor += store_options6((char *)reply.buf.data +
+							reply.cursor,
+					       sizeof(reply.buf) -
+					       		reply.cursor,
+					       reply.opt_state, reply.packet,
+					       required_opts,
+					       NULL);
+	} else if (no_addrs_avail &&
+		   (reply.packet->dhcpv6_msg_type != DHCPV6_REQUEST))
+	{
+		goto exit;
+	} else {
+		/*
+		 * Having stored the client's IA_NA's, store any options that
+		 * will fit in the remaining space.
+		 */
+		reply.cursor += store_options6((char *)reply.buf.data +
+							reply.cursor,
+					       sizeof(reply.buf) -
+							reply.cursor,
+					       reply.opt_state, reply.packet,
+					       required_opts_solicit,
+					       &packet_oro);
+	}
 
 	/* Return our reply to the caller. */
 	reply_ret->len = reply.cursor;
@@ -1250,7 +1350,6 @@ reply_process_ia(struct reply_state *reply, struct option_cache *ia) {
 	oc = lookup_option(&dhcpv6_universe, packet_ia, D6O_IAADDR);
 	reply->valid = reply->prefer = 0xffffffff;
 	reply->client_valid = reply->client_prefer = 0;
-	reply->client_addresses = 0;
 	for (; oc != NULL ; oc = oc->next) {
 		status = reply_process_addr(reply, oc);
 
@@ -1276,60 +1375,76 @@ reply_process_ia(struct reply_state *reply, struct option_cache *ia) {
 	if ((status != ISC_R_CANCELED) && (reply->client_addresses == 0)) {
 		status = find_client_address(reply);
 
-		/*
-		 * RFC3315 section 17.2.2 (Solicit):
-		 *
-		 * If the server will not assign any addresses to any IAs in a
-		 * subsequent Request from the client, the server MUST send an
-		 * Advertise message to the client that includes only a Status
-		 * Code option with code NoAddrsAvail and a status message for
-		 * the user, a Server Identifier option with the server's DUID,
-		 * and a Client Identifier option with the client's DUID.
-		 *
-		 * Section 18.2.1 (Request):
-		 *
-		 * If the server cannot assign any addresses to an IA in the
-		 * message from the client, the server MUST include the IA in
-		 * the Reply message with no addresses in the IA and a Status
-		 * Code option in the IA containing status code NoAddrsAvail.
-		 *
-		 * Section 18.2.3 (Renew):
-		 *
-		 * The server may choose to change the list of addresses and
-		 * the lifetimes of addresses in IAs that are returned to the
-		 * client.
-		 *
-		 * Section 18.2.4 (Rebind):
-		 *
-		 * Absolutely nothing.  Interpretation:  Only address the
-		 * client if its old binding can be found.
-		 */
-		if ((status == ISC_R_NORESOURCES) &&
-		    (reply->packet->dhcpv6_msg_type != DHCPV6_REBIND)) {
-			/* If this is not a Renew, clear all IAADDRs. */
-			if (reply->packet->dhcpv6_msg_type != DHCPV6_RENEW) {
+		if (status == ISC_R_NORESOURCES) {
+			switch (reply->packet->dhcpv6_msg_type) {
+			      case DHCPV6_SOLICIT:
+				/*
+				 * Solicit is handled by the caller, because
+				 * it has to be the sum of all the IA's.
+				 */
+				goto cleanup;
+
+			      case DHCPV6_REQUEST:
+				/* Section 18.2.1 (Request):
+				 *
+				 * If the server cannot assign any addresses to
+				 * an IA in the message from the client, the
+				 * server MUST include the IA in the Reply
+				 * message with no addresses in the IA and a
+				 * Status Code option in the IA containing
+				 * status code NoAddrsAvail.
+				 */
 				option_state_dereference(&reply->reply_ia, MDL);
 				if (!option_state_allocate(&reply->reply_ia,
-							  MDL)) {
-					log_error("reply_process_ia: No memory "
-						  "for option state wipe.");
+							   MDL))
+				{
+					log_error("reply_process_ia: No "
+						  "memory for option state "
+						  "wipe.");
 					status = ISC_R_NOMEMORY;
 					goto cleanup;
 				}
-			}
 
-			/* Set the status code. */
-			if (!set_status_code(STATUS_NoAddrsAvail,
-					     "No addresses available "
-					     "for this interface.",
-					     reply->reply_ia)) {
-				log_error("reply_process_ia: Unable to set "
-					  "NoAddrsAvail status code.");
-				status = ISC_R_FAILURE;
-				goto cleanup;
-			}
+				if (!set_status_code(STATUS_NoAddrsAvail,
+						     "No addresses available "
+						     "for this interface.",
+						      reply->reply_ia)) {
+					log_error("reply_process_ia: Unable "
+						  "to set NoAddrsAvail status "
+						  "code.");
+					status = ISC_R_FAILURE;
+					goto cleanup;
+				}
 
-			status = ISC_R_SUCCESS;
+				status = ISC_R_SUCCESS;
+				break;
+
+			      default:
+				/*
+				 * RFC 3315 does not tell us to emit a status
+				 * code in this condition, or anything else.
+				 *
+				 * If we included non-allocated addresses
+				 * (zeroed lifetimes) in an IA, then the client
+				 * will deconfigure them.
+				 *
+				 * So we want to include the IA even if we
+				 * can't give it a new address if it includes
+				 * zeroed lifetime addresses.
+				 *
+				 * We don't want to include the IA if we
+				 * provide zero addresses including zeroed
+				 * lifetimes...if we did, the client would
+				 * reset its renew/rebind behaviour.  If we do
+				 * not, the client may get a success off
+				 * another server.
+				 */
+				if (reply->ia_addrs_included)
+					status = ISC_R_SUCCESS;
+				else
+					goto cleanup;
+				break;
+			}
 		}
 
 		if (status != ISC_R_SUCCESS)
@@ -2090,6 +2205,8 @@ reply_process_send_addr(struct reply_state *reply, struct iaddr *addr) {
 		status = ISC_R_FAILURE;
 		goto cleanup;
 	}
+
+	reply->ia_addrs_included = ISC_TRUE;
 
       cleanup:
 	if (data.data != NULL)
