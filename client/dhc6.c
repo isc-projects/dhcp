@@ -43,7 +43,7 @@ static struct dhc6_ia *dhc6_dup_ia(struct dhc6_ia *ia,
 				   const char *file, int line);
 static struct dhc6_addr *dhc6_dup_addr(struct dhc6_addr *addr,
 				       const char *file, int line);
-static void dhc6_ia_destroy(struct dhc6_ia *ia, const char *file, int line);
+static void dhc6_ia_destroy(struct dhc6_ia **src, const char *file, int line);
 static isc_result_t dhc6_parse_ia_na(struct dhc6_ia **pia,
 				     struct packet *packet,
 				     struct option_state *options);
@@ -387,7 +387,7 @@ dhc6_dup_lease(struct dhc6_lease *lease, const char *file, int line)
 		*insert_ia = dhc6_dup_ia(ia, file, line);
 
 		if (*insert_ia == NULL) {
-			dhc6_lease_destroy(copy, file, line);
+			dhc6_lease_destroy(&copy, file, line);
 			return NULL;
 		}
 
@@ -418,7 +418,7 @@ dhc6_dup_ia(struct dhc6_ia *ia, const char *file, int line)
 		*insert_addr = dhc6_dup_addr(addr, file, line);
 
 		if (*insert_addr == NULL) {
-			dhc6_ia_destroy(copy, file, line);
+			dhc6_ia_destroy(&copy, file, line);
 			return NULL;
 		}
 
@@ -488,7 +488,7 @@ dhc6_leaseify(struct packet *packet)
 			log_error("Invalid length of DHCPv6 Preference option "
 				  "(%d != 1)", ds.len);
 			data_string_forget(&ds, MDL);
-			dhc6_lease_destroy(lease, MDL);
+			dhc6_lease_destroy(&lease, MDL);
 			return NULL;
 		} else {
 			lease->pref = ds.data[0];
@@ -505,7 +505,7 @@ dhc6_leaseify(struct packet *packet)
 	if (dhc6_parse_ia_na(&lease->bindings, packet,
 			     lease->options) != ISC_R_SUCCESS) {
 		/* Error conditions are logged by the caller. */
-		dhc6_lease_destroy(lease, MDL);
+		dhc6_lease_destroy(&lease, MDL);
 		return NULL;
 	}
 
@@ -522,7 +522,7 @@ dhc6_leaseify(struct packet *packet)
 		/* This should be impossible due to validation checks earlier.
 		 */
 		log_error("Invalid SERVERID option cache.");
-		dhc6_lease_destroy(lease, MDL);
+		dhc6_lease_destroy(&lease, MDL);
 		return NULL;
 	} else {
 		log_debug("RCV:  X-- Server ID: %s",
@@ -730,15 +730,18 @@ dhc6_parse_addrs(struct dhc6_addr **paddr, struct packet *packet,
 	return ISC_R_SUCCESS;
 }
 
-/* Clean up a lease object and deallocate all its parts. */
+/* Clean up a lease object, deallocate all its parts, and set it to NULL. */
 void
-dhc6_lease_destroy(struct dhc6_lease *lease, const char *file, int line)
+dhc6_lease_destroy(struct dhc6_lease **src, const char *file, int line)
 {
 	struct dhc6_ia *ia, *nia;
+        struct dhc6_lease *lease;
 
-	/* no-op */
-	if (lease == NULL)
+	if (src == NULL || *src == NULL) {
+                log_error("Attempt to destroy null lease.");
 		return;
+        }
+	lease = *src;
 
 	if (lease->server_id.len != 0)
 		data_string_forget(&lease->server_id, file, line);
@@ -746,20 +749,31 @@ dhc6_lease_destroy(struct dhc6_lease *lease, const char *file, int line)
 	for (ia = lease->bindings ; ia != NULL ; ia = nia) {
 		nia = ia->next;
 
-		dhc6_ia_destroy(ia, file, line);
+		dhc6_ia_destroy(&ia, file, line);
 	}
 
 	if (lease->options != NULL)
 		option_state_dereference(&lease->options, file, line);
 
 	dfree(lease, file, line);
+        *src = NULL;
 }
 
-/* Traverse the addresses list, and destroy their contents. */
+/*
+ * Traverse the addresses list, and destroy their contents, and NULL the
+ * list pointer.
+ */
 static void
-dhc6_ia_destroy(struct dhc6_ia *ia, const char *file, int line)
+dhc6_ia_destroy(struct dhc6_ia **src, const char *file, int line)
 {
 	struct dhc6_addr *addr, *naddr;
+        struct dhc6_ia *ia;
+
+	if (src == NULL || *src == NULL) {
+                log_error("Attempt to destroy null IA.");
+		return;
+        }
+	is = *src;
 
 	for (addr = ia->addrs ; addr != NULL ; addr = naddr) {
 		naddr = addr->next;
@@ -774,6 +788,7 @@ dhc6_ia_destroy(struct dhc6_ia *ia, const char *file, int line)
 		option_state_dereference(&ia->options, file, line);
 
 	dfree(ia, file, line);
+        *src = NULL;
 }
 
 /* For a given lease, insert it into the tail of the lease list.  Upon
@@ -787,7 +802,7 @@ insert_lease(struct dhc6_lease **head, struct dhc6_lease *new)
 		    memcmp((*head)->server_id.data, new->server_id.data,
 			   new->server_id.len) == 0) {
 			new->next = (*head)->next;
-			dhc6_lease_destroy(*head, MDL);
+			dhc6_lease_destroy(head, MDL);
 			break;
 		}
 
@@ -1314,7 +1329,7 @@ status_log(int code, const char *scope, const char *additional, int len)
 
 	switch(code) {
 	      case STATUS_Success:
-		msg = "Succes";
+		msg = "Success";
 		break;
 
 	      case STATUS_UnspecFail:
@@ -1493,7 +1508,7 @@ dhc6_select_action(struct client_state *client, isc_result_t rval,
 	      default:
 	      case STATUS_UnspecFail:
 		if (client->advertised_leases != NULL) {
-			dhc6_lease_destroy(client->selected_lease, MDL);
+			dhc6_lease_destroy(&client->selected_lease, MDL);
 			client->selected_lease = NULL;
 
 			start_selecting6(client);
@@ -1513,7 +1528,7 @@ dhc6_select_action(struct client_state *client, isc_result_t rval,
 		if (client->selected_lease == NULL)
 			log_fatal("Impossible case at %s:%d.", MDL);
 
-		dhc6_lease_destroy(client->selected_lease, MDL);
+		dhc6_lease_destroy(&client->selected_lease, MDL);
 		client->selected_lease = NULL;
 
 		if (client->advertised_leases != NULL)
@@ -1534,19 +1549,19 @@ dhc6_select_action(struct client_state *client, isc_result_t rval,
 			if (client->active_lease == NULL)
 				log_fatal("Impossible case at %s:%d.", MDL);
 
-			dhc6_lease_destroy(client->active_lease, MDL);
+			dhc6_lease_destroy(&client->active_lease, MDL);
 		} else {
 			if (client->selected_lease == NULL)
 				log_fatal("Impossible case at %s:%d.", MDL);
 
-			dhc6_lease_destroy(client->selected_lease, MDL);
+			dhc6_lease_destroy(&client->selected_lease, MDL);
 			client->selected_lease = NULL;
 
 			while (client->advertised_leases != NULL) {
 				lease = client->advertised_leases;
 				client->advertised_leases = lease->next;
 
-				dhc6_lease_destroy(lease, MDL);
+				dhc6_lease_destroy(&lease, MDL);
 			}
 		}
 
@@ -1748,7 +1763,7 @@ dhc6_check_reply(struct client_state *client, struct dhc6_lease *new)
 				  "Trying other servers.",
 				  nscore, sscore);
 
-			dhc6_lease_destroy(client->selected_lease, MDL);
+			dhc6_lease_destroy(&client->selected_lease, MDL);
 			client->selected_lease = NULL;
 
 			start_selecting6(client);
@@ -1807,7 +1822,7 @@ init_handler(struct packet *packet, struct client_state *client)
 
 	if (dhc6_check_advertise(lease) != ISC_R_SUCCESS) {
 		log_debug("PRC: Lease failed to satisfy.");
-		dhc6_lease_destroy(lease, MDL);
+		dhc6_lease_destroy(&lease, MDL);
 		return;
 	}
 
@@ -2030,7 +2045,7 @@ do_select6(void *input)
 				      lease->server_id.data, 56));
 
 		/* Get rid of the lease that timed/counted out. */
-		dhc6_lease_destroy(lease, MDL);
+		dhc6_lease_destroy(&lease, MDL);
 		client->selected_lease = NULL;
 
 		/* If there are more leases great.  If not, get more. */
@@ -2298,7 +2313,7 @@ reply_handler(struct packet *packet, struct client_state *client)
 
 	check_status = dhc6_check_reply(client, lease);
 	if (check_status != ISC_R_SUCCESS) {
-		dhc6_lease_destroy(lease, MDL);
+		dhc6_lease_destroy(&lease, MDL);
 
 		/* If no action was taken, but there is an error, then
 		 * we wait for a retransmission.
@@ -2320,7 +2335,7 @@ reply_handler(struct packet *packet, struct client_state *client)
 		return;
 
 	if (client->selected_lease != NULL) {
-		dhc6_lease_destroy(client->selected_lease, MDL);
+		dhc6_lease_destroy(&client->selected_lease, MDL);
 		client->selected_lease = NULL;
 	}
 
@@ -2329,7 +2344,7 @@ reply_handler(struct packet *packet, struct client_state *client)
 		if (client->active_lease == NULL)
 			log_fatal("Impossible condition at %s:%d.", MDL);
 
-                dhc6_lease_destroy(client->active_lease, MDL);
+                dhc6_lease_destroy(&client->active_lease, MDL);
                 client->active_lease = NULL;
                 return;
         }
@@ -2341,7 +2356,7 @@ reply_handler(struct packet *packet, struct client_state *client)
 		if (client->active_lease == NULL)
 			log_fatal("Impossible condition at %s:%d.", MDL);
 
-		dhc6_lease_destroy(lease, MDL);
+		dhc6_lease_destroy(&lease, MDL);
 		start_bound(client);
 		return;
 	}
@@ -2353,7 +2368,7 @@ reply_handler(struct packet *packet, struct client_state *client)
 
 	/* Cleanup if a previous attempt to go bound failed. */
 	if (client->old_lease != NULL) {
-		dhc6_lease_destroy(client->old_lease, MDL);
+		dhc6_lease_destroy(&client->old_lease, MDL);
 		client->old_lease = NULL;
 	}
 
@@ -2367,7 +2382,7 @@ reply_handler(struct packet *packet, struct client_state *client)
 		lease = client->advertised_leases;
 		client->advertised_leases = lease->next;
 
-		dhc6_lease_destroy(lease, MDL);
+		dhc6_lease_destroy(&lease, MDL);
 	}
 
 	start_bound(client);
@@ -2547,7 +2562,7 @@ dhc6_check_times(struct client_state *client)
 	 * schedule a future request (using 4-pkt info-request model).
 	 */
 	if (has_addrs == ISC_FALSE) {
-		dhc6_lease_destroy(client->active_lease, MDL);
+		dhc6_lease_destroy(&client->active_lease, MDL);
 		client->active_lease = NULL;
 
 		/* Go back to the beginning. */
@@ -2822,7 +2837,7 @@ start_bound(struct client_state *client)
 	go_daemon();
 
 	if (client->old_lease != NULL) {
-		dhc6_lease_destroy(client->old_lease, MDL);
+		dhc6_lease_destroy(&client->old_lease, MDL);
 		client->old_lease = NULL;
 	}
 
@@ -3131,7 +3146,7 @@ do_expire(void *input)
 		log_info("PRC: Bound lease is devoid of active addresses."
 			 "  Re-initializing.");
 
-		dhc6_lease_destroy(lease, MDL);
+		dhc6_lease_destroy(&lease, MDL);
 		client->active_lease = NULL;
 
 		start_init6(client);

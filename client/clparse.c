@@ -1398,7 +1398,7 @@ parse_client6_lease_statement(struct parse *cfile)
 
 	if (!has_ia) {
 		log_debug("Lease with no IA's discarded from lease db.");
-		dhc6_lease_destroy(lease, MDL);
+		dhc6_lease_destroy(&lease, MDL);
 		return;
 	}
 
@@ -1415,7 +1415,7 @@ parse_client6_lease_statement(struct parse *cfile)
 
 	if (client == NULL) {
 		parse_warn(cfile, "No matching client state.");
-		dhc6_lease_destroy(lease, MDL);
+		dhc6_lease_destroy(&lease, MDL);
 		return;
 	}
 
@@ -1429,7 +1429,7 @@ parse_client6_lease_statement(struct parse *cfile)
 			log_error("Invalid length of DHCPv6 Preference option "
 				  "(%d != 1)", ds.len);
 			data_string_forget(&ds, MDL);
-			dhc6_lease_destroy(lease, MDL);
+			dhc6_lease_destroy(&lease, MDL);
 			return;
 		} else
 			lease->pref = ds.data[0];
@@ -1446,12 +1446,12 @@ parse_client6_lease_statement(struct parse *cfile)
 	    (lease->server_id.len == 0)) {
 		/* This should be impossible... */
 		log_error("Invalid SERVERID option cache.");
-		dhc6_lease_destroy(lease, MDL);
+		dhc6_lease_destroy(&lease, MDL);
 		return;
 	}
 
 	if (client->active_lease != NULL)
-		dhc6_lease_destroy(client->active_lease, MDL);
+		dhc6_lease_destroy(&client->active_lease, MDL);
 
 	client->active_lease = lease;
 #endif /* defined(DHCPv6) */
