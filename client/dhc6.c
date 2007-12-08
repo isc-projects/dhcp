@@ -773,7 +773,7 @@ dhc6_ia_destroy(struct dhc6_ia **src, const char *file, int line)
                 log_error("Attempt to destroy null IA.");
 		return;
         }
-	is = *src;
+	ia = *src;
 
 	for (addr = ia->addrs ; addr != NULL ; addr = naddr) {
 		naddr = addr->next;
