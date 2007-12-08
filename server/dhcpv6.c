@@ -641,6 +641,7 @@ static const int required_opts[] = {
 	D6O_CLIENTID,
 	D6O_SERVERID,
 	D6O_STATUS_CODE,
+	D6O_PREFERENCE,
 	0
 };
 static const int required_opts_solicit[] = {
@@ -652,6 +653,7 @@ static const int required_opts_solicit[] = {
 	D6O_STATUS_CODE,
 	D6O_VENDOR_OPTS,
 	D6O_RECONF_ACCEPT,
+	D6O_PREFERENCE,
 	0
 };
 static const int required_opts_IA_NA[] = {

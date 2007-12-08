@@ -52,6 +52,11 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and
 may not work on other platforms. Please report any problems and 
 suggested fixes to <dhcp-users@isc.org>.
 
+			Changes since 4.0.0rc1
+
+- The DHCPv6 server would not send the preference option unless the 
+  client requested it, via the ORO. This has been fixed, so the DHCPv6
+  server will always send the preference value if it is configured.
 
 			Changes since 4.0.0b3
 
