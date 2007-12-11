@@ -52,7 +52,12 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and
 may not work on other platforms. Please report any problems and 
 suggested fixes to <dhcp-users@isc.org>.
 
-			Changes since 4.0.0rc1
+
+			Changes since 4.0.0b3
+
+- The reverse dns name for PTR updates on IPv6 addresses has been fixed to
+  use ip6.arpa. rather than default to in-addr.arpa and require user
+  configuration.
 
 - dhc6_lease_destroy() and dhc6_ia_destroy() now set lease and IA pointers
   to NULL after freeing, to prevent subsequent accesses to freed memory.
@@ -60,8 +65,6 @@ suggested fixes to <dhcp-users@isc.org>.
 - The DHCPv6 server would not send the preference option unless the 
   client requested it, via the ORO. This has been fixed, so the DHCPv6
   server will always send the preference value if it is configured.
-
-			Changes since 4.0.0b3
 
 - When addresses were passed as hints to the server in an IA, they were 
   incorrectly handled, sometimes being treated as an error. Now the 

@@ -454,44 +454,9 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 		}
 	}
 
-	/* CC: see if we are configured NOT to do reverse ptr updates
-        */
-	if ((oc = lookup_option(&server_universe, options,
-				SV_DO_REVERSE_UPDATES)) &&
-	    !evaluate_boolean_option_cache(&ignorep, packet, lease, NULL,
-					   packet->options, options,
-					   scope, oc, MDL)) {
-		server_updates_ptr = 0;
-	}
-
 	/*
-	 * Compute the reverse IP name.
+	 * Compute the reverse IP name, starting with the domain name.
 	 */
-
-	/* 
-	 * Figure out the length of the part of the name that depends 
-	 * on the address.
-	 */
-	if (addr.len == 4) {
-		char buf[1];
-		/* XXX: WOW this is gross. */
-		rev_name_len = snprintf(buf, sizeof(buf), "%u.%u.%u.%u.",
-					addr.iabuf[3] & 0xff,
-					addr.iabuf[2] & 0xff,
-					addr.iabuf[1] & 0xff,
-					addr.iabuf[0] & 0xff);
-	} else if (addr.len == 16) {
-		/* 
-		 * IPv6 reverse names are always the same length, with 
-		 * 32 hex characters separated by dots.
-		 */
-		rev_name_len = 64;
-	} else {
-		log_fatal("invalid address length %d", addr.len);
-		/* Silence compiler warnings. */
-		return 0;
-	}
-
 	oc = lookup_option(&server_universe, options, SV_DDNS_REV_DOMAIN_NAME);
 	if (oc)
 		s1 = evaluate_option_cache(&d1, packet, lease, NULL,
@@ -500,25 +465,78 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 	else
 		s1 = 0;
 
-	if (s1 && ((d1.len + rev_name_len) > 255)) {
-		log_error ("ddns_update: Calculated rev domain name too long.");
-		s1 = 0;
-		data_string_forget (&d1, MDL);
-	}
-
-	if (oc && s1) {
-		buffer_allocate (&ddns_rev_name.buffer,
-				 d1.len + rev_name_len + 1, MDL);
-		if (ddns_rev_name.buffer) {
-			ddns_rev_name.data = ddns_rev_name.buffer->data;
-
-			if (addr.len == 4) {
-				sprintf((char *)ddns_rev_name.buffer->data,
-					"%u.%u.%u.%u.", 
+	/* 
+	 * Figure out the length of the part of the name that depends 
+	 * on the address.
+	 */
+	if (addr.len == 4) {
+		char buf[17];
+		/* XXX: WOW this is gross. */
+		rev_name_len = snprintf(buf, sizeof(buf), "%u.%u.%u.%u.",
 					addr.iabuf[3] & 0xff,
 					addr.iabuf[2] & 0xff,
 					addr.iabuf[1] & 0xff,
-					addr.iabuf[0] & 0xff);
+					addr.iabuf[0] & 0xff) + 1;
+
+		if (s1) {
+			rev_name_len += d1.len;
+
+			if (rev_name_len > 255) {
+				log_error("ddns_update: Calculated rev domain "
+					  "name too long.");
+				s1 = 0;
+				data_string_forget(&d1, MDL);
+			}
+		}
+	} else if (addr.len == 16) {
+		/* 
+		 * IPv6 reverse names are always the same length, with 
+		 * 32 hex characters separated by dots.
+		 */
+		rev_name_len = sizeof("0.1.2.3.4.5.6.7."
+				      "8.9.a.b.c.d.e.f."
+				      "0.1.2.3.4.5.6.7."
+				      "8.9.a.b.c.d.e.f."
+				      "ip6.arpa.");
+
+		/* Set s1 to make sure we gate into updates. */
+		s1 = 1;
+	} else {
+		log_fatal("invalid address length %d", addr.len);
+		/* Silence compiler warnings. */
+		return 0;
+	}
+
+	/* See if we are configured NOT to do reverse ptr updates */
+	if ((oc = lookup_option(&server_universe, options,
+				SV_DO_REVERSE_UPDATES)) &&
+	    !evaluate_boolean_option_cache(&ignorep, packet, lease, NULL,
+					   packet->options, options,
+					   scope, oc, MDL)) {
+		server_updates_ptr = 0;
+	}
+
+	if (s1) {
+		buffer_allocate(&ddns_rev_name.buffer, rev_name_len, MDL);
+		if (ddns_rev_name.buffer != NULL) {
+			ddns_rev_name.data = ddns_rev_name.buffer->data;
+
+			if (addr.len == 4) {
+				ddns_rev_name.len =
+				    sprintf((char *)ddns_rev_name.buffer->data,
+					    "%u.%u.%u.%u.", 
+					    addr.iabuf[3] & 0xff,
+					    addr.iabuf[2] & 0xff,
+					    addr.iabuf[1] & 0xff,
+					    addr.iabuf[0] & 0xff);
+
+				/*
+				 * d1.data may be opaque, garbage bytes, from
+				 * user (mis)configuration.
+				 */
+				data_string_append(&ddns_rev_name, &d1);
+				ddns_rev_name.buffer->data[ddns_rev_name.len] =
+					'\0';
 			} else if (addr.len == 16) {
 				char *p = (char *)&ddns_rev_name.buffer->data;
 				unsigned char *a = addr.iabuf + 15;
@@ -528,16 +546,16 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 					p += 4;
 					a -= 1;
 				}
+				strcat(p, "ip6.arpa.");
+				ddns_rev_name.len =
+				    strlen((const char *)ddns_rev_name.data);
 			}
 
-			ddns_rev_name.len =
-				strlen ((const char *)ddns_rev_name.data);
-			data_string_append (&ddns_rev_name, &d1);
-			ddns_rev_name.buffer -> data [ddns_rev_name.len] ='\0';
 			ddns_rev_name.terminated = 1;
 		}
 
-		data_string_forget (&d1, MDL);
+		if (d1.data != NULL)
+			data_string_forget(&d1, MDL);
 	}
 
 	/*
