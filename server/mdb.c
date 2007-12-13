@@ -715,7 +715,6 @@ void new_address_range (cfile, low, high, subnet, pool, lpchain)
 	struct lease **lpchain;
 {
 	struct lease *address_range;
-	struct iaddr net;
 	unsigned min, max, i;
 	char lowbuf [16], highbuf [16], netbuf [16];
 	struct shared_network *share = subnet -> shared_network;
@@ -747,23 +746,19 @@ void new_address_range (cfile, low, high, subnet, pool, lpchain)
 			log_fatal ("Can't allocate lease/hw hash");
 	}
 
-	/* Make sure that high and low addresses are in same subnet. */
-	net = subnet_number (low, subnet -> netmask);
-	if (!addr_eq (net, subnet_number (high, subnet -> netmask))) {
-		strcpy (lowbuf, piaddr (low));
-		strcpy (highbuf, piaddr (high));
-		strcpy (netbuf, piaddr (subnet -> netmask));
-		log_fatal ("Address range %s to %s, netmask %s spans %s!",
-		       lowbuf, highbuf, netbuf, "multiple subnets");
+	/* Make sure that high and low addresses are in this subnet. */
+	if (!addr_eq(subnet->net, subnet_number(low, subnet->netmask))) {
+		strcpy(lowbuf, piaddr(low));
+		strcpy(netbuf, piaddr(subnet->net));
+		log_fatal("bad range, address %s not in subnet %s netmask %s",
+			  lowbuf, netbuf, piaddr(subnet->netmask));
 	}
 
-	/* Make sure that the addresses are on the correct subnet. */
-	if (!addr_eq (net, subnet -> net)) {
-		strcpy (lowbuf, piaddr (low));
-		strcpy (highbuf, piaddr (high));
-		strcpy (netbuf, piaddr (subnet -> netmask));
-		log_fatal ("Address range %s to %s not on net %s/%s!",
-		       lowbuf, highbuf, piaddr (subnet -> net), netbuf);
+	if (!addr_eq(subnet->net, subnet_number(high, subnet->netmask))) {
+		strcpy(highbuf, piaddr(high));
+		strcpy(netbuf, piaddr(subnet->net));
+		log_fatal("bad range, address %s not in subnet %s netmask %s",
+			  highbuf, netbuf, piaddr(subnet->netmask));
 	}
 
 	/* Get the high and low host addresses... */
