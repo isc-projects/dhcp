@@ -1684,9 +1684,10 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 					   &lease -> scope, oc, MDL)) {
 			if (d1.len &&
 			    ntohs (packet -> raw -> secs) < d1.data [0]) {
-				log_info ("%s: %d secs < %d", msg,
-					  ntohs (packet -> raw -> secs),
-					  d1.data [0]);
+				log_info("%s: configured min-secs value (%d) "
+					 "is greater than secs field (%d).  "
+					 "message dropped.", msg, d1.data[0],
+					 ntohs(packet->raw->secs));
 				data_string_forget (&d1, MDL);
 				free_lease_state (state, MDL);
 				if (host)

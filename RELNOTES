@@ -59,6 +59,9 @@ suggested fixes to <dhcp-users@isc.org>.
   they were declared has been updated to be more helpful and identify the
   typo in configuration that created the spanning addresses.
 
+- The 'min-secs' configuration parameter's log message has been updated to
+  be more helpful.
+
 			Changes since 4.0.0b3
 
 - The reverse dns name for PTR updates on IPv6 addresses has been fixed to
