@@ -62,6 +62,10 @@ suggested fixes to <dhcp-users@isc.org>.
 - The 'min-secs' configuration parameter's log message has been updated to
   be more helpful.
 
+- A cosmetic bug during potential-conflict recovery that caused the peer's
+  'conflict-done' state message to be logged as 'unknown-state' has been
+  repaired.  It is now logged correctly.
+
 			Changes since 4.0.0b3
 
 - The reverse dns name for PTR updates on IPv6 addresses has been fixed to
