@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.63.56.13 2007/10/09 22:33:18 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.63.56.14 2007/12/13 16:59:59 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -3543,6 +3543,9 @@ const char *dhcp_failover_state_name_print (enum failover_state state)
 
 	      case normal:
 		return "normal";
+
+	      case conflict_done:
+		return "conflict-done";
 
 	      case communications_interrupted:
 		return "communications-interrupted";
