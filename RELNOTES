@@ -87,6 +87,9 @@ the README file.
   they were declared has been updated to be more helpful and identify the
   typo in configuration that created the spanning addresses.
 
+- The 'min-secs' configuration parameter's log message has been updated to
+  be more helpful.
+
 			Changes since 3.1.0rc1
 
 - The parse warning that 'deny dyanmic bootp;' must be configured for
