@@ -83,6 +83,10 @@ the README file.
 
 - Dynamic BOOTP leases are now load balanced in failover.
 
+- The warning logged when an address range doesn't fit in the subnets
+  they were declared has been updated to be more helpful and identify the
+  typo in configuration that created the spanning addresses.
+
 			Changes since 3.1.0rc1
 
 - The parse warning that 'deny dyanmic bootp;' must be configured for
