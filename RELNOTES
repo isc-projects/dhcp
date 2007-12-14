@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-		            Version 4.0.0rc1
-			    December 10, 2007
+		            Version 4.0.0
+			  December 14, 2007
 
 			     Release Notes
 
@@ -19,8 +19,7 @@ release, which will be addressed shortly:
 
 - Only Solaris, Linux, FreeBSD, NetBSD, and OpenBSD are supported.
 
-- There is no DHCPv6 Relay Agent implementation.  There are only DHCPv6
-  Server and Client implementations.
+- The Relay Agent (dhcrelay) only supports DHCPv4, not DHCPv6.
 
 - Only a single address is supported per IA.
 
@@ -52,6 +51,10 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and
 may not work on other platforms. Please report any problems and 
 suggested fixes to <dhcp-users@isc.org>.
 
+
+                        Changes since 4.0.0rc1
+
+- None
 
 			Changes since 4.0.0b3
 

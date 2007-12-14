@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-		            Version 4.0.0rc1
-			    December 10, 2007
+		            Version 4.0.0
+			  December 14, 2007
 
 			      README FILE
 
@@ -92,14 +92,14 @@ directory, it may not have up-to-date information).
 
 			    RELEASE STATUS
 
-This is the first RELEASE CANDIDATE of 4.0.0, a feature release
+This is the FINAL RELEASE of ISC DHCP 4.0.0, a feature release
 bent to the purpose of implementing DHCPv6.
 
 In this release, the DHCPv6 server should be fully functional on Linux,
 Solaris, or any BSD.  The DHCPv6 client should be similarly functional
-except on Solaris.
+except on Solaris.  There is no DHCPv6 relay agent as yet.
 
-The DHCPv4 server, relay, and client, should be fully functional
+The DHCPv4 server, relay agent, and client should be fully functional
 on Linux, Solaris, any BSD, HPUX, SCO, NextSTEP, and Irix.
 
 If you are running the DHCP distribution on a machine which is a
@@ -129,12 +129,12 @@ information.   On Digital Unix, type ``man pfilt''.
 To build the DHCP Distribution, unpack the compressed tar file using
 the tar utility and the gzip command - type something like:
 
-	gunzip dhcp-4.0.0rc1.tar.gz
-	tar xvf dhcp-4.0.0rc1.tar
+	gunzip dhcp-4.0.0.tar.gz
+	tar xvf dhcp-4.0.0.tar
 
 			    CONFIGURING IT
 
-Now, cd to the dhcp-4.0.0rc1 subdirectory that you've just created and
+Now, cd to the dhcp-4.0.0 subdirectory that you've just created and
 configure the source tree by typing:
 
 	./configure
