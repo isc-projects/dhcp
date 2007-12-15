@@ -1382,7 +1382,7 @@ intern(char *atom, enum dhcp_token dfv) {
 			break;
 		}
 		if (!strcasecmp (atom + 1, "nauthenticated"))
-			return AUTHENTICATED;
+			return UNAUTHENTICATED;
 		if (!strcasecmp (atom + 1, "pdated-dns-rr"))
 			return UPDATED_DNS_RR;
 		if (!strcasecmp (atom + 1, "pdate"))
