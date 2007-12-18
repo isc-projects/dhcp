@@ -53,7 +53,7 @@ may not work on other platforms. Please report any problems and
 suggested fixes to <dhcp-users@isc.org>.
 
 
-			Chagnes since 4.0.0
+			Changes since 4.0.0
 
 - The warning logged when an address range doesn't fit in the subnets
   they were declared has been updated to be more helpful and identify the
@@ -65,6 +65,9 @@ suggested fixes to <dhcp-users@isc.org>.
 - A cosmetic bug during potential-conflict recovery that caused the peer's
   'conflict-done' state message to be logged as 'unknown-state' has been
   repaired.  It is now logged correctly.
+
+- Fixed definition of the iaaddr hash functions to use the correct 
+  functions when referencing and dereferencing memory.
 
 			Changes since 4.0.0b3
 
