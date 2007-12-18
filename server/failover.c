@@ -49,7 +49,8 @@ static isc_result_t failover_message_dereference (failover_message_t **,
 
 static void dhcp_failover_pool_balance(dhcp_failover_state_t *state);
 static void dhcp_failover_pool_reqbalance(dhcp_failover_state_t *state);
-static int dhcp_failover_pool_dobalance(dhcp_failover_state_t *state);
+static int dhcp_failover_pool_dobalance(dhcp_failover_state_t *state,
+					isc_boolean_t *sendreq);
 static INLINE int secondary_not_hoarding(dhcp_failover_state_t *state,
 					 struct pool *p);
 
@@ -2234,7 +2235,11 @@ isc_result_t dhcp_failover_peer_state_changed (dhcp_failover_state_t *state,
 	return ISC_R_SUCCESS;
 }
 
-/* Balance operation manual entry. */
+/*
+ * Balance operation manual entry; startup, entrance to normal state.  No
+ * sense sending a POOLREQ at this stage; the peer is likely about to schedule
+ * their own rebalance event upon entering normal themselves.
+ */
 static void
 dhcp_failover_pool_balance(dhcp_failover_state_t *state)
 {
@@ -2242,25 +2247,36 @@ dhcp_failover_pool_balance(dhcp_failover_state_t *state)
 	cancel_timeout(dhcp_failover_pool_rebalance, state);
 	state->sched_balance = 0;
 
-	dhcp_failover_pool_dobalance(state);
+	dhcp_failover_pool_dobalance(state, NULL);
 }
 
-/* Balance operation entry from timer event. */
+/*
+ * Balance operation entry from timer event.  Once per timer interval is
+ * the only time we want to emit POOLREQs (asserting an interrupt in our
+ * peer).
+ */
 void
 dhcp_failover_pool_rebalance(void *failover_state)
 {
 	dhcp_failover_state_t *state;
+	isc_boolean_t sendreq = ISC_FALSE;
 
 	state = (dhcp_failover_state_t *)failover_state;
 
 	/* Clear scheduled event indicator. */
 	state->sched_balance = 0;
 
-	if (dhcp_failover_pool_dobalance(state))
+	if (dhcp_failover_pool_dobalance(state, &sendreq))
 		dhcp_failover_send_updates(state);
+
+	if (sendreq)
+		dhcp_failover_send_poolreq(state);
 }
 
-/* Balance operation entry from POOLREQ protocol message. */
+/*
+ * Balance operation entry from POOLREQ protocol message.  Do not permit a
+ * POOLREQ to send back a POOLREQ.  Ping pong.
+ */
 static void
 dhcp_failover_pool_reqbalance(dhcp_failover_state_t *state)
 {
@@ -2270,7 +2286,7 @@ dhcp_failover_pool_reqbalance(dhcp_failover_state_t *state)
 	cancel_timeout(dhcp_failover_pool_rebalance, state);
 	state->sched_balance = 0;
 
-	queued = dhcp_failover_pool_dobalance(state);
+	queued = dhcp_failover_pool_dobalance(state, NULL);
 
 	dhcp_failover_send_poolresp(state, queued);
 
@@ -2282,12 +2298,19 @@ dhcp_failover_pool_reqbalance(dhcp_failover_state_t *state)
 			 state->name);
 }
 
-/* Do the meat of the work common to all forms of pool rebalance. */
-static int dhcp_failover_pool_dobalance(dhcp_failover_state_t *state)
+/*
+ * Do the meat of the work common to all forms of pool rebalance.  If the
+ * caller deems it appropriate to transmit POOLREQ messages, it can use the
+ * sendreq pointer to pass in the address of a FALSE value which this function
+ * will conditionally turn TRUE if a POOLREQ is determined to be necessary.
+ * A NULL value may be passed, in which case no action is taken.
+ */
+static int
+dhcp_failover_pool_dobalance(dhcp_failover_state_t *state,
+			    isc_boolean_t *sendreq)
 {
-	int lts, total, thresh, hold, pass;
+	int lts, total, thresh, hold, panic, pass;
 	int leases_queued = 0;
-	int reqsent = 0;
 	struct lease *lp = (struct lease *)0;
 	struct lease *next = (struct lease *)0;
 	struct shared_network *s;
@@ -2296,7 +2319,7 @@ static int dhcp_failover_pool_dobalance(dhcp_failover_state_t *state)
 	binding_state_t my_lease_state;
 	struct lease **lq;
 	int (*log_func)(const char *, ...);
-	const char *result;
+	const char *result, *reqlog;
 
 	if (state -> me.state != normal)
 		return 0;
@@ -2331,21 +2354,37 @@ static int dhcp_failover_pool_dobalance(dhcp_failover_state_t *state)
 		thresh = ((total * state->max_lease_misbalance) + 50) / 100;
 		hold = ((total * state->max_lease_ownership) + 50) / 100;
 
+		/*
+		 * If we need leases (so lts is negative) more than negative
+		 * double the thresh%, panic and send poolreq to hopefully wake
+		 * up the peer (but more likely the db is inconsistent).  But,
+		 * if this comes out zero, switch to -1 so that the POOLREQ is
+		 * sent on lts == -2 rather than right away at -1.
+		 *
+		 * Note that we do not subtract -1 from panic all the time
+		 * because thresh% and hold% may come out to the same number,
+		 * and that is correct operation...where thresh% and hold% are
+		 * both -1, we want to send poolreq when lts reaches -3.  So,
+		 * "-3 < -2", lts < panic.
+		 */
+		panic = thresh * -2;
+
+		if (panic == 0)
+			panic = -1;
+
+		if ((sendreq != NULL) && (lts < panic)) {
+			reqlog = "  (requesting peer rebalance!)";
+			*sendreq = ISC_TRUE;
+		} else
+			reqlog = "";
+
 		log_info("balancing pool %lx %s  total %d  free %d  "
-			 "backup %d  lts %d  max-own (+/-)%d",
+			 "backup %d  lts %d  max-own (+/-)%d%s",
 			 (unsigned long)p,
 			 (p->shared_network ?
 			  p->shared_network->name : ""), p->lease_count,
-			 p->free_leases, p->backup_leases, lts, hold);
-
-		/* If lts is in the negatives (we need leases) more than
-		 * negative double the thresh%, panic and send poolreq to
-		 * hopefully wake up the peer.
-		 */
-		if (!reqsent && (lts < (thresh * -2))) {
-			dhcp_failover_send_poolreq(state);
-			reqsent = 1;
-		}
+			 p->free_leases, p->backup_leases, lts, hold,
+			 reqlog);
 
 		/* In the first pass, try to allocate leases to the
 		 * peer which it would normally be responsible for (if

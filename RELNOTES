@@ -69,6 +69,13 @@ suggested fixes to <dhcp-users@isc.org>.
 - Fixed definition of the iaaddr hash functions to use the correct 
   functions when referencing and dereferencing memory.
 
+- A bug in failover pool rebalancing that caused POOLREQ message ping-pongs
+  was repaired.
+
+- A flaw in failover pool rebalancing that could cause POOLREQ messages to
+  be sent outside of the min-balance/max-balance scheduled intervals has
+  been repaired.
+
 			Changes since 4.0.0b3
 
 - The reverse dns name for PTR updates on IPv6 addresses has been fixed to
