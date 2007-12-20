@@ -1566,6 +1566,11 @@ format_min_length(format, oc)
 	p = format;
 	while (*p != '\0') {
 		switch (*p++) {
+		    case '6': /* IPv6 Address */
+			min_len += 16;
+			last_size = 16;
+			break;
+
 		    case 'I': /* IPv4 Address */
 		    case 'l': /* int32_t */
 		    case 'L': /* uint32_t */
