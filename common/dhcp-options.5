@@ -1,4 +1,4 @@
-.\"	$Id: dhcp-options.5,v 1.39 2007/09/17 17:52:01 dhankins Exp $
+.\"	$Id: dhcp-options.5,v 1.40 2007/12/20 21:58:38 fdupont Exp $
 .\"
 .\" Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
@@ -178,6 +178,14 @@ This option configures a list of IPv4 addresses for use as Broadcast and
 Multicast Controller Servers ("BCMS").
 .RE
 .PP
+.B option \fBbcms-controller-names\fR \fIdomain-list\fR\fB;\fR
+.RS 0.25i
+.PP
+This option contains the domain names of local Broadcast and
+Multicast Controller Servers ("BCMS") controllers which the client
+may use.
+.RE
+.PP
 .B option \fBbootfile-name\fR \fItext\fR\fB;\fR
 .RS 0.25i
 .PP
@@ -333,7 +341,8 @@ This option is not user configurable.
 .PP
 .RE
 .PP
-.B option \fBdhcp-parameter-request-list\fR \fIuint16\fR\fB;\fR
+.B option \fBdhcp-parameter-request-list\fR \fIuint16\fR [\fB,\fR
+\fIuint16\fR... ]\fB;\fR
 .RS 0.25i
 .PP
 This option, when sent by the client, specifies which options the
@@ -1323,18 +1332,18 @@ Understandably, many options are not "allowed" to have multiple
 instances in a packet - normally these are options which are digested
 by the DHCP protocol software, and not by users or applications.
 .PP
-.B option \fBdhcp6.client-id\fR \fIduid-type\fR \fIstring\fR\fB;\fR
+.B option \fBdhcp6.client-id\fR \fIstring\fR\fB;\fR
 .RS 0.25i
 .PP
 This option specifies the client's DUID identifier.  DUIDs are similar
 but different from DHCPv4 client identifiers - there are documented duid
 types:
 .PP
-duid-llt
+.I duid-llt
 .PP
-duid-en
+.I duid-en
 .PP
-duid-ll
+.I duid-ll
 .PP
 This value should not be configured, but rather is provided by clients
 and treated as an opaque identifier key blob by servers.
@@ -1379,8 +1388,8 @@ be configured.
 The Option Request Option ("ORO") is the DHCPv6 equivalent of the
 parameter-request-list.  Clients supply this option to ask servers
 to reply with options relevant to their needs and use.  This option
-must be configured in dhclient.conf (5).  An easier way to manage
-the ORO will be supplied
+must not be directly configured, the request syntax in dhclient.conf (5)
+should be used instead.
 .RE
 .PP
 .B option \fBdhcp6.preference\fR \fIuint8\fR\fB;\fR
@@ -1452,7 +1461,7 @@ titled VENDOR ENCAPSULATED OPTIONS below, in particular the bits about
 the "vsio" option space.
 .RE
 .PP
-.B option \fBdhcp6.interface-id\fR \fItext\fR\fB;\fR
+.B option \fBdhcp6.interface-id\fR \fIstring\fR\fB;\fR
 .RS 0.25i
 .PP
 The \fBinterface-id\fR option is manufactured by relay agents, and may
@@ -1534,7 +1543,7 @@ is not yet any support for prefix delegation in this software, and this
 option is provided informationally only.
 .RE
 .PP
-.B option \fBdhcp6.ia-prefix\fR \fIdomain-list\fR\fB;\fR
+.B option \fBdhcp6.ia-prefix\fR \fIstring\fR\fB;\fR
 .RS 0.25i
 .PP
 The \fBia-prefix\fR option is placed inside \fBia-pd\fR options in order
@@ -1647,6 +1656,40 @@ and negotiates the client's Fully Qualified Domain Name, as well as which
 party is responsible for Dynamic DNS Updates.  See the section on the
 Client FQDN SubOptions for full details (the DHCPv4 and DHCPv6 FQDN options
 use the same "fqdn." encapsulated space, so are in all ways identical).
+.RE
+.PP
+.B option \fBdhcp6.lq-query\fR \fIstring\fR\fB;\fR
+.RS 0.25i
+.PP
+The \fBlq-query\fR option is used internally by for lease query.
+.RE
+.PP
+.B option \fBdhcp6.client-data\fR \fIstring\fR\fB;\fR
+.RS 0.25i
+.PP
+The \fBclient-data\fR option is used internally by for lease query.
+.RE
+.PP
+.B option \fBdhcp6.clt-time\fR \fIuint32\fR\fB;\fR
+.RS 0.25i
+.PP
+The \fBclt-time\fR option is used internally by for lease query.
+.RE
+.PP
+.B option \fBdhcp6.lq-relay-data\fR \fIip6-address string\fR\fB;\fR
+.RS 0.25i
+.PP
+The \fBlq-relay-data\fR option is used internally by for lease query.
+.RE
+.PP
+.B option
+.B dhcp6.lq-client-link
+.I ip6-address \fR[\fB,\fR
+.I ip6-address \fR... ]
+.B ;
+.RS 0.25i
+.PP
+The \fBlq-client-link\fR option is used internally by for lease query.
 .RE
 .PP
 .RE
@@ -2065,7 +2108,7 @@ DHCPv6 VSIO options can have multiple vendor definitions all at once (even
 transmitted to the same client), so it is not necessary to configure this.
 .SH SEE ALSO
 dhcpd.conf(5), dhcpd.leases(5), dhclient.conf(5), dhcp-eval(5), dhcpd(8),
-dhclient(8), RFC2132, RFC2131, draft-ietf-dhc-agent-options-??.txt.
+dhclient(8), RFC2132, RFC2131, RFC3046, RFC3315.
 .SH AUTHOR
 The Internet Systems Consortium DHCP Distribution was written by Ted
 Lemon under a contract with Vixie Labs.  Funding for

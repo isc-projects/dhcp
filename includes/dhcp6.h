@@ -58,24 +58,38 @@
 #define D6O_NIS_DOMAIN_NAME			29 /* RFC3898 */
 #define D6O_NISP_DOMAIN_NAME			30 /* RFC3898 */
 #define D6O_SNTP_SERVERS			31 /* RFC4075 */
-#define D6O_INFORMATION_REFRESH_TIME		32 /* lifetime */
+#define D6O_INFORMATION_REFRESH_TIME		32 /* RFC4242 */
 #define D6O_BCMCS_SERVER_D			33 /* RFC4280 */
 #define D6O_BCMCS_SERVER_A			34 /* RFC4280 */
 /* 35 is unassigned */
-#define D6O_GEOCONF_CIVIC			36 /* geopriv-dhcp-civil */
-#define D6O_REMOTE_ID				37 /* dhcpv6-remoteid */
+#define D6O_GEOCONF_CIVIC			36 /* RFC4776 */
+#define D6O_REMOTE_ID				37 /* RFC4649 */
 #define D6O_SUBSCRIBER_ID			38 /* RFC4580 */
-#define D6O_CLIENT_FQDN				39 /* dhcpv6-fqdn */
+#define D6O_CLIENT_FQDN				39 /* RFC4704 */
+#define D6O_PANA_AGENT				40 /* paa-option */
+#define D6O_NEW_POSIX_TIMEZONE			41 /* RFC4833 */
+#define D6O_NEW_TZDB_TIMEZONE			42 /* RFC4833 */
+#define D6O_ERO					43 /* RFC4994 */
+#define D6O_LQ_QUERY				44 /* RFC5007 */
+#define D6O_CLIENT_DATA				45 /* RFC5007 */
+#define D6O_CLT_TIME				46 /* RFC5007 */
+#define D6O_LQ_RELAY_DATA			47 /* RFC5007 */
+#define D6O_LQ_CLIENT_LINK			48 /* RFC5007 */
 
 /* 
- * Status Codes, from RFC 3315 section 24.4. 
+ * Status Codes, from RFC 3315 section 24.4, and RFC 3633, 5007.
  */
-#define STATUS_Success		0
-#define STATUS_UnspecFail	1
-#define STATUS_NoAddrsAvail	2
-#define STATUS_NoBinding	3
-#define STATUS_NotOnLink	4 
-#define STATUS_UseMulticast	5 
+#define STATUS_Success		 0
+#define STATUS_UnspecFail	 1
+#define STATUS_NoAddrsAvail	 2
+#define STATUS_NoBinding	 3
+#define STATUS_NotOnLink	 4 
+#define STATUS_UseMulticast	 5 
+#define STATUS_NoPrefixAvail	 6
+#define STATUS_UnknownQueryType	 7
+#define STATUS_MalformedQuery	 8
+#define STATUS_NotConfigured	 9
+#define STATUS_NotAllowed	10
 
 /* 
  * DHCPv6 message types, defined in section 5.3 of RFC 3315 
@@ -93,6 +107,8 @@
 #define DHCPV6_INFORMATION_REQUEST 11
 #define DHCPV6_RELAY_FORW	   12
 #define DHCPV6_RELAY_REPL	   13
+#define DHCPV6_LEASEQUERY	   14
+#define DHCPV6_LEASEQUERY_REPLY    15
 
 extern const char *dhcpv6_type_names[];
 extern const int dhcpv6_type_name_max;
@@ -106,9 +122,16 @@ extern const int dhcpv6_type_name_max;
 /* Offsets into IA_*'s where Option spaces commence.  */
 #define IA_NA_OFFSET 12 /* IAID, T1, T2, all 4 octets each */
 #define IA_TA_OFFSET  4 /* IAID only, 4 octets */
+#define IA_PD_OFFSET 12 /* IAID, T1, T2, all 4 octets each */
 
-/* Offsets into IAADDR's where Option spaces commence. */
+/* Offset into IAADDR's where Option spaces commence. */
 #define IAADDR_OFFSET 24
+
+/* Offset into IAPREFIX's where Option spaces commence. */
+#define IAPREFIX_OFFSET 25
+
+/* Offset into LQ_QUERY's where Option spaces commence. */
+#define LQ_QUERY_OFFSET 17
 
 /* 
  * DHCPv6 well-known multicast addressess, from section 5.1 of RFC 3315 
@@ -168,3 +191,7 @@ struct dhcpv6_relay_packet {
 	unsigned char options[0];
 };
 
+/* Leasequery query-types (RFC 5007) */
+
+#define LQ6QT_BY_ADDRESS	1
+#define LQ6QT_BY_CLIENTID	2

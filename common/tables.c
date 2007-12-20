@@ -176,8 +176,11 @@ static struct option dhcp_options[] = {
 	{ "user-class", "t",			&dhcp_universe,  77, 1 },
 	{ "slp-directory-agent", "fIa",		&dhcp_universe,  78, 1 },
 	{ "slp-service-scope", "fto",		&dhcp_universe,  79, 1 },
+	/* 80 is the zero-length rapid-commit (RFC 4039) */
 	{ "fqdn", "Efqdn.",			&dhcp_universe,  81, 1 },
 	{ "relay-agent-information", "Eagent.",	&dhcp_universe,  82, 1 },
+	/* 83 is iSNS (RFC 4174) */
+	/* 84 is unassigned */
 	{ "nds-servers", "IA",			&dhcp_universe,  85, 1 },
 	{ "nds-tree-name", "t",			&dhcp_universe,  86, 1 },
 	{ "nds-context", "t",			&dhcp_universe,  87, 1 },
@@ -188,10 +191,12 @@ static struct option dhcp_options[] = {
 	{ "bcms-controller-names", "D",		&dhcp_universe,  88, 1 },
 	{ "bcms-controller-address", "Ia",	&dhcp_universe,  89, 1 },
 
+	/* 90 is the authentication option (RFC 3118) */
+
 	{ "client-last-transaction-time", "L",  &dhcp_universe,  91, 1 },
 	{ "associated-ip", "Ia",                &dhcp_universe,  92, 1 },
 #if 0
-	/* Not defined by RFC yet */
+	/* Defined by RFC 4578 */
 	{ "pxe-system-type", "S",		&dhcp_universe,  93, 1 },
 	{ "pxe-interface-id", "BBB",		&dhcp_universe,  94, 1 },
 	{ "pxe-client-id", "BX",		&dhcp_universe,  97, 1 },
@@ -205,7 +210,7 @@ static struct option dhcp_options[] = {
 	{ "vivco", "Evendor-class.",		&dhcp_universe, 124, 1 },
 	{ "vivso", "Evendor.",			&dhcp_universe, 125, 1 },
 #if 0
-	/* Not defined by RFC yet.
+	/* Referenced by RFC 4578.
 	 * DO NOT UNCOMMENT THESE DEFINITIONS: these names are placeholders
 	 * and will not be used in future versions of the software.
 	 */
@@ -223,7 +228,7 @@ static struct option dhcp_options[] = {
 	{ "tftp-server-address", "Ia",		&dhcp_universe, 150, 1 },
 #endif
 #if 0
-	/* PXELINUX options: not defined by RFC yet */
+	/* PXELINUX options: defined by RFC 5071 */
 	{ "pxelinux-magic", "BBBB",		&dhcp_universe, 208, 1 },
 	{ "loader-configfile", "t",		&dhcp_universe, 209, 1 },
 	{ "loader-pathprefix", "t",		&dhcp_universe, 210, 1 },
@@ -392,7 +397,7 @@ static struct option dhcpv6_options[] = {
 
 	/* Not yet considering for inclusion. */
 #if 0
-			/* RFC-ietf-geopriv-dhcp-civil-09.txt */
+			/* RFC4776 OPTIONS */
 
 	{ "geoconf-civic", "X",			&dhcpv6_universe, 36, 1 },
 #endif
@@ -424,6 +429,30 @@ static struct option dhcpv6_options[] = {
 	 */
 	{ "fqdn", "Efqdn6-if-you-see-me-its-a-bug-bug-bug.",
 						&dhcpv6_universe, 39, 1 },
+
+	/* Not yet considering for inclusion. */
+#if 0
+			/* draft-ietf-dhc-paa-option-05 */
+	{ "pana-agent", "6A",			&dhcpv6_universe, 40, 1 },
+
+			/* RFC4833 OPTIONS */
+
+	{ "new-posix-timezone", "t",		&dhcpv6_universe, 41, 1 },
+	{ "new-tzdb-timezone", "t",		&dhcpv6_universe, 42, 1 },
+
+			/* RFC4994 OPTIONS */
+
+	{ "ero", "SA",				&dhcpv6_universe, 43, 1 },
+#endif
+
+			/* RFC5007 OPTIONS */
+
+	{ "lq-query", "X",			&dhcpv6_universe, 44, 1 },
+	{ "client-data", "X",			&dhcpv6_universe, 45, 1 },
+	{ "clt-time", "L",			&dhcpv6_universe, 46, 1 },
+	{ "lq-relay-data", "6X",		&dhcpv6_universe, 47, 1 },
+	{ "lq-client-link", "6A",		&dhcpv6_universe, 48, 1 },
+
 	{ NULL, NULL, NULL, 0, 0 }
 };
 
@@ -447,6 +476,11 @@ struct enumeration_value dhcpv6_status_code_values[] = {
 	{ "NoBinding",	  3 }, /* Client record (binding) unavailable.	*/
 	{ "NotOnLink",	  4 }, /* Bad prefix for the link.		*/
 	{ "UseMulticast", 5 }, /* Not just good advice.  It's the law.	*/
+	{ "NoPrefixAvail", 6 }, /* Server has no prefixes to assign.	*/
+	{ "UnknownQueryType", 7 }, /* Query-type unknown/unsupported.	*/
+	{ "MalformedQuery", 8 }, /* Leasequery not valid.		*/
+	{ "NotConfigured", 9 }, /* The target address is not in config.	*/
+	{ "NotAllowed",  10 }, /* Server doesn't allow the leasequery.	*/
 	{ NULL, 0 }
 };
 
@@ -454,6 +488,18 @@ struct enumeration dhcpv6_status_codes = {
 	NULL,
 	"status-codes", 2,
 	dhcpv6_status_code_values
+};
+
+struct enumeration_value lq6_query_type_values[] = {
+	{ "query-by-address", 1 },
+	{ "query-by-clientid", 2 },
+	{ NULL, 0 }
+};
+
+struct enumeration lq6_query_types = {
+	NULL,
+	"query-types", 2,
+	lq6_query_type_values
 };
 
 struct enumeration_value dhcpv6_message_values[] = {
@@ -470,6 +516,8 @@ struct enumeration_value dhcpv6_message_values[] = {
 	{ "INFORMATION-REQUEST", 11 },
 	{ "RELAY-FORW", 12 },
 	{ "RELAY-REPL", 13 },
+	{ "LEASEQUERY", 14 },
+	{ "LEASEQUERY-REPLY", 15 },
 	{ NULL, 0 }
 };
 
@@ -488,7 +536,9 @@ const char *dhcpv6_type_names[] = {
 	"Reconfigure",
 	"Information-request",
 	"Relay-forward",
-	"Relay-reply"
+	"Relay-reply",
+	"Leasequery",
+	"Leasequery-reply"
 };
 const int dhcpv6_type_name_max =
 	(sizeof(dhcpv6_type_names) / sizeof(dhcpv6_type_names[0]));
