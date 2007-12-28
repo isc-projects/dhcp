@@ -81,6 +81,8 @@ suggested fixes to <dhcp-users@isc.org>.
 - Allocated interface IDs are better controlled ('u' bit set to zero,
   reserved IDs avoided).
 
+- Unicast options are taken into account only for RENEWs.
+
 			Changes since 4.0.0b3
 
 - The reverse dns name for PTR updates on IPv6 addresses has been fixed to

@@ -2930,7 +2930,7 @@ do_refresh6(void *input)
 
 	/*
 	 * Check whether the server has sent a unicast option; if so, we can
-	 * use the address it specified.
+	 * use the address it specified for RENEWs.
 	 */
 	oc = lookup_option(&dhcpv6_universe, lease->options, D6O_UNICAST);
 	if (oc && evaluate_option_cache(&ds, NULL, NULL, NULL,
@@ -2943,7 +2943,9 @@ do_refresh6(void *input)
 			unicast.sin6_family = AF_INET6;
 			unicast.sin6_port = remote_port;
 			memcpy(&unicast.sin6_addr, ds.data, 16);
-			dest_addr = &unicast;
+			if (client->refresh_type == DHCPV6_RENEW) {
+				dest_addr = &unicast;
+			}
 		}
 
 		data_string_forget(&ds, MDL);
