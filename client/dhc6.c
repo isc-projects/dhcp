@@ -2299,7 +2299,7 @@ reply_handler(struct packet *packet, struct client_state *client)
 	 * always include a client id).
 	 */
 	if (!valid_reply(packet, client)) {
-		log_error("Invalid Advertise - rejecting.");
+		log_error("Invalid Reply - rejecting.");
 		return;
 	}
 
