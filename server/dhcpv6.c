@@ -2327,7 +2327,7 @@ dhcpv6_solicit(struct data_string *reply_ret, struct packet *packet) {
  * Very similar to Solicit handling, except the server DUID is required.
  */
 
-/* TODO: discard unicast messages, unless we set unicast option */
+/* TODO: reject unicast messages, unless we set unicast option */
 static void
 dhcpv6_request(struct data_string *reply_ret, struct packet *packet) {
 	struct data_string client_id;
@@ -2432,7 +2432,6 @@ shared_network_from_packet6(struct shared_network **shared,
  *   NOT send a reply to the client.
  */
 
-/* TODO: discard unicast messages, unless we set unicast option */
 static void
 dhcpv6_confirm(struct data_string *reply_ret, struct packet *packet) {
 	struct shared_network *shared;
@@ -2636,7 +2635,7 @@ exit:
  * for the error code of when addresses don't match.
  */
 
-/* TODO: discard unicast messages, unless we set unicast option */
+/* TODO: reject unicast messages, unless we set unicast option */
 static void
 dhcpv6_renew(struct data_string *reply, struct packet *packet) {
 	struct data_string client_id;
@@ -2668,7 +2667,6 @@ dhcpv6_renew(struct data_string *reply, struct packet *packet) {
  * for the error code of when addresses don't match.
  */
 
-/* TODO: discard unicast messages, unless we set unicast option */
 static void
 dhcpv6_rebind(struct data_string *reply, struct packet *packet) {
 	struct data_string client_id;
@@ -3071,7 +3069,7 @@ exit:
  * we still need to be aware of this possibility.
  */
 
-/* TODO: discard unicast messages, unless we set unicast option */
+/* TODO: reject unicast messages, unless we set unicast option */
 /* TODO: IA_TA */
 static void
 dhcpv6_decline(struct data_string *reply, struct packet *packet) {
@@ -3186,7 +3184,7 @@ exit:
  * Release means a client is done with the addresses.
  */
 
-/* TODO: discard unicast messages, unless we set unicast option */
+/* TODO: reject unicast messages, unless we set unicast option */
 static void
 dhcpv6_release(struct data_string *reply, struct packet *packet) {
 	struct data_string client_id;
@@ -3214,7 +3212,6 @@ dhcpv6_release(struct data_string *reply, struct packet *packet) {
  * from other means, but want configuration information from the server.
  */
 
-/* TODO: discard unicast messages, unless we set unicast option */
 static void
 dhcpv6_information_request(struct data_string *reply, struct packet *packet) {
 	struct data_string client_id;
