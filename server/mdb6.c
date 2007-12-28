@@ -617,7 +617,19 @@ create_address(struct in6_addr *addr,
 		case 6: str[i] = (str[i] & 0x03) | (net_str[i] & 0xFC); break;
 		case 7: str[i] = (str[i] & 0x01) | (net_str[i] & 0xFE); break;
 	}
+	/* set the 'u' bit to zero for /64s. */
+	if (net_bits == 64)
+		str[8] &= ~0x02;
 }
+
+/* Reserved Subnet Router Anycast ::0:0:0:0. */
+static struct in6_addr rtany = {
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
+/* Reserved Subnet Anycasts ::fdff:ffff:ffff:ff80-::fdff:ffff:ffff:ffff. */
+static struct in6_addr resany = {
+	0xfd, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x80
+};
 
 /*
  * Create a lease for the given address and client duid.
@@ -650,6 +662,7 @@ activate_lease6(struct ipv6_pool *pool, struct iaaddr **addr,
 	struct data_string new_ds;
 	struct iaaddr *iaaddr;
 	isc_result_t result;
+	isc_boolean_t reserved_iid;
 
 	/* 
 	 * Use the UID as our initial seed for the hash
@@ -673,14 +686,30 @@ activate_lease6(struct ipv6_pool *pool, struct iaaddr **addr,
 		create_address(&tmp, &pool->start_addr, pool->bits, &ds);
 
 		/*
+		 * Avoid reserved interface IDs.
+		 * (cf. draft-krishnan-ipv6-reserved-iids-02.txt)
+		 */
+		reserved_iid = ISC_FALSE;
+		if (memcmp(&tmp, &rtany, 16) == 0) {
+			reserved_iid = ISC_TRUE;
+		}
+		if (!reserved_iid &&
+		    (memcmp(&tmp, &resany, 15) == 0) &&
+		    (tmp.s6_addr[15] & 0x80 == 0x80)) {
+			reserved_iid = ISC_TRUE;
+		}
+
+		/*
 		 * If this address is not in use, we're happy with it
 		 */
 		test_iaaddr = NULL;
-		if (iaaddr_hash_lookup(&test_iaaddr, pool->addrs,
-				       &tmp, sizeof(tmp), MDL) == 0) {
+		if (!reserved_iid &&
+		    (iaaddr_hash_lookup(&test_iaaddr, pool->addrs,
+					&tmp, sizeof(tmp), MDL) == 0)) {
 			break;
 		}
-		iaaddr_dereference(&test_iaaddr, MDL);
+		if (test_iaaddr != NULL)
+			iaaddr_dereference(&test_iaaddr, MDL);
 
 		/* 
 		 * Otherwise, we create a new input, adding the address
