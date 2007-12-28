@@ -1182,7 +1182,7 @@ lease_to_client(struct data_string *reply_ret,
 		 * Server DUID.
 		 * Client DUID.
 		 */
-		reply.msg_type = DHCPV6_ADVERTISE;
+		reply.buf.reply.msg_type = DHCPV6_ADVERTISE;
 		reply.cursor += store_options6((char *)reply.buf.data +
 							reply.cursor,
 					       sizeof(reply.buf) -
