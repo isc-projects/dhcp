@@ -1176,12 +1176,13 @@ lease_to_client(struct data_string *reply_ret,
 		reply.cursor = REPLY_OPTIONS_INDEX;
 
 		/*
-		 * Produce a reply that includes;
+		 * Produce an advertise that includes;
 		 *
 		 * Status code.
 		 * Server DUID.
 		 * Client DUID.
 		 */
+		reply.msg_type = DHCPV6_ADVERTISE;
 		reply.cursor += store_options6((char *)reply.buf.data +
 							reply.cursor,
 					       sizeof(reply.buf) -

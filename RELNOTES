@@ -83,6 +83,9 @@ suggested fixes to <dhcp-users@isc.org>.
 
 - Unicast options are taken into account only for RENEWs.
 
+- NoAddrsAvail answers to SOLICITs are always ADVERTISEs even when a SOLICIT
+  carries a rapid-commit option.
+
 			Changes since 4.0.0b3
 
 - The reverse dns name for PTR updates on IPv6 addresses has been fixed to
