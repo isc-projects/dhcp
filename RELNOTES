@@ -86,6 +86,9 @@ suggested fixes to <dhcp-users@isc.org>.
 - NoAddrsAvail answers to SOLICITs are always ADVERTISEs even when a SOLICIT
   carries a rapid-commit option.
 
+- Return in place of raise an impossible condition when one tries to release
+  an empty active lease.
+
 			Changes since 4.0.0b3
 
 - The reverse dns name for PTR updates on IPv6 addresses has been fixed to

@@ -1247,7 +1247,7 @@ do_release6(void *input)
 	client = input;
 
 	if (client->active_lease == NULL)
-		log_fatal("Impossible condition at %s:%d.", MDL);
+		return;
 
 	if ((client->MRC != 0) && (client->txcount > client->MRC))  {
 		log_info("Max retransmission count exceeded.");
