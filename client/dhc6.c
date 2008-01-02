@@ -34,7 +34,10 @@ struct sockaddr_in6 DHCPv6DestAddr;
 struct option *clientid_option = NULL;
 struct option *elapsed_option = NULL;
 struct option *ia_na_option = NULL;
+struct option *ia_ta_option = NULL;
+struct option *ia_pd_option = NULL;
 struct option *iaaddr_option = NULL;
+struct option *iaprefix_option = NULL;
 struct option *oro_option = NULL;
 
 static struct dhc6_lease *dhc6_dup_lease(struct dhc6_lease *lease,
@@ -47,20 +50,29 @@ static void dhc6_ia_destroy(struct dhc6_ia **src, const char *file, int line);
 static isc_result_t dhc6_parse_ia_na(struct dhc6_ia **pia,
 				     struct packet *packet,
 				     struct option_state *options);
+static isc_result_t dhc6_parse_ia_ta(struct dhc6_ia **pia,
+				     struct packet *packet,
+				     struct option_state *options);
+static isc_result_t dhc6_parse_ia_pd(struct dhc6_ia **pia,
+				     struct packet *packet,
+				     struct option_state *options);
 static isc_result_t dhc6_parse_addrs(struct dhc6_addr **paddr,
 				     struct packet *packet,
 				     struct option_state *options);
-static struct dhc6_ia *find_ia(struct dhc6_ia *head, const char *id);
+static isc_result_t dhc6_parse_prefs(struct dhc6_addr **ppref,
+				     struct packet *packet,
+				     struct option_state *options);
+static struct dhc6_ia *find_ia_na(struct dhc6_ia *head, const char *id);
 static struct dhc6_addr *find_addr(struct dhc6_addr *head,
 				   struct iaddr *address);
 void init_handler(struct packet *packet, struct client_state *client);
 void do_init6(void *input);
 void do_confirm6(void *input);
 void reply_handler(struct packet *packet, struct client_state *client);
-static isc_result_t dhc6_add_ia(struct client_state *client,
-				struct data_string *packet,
-				struct dhc6_lease *lease,
-                                u_int8_t message);
+static isc_result_t dhc6_add_ia_na(struct client_state *client,
+				   struct data_string *packet,
+				   struct dhc6_lease *lease,
+				   u_int8_t message);
 static void dhc6_merge_lease(struct dhc6_lease *src, struct dhc6_lease *dst);
 void do_select6(void *input);
 void do_refresh6(void *input);
@@ -177,10 +189,26 @@ dhcpv6_client_assignments(void)
 				     &code, 0, MDL))
 		log_fatal("Unable to find the IA_NA option definition.");
 
+	code = D6O_IA_TA;
+	if (!option_code_hash_lookup(&ia_ta_option, dhcpv6_universe.code_hash,
+				     &code, 0, MDL))
+		log_fatal("Unable to find the IA_TA option definition.");
+
+	code = D6O_IA_PD;
+	if (!option_code_hash_lookup(&ia_pd_option, dhcpv6_universe.code_hash,
+				     &code, 0, MDL))
+		log_fatal("Unable to find the IA_PD option definition.");
+
 	code = D6O_IAADDR;
 	if (!option_code_hash_lookup(&iaaddr_option, dhcpv6_universe.code_hash,
 				     &code, 0, MDL))
 		log_fatal("Unable to find the IAADDR option definition.");
+
+	code = D6O_IAPREFIX;
+	if (!option_code_hash_lookup(&iaprefix_option,
+				     dhcpv6_universe.code_hash,
+				     &code, 0, MDL))
+		log_fatal("Unable to find the IAPREFIX option definition.");
 
 	code = D6O_ORO;
 	if (!option_code_hash_lookup(&oro_option, dhcpv6_universe.code_hash,
@@ -409,6 +437,7 @@ dhc6_dup_ia(struct dhc6_ia *ia, const char *file, int line)
 
 	memcpy(copy->iaid, ia->iaid, sizeof(copy->iaid));
 
+	copy->ia_type = ia->ia_type;
 	copy->starts = ia->starts;
 	copy->renew = ia->renew;
 	copy->rebind = ia->rebind;
@@ -432,7 +461,7 @@ dhc6_dup_ia(struct dhc6_ia *ia, const char *file, int line)
 	return copy;
 }
 
-/* Duplicate an IAADDR structure.
+/* Duplicate an IAADDR or IAPREFIX structure.
  */
 static struct dhc6_addr *
 dhc6_dup_addr(struct dhc6_addr *addr, const char *file, int line)
@@ -446,6 +475,7 @@ dhc6_dup_addr(struct dhc6_addr *addr, const char *file, int line)
 
 	memcpy(&copy->address, &addr->address, sizeof(copy->address));
 
+	copy->plen = addr->plen;
 	copy->flags = addr->flags;
 	copy->starts = addr->starts;
 	copy->preferred_life = addr->preferred_life;
@@ -459,7 +489,7 @@ dhc6_dup_addr(struct dhc6_addr *addr, const char *file, int line)
 }
 
 /* Form a DHCPv6 lease structure based upon packet contents.  Creates and
- * populates IA's and any IAADDR's they contain.
+ * populates IA's and any IAADDR/IAPREFIX's they contain.
  */
 static struct dhc6_lease *
 dhc6_leaseify(struct packet *packet)
@@ -503,6 +533,24 @@ dhc6_leaseify(struct packet *packet)
 	 * options.
 	 */
 	if (dhc6_parse_ia_na(&lease->bindings, packet,
+			     lease->options) != ISC_R_SUCCESS) {
+		/* Error conditions are logged by the caller. */
+		dhc6_lease_destroy(&lease, MDL);
+		return NULL;
+	}
+	/* Dig into recursive DHCPv6 pockets for IA_TA and contained IAADDR
+	 * options.
+	 */
+	if (dhc6_parse_ia_ta(&lease->bindings, packet,
+			     lease->options) != ISC_R_SUCCESS) {
+		/* Error conditions are logged by the caller. */
+		dhc6_lease_destroy(&lease, MDL);
+		return NULL;
+	}
+	/* Dig into recursive DHCPv6 pockets for IA_PD and contained IAPREFIX
+	 * options.
+	 */
+	if (dhc6_parse_ia_pd(&lease->bindings, packet,
 			     lease->options) != ISC_R_SUCCESS) {
 		/* Error conditions are logged by the caller. */
 		dhc6_lease_destroy(&lease, MDL);
@@ -555,6 +603,7 @@ dhc6_parse_ia_na(struct dhc6_ia **pia, struct packet *packet,
 						 &global_scope, oc, MDL) &&
 			   ds.len >= 12) {
 			memcpy(ia->iaid, ds.data, 4);
+			ia->ia_type = D6O_IA_NA;
 			ia->starts = cur_time;
 			ia->renew = getULong(ds.data + 4);
 			ia->rebind = getULong(ds.data + 8);
@@ -626,6 +675,188 @@ dhc6_parse_ia_na(struct dhc6_ia **pia, struct packet *packet,
 			pia = &ia->next;
 		} else {
 			log_error("Invalid IA_NA option cache.");
+			dfree(ia, MDL);
+			if (ds.len != 0)
+				data_string_forget(&ds, MDL);
+			return ISC_R_UNEXPECTED;
+		}
+	}
+
+	return ISC_R_SUCCESS;
+}
+
+static isc_result_t
+dhc6_parse_ia_ta(struct dhc6_ia **pia, struct packet *packet,
+		 struct option_state *options)
+{
+	struct data_string ds;
+	struct dhc6_ia *ia;
+	struct option_cache *oc;
+	isc_result_t result;
+
+	memset(&ds, 0, sizeof(ds));
+
+	oc = lookup_option(&dhcpv6_universe, options, D6O_IA_TA);
+	for ( ; oc != NULL ; oc = oc->next) {
+		ia = dmalloc(sizeof(*ia), MDL);
+		if (ia == NULL) {
+			log_error("Out of memory allocating IA_TA structure.");
+			return ISC_R_NOMEMORY;
+		} else if (evaluate_option_cache(&ds, packet, NULL, NULL,
+						 options, NULL,
+						 &global_scope, oc, MDL) &&
+			   ds.len >= 4) {
+			memcpy(ia->iaid, ds.data, 4);
+			ia->ia_type = D6O_IA_TA;
+			ia->starts = cur_time;
+
+			log_debug("RCV:  X-- IA_TA %s",
+				  print_hex_1(4, ia->iaid, 59));
+			/* XXX: This should be the printed time I think. */
+			log_debug("RCV:  | X-- starts %u",
+				  (unsigned)ia->starts);
+
+			if (ds.len > 4) {
+				log_debug("RCV:  | X-- [Options]");
+
+				if (!option_state_allocate(&ia->options,
+							   MDL)) {
+					log_error("Out of memory allocating "
+						  "IA option state.");
+					dfree(ia, MDL);
+					data_string_forget(&ds, MDL);
+					return ISC_R_NOMEMORY;
+				}
+
+				if (!parse_option_buffer(ia->options,
+							 ds.data + 4,
+							 ds.len - 4,
+							 &dhcpv6_universe)) {
+					log_error("Corrupt IA_TA options.");
+					option_state_dereference(&ia->options,
+								 MDL);
+					dfree(ia, MDL);
+					data_string_forget(&ds, MDL);
+					return ISC_R_BADPARSE;
+				}
+			}
+			data_string_forget(&ds, MDL);
+
+			if (ia->options != NULL) {
+				result = dhc6_parse_addrs(&ia->addrs, packet,
+							  ia->options);
+				if (result != ISC_R_SUCCESS) {
+					option_state_dereference(&ia->options,
+								 MDL);
+					dfree(ia, MDL);
+					return result;
+				}
+			}
+
+			*pia = ia;
+			pia = &ia->next;
+		} else {
+			log_error("Invalid IA_TA option cache.");
+			dfree(ia, MDL);
+			if (ds.len != 0)
+				data_string_forget(&ds, MDL);
+			return ISC_R_UNEXPECTED;
+		}
+	}
+
+	return ISC_R_SUCCESS;
+}
+
+static isc_result_t
+dhc6_parse_ia_pd(struct dhc6_ia **pia, struct packet *packet,
+		 struct option_state *options)
+{
+	struct data_string ds;
+	struct dhc6_ia *ia;
+	struct option_cache *oc;
+	isc_result_t result;
+
+	memset(&ds, 0, sizeof(ds));
+
+	oc = lookup_option(&dhcpv6_universe, options, D6O_IA_PD);
+	for ( ; oc != NULL ; oc = oc->next) {
+		ia = dmalloc(sizeof(*ia), MDL);
+		if (ia == NULL) {
+			log_error("Out of memory allocating IA_PD structure.");
+			return ISC_R_NOMEMORY;
+		} else if (evaluate_option_cache(&ds, packet, NULL, NULL,
+						 options, NULL,
+						 &global_scope, oc, MDL) &&
+			   ds.len >= 12) {
+			memcpy(ia->iaid, ds.data, 4);
+			ia->ia_type = D6O_IA_PD;
+			ia->starts = cur_time;
+			ia->renew = getULong(ds.data + 4);
+			ia->rebind = getULong(ds.data + 8);
+
+			log_debug("RCV:  X-- IA_PD %s",
+				  print_hex_1(4, ia->iaid, 59));
+			/* XXX: This should be the printed time I think. */
+			log_debug("RCV:  | X-- starts %u",
+				  (unsigned)ia->starts);
+			log_debug("RCV:  | X-- t1 - renew  +%u", ia->renew);
+			log_debug("RCV:  | X-- t2 - rebind +%u", ia->rebind);
+
+			/* RFC3315 section 22.4, discard IA_PD's that
+			 * have t1 greater than t2, and both not zero.
+			 * Since RFC3315 defines this behaviour, it is not
+			 * an error - just normal operation.
+			 */
+			if ((ia->renew > 0) && (ia->rebind > 0) &&
+			    (ia->renew > ia->rebind)) {
+				log_debug("RCV:  | !-- INVALID renew/rebind "
+					  "times, IA_PD discarded.");
+				dfree(ia, MDL);
+				data_string_forget(&ds, MDL);
+				continue;
+			}
+
+			if (ds.len > 12) {
+				log_debug("RCV:  | X-- [Options]");
+
+				if (!option_state_allocate(&ia->options,
+							   MDL)) {
+					log_error("Out of memory allocating "
+						  "IA option state.");
+					dfree(ia, MDL);
+					data_string_forget(&ds, MDL);
+					return ISC_R_NOMEMORY;
+				}
+
+				if (!parse_option_buffer(ia->options,
+							 ds.data + 12,
+							 ds.len - 12,
+							 &dhcpv6_universe)) {
+					log_error("Corrupt IA_PD options.");
+					option_state_dereference(&ia->options,
+								 MDL);
+					dfree(ia, MDL);
+					data_string_forget(&ds, MDL);
+					return ISC_R_BADPARSE;
+				}
+			}
+			data_string_forget(&ds, MDL);
+
+			if (ia->options != NULL) {
+				result = dhc6_parse_prefs(&ia->addrs, packet,
+							  ia->options);
+				if (result != ISC_R_SUCCESS) {
+					option_state_dereference(&ia->options,
+								 MDL);
+					dfree(ia, MDL);
+					return result;
+				}
+			}
+
+			*pia = ia;
+			pia = &ia->next;
+		} else {
+			log_error("Invalid IA_PD option cache.");
 			dfree(ia, MDL);
 			if (ds.len != 0)
 				data_string_forget(&ds, MDL);
@@ -721,6 +952,109 @@ dhc6_parse_addrs(struct dhc6_addr **paddr, struct packet *packet,
 		} else {
 			log_error("Invalid IAADDR option cache.");
 			dfree(addr, MDL);
+			if (ds.len != 0)
+				data_string_forget(&ds, MDL);
+			return ISC_R_UNEXPECTED;
+		}
+	}
+
+	return ISC_R_SUCCESS;
+}
+
+static isc_result_t
+dhc6_parse_prefs(struct dhc6_addr **ppref, struct packet *packet,
+		 struct option_state *options)
+{
+	struct data_string ds;
+	struct option_cache *oc;
+	struct dhc6_addr *pref;
+
+	memset(&ds, 0, sizeof(ds));
+
+	oc = lookup_option(&dhcpv6_universe, options, D6O_IAPREFIX);
+	for ( ; oc != NULL ; oc = oc->next) {
+		pref = dmalloc(sizeof(*pref), MDL);
+		if (pref == NULL) {
+			log_error("Out of memory allocating "
+				  "prefix structure.");
+			return ISC_R_NOMEMORY;
+		} else if (evaluate_option_cache(&ds, packet, NULL, NULL,
+						 options, NULL, &global_scope,
+						 oc, MDL) &&
+			   (ds.len >= 25)) {
+
+			pref->plen = getUChar(ds.data);
+			pref->address.len = 16;
+			memcpy(pref->address.iabuf, ds.data + 1, 16);
+			pref->starts = cur_time;
+			pref->preferred_life = getULong(ds.data + 17);
+			pref->max_life = getULong(ds.data + 21);
+
+			log_debug("RCV:  | | X-- IAPREFIX %s/%d",
+				  piaddr(pref->address), (int)pref->plen);
+			log_debug("RCV:  | | | X-- Preferred lifetime %u.",
+				  pref->preferred_life);
+			log_debug("RCV:  | | | X-- Max lifetime %u.",
+				  pref->max_life);
+
+			/* Sanity check over the prefix length */
+			if ((pref->plen < 4) || (pref->plen > 128)) {
+				log_debug("RCV:  | | | !-- INVALID prefix "
+					  "length, IAPREFIX discarded.  "
+					  "Check your server configuration.");
+				dfree(pref, MDL);
+				data_string_forget(&ds, MDL);
+				continue;
+			}
+			/* RFC 3315 section 22.6 says we must discard
+			 * prefixes whose pref is later than valid.
+			 */
+			if ((pref->preferred_life > pref->max_life)) {
+				log_debug("RCV:  | | | !-- INVALID lifetimes, "
+					  "IAPREFIX discarded.  Check your "
+					  "server configuration.");
+				dfree(pref, MDL);
+				data_string_forget(&ds, MDL);
+				continue;
+			}
+
+			/* Fortunately this is the last recursion in the
+			 * protocol.
+			 */
+			if (ds.len > 25) {
+				if (!option_state_allocate(&pref->options,
+							   MDL)) {
+					log_error("Out of memory allocating "
+						  "IAPREFIX option state.");
+					dfree(pref, MDL);
+					data_string_forget(&ds, MDL);
+					return ISC_R_NOMEMORY;
+				}
+
+				if (!parse_option_buffer(pref->options,
+							 ds.data + 25,
+							 ds.len - 25,
+							 &dhcpv6_universe)) {
+					log_error("Corrupt IAPREFIX options.");
+					option_state_dereference(&pref->options,
+								 MDL);
+					dfree(pref, MDL);
+					data_string_forget(&ds, MDL);
+					return ISC_R_BADPARSE;
+				}
+			}
+
+			if (pref->options != NULL)
+				log_debug("RCV:  | | | X-- "
+					  "[Options]");
+
+			data_string_forget(&ds, MDL);
+
+			*ppref = pref;
+			ppref = &pref->next;
+		} else {
+			log_error("Invalid IAPREFIX option cache.");
+			dfree(pref, MDL);
 			if (ds.len != 0)
 				data_string_forget(&ds, MDL);
 			return ISC_R_UNEXPECTED;
@@ -1032,8 +1366,8 @@ do_init6(void *input)
 	log_debug("XMT:  | X-- Request rebind in +%u", (unsigned)t2);
 
 	if ((client->active_lease != NULL) &&
-	    ((old_ia = find_ia(client->active_lease->bindings,
-			       (char *)ia.buffer->data)) != NULL)) {
+	    ((old_ia = find_ia_na(client->active_lease->bindings,
+				  (char *)ia.buffer->data)) != NULL)) {
 		/* For each address in the old IA, request a binding. */
 		memset(&addr, 0, sizeof(addr));
 		for (old_addr = old_ia->addrs ; old_addr != NULL ;
@@ -1174,8 +1508,8 @@ do_confirm6(void *input)
 				    &dhcpv6_universe);
 
 	/* Append IA's. */
-	if (dhc6_add_ia(client, &ds, client->active_lease,
-                        DHCPV6_CONFIRM) != ISC_R_SUCCESS) {
+	if (dhc6_add_ia_na(client, &ds, client->active_lease,
+			   DHCPV6_CONFIRM) != ISC_R_SUCCESS) {
 		data_string_forget(&ds, MDL);
 		return;
 	}
@@ -1295,8 +1629,8 @@ do_release6(void *input)
 				    &dhcpv6_universe);
 
 	/* Append IA's. */
-	if (dhc6_add_ia(client, &ds, client->active_lease,
-                        DHCPV6_RELEASE) != ISC_R_SUCCESS) {
+	if (dhc6_add_ia_na(client, &ds, client->active_lease,
+			   DHCPV6_RELEASE) != ISC_R_SUCCESS) {
 		data_string_forget(&ds, MDL);
 		return;
 	}
@@ -1453,15 +1787,32 @@ dhc6_check_advertise(struct dhc6_lease *lease)
 	isc_result_t rval = ISC_R_SUCCESS;
 	int have_addrs = ISC_FALSE;
 	unsigned code;
+	const char *scope;
 
 	rval = dhc6_check_status(rval, lease->options, "message", &code);
 
 	for (ia = lease->bindings ; ia != NULL ; ia = ia->next) {
-		rval = dhc6_check_status(rval, ia->options, "IA_NA", &code);
+		switch (ia->ia_type) {
+			case D6O_IA_NA:
+			default:
+				scope = "IA_NA";
+				break;
+			case D6O_IA_TA:
+				scope = "IA_TA";
+				break;
+			case D6O_IA_PD:
+				scope = "IA_PD";
+				break;
+		}
+		rval = dhc6_check_status(rval, ia->options, scope, &code);
 
 		for (addr = ia->addrs ; addr != NULL ; addr = addr->next) {
+			if (ia->ia_type != D6O_IA_PD)
+				scope = "IAADDR";
+			else
+				scope = "IAPREFIX";
 			rval = dhc6_check_status(rval, addr->options,
-						 "IAADDR", &code);
+						 scope, &code);
 			have_addrs = ISC_TRUE;
 		}
 	}
@@ -1695,6 +2046,7 @@ dhc6_check_reply(struct client_state *client, struct dhc6_lease *new)
 	struct dhc6_addr *addr;
 	isc_result_t rval = ISC_R_SUCCESS;
 	unsigned code;
+	const char *scope;
 	int nscore, sscore;
 
 	if ((client == NULL) || (new == NULL))
@@ -1725,15 +2077,31 @@ dhc6_check_reply(struct client_state *client, struct dhc6_lease *new)
 		return ISC_R_CANCELED;
 
 	for (ia = new->bindings ; ia != NULL ; ia = ia->next) {
-		rval = dhc6_check_status(rval, ia->options, "IA_NA",
-					 &code);
+		switch (ia->ia_type) {
+			case D6O_IA_NA:
+			default:
+				scope = "IA_NA";
+				break;
+			case D6O_IA_TA:
+				scope = "IA_TA";
+				break;
+			case D6O_IA_PD:
+				scope = "IA_PD";
+				break;
+		}
+		rval = dhc6_check_status(rval, ia->options,
+					 scope, &code);
 		if (action(client, rval, code))
 			return ISC_R_CANCELED;
 
 		for (addr = ia->addrs ; addr != NULL ;
 		     addr = addr->next) {
+			if (ia->ia_type != D6O_IA_PD)
+				scope = "IAADDR";
+			else
+				scope = "IAPREFIX";
 			rval = dhc6_check_status(rval, addr->options,
-						 "IAADDR", &code);
+						 scope, &code);
 			if (action(client, rval, code))
 				return ISC_R_CANCELED;
 		}
@@ -2098,8 +2466,9 @@ do_select6(void *input)
 				    NULL, client->sent_options, &global_scope,
 				    &dhcpv6_universe);
 
-	/* Now append any IA_NA's, and within them any IAADDRs. */
-	if (dhc6_add_ia(client, &ds, lease, DHCPV6_REQUEST) != ISC_R_SUCCESS) {
+	/* Now append any IA's, and within them any IAADDR/IAPREFIXs. */
+	if (dhc6_add_ia_na(client, &ds, lease,
+			   DHCPV6_REQUEST) != ISC_R_SUCCESS) {
 		data_string_forget(&ds, MDL);
 		return;
 	}
@@ -2122,12 +2491,12 @@ do_select6(void *input)
 	dhc6_retrans_advance(client);
 }
 
-/* For each IA in the lease, for each address in the IA, append that
- * information onto the packet-so-far.
+/* For each IA_NA in the lease, for each address in the IA_NA,
+ * append that information onto the packet-so-far.
  */
 static isc_result_t
-dhc6_add_ia(struct client_state *client, struct data_string *packet,
-	    struct dhc6_lease *lease, u_int8_t message)
+dhc6_add_ia_na(struct client_state *client, struct data_string *packet,
+	       struct dhc6_lease *lease, u_int8_t message)
 {
 	struct data_string iads;
 	struct data_string addrds;
@@ -2141,6 +2510,9 @@ dhc6_add_ia(struct client_state *client, struct data_string *packet,
 	for (ia = lease->bindings;
              ia != NULL && rval == ISC_R_SUCCESS;
              ia = ia->next) {
+		if (ia->ia_type != D6O_IA_NA)
+			continue;
+
 		if (!buffer_allocate(&iads.buffer, 12, MDL)) {
 			log_error("Unable to allocate memory for IA_NA.");
 			rval = ISC_R_NOMEMORY;
@@ -2469,6 +2841,9 @@ dhc6_check_times(struct client_state *client)
 	for(ia = lease->bindings ; ia != NULL ; ia = ia->next) {
 		TIME this_ia_lo_expire, this_ia_hi_expire, use_expire;
 
+		if (ia->ia_type != D6O_IA_NA)
+			continue;
+
 		this_ia_lo_expire = MAX_TIME;
 		this_ia_hi_expire = 0;
 
@@ -2632,11 +3007,13 @@ dhc6_check_times(struct client_state *client)
 
 /* In a given IA chain, find the IA with the same 'iaid'. */
 static struct dhc6_ia *
-find_ia(struct dhc6_ia *head, const char *id)
+find_ia_na(struct dhc6_ia *head, const char *id)
 {
 	struct dhc6_ia *ia;
 
 	for (ia = head ; ia != NULL ; ia = ia->next) {
+		if (ia->ia_type != D6O_IA_NA)
+			continue;
 		if (memcmp(ia->iaid, id, 4) == 0)
 			return ia;
 	}
@@ -2676,7 +3053,9 @@ dhc6_merge_lease(struct dhc6_lease *src, struct dhc6_lease *dst)
 		return;
 
 	for (sia = src->bindings ; sia != NULL ; sia = sia->next) {
-		dia = find_ia(dst->bindings, (char *)sia->iaid);
+		if (sia->ia_type != D6O_IA_NA)
+			continue;
+		dia = find_ia_na(dst->bindings, (char *)sia->iaid);
 
 		if (dia == NULL) {
 			tia = dhc6_dup_ia(sia, MDL);
@@ -2774,8 +3153,11 @@ start_bound(struct client_state *client)
 
 	oldia = NULL;
 	for (ia = lease->bindings ; ia != NULL ; ia = ia->next) {
+		if (ia->ia_type != D6O_IA_NA)
+			continue;
+
 		if (old != NULL)
-			oldia = find_ia(old->bindings, (char *)ia->iaid);
+			oldia = find_ia_na(old->bindings, (char *)ia->iaid);
 		else
 			oldia = NULL;
 
@@ -2983,8 +3365,8 @@ do_refresh6(void *input)
 				    &dhcpv6_universe);
 
         /* Append IA's */
-	if (dhc6_add_ia(client, &ds, lease,
-                        client->refresh_type) != ISC_R_SUCCESS) {
+	if (dhc6_add_ia_na(client, &ds, lease,
+			   client->refresh_type) != ISC_R_SUCCESS) {
 		data_string_forget(&ds, MDL);
 		return;
 	}
@@ -3062,6 +3444,8 @@ do_depref(void *input)
 		return;
 
 	for (ia = lease->bindings ; ia != NULL ; ia = ia->next) {
+		if (ia->ia_type != D6O_IA_NA)
+			continue;
 		for (addr = ia->addrs ; addr != NULL ; addr = addr->next) {
 			if (addr->flags & DHC6_ADDR_DEPREFFED)
 				continue;
@@ -3110,6 +3494,8 @@ do_expire(void *input)
 		return;
 
 	for (ia = lease->bindings ; ia != NULL ; ia = ia->next) {
+		if (ia->ia_type != D6O_IA_NA)
+			continue;
 		for (addr = ia->addrs ; addr != NULL ; addr = addr->next) {
 			if (addr->flags & DHC6_ADDR_EXPIRED)
 				continue;
@@ -3174,6 +3560,9 @@ unconfigure6(struct client_state *client, const char *reason)
 		return;
 
 	for (ia = client->active_lease->bindings ; ia != NULL ; ia = ia->next) {
+		if (ia->ia_type != D6O_IA_NA)
+			continue;
+
 		for (addr = ia->addrs ; addr != NULL ; addr = addr->next) {
 			script_init(client, reason, NULL);
 			dhc6_marshall_values("old_", client, 

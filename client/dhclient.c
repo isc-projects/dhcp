@@ -2487,6 +2487,7 @@ write_client6_lease(struct client_state *client, struct dhc6_lease *lease,
 	struct dhc6_ia *ia;
 	struct dhc6_addr *addr;
 	int stat;
+	const char *ianame;
 
 	/* This should include the current lease. */
 	if (!rewrite && (leases_written++ > 20)) {
@@ -2516,21 +2517,44 @@ write_client6_lease(struct client_state *client, struct dhc6_lease *lease,
 		return ISC_R_IOERROR;
 
 	for (ia = lease->bindings ; ia != NULL ; ia = ia->next) {
-		stat = fprintf(leaseFile, "  ia-na %s {\n",
-			       print_hex_1(4, ia->iaid, 12));
+		switch (ia->ia_type) {
+			case D6O_IA_NA:
+			default:
+				ianame = "ia-na";
+				break;
+			case D6O_IA_TA:
+				ianame = "ia-ta";
+				break;
+			case D6O_IA_PD:
+				ianame = "ia-pd";
+				break;
+		}
+		stat = fprintf(leaseFile, "  %s %s {\n",
+			       ianame, print_hex_1(4, ia->iaid, 12));
 		if (stat <= 0)
 			return ISC_R_IOERROR;
 
-		stat = fprintf(leaseFile, "    starts %d;\n"
-					  "    renew %u;\n"
-					  "    rebind %u;\n",
-			       (int)ia->starts, ia->renew, ia->rebind);
+		if (ia->ia_type != D6O_IA_TA)
+			stat = fprintf(leaseFile, "    starts %d;\n"
+						  "    renew %u;\n"
+						  "    rebind %u;\n",
+				       (int)ia->starts, ia->renew, ia->rebind);
+		else
+			stat = fprintf(leaseFile, "    starts %d;\n",
+				       (int)ia->starts);
 		if (stat <= 0)
 			return ISC_R_IOERROR;
 
 		for (addr = ia->addrs ; addr != NULL ; addr = addr->next) {
-			stat = fprintf(leaseFile, "    iaaddr %s {\n",
-				       piaddr(addr->address));
+			if (ia->ia_type != D6O_IA_PD)
+				stat = fprintf(leaseFile,
+					       "    iaaddr %s {\n",
+					       piaddr(addr->address));
+			else
+				stat = fprintf(leaseFile,
+					       "    iaprefix %s/%d {\n",
+					       piaddr(addr->address),
+					       (int)addr->plen);
 			if (stat <= 0)
 				return ISC_R_IOERROR;
 

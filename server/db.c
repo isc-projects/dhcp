@@ -497,10 +497,10 @@ int write_group (group)
 }
 
 /*
- * Write an IA_NA and the options it has.
+ * Write an IA and the options it has.
  */
 int
-write_ia_na(const struct ia_na *ia_na) {
+write_ia(const struct ia_na *ia) {
 	struct iaaddr *iaaddr;
 	struct binding *bnd;
 	int i;
@@ -525,24 +525,32 @@ write_ia_na(const struct ia_na *ia_na) {
 	}
 
 	
-	s = quotify_buf(ia_na->iaid_duid.data, ia_na->iaid_duid.len, MDL);
+	s = quotify_buf(ia->iaid_duid.data, ia->iaid_duid.len, MDL);
 	if (s == NULL) {
 		goto error_exit;
 	}
-	fprintf_ret = fprintf(db_file, "ia-na \"%s\" {\n", s);
+	if (ia->ia_type == D6O_IA_NA) {
+		fprintf_ret = fprintf(db_file, "ia-na \"%s\" {\n", s);
+	} else if (ia->ia_type == D6O_IA_TA) {
+		fprintf_ret = fprintf(db_file, "ia-ta \"%s\" {\n", s);
+	} else {
+		log_error("Unknown ia type %u at %s:%d",
+			  (unsigned)ia->ia_type, MDL);
+		goto error_exit;
+	}
 	dfree(s, MDL);
 	if (fprintf_ret < 0) {
 		goto error_exit;
 	}
-	for (i=0; i<ia_na->num_iaaddr; i++) {
-		iaaddr = ia_na->iaaddr[i];
+	for (i=0; i<ia->num_iaaddr; i++) {
+		iaaddr = ia->iaaddr[i];
 
 		inet_ntop(AF_INET6, &iaaddr->addr, addr_buf, sizeof(addr_buf));
 		if (fprintf(db_file, "  iaaddr %s {\n", addr_buf) < 0) {
 			goto error_exit;
 		}
 		if ((iaaddr->state <= 0) || (iaaddr->state > FTS_LAST)) {
-			log_fatal("Unknown ia_na state %d at %s:%d", 
+			log_fatal("Unknown iaaddr state %d at %s:%d", 
 				  iaaddr->state, MDL);
 		}
 		binding_state = binding_state_names[iaaddr->state-1];
@@ -593,7 +601,110 @@ write_ia_na(const struct ia_na *ia_na) {
 	return 1;
 
 error_exit:
-	log_info("write_ia_na: unable to write ia-na");
+	log_info("write_ia: unable to write ia-na");
+	lease_file_is_corrupt = 1;
+	return 0;
+}
+
+/*
+ * Write an IA_PD and the options it has.
+ */
+int
+write_ia_pd(const struct ia_pd *ia_pd) {
+	struct iaprefix *iapref;
+	struct binding *bnd;
+	int i;
+	char addr_buf[sizeof("ffff:ffff:ffff:ffff:ffff:ffff.255.255.255.255")];
+	const char *binding_state;
+	const char *tval;
+	char *s;
+	int fprintf_ret;
+
+	/* 
+	 * If the lease file is corrupt, don't try to write any more 
+	 * leases until we've written a good lease file. 
+	 */
+	if (lease_file_is_corrupt) {
+		if (!new_lease_file()) {
+			return 0;
+		}
+	}
+
+	if (counting) {
+		++count;
+	}
+
+	
+	s = quotify_buf(ia_pd->iaid_duid.data, ia_pd->iaid_duid.len, MDL);
+	if (s == NULL) {
+		goto error_exit;
+	}
+	fprintf_ret = fprintf(db_file, "ia-pd \"%s\" {\n", s);
+	dfree(s, MDL);
+	if (fprintf_ret < 0) {
+		goto error_exit;
+	}
+	for (i=0; i<ia_pd->num_iaprefix; i++) {
+		iapref = ia_pd->iaprefix[i];
+
+		inet_ntop(AF_INET6, &iapref->pref, addr_buf, sizeof(addr_buf));
+		if (fprintf(db_file, "  iaprefix %s/%d {\n",
+			    addr_buf, (int)iapref->plen) < 0) {
+			goto error_exit;
+		}
+		if ((iapref->state <= 0) || (iapref->state > FTS_LAST)) {
+			log_fatal("Unknown iaprefix state %d at %s:%d", 
+				  iapref->state, MDL);
+		}
+		binding_state = binding_state_names[iapref->state-1];
+		if (fprintf(db_file, "    binding state %s;\n", 
+			    binding_state) < 0) {
+			goto error_exit;
+		}
+
+		/* Note that from here on out, the \n is prepended to the
+		 * next write, rather than appended to the current write.
+		 */
+		tval = print_time(iapref->valid_lifetime_end_time);
+		if (tval == NULL) {
+			goto error_exit;
+		}
+		if (fprintf(db_file, "    ends %s", tval) < 0) {
+			goto error_exit;
+		}
+
+		/* Write out any binding scopes: note that 'ends' above does
+		 * not have \n on the end!  We want that.
+		 */
+		if (iapref->scope != NULL)
+			bnd = iapref->scope->bindings;
+		else
+			bnd = NULL;
+
+		for (; bnd != NULL ; bnd = bnd->next) {
+			if (bnd->value == NULL)
+				continue;
+
+			/* We don't do a regular error_exit because the
+			 * lease db is not corrupt in this case.
+			 */
+			if (write_binding_scope(db_file, bnd,
+						"\n    ") != ISC_R_SUCCESS)
+				goto error_exit;
+				
+		}
+
+		if (fprintf(db_file, "\n  }\n") < 0)
+                        goto error_exit;
+	}
+	if (fprintf(db_file, "}\n\n") < 0)
+                goto error_exit;
+
+	fflush(db_file);
+	return 1;
+
+error_exit:
+	log_info("write_ia_pd: unable to write ia-pd");
 	lease_file_is_corrupt = 1;
 	return 0;
 }

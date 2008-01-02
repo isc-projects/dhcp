@@ -49,11 +49,11 @@ struct reply_state {
 
 	/* IA level persistent state */
 	unsigned ia_count;
-	unsigned client_addresses;
+	unsigned client_resources;
 	isc_boolean_t ia_addrs_included;
 	isc_boolean_t static_lease;
 	struct ia_na *ia_na;
-	struct ia_na *old_ia;
+	struct ia_na *old_ia_na;
 	struct option_state *reply_ia;
 	struct data_string fixed;
 
@@ -96,8 +96,8 @@ static void seek_shared_host(struct host_decl **hp,
 			     struct shared_network *shared);
 static isc_boolean_t fixed_matches_shared(struct host_decl *host,
 					  struct shared_network *shared);
-static isc_result_t reply_process_ia(struct reply_state *reply,
-				     struct option_cache *ia);
+static isc_result_t reply_process_ia_na(struct reply_state *reply,
+					struct option_cache *ia);
 static isc_result_t reply_process_addr(struct reply_state *reply,
 				       struct option_cache *addr);
 static isc_boolean_t address_is_owned(struct reply_state *reply,
@@ -592,6 +592,14 @@ valid_client_info_req(struct packet *packet, struct data_string *server_id) {
 			  piaddr(packet->client_addr), client_id_str);
 		goto exit;
 	}
+	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_IA_PD);
+	if (oc != NULL) {
+		log_debug("Discarding %s from %s; "
+			  "IA_PD option present%s", 
+			  dhcpv6_type_names[packet->dhcpv6_msg_type],
+			  piaddr(packet->client_addr), client_id_str);
+		goto exit;
+	}
 
 	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_SERVERID);
 	if (oc != NULL) {
@@ -649,6 +657,7 @@ static const int required_opts_solicit[] = {
 	D6O_SERVERID,
 	D6O_IA_NA,
 	D6O_IA_TA,
+	D6O_IA_PD,
 	D6O_RAPID_COMMIT,
 	D6O_STATUS_CODE,
 	D6O_VENDOR_OPTS,
@@ -662,6 +671,20 @@ static const int required_opts_IA_NA[] = {
 	D6O_VENDOR_OPTS,
 	0
 };
+/*
+static const int required_opts_IA_TA[] = {
+	D6O_IAADDR,
+	D6O_STATUS_CODE,
+	D6O_VENDOR_OPTS,
+	0
+};
+static const int required_opts_IA_PD[] = {
+	D6O_IAPREFIX,
+	D6O_STATUS_CODE,
+	D6O_VENDOR_OPTS,
+	0
+};
+*/
 static const int required_opts_STATUS_CODE[] = {
 	D6O_STATUS_CODE,
 	0
@@ -1090,11 +1113,11 @@ lease_to_client(struct data_string *reply_ret,
 	for (; oc != NULL ; oc = oc->next) {
 		isc_result_t status;
 
-		/* Start counting addresses offered. */
-		reply.client_addresses = 0;
+		/* Start counting resources (addresses) offered. */
+		reply.client_resources = 0;
 		reply.ia_addrs_included = ISC_FALSE;
 
-		status = reply_process_ia(&reply, oc);
+		status = reply_process_ia_na(&reply, oc);
 
 		/*
 		 * We continue to try other IA's whether we can address
@@ -1108,9 +1131,11 @@ lease_to_client(struct data_string *reply_ret,
 		 * If any address can be given to any IA, then do not set the
 		 * NoAddrsAvail status code.
 		 */
-		if (reply.client_addresses == 0)
+		if (reply.client_resources == 0)
 			no_addrs_avail = ISC_TRUE;
 	}
+
+	/* Do IA_TA and IA_PD */
 
 	/*
 	 * Make no reply if we gave no resources and is not
@@ -1150,7 +1175,7 @@ lease_to_client(struct data_string *reply_ret,
 	 * INTERPRETATION;
 	 *
 	 * Solicit and Request are fairly explicit; we send NoAddrsAvail.
-	 * We handle SOLICIT here and REQUEST in the reply_process_ia()
+	 * We handle SOLICIT here and REQUEST in the reply_process_ia_na()
 	 * function (because SOLICIT only counts if we never get around to
 	 * it).
 	 *
@@ -1237,7 +1262,7 @@ lease_to_client(struct data_string *reply_ret,
  * the reply packet being built in the reply_state structure.
  */
 static isc_result_t
-reply_process_ia(struct reply_state *reply, struct option_cache *ia) {
+reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 	isc_result_t status = ISC_R_SUCCESS;
 	u_int32_t iaid;
 	unsigned ia_cursor;
@@ -1257,7 +1282,7 @@ reply_process_ia(struct reply_state *reply, struct option_cache *ia) {
 
 	/* Make sure there is at least room for the header. */
 	if ((reply->cursor + IA_NA_OFFSET + 4) > sizeof(reply->buf)) {
-		log_error("reply_process_ia: Reply too long for IA.");
+		log_error("reply_process_ia_na: Reply too long for IA.");
 		return ISC_R_NOSPACE;
 	}
 
@@ -1265,7 +1290,7 @@ reply_process_ia(struct reply_state *reply, struct option_cache *ia) {
 	/* Fetch the IA_NA contents. */
 	if (!get_encapsulated_IA_state(&packet_ia, &ia_data, reply->packet,
 				       ia, IA_NA_OFFSET)) {
-		log_error("reply_process_ia: error evaluating ia_na");
+		log_error("reply_process_ia_na: error evaluating ia_na");
 		status = ISC_R_FAILURE;
 		goto cleanup;
 	}
@@ -1282,9 +1307,10 @@ reply_process_ia(struct reply_state *reply, struct option_cache *ia) {
 		status = ISC_R_NOMEMORY;
 		goto cleanup;
 	}
+	reply->ia_na->ia_type = D6O_IA_NA;
 
 	/* Cache pre-existing IA, if any. */
-	ia_na_hash_lookup(&reply->old_ia, ia_active,
+	ia_na_hash_lookup(&reply->old_ia_na, ia_na_active,
 			  (unsigned char *)reply->ia_na->iaid_duid.data,
 			  reply->ia_na->iaid_duid.len, MDL);
 
@@ -1302,14 +1328,14 @@ reply_process_ia(struct reply_state *reply, struct option_cache *ia) {
 		if (!evaluate_option_cache(&reply->fixed, NULL, NULL, NULL,
 					   NULL, NULL, &global_scope,
 					   reply->host->fixed_addr, MDL)) {
-			log_error("reply_process_ia: unable to evaluate "
+			log_error("reply_process_ia_na: unable to evaluate "
 				  "fixed address.");
 			status = ISC_R_FAILURE;
 			goto cleanup;
 		}
 
 		if (reply->fixed.len < 16) {
-			log_error("reply_process_ia: invalid fixed address.");
+			log_error("reply_process_ia_na: invalid fixed address.");
 			status = ISC_R_INVALIDARG;
 			goto cleanup;
 		}
@@ -1375,7 +1401,7 @@ reply_process_ia(struct reply_state *reply, struct option_cache *ia) {
 	 * If we fell through the above and never gave the client
 	 * an address, give it one now.
 	 */
-	if ((status != ISC_R_CANCELED) && (reply->client_addresses == 0)) {
+	if ((status != ISC_R_CANCELED) && (reply->client_resources == 0)) {
 		status = find_client_address(reply);
 
 		if (status == ISC_R_NORESOURCES) {
@@ -1401,7 +1427,7 @@ reply_process_ia(struct reply_state *reply, struct option_cache *ia) {
 				if (!option_state_allocate(&reply->reply_ia,
 							   MDL))
 				{
-					log_error("reply_process_ia: No "
+					log_error("reply_process_ia_na: No "
 						  "memory for option state "
 						  "wipe.");
 					status = ISC_R_NOMEMORY;
@@ -1412,7 +1438,7 @@ reply_process_ia(struct reply_state *reply, struct option_cache *ia) {
 						     "No addresses available "
 						     "for this interface.",
 						      reply->reply_ia)) {
-					log_error("reply_process_ia: Unable "
+					log_error("reply_process_ia_na: Unable "
 						  "to set NoAddrsAvail status "
 						  "code.");
 					status = ISC_R_FAILURE;
@@ -1551,20 +1577,20 @@ reply_process_ia(struct reply_state *reply, struct option_cache *ia) {
 		}
 
 		/* Remove any old ia_na from the hash. */
-		if (reply->old_ia != NULL) {
-			ia_id = &reply->old_ia->iaid_duid;
-			ia_na_hash_delete(ia_active,
+		if (reply->old_ia_na != NULL) {
+			ia_id = &reply->old_ia_na->iaid_duid;
+			ia_na_hash_delete(ia_na_active,
 					  (unsigned char *)ia_id->data,
 					  ia_id->len, MDL);
-			ia_na_dereference(&reply->old_ia, MDL);
+			ia_na_dereference(&reply->old_ia_na, MDL);
 		}
 
 		/* Put new ia_na into the hash. */
 		ia_id = &reply->ia_na->iaid_duid;
-		ia_na_hash_add(ia_active, (unsigned char *)ia_id->data,
+		ia_na_hash_add(ia_na_active, (unsigned char *)ia_id->data,
 			       ia_id->len, reply->ia_na, MDL);
 
-		write_ia_na(reply->ia_na);
+		write_ia(reply->ia_na);
 
 		/* 
 		 * Note that we wrote the lease into the database,
@@ -1578,8 +1604,8 @@ reply_process_ia(struct reply_state *reply, struct option_cache *ia) {
 	 * suggesting the existing database entry to the client.
 	 */
 	} else if ((status != ISC_R_CANCELED) && !reply->static_lease &&
-	    (reply->old_ia != NULL)) {
-	    	if (ia_na_equal(reply->old_ia, reply->ia_na)) {
+	    (reply->old_ia_na != NULL)) {
+	    	if (ia_na_equal(reply->old_ia_na, reply->ia_na)) {
 			lease_in_database = ISC_TRUE;
 		}
 	}
@@ -1595,8 +1621,8 @@ reply_process_ia(struct reply_state *reply, struct option_cache *ia) {
 		data_string_forget(&data, MDL);
 	if (reply->ia_na != NULL)
 		ia_na_dereference(&reply->ia_na, MDL);
-	if (reply->old_ia != NULL)
-		ia_na_dereference(&reply->old_ia, MDL);
+	if (reply->old_ia_na != NULL)
+		ia_na_dereference(&reply->old_ia_na, MDL);
 	if (reply->lease != NULL) {
 		if (!lease_in_database) {
 			release_lease6(reply->lease->ipv6_pool, reply->lease);
@@ -1837,12 +1863,12 @@ reply_process_addr(struct reply_state *reply, struct option_cache *addr) {
 	}
 
 	/*
-	 * If client_addresses is nonzero, then the reply_process_is_addressed
+	 * If client_resources is nonzero, then the reply_process_is_addressed
 	 * function has executed configuration state into the reply option
 	 * cache.  We will use that valid cache to derive configuration for
 	 * whether or not to engage in additional addresses, and similar.
 	 */
-	if (reply->client_addresses != 0) {
+	if (reply->client_resources != 0) {
 		unsigned limit = 1;
 
 		/*
@@ -1859,7 +1885,7 @@ reply_process_addr(struct reply_state *reply, struct option_cache *addr) {
 						   reply->opt_state,
 						   scope, oc, MDL) ||
 			    (data.len != 4)) {
-				log_error("reply_process_ia: unable to "
+				log_error("reply_process_addr: unable to "
 					  "evaluate addrs-per-ia value.");
 				status = ISC_R_FAILURE;
 				goto cleanup;
@@ -1873,7 +1899,7 @@ reply_process_addr(struct reply_state *reply, struct option_cache *addr) {
 		 * If we wish to limit the client to a certain number of
 		 * addresses, then omit the address from the reply.
 		 */
-		if (reply->client_addresses >= limit)
+		if (reply->client_resources >= limit)
 			goto cleanup;
 	}
 
@@ -1918,13 +1944,13 @@ address_is_owned(struct reply_state *reply, struct iaddr *addr) {
 		return ISC_FALSE;
 	}
 
-	if ((reply->old_ia == NULL) || (reply->old_ia->num_iaaddr == 0))
+	if ((reply->old_ia_na == NULL) || (reply->old_ia_na->num_iaaddr == 0))
 		return ISC_FALSE;
 
-	for (i = 0 ; i < reply->old_ia->num_iaaddr ; i++) {
+	for (i = 0 ; i < reply->old_ia_na->num_iaaddr ; i++) {
 		struct iaaddr *tmp;
 
-		tmp = reply->old_ia->iaaddr[i];
+		tmp = reply->old_ia_na->iaaddr[i];
 
 		if (memcmp(addr->iabuf, &tmp->addr, 16) == 0) {
 			iaaddr_reference(&reply->lease, tmp, MDL);
@@ -1998,9 +2024,9 @@ find_client_address(struct reply_state *reply) {
 		goto send_addr;
 	}
 
-	if (reply->old_ia != NULL)  {
-		for (i = 0 ; i < reply->old_ia->num_iaaddr ; i++) {
-			lease = reply->old_ia->iaaddr[i];
+	if (reply->old_ia_na != NULL)  {
+		for (i = 0 ; i < reply->old_ia_na->num_iaaddr ; i++) {
+			lease = reply->old_ia_na->iaaddr[i];
 
 			best_lease = lease_compare(lease, best_lease);
 		}
@@ -2082,7 +2108,7 @@ reply_process_is_addressed(struct reply_state *reply,
 					   reply->opt_state,
 					   scope, oc, MDL) ||
 		    (data.len != 4)) {
-			log_error("reply_process_ia: unable to "
+			log_error("reply_process_is_addressed: unable to "
 				  "evaluate default lease time");
 			status = ISC_R_FAILURE;
 			goto cleanup;
@@ -2109,7 +2135,7 @@ reply_process_is_addressed(struct reply_state *reply,
 					   reply->opt_state,
 					   scope, oc, MDL) ||
 		    (data.len != 4)) {
-			log_error("reply_process_ia: unable to "
+			log_error("reply_process_is_addressed: unable to "
 				  "evaluate preferred lease time");
 			status = ISC_R_FAILURE;
 			goto cleanup;
@@ -2173,7 +2199,7 @@ reply_process_is_addressed(struct reply_state *reply,
 		data_string_forget(&data, MDL);
 
 	if (status == ISC_R_SUCCESS)
-		reply->client_addresses++;
+		reply->client_resources++;
 
 	return status;
 }
@@ -2189,7 +2215,7 @@ reply_process_send_addr(struct reply_state *reply, struct iaddr *addr) {
 	/* Now append the lease. */
 	data.len = IAADDR_OFFSET;
 	if (!buffer_allocate(&data.buffer, data.len, MDL)) {
-		log_error("reply_process_ia: out of memory allocating "
+		log_error("reply_process_send_addr: out of memory allocating "
 			  "new IAADDR buffer.");
 		status = ISC_R_NOMEMORY;
 		goto cleanup;
@@ -2203,7 +2229,7 @@ reply_process_send_addr(struct reply_state *reply, struct iaddr *addr) {
 	if (!append_option_buffer(&dhcpv6_universe, reply->reply_ia,
 				  data.buffer, data.buffer->data,
 				  data.len, D6O_IAADDR, 0)) {
-		log_error("reply_process_ia: unable to save IAADDR "
+		log_error("reply_process_send_addr: unable to save IAADDR "
 			  "option");
 		status = ISC_R_FAILURE;
 		goto cleanup;
@@ -2695,7 +2721,7 @@ ia_na_match_decline(const struct data_string *client_id,
 		  	    tmp_addr, sizeof(tmp_addr)));
 	if (lease != NULL) {
 		decline_lease6(lease->ipv6_pool, lease);
-		write_ia_na(lease->ia_na);
+		write_ia(lease->ia_na);
 	}
 }
 
@@ -2971,16 +2997,16 @@ iterate_over_ia_na(struct data_string *reply_ret,
 			/*
 			 * Find existing IA_NA.
 			 */
-			if (ia_na_make_key(&key, iaid, 
-					   (char *)client_id->data,
-					   client_id->len, 
-					   MDL) != ISC_R_SUCCESS) {
+			if (ia_make_key(&key, iaid, 
+					(char *)client_id->data,
+					client_id->len, 
+					MDL) != ISC_R_SUCCESS) {
 				log_fatal("iterate_over_ia_na: no memory for "
 					  "key.");
 			}
 
 			existing_ia_na = NULL;
-			if (ia_na_hash_lookup(&existing_ia_na, ia_active, 
+			if (ia_na_hash_lookup(&existing_ia_na, ia_na_active, 
 					      (unsigned char *)key.data, 
 					      key.len, MDL)) {
 				/* 
@@ -3103,7 +3129,7 @@ ia_na_match_release(const struct data_string *client_id,
 		 inet_ntop(AF_INET6, iaaddr->data, tmp_addr, sizeof(tmp_addr)));
 	if (lease != NULL) {
 		release_lease6(lease->ipv6_pool, lease);
-		write_ia_na(lease->ia_na);
+		write_ia(lease->ia_na);
 	}
 }
 

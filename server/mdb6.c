@@ -32,13 +32,25 @@
 HASH_FUNCTIONS(ia_na, unsigned char *, struct ia_na, ia_na_hash_t,
 	       ia_na_reference, ia_na_dereference, do_string_hash);
 
-ia_na_hash_t *ia_active;
+ia_na_hash_t *ia_na_active;
+ia_na_hash_t *ia_ta_active;
+
+HASH_FUNCTIONS(ia_pd, unsigned char *, struct ia_pd, ia_pd_hash_t,
+	       ia_pd_reference, ia_pd_dereference, do_string_hash);
+
+ia_pd_hash_t *ia_pd_active;
 
 HASH_FUNCTIONS(iaaddr, struct in6_addr *, struct iaaddr, iaaddr_hash_t,
 	       iaaddr_reference, iaaddr_dereference, do_string_hash);
 
+HASH_FUNCTIONS(iaprefix, struct in6_addr *, struct iaprefix, iaprefix_hash_t,
+	       iaprefix_reference, iaprefix_dereference, do_string_hash);
+
 struct ipv6_pool **pools;
 int num_pools;
+
+struct ipv6_ppool **ppools;
+int num_ppools;
 
 /*
  * Create a new IAADDR structure.
@@ -138,13 +150,111 @@ iaaddr_dereference(struct iaaddr **iaaddr, const char *file, int line) {
 	return ISC_R_SUCCESS;
 }
 
-/* 
- * Make the key that we use for IA_NA.
+/*
+ * Create a new IAPREFIX structure.
+ *
+ * - iapref must be a pointer to a (struct iaprefix *) pointer previously
+ *   initialized to NULL
  */
 isc_result_t
-ia_na_make_key(struct data_string *key, u_int32_t iaid,
-	       const char *duid, unsigned int duid_len,
-	       const char *file, int line) {
+iaprefix_allocate(struct iaprefix **iapref, const char *file, int line) {
+	struct iaprefix *tmp;
+
+	if (iapref == NULL) {
+		log_error("%s(%d): NULL pointer reference", file, line);
+		return ISC_R_INVALIDARG;
+	}
+	if (*iapref != NULL) {
+		log_error("%s(%d): non-NULL pointer", file, line);
+		return ISC_R_INVALIDARG;
+	}
+
+	tmp = dmalloc(sizeof(*tmp), file, line);
+	if (tmp == NULL) {
+		return ISC_R_NOMEMORY;
+	}
+
+	tmp->refcnt = 1;
+	tmp->state = FTS_FREE;
+	tmp->heap_index = -1;
+
+	*iapref = tmp;
+	return ISC_R_SUCCESS;
+}
+
+/*
+ * Reference an IAPREFIX structure.
+ *
+ * - iapref must be a pointer to a (struct iaprefix *) pointer previously
+ *   initialized to NULL
+ */
+isc_result_t
+iaprefix_reference(struct iaprefix **iapref, struct iaprefix *src,
+		 const char *file, int line) {
+	if (iapref == NULL) {
+		log_error("%s(%d): NULL pointer reference", file, line);
+		return ISC_R_INVALIDARG;
+	}
+	if (*iapref != NULL) {
+		log_error("%s(%d): non-NULL pointer", file, line);
+		return ISC_R_INVALIDARG;
+	}
+	if (src == NULL) {
+		log_error("%s(%d): NULL pointer reference", file, line);
+		return ISC_R_INVALIDARG;
+	}
+	*iapref = src;
+	src->refcnt++;
+	return ISC_R_SUCCESS;
+}
+
+
+/*
+ * Dereference an IAPREFIX structure.
+ *
+ * If it is the last reference, then the memory for the 
+ * structure is freed.
+ */
+isc_result_t
+iaprefix_dereference(struct iaprefix **iapref, const char *file, int line) {
+	struct iaprefix *tmp;
+
+	if ((iapref == NULL) || (*iapref == NULL)) {
+		log_error("%s(%d): NULL pointer", file, line);
+		return ISC_R_INVALIDARG;
+	}
+
+	tmp = *iapref;
+	*iapref = NULL;
+
+	tmp->refcnt--;
+	if (tmp->refcnt < 0) {
+		log_error("%s(%d): negative refcnt", file, line);
+		tmp->refcnt = 0;
+	}
+	if (tmp->refcnt == 0) {
+		if (tmp->ia_pd != NULL) {
+			ia_pd_dereference(&(tmp->ia_pd), file, line);
+		}
+		if (tmp->ipv6_ppool != NULL) {
+			ipv6_ppool_dereference(&(tmp->ipv6_ppool), file, line);
+		}
+		if (tmp->scope != NULL) {
+			binding_scope_dereference(&tmp->scope, file, line);
+		}
+		dfree(tmp, file, line);
+	}
+
+	return ISC_R_SUCCESS;
+}
+
+/* 
+ * Make the key that we use for IA.
+ */
+isc_result_t
+ia_make_key(struct data_string *key, u_int32_t iaid,
+	    const char *duid, unsigned int duid_len,
+	    const char *file, int line) {
 
 	memset(key, 0, sizeof(*key));
 	key->len = duid_len + sizeof(iaid);
@@ -159,9 +269,9 @@ ia_na_make_key(struct data_string *key, u_int32_t iaid,
 }
 
 /*
- * Create a new IA_NA structure.
+ * Create a new IA structure.
  *
- * - ia_na must be a pointer to a (struct ia_na *) pointer previously
+ * - ia must be a pointer to a (struct ia_na *) pointer previously
  *   initialized to NULL
  * - iaid and duid are values from the client
  *
@@ -170,16 +280,16 @@ ia_na_make_key(struct data_string *key, u_int32_t iaid,
  *        between machines of different byte order
  */
 isc_result_t
-ia_na_allocate(struct ia_na **ia_na, u_int32_t iaid, 
+ia_na_allocate(struct ia_na **ia, u_int32_t iaid, 
 	       const char *duid, unsigned int duid_len,
 	       const char *file, int line) {
 	struct ia_na *tmp;
 
-	if (ia_na == NULL) {
+	if (ia == NULL) {
 		log_error("%s(%d): NULL pointer reference", file, line);
 		return ISC_R_INVALIDARG;
 	}
-	if (*ia_na != NULL) {
+	if (*ia != NULL) {
 		log_error("%s(%d): non-NULL pointer", file, line);
 		return ISC_R_INVALIDARG;
 	}
@@ -189,32 +299,32 @@ ia_na_allocate(struct ia_na **ia_na, u_int32_t iaid,
 		return ISC_R_NOMEMORY;
 	}
 
-	if (ia_na_make_key(&tmp->iaid_duid, iaid, 
-			   duid, duid_len, file, line) != ISC_R_SUCCESS) {
+	if (ia_make_key(&tmp->iaid_duid, iaid, 
+			duid, duid_len, file, line) != ISC_R_SUCCESS) {
 		dfree(tmp, file, line);
 		return ISC_R_NOMEMORY;
 	}
 
 	tmp->refcnt = 1;
 
-	*ia_na = tmp;
+	*ia = tmp;
 	return ISC_R_SUCCESS;
 }
 
 /*
- * Reference an IA_NA structure.
+ * Reference an IA structure.
  *
- * - ia_na must be a pointer to a (struct ia_na *) pointer previously
+ * - ia must be a pointer to a (struct ia_na *) pointer previously
  *   initialized to NULL
  */
 isc_result_t
-ia_na_reference(struct ia_na **ia_na, struct ia_na *src,
+ia_na_reference(struct ia_na **ia, struct ia_na *src,
 		const char *file, int line) {
-	if (ia_na == NULL) {
+	if (ia == NULL) {
 		log_error("%s(%d): NULL pointer reference", file, line);
 		return ISC_R_INVALIDARG;
 	}
-	if (*ia_na != NULL) {
+	if (*ia != NULL) {
 		log_error("%s(%d): non-NULL pointer", file, line);
 		return ISC_R_INVALIDARG;
 	}
@@ -222,29 +332,29 @@ ia_na_reference(struct ia_na **ia_na, struct ia_na *src,
 		log_error("%s(%d): NULL pointer reference", file, line);
 		return ISC_R_INVALIDARG;
 	}
-	*ia_na = src;
+	*ia = src;
 	src->refcnt++;
 	return ISC_R_SUCCESS;
 }
 
 /*
- * Dereference an IA_NA structure.
+ * Dereference an IA structure.
  *
  * If it is the last reference, then the memory for the 
  * structure is freed.
  */
 isc_result_t
-ia_na_dereference(struct ia_na **ia_na, const char *file, int line) {
+ia_na_dereference(struct ia_na **ia, const char *file, int line) {
 	struct ia_na *tmp;
 	int i;
 
-	if ((ia_na == NULL) || (*ia_na == NULL)) {
+	if ((ia == NULL) || (*ia == NULL)) {
 		log_error("%s(%d): NULL pointer", file, line);
 		return ISC_R_INVALIDARG;
 	}
 
-	tmp = *ia_na;
-	*ia_na = NULL;
+	tmp = *ia;
+	*ia = NULL;
 
 	tmp->refcnt--;
 	if (tmp->refcnt < 0) {
@@ -267,10 +377,10 @@ ia_na_dereference(struct ia_na **ia_na, const char *file, int line) {
 
 
 /*
- * Add an IAADDR entry to an IA_NA structure.
+ * Add an IAADDR entry to an IA structure.
  */
 isc_result_t
-ia_na_add_iaaddr(struct ia_na *ia_na, struct iaaddr *iaaddr, 
+ia_na_add_iaaddr(struct ia_na *ia, struct iaaddr *iaaddr, 
 		 const char *file, int line) {
 	int max;
 	struct iaaddr **new;
@@ -282,69 +392,69 @@ ia_na_add_iaaddr(struct ia_na *ia_na, struct iaaddr *iaaddr,
 	 *       guess as to how many addresses we might expect on an 
 	 *       interface.
 	 */
-	if (ia_na->max_iaaddr <= ia_na->num_iaaddr) {
-		max = ia_na->max_iaaddr + 4;
+	if (ia->max_iaaddr <= ia->num_iaaddr) {
+		max = ia->max_iaaddr + 4;
 		new = dmalloc(max * sizeof(struct iaaddr *), file, line);
 		if (new == NULL) {
 			return ISC_R_NOMEMORY;
 		}
-		memcpy(new, ia_na->iaaddr, 
-		       ia_na->num_iaaddr * sizeof(struct iaaddr *));
-		ia_na->iaaddr = new;
-		ia_na->max_iaaddr = max;
+		memcpy(new, ia->iaaddr, 
+		       ia->num_iaaddr * sizeof(struct iaaddr *));
+		ia->iaaddr = new;
+		ia->max_iaaddr = max;
 	}
 
-	iaaddr_reference(&(ia_na->iaaddr[ia_na->num_iaaddr]), iaaddr, 
+	iaaddr_reference(&(ia->iaaddr[ia->num_iaaddr]), iaaddr, 
 			 file, line);
-	ia_na->num_iaaddr++;
+	ia->num_iaaddr++;
 
 	return ISC_R_SUCCESS;
 }
 
 /*
- * Remove an IAADDR entry to an IA_NA structure.
+ * Remove an IAADDR entry to an IA structure.
  *
  * Note: if an IAADDR appears more than once, then only ONE will be removed.
  */
 void
-ia_na_remove_iaaddr(struct ia_na *ia_na, struct iaaddr *iaaddr,
+ia_na_remove_iaaddr(struct ia_na *ia, struct iaaddr *iaaddr,
 		    const char *file, int line) {
 	int i, j;
 
-	for (i=0; i<ia_na->num_iaaddr; i++) {
-		if (ia_na->iaaddr[i] == iaaddr) {
+	for (i=0; i<ia->num_iaaddr; i++) {
+		if (ia->iaaddr[i] == iaaddr) {
 			/* remove this IAADDR */
-			iaaddr_dereference(&(ia_na->iaaddr[i]), file, line);
+			iaaddr_dereference(&(ia->iaaddr[i]), file, line);
 			/* move remaining IAADDR pointers down one */
-			for (j=i+1; j < ia_na->num_iaaddr; j++) {
-				ia_na->iaaddr[j-1] = ia_na->iaaddr[j];
+			for (j=i+1; j < ia->num_iaaddr; j++) {
+				ia->iaaddr[j-1] = ia->iaaddr[j];
 			}
 			/* decrease our total count */
 			/* remove the back-reference in the IAADDR itself */
 			ia_na_dereference(&iaaddr->ia_na, file, line);
-			ia_na->num_iaaddr--;
+			ia->num_iaaddr--;
 			return;
 		}
 	}
-	log_error("%s(%d): IAADDR not in IA_NA", file, line);
+	log_error("%s(%d): IAADDR not in IA", file, line);
 }
 
 /*
- * Remove all addresses from an IA_NA.
+ * Remove all addresses from an IA.
  */
 void
-ia_na_remove_all_iaaddr(struct ia_na *ia_na, const char *file, int line) {
+ia_na_remove_all_iaaddr(struct ia_na *ia, const char *file, int line) {
 	int i;
 
-	for (i=0; i<ia_na->num_iaaddr; i++) {
-		ia_na_dereference(&(ia_na->iaaddr[i]->ia_na), file, line);
-		iaaddr_dereference(&(ia_na->iaaddr[i]), file, line);
+	for (i=0; i<ia->num_iaaddr; i++) {
+		ia_na_dereference(&(ia->iaaddr[i]->ia_na), file, line);
+		iaaddr_dereference(&(ia->iaaddr[i]), file, line);
 	}
-	ia_na->num_iaaddr = 0;
+	ia->num_iaaddr = 0;
 }
 
 /*
- * Compare two IA_NA.
+ * Compare two IA.
  */
 isc_boolean_t
 ia_na_equal(const struct ia_na *a, const struct ia_na *b) 
@@ -362,6 +472,13 @@ ia_na_equal(const struct ia_na *a, const struct ia_na *b)
 			return ISC_FALSE;
 		}
 	}	
+
+	/*
+	 * Check the type is the same.
+	 */
+	if (a->ia_type != b->ia_type) {
+		return ISC_FALSE;
+	}
 
 	/*
 	 * Check the DUID is the same.
@@ -389,7 +506,257 @@ ia_na_equal(const struct ia_na *a, const struct ia_na *b)
 		for (j=0; j<a->num_iaaddr; j++) {
 			if (memcmp(&(a->iaaddr[i]->addr),
 			           &(b->iaaddr[j]->addr), 
-				   sizeof(struct in6_addr) == 0)) {
+				   sizeof(struct in6_addr)) == 0) {
+				found = ISC_TRUE;
+				break;
+			}
+		}
+		if (!found) {
+			return ISC_FALSE;
+		}
+	}
+
+	/*
+	 * These are the same in every way we care about.
+	 */
+	return ISC_TRUE;
+}
+
+/*
+ * Create a new IA_PD structure.
+ *
+ * - ia_pd must be a pointer to a (struct ia_pd *) pointer previously
+ *   initialized to NULL
+ * - iaid and duid are values from the client
+ *
+ * XXXsk: we don't concern ourself with the byte order of the IAID, 
+ *        which might be a problem if we transfer this structure 
+ *        between machines of different byte order
+ */
+isc_result_t
+ia_pd_allocate(struct ia_pd **ia_pd, u_int32_t iaid, 
+	       const char *duid, unsigned int duid_len,
+	       const char *file, int line) {
+	struct ia_pd *tmp;
+
+	if (ia_pd == NULL) {
+		log_error("%s(%d): NULL pointer reference", file, line);
+		return ISC_R_INVALIDARG;
+	}
+	if (*ia_pd != NULL) {
+		log_error("%s(%d): non-NULL pointer", file, line);
+		return ISC_R_INVALIDARG;
+	}
+
+	tmp = dmalloc(sizeof(*tmp), file, line);
+	if (tmp == NULL) {
+		return ISC_R_NOMEMORY;
+	}
+
+	if (ia_make_key(&tmp->iaid_duid, iaid, 
+			duid, duid_len, file, line) != ISC_R_SUCCESS) {
+		dfree(tmp, file, line);
+		return ISC_R_NOMEMORY;
+	}
+
+	tmp->refcnt = 1;
+
+	*ia_pd = tmp;
+	return ISC_R_SUCCESS;
+}
+
+/*
+ * Reference an IA_PD structure.
+ *
+ * - ia_pd must be a pointer to a (struct ia_pd *) pointer previously
+ *   initialized to NULL
+ */
+isc_result_t
+ia_pd_reference(struct ia_pd **ia_pd, struct ia_pd *src,
+		const char *file, int line) {
+	if (ia_pd == NULL) {
+		log_error("%s(%d): NULL pointer reference", file, line);
+		return ISC_R_INVALIDARG;
+	}
+	if (*ia_pd != NULL) {
+		log_error("%s(%d): non-NULL pointer", file, line);
+		return ISC_R_INVALIDARG;
+	}
+	if (src == NULL) {
+		log_error("%s(%d): NULL pointer reference", file, line);
+		return ISC_R_INVALIDARG;
+	}
+	*ia_pd = src;
+	src->refcnt++;
+	return ISC_R_SUCCESS;
+}
+
+/*
+ * Dereference an IA_PD structure.
+ *
+ * If it is the last reference, then the memory for the 
+ * structure is freed.
+ */
+isc_result_t
+ia_pd_dereference(struct ia_pd **ia_pd, const char *file, int line) {
+	struct ia_pd *tmp;
+	int i;
+
+	if ((ia_pd == NULL) || (*ia_pd == NULL)) {
+		log_error("%s(%d): NULL pointer", file, line);
+		return ISC_R_INVALIDARG;
+	}
+
+	tmp = *ia_pd;
+	*ia_pd = NULL;
+
+	tmp->refcnt--;
+	if (tmp->refcnt < 0) {
+		log_error("%s(%d): negative refcnt", file, line);
+		tmp->refcnt = 0;
+	}
+	if (tmp->refcnt == 0) {
+		if (tmp->iaprefix != NULL) {
+			for (i=0; i<tmp->num_iaprefix; i++) {
+				iaprefix_dereference(&(tmp->iaprefix[i]), 
+						     file, line);
+			}
+			dfree(tmp->iaprefix, file, line);
+		}
+		data_string_forget(&(tmp->iaid_duid), file, line);
+		dfree(tmp, file, line);
+	}
+	return ISC_R_SUCCESS;
+}
+
+
+/*
+ * Add an IAPREFIX entry to an IA_PD structure.
+ */
+isc_result_t
+ia_pd_add_iaprefix(struct ia_pd *ia_pd, struct iaprefix *iapref, 
+		   const char *file, int line) {
+	int max;
+	struct iaprefix **new;
+
+	/* 
+	 * Grow our array if we need to.
+	 * 
+	 * Note: we pick 4 as the increment, as that seems a reasonable
+	 *       guess as to how many prefixes we might expect on an 
+	 *       interface.
+	 */
+	if (ia_pd->max_iaprefix <= ia_pd->num_iaprefix) {
+		max = ia_pd->max_iaprefix + 4;
+		new = dmalloc(max * sizeof(struct iaprefix *), file, line);
+		if (new == NULL) {
+			return ISC_R_NOMEMORY;
+		}
+		memcpy(new, ia_pd->iaprefix, 
+		       ia_pd->num_iaprefix * sizeof(struct iaprefix *));
+		ia_pd->iaprefix = new;
+		ia_pd->max_iaprefix = max;
+	}
+
+	iaprefix_reference(&(ia_pd->iaprefix[ia_pd->num_iaprefix]), iapref, 
+			   file, line);
+	ia_pd->num_iaprefix++;
+
+	return ISC_R_SUCCESS;
+}
+
+/*
+ * Remove an IAPREFIX entry to an IA_PD structure.
+ *
+ * Note: if an IAPREFIX appears more than once, then only ONE will be removed.
+ */
+void
+ia_pd_remove_iaprefix(struct ia_pd *ia_pd, struct iaprefix *iapref,
+		      const char *file, int line) {
+	int i, j;
+
+	for (i=0; i<ia_pd->num_iaprefix; i++) {
+		if (ia_pd->iaprefix[i] == iapref) {
+			/* remove this IAPREFIX */
+			iaprefix_dereference(&(ia_pd->iaprefix[i]),
+					     file, line);
+			/* move remaining IAPREFIX pointers down one */
+			for (j=i+1; j < ia_pd->num_iaprefix; j++) {
+				ia_pd->iaprefix[j-1] = ia_pd->iaprefix[j];
+			}
+			/* decrease our total count */
+			/* remove the back-reference in the IAPREFIX itself */
+			ia_pd_dereference(&iapref->ia_pd, file, line);
+			ia_pd->num_iaprefix--;
+			return;
+		}
+	}
+	log_error("%s(%d): IAPREFIX not in IA_PD", file, line);
+}
+
+/*
+ * Remove all prefixes from an IA_PD.
+ */
+void
+ia_pd_remove_all_iaprefix(struct ia_pd *ia_pd, const char *file, int line) {
+	int i;
+
+	for (i=0; i<ia_pd->num_iaprefix; i++) {
+		ia_pd_dereference(&(ia_pd->iaprefix[i]->ia_pd), file, line);
+		iaprefix_dereference(&(ia_pd->iaprefix[i]), file, line);
+	}
+	ia_pd->num_iaprefix = 0;
+}
+
+/*
+ * Compare two IA_PD.
+ */
+isc_boolean_t
+ia_pd_equal(const struct ia_pd *a, const struct ia_pd *b) 
+{
+	isc_boolean_t found;
+	int i, j;
+
+	/*
+	 * Handle cases where one or both of the inputs is NULL.
+	 */
+	if (a == NULL) {
+		if (b == NULL) {
+			return ISC_TRUE;
+		} else {
+			return ISC_FALSE;
+		}
+	}	
+
+	/*
+	 * Check the DUID is the same.
+	 */
+	if (a->iaid_duid.len != b->iaid_duid.len) {
+		return ISC_FALSE;
+	}
+	if (memcmp(a->iaid_duid.data, 
+		   b->iaid_duid.data, a->iaid_duid.len) != 0) {
+		return ISC_FALSE;
+	}
+
+	/*
+	 * Make sure we have the same number of prefixes in each.
+	 */
+	if (a->num_iaprefix != b->num_iaprefix) {
+		return ISC_FALSE;
+	}
+
+	/*
+	 * Check that each prefix is present in both.
+	 */
+	for (i=0; i<a->num_iaprefix; i++) {
+		found = ISC_FALSE;
+		for (j=0; j<a->num_iaprefix; j++) {
+			if (a->iaprefix[i]->plen != b->iaprefix[i]->plen)
+				continue;
+			if (memcmp(&(a->iaprefix[i]->pref),
+			           &(b->iaprefix[j]->pref), 
+				   sizeof(struct in6_addr)) == 0) {
 				found = ISC_TRUE;
 				break;
 			}
@@ -408,6 +775,7 @@ ia_na_equal(const struct ia_na *a, const struct ia_na *b)
 /*
  * Helper function for lease heaps.
  * Makes the top of the heap the oldest lease.
+ * Note: this relies on the unique layout for leases!
  */
 static isc_boolean_t 
 lease_older(void *a, void *b) {
@@ -419,7 +787,7 @@ lease_older(void *a, void *b) {
 }
 
 /*
- * Helper function for lease heaps.
+ * Helper function for lease address heaps.
  * Callback when an address's position in the heap changes.
  */
 static void
@@ -427,9 +795,18 @@ lease_address_index_changed(void *iaaddr, unsigned int new_heap_index) {
 	((struct iaaddr *)iaaddr)-> heap_index = new_heap_index;
 }
 
+/*
+ * Helper function for lease prefix heaps.
+ * Callback when a prefix's position in the heap changes.
+ */
+static void
+lease_prefix_index_changed(void *iapref, unsigned int new_heap_index) {
+	((struct iaprefix *)iapref)-> heap_index = new_heap_index;
+}
+
 
 /*
- * Create a new IPv6 lease pool structure.
+ * Create a new IPv6 lease (address) pool structure.
  *
  * - pool must be a pointer to a (struct ipv6_pool *) pointer previously
  *   initialized to NULL
@@ -569,6 +946,156 @@ ipv6_pool_dereference(struct ipv6_pool **pool, const char *file, int line) {
 		isc_heap_destroy(&(tmp->active_timeouts));
 		isc_heap_foreach(tmp->inactive_timeouts, 
 				 dereference_heap_entry, NULL);
+		isc_heap_destroy(&(tmp->inactive_timeouts));
+		dfree(tmp, file, line);
+	}
+
+	return ISC_R_SUCCESS;
+}
+
+/*
+ * Create a new IPv6 lease (prefix) pool structure.
+ *
+ * - ppool must be a pointer to a (struct ipv6_ppool *) pointer previously
+ *   initialized to NULL
+ */
+isc_result_t
+ipv6_ppool_allocate(struct ipv6_ppool **ppool,
+		    const struct in6_addr *start_pref,
+		    u_int8_t pool_plen, u_int8_t alloc_plen,
+		    const char *file, int line) {
+	struct ipv6_ppool *tmp;
+
+	if (ppool == NULL) {
+		log_error("%s(%d): NULL pointer reference", file, line);
+		return ISC_R_INVALIDARG;
+	}
+	if (*ppool != NULL) {
+		log_error("%s(%d): non-NULL pointer", file, line);
+		return ISC_R_INVALIDARG;
+	}
+
+	tmp = dmalloc(sizeof(*tmp), file, line);
+	if (tmp == NULL) {
+		return ISC_R_NOMEMORY;
+	}
+
+	tmp->refcnt = 1;
+	tmp->start_pref = *start_pref;
+	tmp->pool_plen = pool_plen;
+	tmp->alloc_plen = alloc_plen;
+	if (!iaprefix_new_hash(&tmp->prefs, DEFAULT_HASH_SIZE, file, line)) {
+		dfree(tmp, file, line);
+		return ISC_R_NOMEMORY;
+	}
+	if (isc_heap_create(lease_older, lease_prefix_index_changed,
+			    0, &(tmp->active_timeouts)) != ISC_R_SUCCESS) {
+		iaprefix_free_hash_table(&(tmp->prefs), file, line);
+		dfree(tmp, file, line);
+		return ISC_R_NOMEMORY;
+	}
+	if (isc_heap_create(lease_older, lease_prefix_index_changed,
+			    0, &(tmp->inactive_timeouts)) != ISC_R_SUCCESS) {
+		isc_heap_destroy(&(tmp->active_timeouts));
+		iaprefix_free_hash_table(&(tmp->prefs), file, line);
+		dfree(tmp, file, line);
+		return ISC_R_NOMEMORY;
+	}
+
+	*ppool = tmp;
+	return ISC_R_SUCCESS;
+}
+
+/*
+ * Reference an IPv6 prefix pool structure.
+ *
+ * - ppool must be a pointer to a (struct ppool *) pointer previously
+ *   initialized to NULL
+ */
+isc_result_t
+ipv6_ppool_reference(struct ipv6_ppool **ppool, struct ipv6_ppool *src,
+		     const char *file, int line) {
+	if (ppool == NULL) {
+		log_error("%s(%d): NULL pointer reference", file, line);
+		return ISC_R_INVALIDARG;
+	}
+	if (*ppool != NULL) {
+		log_error("%s(%d): non-NULL pointer", file, line);
+		return ISC_R_INVALIDARG;
+	}
+	if (src == NULL) {
+		log_error("%s(%d): NULL pointer reference", file, line);
+		return ISC_R_INVALIDARG;
+	}
+	*ppool = src;
+	src->refcnt++;
+	return ISC_R_SUCCESS;
+}
+
+/* 
+ * Note: Each IAPREFIX in a pool is referenced by the pool. This is needed
+ * to prevent the IAPREFIX from being garbage collected out from under the
+ * pool.
+ *
+ * The references are made from the hash and from the heap. The following
+ * helper functions dereference these when a pool is destroyed.
+ */
+
+/*
+ * Helper function for prefix pool cleanup.
+ * Dereference each of the hash entries in a pool.
+ */
+static isc_result_t 
+dereference_phash_entry(const void *name, unsigned len, void *value) {
+	struct iaprefix *iapref = (struct iaprefix *)value;
+
+	iaprefix_dereference(&iapref, MDL);
+	return ISC_R_SUCCESS;
+}
+
+/*
+ * Helper function for prefix pool cleanup.
+ * Dereference each of the heap entries in a pool.
+ */
+static void
+dereference_pheap_entry(void *value, void *dummy) {
+	struct iaprefix *iapref = (struct iaprefix *)value;
+
+	iaprefix_dereference(&iapref, MDL);
+}
+
+
+/*
+ * Dereference an IPv6 prefix pool structure.
+ *
+ * If it is the last reference, then the memory for the 
+ * structure is freed.
+ */
+isc_result_t
+ipv6_ppool_dereference(struct ipv6_ppool **ppool, const char *file, int line) {
+	struct ipv6_ppool *tmp;
+
+	if ((ppool == NULL) || (*ppool == NULL)) {
+		log_error("%s(%d): NULL pointer", file, line);
+		return ISC_R_INVALIDARG;
+	}
+
+	tmp = *ppool;
+	*ppool = NULL;
+
+	tmp->refcnt--;
+	if (tmp->refcnt < 0) {
+		log_error("%s(%d): negative refcnt", file, line);
+		tmp->refcnt = 0;
+	}
+	if (tmp->refcnt == 0) {
+		iaprefix_hash_foreach(tmp->prefs, dereference_phash_entry);
+		iaprefix_free_hash_table(&(tmp->prefs), file, line);
+		isc_heap_foreach(tmp->active_timeouts, 
+				 dereference_pheap_entry, NULL);
+		isc_heap_destroy(&(tmp->active_timeouts));
+		isc_heap_foreach(tmp->inactive_timeouts, 
+				 dereference_pheap_entry, NULL);
 		isc_heap_destroy(&(tmp->inactive_timeouts));
 		dfree(tmp, file, line);
 	}
@@ -1018,6 +1545,417 @@ release_lease6(struct ipv6_pool *pool, struct iaaddr *addr) {
 	}
 }
 
+/* 
+ * Create a prefix by hashing the input, and using that for
+ * the part subject to allocation.
+ */
+static void
+create_prefix(struct in6_addr *pref, 
+	      const struct in6_addr *net_start_pref,
+	      int pool_bits, int pref_bits,
+	      const struct data_string *input) {
+	MD5_CTX ctx;
+	int net_bytes;
+	int i;
+	char *str;
+	const char *net_str;
+
+	/* 
+	 * Use MD5 to get a nice 128 bit hash of the input.
+	 * Yes, we know MD5 isn't cryptographically sound. 
+	 * No, we don't care.
+	 */
+	MD5_Init(&ctx);
+	MD5_Update(&ctx, input->data, input->len);
+	MD5_Final((unsigned char *)pref, &ctx);
+
+	/*
+	 * Copy the network bits over.
+	 */
+	str = (char *)pref;
+	net_str = (const char *)net_start_pref;
+	net_bytes = pool_bits / 8;
+	for (i=0; i<net_bytes; i++) {
+		str[i] = net_str[i];
+	}
+	switch (pool_bits % 8) {
+		case 1: str[i] = (str[i] & 0x7F) | (net_str[i] & 0x80); break;
+		case 2: str[i] = (str[i] & 0x3F) | (net_str[i] & 0xC0); break;
+		case 3: str[i] = (str[i] & 0x1F) | (net_str[i] & 0xE0); break;
+		case 4: str[i] = (str[i] & 0x0F) | (net_str[i] & 0xF0); break;
+		case 5: str[i] = (str[i] & 0x07) | (net_str[i] & 0xF8); break;
+		case 6: str[i] = (str[i] & 0x03) | (net_str[i] & 0xFC); break;
+		case 7: str[i] = (str[i] & 0x01) | (net_str[i] & 0xFE); break;
+	}
+	/*
+	 * Zero the remaining bits.
+	 */
+	net_bytes = pref_bits / 8;
+	for (i=net_bytes+1; i<16; i++) {
+		str[i] = 0;
+	}
+	switch (pref_bits % 8) {
+		case 0: str[i] &= 0;
+		case 1: str[i] &= 0x80;
+		case 2: str[i] &= 0xC0;
+		case 3: str[i] &= 0xE0;
+		case 4: str[i] &= 0xF0;
+		case 5: str[i] &= 0xF8;
+		case 6: str[i] &= 0xFC;
+		case 7: str[i] &= 0xFE;
+	}
+}
+
+/*
+ * Create a lease for the given prefix and client duid.
+ *
+ * - ppool must be a pointer to a (struct ppool *) pointer previously
+ *   initialized to NULL
+ *
+ * Right now we simply hash the DUID, and if we get a collision, we hash 
+ * again until we find a free prefix. We try this a fixed number of times,
+ * to avoid getting stuck in a loop (this is important on small pools
+ * where we can run out of space).
+ *
+ * We return the number of attempts that it took to find an available
+ * prefix. This tells callers when a pool is are filling up, as
+ * well as an indication of how full the pool is; statistically the 
+ * more full a pool is the more attempts must be made before finding
+ * a free prefix. Realistically this will only happen in very full
+ * pools.
+ *
+ * We probably want different algorithms depending on the network size, in
+ * the long term.
+ */
+isc_result_t
+activate_prefix(struct ipv6_ppool *ppool, struct iaprefix **pref, 
+		unsigned int *attempts,
+		const struct data_string *uid,
+		time_t valid_lifetime_end_time) {
+	struct data_string ds;
+	struct in6_addr tmp;
+	struct iaprefix *test_iapref;
+	struct data_string new_ds;
+	struct iaprefix *iapref;
+	isc_result_t result;
+
+	/* 
+	 * Use the UID as our initial seed for the hash
+	 */
+	memset(&ds, 0, sizeof(ds));
+	data_string_copy(&ds, (struct data_string *)uid, MDL);
+
+	*attempts = 0;
+	for (;;) {
+		/*
+		 * Give up at some point.
+		 */
+		if (++(*attempts) > 10) {
+			data_string_forget(&ds, MDL);
+			return ISC_R_NORESOURCES;
+		}
+
+		/* 
+		 * Create a prefix
+		 */
+		create_prefix(&tmp, &ppool->start_pref,
+			      (int)ppool->pool_plen, (int)ppool->alloc_plen,
+			      &ds);
+
+		/*
+		 * If this prefix is not in use, we're happy with it
+		 */
+		test_iapref = NULL;
+		if (iaprefix_hash_lookup(&test_iapref, ppool->prefs,
+					 &tmp, sizeof(tmp), MDL) == 0) {
+			break;
+		}
+		iaprefix_dereference(&test_iapref, MDL);
+
+		/* 
+		 * Otherwise, we create a new input, adding the prefix
+		 */
+		memset(&new_ds, 0, sizeof(new_ds));
+		new_ds.len = ds.len + sizeof(tmp);
+		if (!buffer_allocate(&new_ds.buffer, new_ds.len, MDL)) {
+			data_string_forget(&ds, MDL);
+			return ISC_R_NOMEMORY;
+		}
+		new_ds.data = new_ds.buffer->data;
+		memcpy(new_ds.buffer->data, ds.data, ds.len);
+		memcpy(new_ds.buffer->data + ds.len, &tmp, sizeof(tmp));
+		data_string_forget(&ds, MDL);
+		data_string_copy(&ds, &new_ds, MDL);
+		data_string_forget(&new_ds, MDL);
+	}
+
+	data_string_forget(&ds, MDL);
+
+	/* 
+	 * We're happy with the prefix, create an IAPREFIX
+	 * to hold it.
+	 */
+	iapref = NULL;
+	result = iaprefix_allocate(&iapref, MDL);
+	if (result != ISC_R_SUCCESS) {
+		return result;
+	}
+	memcpy(&iapref->pref, &tmp, sizeof(iapref->pref));
+
+	/*
+	 * Add the prefix to the pool.
+	 */
+	result = add_prefix6(ppool, iapref, valid_lifetime_end_time);
+	if (result == ISC_R_SUCCESS) {
+		iaprefix_reference(pref, iapref, MDL);
+	}
+	iaprefix_dereference(&iapref, MDL);
+	return result;
+}
+
+/*
+ * Put a prefix in the pool directly. This is intended to be used when
+ * loading leases from the file.
+ */
+isc_result_t
+add_prefix6(struct ipv6_ppool *ppool, struct iaprefix *iapref,
+	    time_t valid_lifetime_end_time) {
+	isc_result_t insert_result;
+	struct iaprefix *test_iapref;
+	struct iaprefix *tmp_iapref;
+
+	/* If a state was not assigned by the caller, assume active. */
+	if (iapref->state == 0)
+		iapref->state = FTS_ACTIVE;
+
+	iapref->valid_lifetime_end_time = valid_lifetime_end_time;
+	ipv6_ppool_reference(&iapref->ipv6_ppool, ppool, MDL);
+
+	/*
+	 * If this IAPREFIX is already in our structures, remove the 
+	 * old one.
+	 */
+	test_iapref = NULL;
+	if (iaprefix_hash_lookup(&test_iapref, ppool->prefs,
+				 &iapref->pref, sizeof(iapref->pref), MDL)) {
+		/* XXX: we should probably ask the iaprefix what heap it is on
+		 * (as a consistency check).
+		 * XXX: we should probably have one function to "put this
+		 * prefix on its heap" rather than doing these if's
+		 * everywhere.  If you add more states to this list, don't.
+		 */
+		if ((test_iapref->state == FTS_ACTIVE) ||
+		    (test_iapref->state == FTS_ABANDONED)) {
+			isc_heap_delete(ppool->active_timeouts,
+					test_iapref->heap_index);
+			ppool->num_active--;
+		} else {
+			isc_heap_delete(ppool->inactive_timeouts,
+					test_iapref->heap_index);
+			ppool->num_inactive--;
+		}
+
+		iaprefix_hash_delete(ppool->prefs, &test_iapref->pref, 
+				     sizeof(test_iapref->pref), MDL);
+
+		/*
+		 * We're going to do a bit of evil trickery here.
+		 *
+		 * We need to dereference the entry once to remove our
+		 * current reference (in test_iapref), and then one
+		 * more time to remove the reference left when the
+		 * prefix was added to the pool before.
+		 */
+		tmp_iapref = test_iapref;
+		iaprefix_dereference(&test_iapref, MDL);
+		iaprefix_dereference(&tmp_iapref, MDL);
+	}
+
+	/* 
+	 * Add IAPREFIX to our structures.
+	 */
+	tmp_iapref = NULL;
+	iaprefix_reference(&tmp_iapref, iapref, MDL);
+	if ((tmp_iapref->state == FTS_ACTIVE) ||
+	    (tmp_iapref->state == FTS_ABANDONED)) {
+		iaprefix_hash_add(ppool->prefs, &tmp_iapref->pref, 
+				  sizeof(tmp_iapref->pref), iapref, MDL);
+		insert_result = isc_heap_insert(ppool->active_timeouts,
+						tmp_iapref);
+		if (insert_result == ISC_R_SUCCESS)
+			ppool->num_active++;
+	} else {
+		insert_result = isc_heap_insert(ppool->inactive_timeouts,
+						tmp_iapref);
+		if (insert_result == ISC_R_SUCCESS)
+			ppool->num_inactive++;
+	}
+	if (insert_result != ISC_R_SUCCESS) {
+		iaprefix_hash_delete(ppool->prefs, &iapref->pref, 
+				     sizeof(iapref->pref), MDL);
+		iaprefix_dereference(&tmp_iapref, MDL);
+		return insert_result;
+	}
+
+	/* 
+	 * Note: we intentionally leave tmp_iapref referenced; there
+	 * is a reference in the heap/hash, after all.
+	 */
+
+	return ISC_R_SUCCESS;
+}
+
+/*
+ * Determine if a prefix is present in a pool or not.
+ */
+isc_boolean_t
+prefix6_exists(const struct ipv6_ppool *ppool,
+	       const struct in6_addr *pref, u_int8_t plen) {
+	struct iaprefix *test_iapref;
+
+	if (plen != ppool->alloc_plen)
+		return ISC_FALSE;
+
+	test_iapref = NULL;
+	if (iaprefix_hash_lookup(&test_iapref, ppool->prefs, 
+				 (void *)pref, sizeof(*pref), MDL)) {
+		iaprefix_dereference(&test_iapref, MDL);
+		return ISC_TRUE;
+	} else {
+		return ISC_FALSE;
+	}
+}
+
+/*
+ * Put the prefix on our active pool.
+ */
+static isc_result_t
+move_prefix_to_active(struct ipv6_ppool *ppool, struct iaprefix *pref) {
+	isc_result_t insert_result;
+	int old_heap_index;
+
+	old_heap_index = pref->heap_index;
+	insert_result = isc_heap_insert(ppool->active_timeouts, pref);
+	if (insert_result == ISC_R_SUCCESS) {
+       		iaprefix_hash_add(ppool->prefs, &pref->pref, 
+				  sizeof(pref->pref), pref, MDL);
+		isc_heap_delete(ppool->inactive_timeouts, old_heap_index);
+		ppool->num_active++;
+		ppool->num_inactive--;
+		pref->state = FTS_ACTIVE;
+	}
+	return insert_result;
+}
+
+/*
+ * Renew a prefix in the pool.
+ *
+ * To do this, first set the new valid_lifetime_end_time for the prefix, 
+ * and then invoke renew_prefix() on the prefix.
+ *
+ * WARNING: lease times must only be extended, never reduced!!!
+ */
+isc_result_t
+renew_prefix6(struct ipv6_ppool *ppool, struct iaprefix *pref) {
+	/*
+	 * If we're already active, then we can just move our expiration
+	 * time down the heap. 
+	 *
+	 * Otherwise, we have to move from the inactive heap to the 
+	 * active heap.
+	 */
+	if (pref->state == FTS_ACTIVE) {
+		isc_heap_decreased(ppool->active_timeouts, pref->heap_index);
+		return ISC_R_SUCCESS;
+	} else {
+		return move_prefix_to_active(ppool, pref);
+	}
+}
+
+/*
+ * Put the prefix on our inactive pool, with the specified state.
+ */
+static isc_result_t
+move_prefix_to_inactive(struct ipv6_ppool *ppool, struct iaprefix *pref, 
+			binding_state_t state) {
+	isc_result_t insert_result;
+	int old_heap_index;
+
+	old_heap_index = pref->heap_index;
+	insert_result = isc_heap_insert(ppool->inactive_timeouts, pref);
+	if (insert_result == ISC_R_SUCCESS) {
+		/* Process events upon expiration. */
+		/* No DDNS for prefixes. */
+
+		/* Binding scopes are no longer valid after expiry or
+		 * release.
+		 */
+		if (pref->scope != NULL) {
+			binding_scope_dereference(&pref->scope, MDL);
+		}
+
+		iaprefix_hash_delete(ppool->prefs, 
+				     &pref->pref, sizeof(pref->pref), MDL);
+		isc_heap_delete(ppool->active_timeouts, old_heap_index);
+		pref->state = state;
+		ppool->num_active--;
+		ppool->num_inactive++;
+	}
+	return insert_result;
+}
+
+/*
+ * Expire the oldest prefix if it's lifetime_end_time is 
+ * older than the given time.
+ *
+ * - iapref must be a pointer to a (struct iaprefix *) pointer previously
+ *   initialized to NULL
+ *
+ * On return iapref has a reference to the removed entry. It is left
+ * pointing to NULL if the oldest prefix has not expired.
+ */
+isc_result_t
+expire_prefix6(struct iaprefix **pref, struct ipv6_ppool *ppool, time_t now) {
+	struct iaprefix *tmp;
+	isc_result_t result;
+
+	if (pref == NULL) {
+		log_error("%s(%d): NULL pointer reference", MDL);
+		return ISC_R_INVALIDARG;
+	}
+	if (*pref != NULL) {
+		log_error("%s(%d): non-NULL pointer", MDL);
+		return ISC_R_INVALIDARG;
+	}
+
+	if (ppool->num_active > 0) {
+		tmp = (struct iaprefix *)
+			isc_heap_element(ppool->active_timeouts, 1);
+		if (now > tmp->valid_lifetime_end_time) {
+			result = move_prefix_to_inactive(ppool, tmp,
+							 FTS_EXPIRED);
+			if (result == ISC_R_SUCCESS) {
+				iaprefix_reference(pref, tmp, MDL);
+			}
+			return result;
+		}
+	}
+	return ISC_R_SUCCESS;
+}
+
+
+/*
+ * Put the returned prefix on our inactive pool.
+ */
+isc_result_t
+release_prefix6(struct ipv6_ppool *ppool, struct iaprefix *pref) {
+	if (pref->state == FTS_ACTIVE) {
+		return move_prefix_to_inactive(ppool, pref, FTS_RELEASED);
+	} else {
+		return ISC_R_SUCCESS;
+	}
+}
+
 /*
  * Mark an IPv6 address as unavailable from a pool.
  *
@@ -1063,12 +2001,38 @@ add_ipv6_pool(struct ipv6_pool *pool) {
 	return ISC_R_SUCCESS;
 }
 
+/* 
+ * Add a prefix pool.
+ */
+isc_result_t
+add_ipv6_ppool(struct ipv6_ppool *ppool) {
+	struct ipv6_ppool **new_ppools;
+
+	new_ppools = dmalloc(sizeof(struct ipv6_ppool *) * (num_ppools + 1),
+			     MDL);
+	if (new_ppools == NULL) {
+		return ISC_R_NOMEMORY;
+	}
+
+	if (num_ppools > 0) {
+		memcpy(new_ppools, ppools, 
+		       sizeof(struct ipv6_ppool *) * num_ppools);
+		dfree(ppools, MDL);
+	}
+	ppools = new_ppools;
+
+	ppools[num_ppools] = NULL;
+	ipv6_ppool_reference(&ppools[num_ppools], ppool, MDL);
+	num_ppools++;
+	return ISC_R_SUCCESS;
+}
+
 
 static void
 cleanup_old_expired(struct ipv6_pool *pool) {
 	struct iaaddr *tmp;
-	struct ia_na *ia_na;
-	struct ia_na *ia_na_active;
+	struct ia_na *ia;
+	struct ia_na *ia_active;
 	unsigned char *tmpd;
 	
 	while (pool->num_inactive > 0) {
@@ -1084,24 +2048,34 @@ cleanup_old_expired(struct ipv6_pool *pool) {
 
 		if (tmp->ia_na != NULL) {
 			/*
-			 * Check to see if this IA_NA is in the active list,
+			 * Check to see if this IA is in the active list,
 			 * but has no remaining addresses. If so, remove it
 			 * from the active list.
 			 */
-			ia_na = NULL;
-			ia_na_reference(&ia_na, tmp->ia_na, MDL);
-			ia_na_remove_iaaddr(ia_na, tmp, MDL);
-			ia_na_active = NULL;
-			tmpd = (unsigned char *)ia_na->iaid_duid.data;
-			if ((ia_na->num_iaaddr <= 0) &&
-			    (ia_na_hash_lookup(&ia_na_active, ia_active, tmpd,
-			    		       ia_na->iaid_duid.len,
+			ia = NULL;
+			ia_na_reference(&ia, tmp->ia_na, MDL);
+			ia_na_remove_iaaddr(ia, tmp, MDL);
+			ia_active = NULL;
+			tmpd = (unsigned char *)ia->iaid_duid.data;
+			if ((ia->ia_type == D6O_IA_NA) &&
+			    (ia->num_iaaddr <= 0) &&
+			    (ia_na_hash_lookup(&ia_active, ia_na_active, tmpd,
+			    		       ia->iaid_duid.len,
 					       MDL) == 0) &&
-			    (ia_na_active == ia_na)) {
-				ia_na_hash_delete(ia_active, tmpd, 
-					  	  ia_na->iaid_duid.len, MDL);
+			    (ia_active == ia)) {
+				ia_na_hash_delete(ia_na_active, tmpd, 
+					  	  ia->iaid_duid.len, MDL);
 			}
-			ia_na_dereference(&ia_na, MDL);
+			if ((ia->ia_type == D6O_IA_TA) &&
+			    (ia->num_iaaddr <= 0) &&
+			    (ia_na_hash_lookup(&ia_active, ia_ta_active, tmpd,
+			    		       ia->iaid_duid.len,
+					       MDL) == 0) &&
+			    (ia_active == ia)) {
+				ia_na_hash_delete(ia_ta_active, tmpd, 
+					  	  ia->iaid_duid.len, MDL);
+			}
+			ia_na_dereference(&ia, MDL);
 		}
 		iaaddr_dereference(&tmp, MDL);
 	}
@@ -1137,7 +2111,7 @@ lease_timeout_support(void *vpool) {
 		 */
 		ddns_removals(NULL, addr);
 
-		write_ia_na(addr->ia_na);
+		write_ia(addr->ia_na);
 
 		iaaddr_dereference(&addr, MDL);
 	}
@@ -1199,6 +2173,138 @@ schedule_all_ipv6_lease_timeouts(void) {
 
 	for (i=0; i<num_pools; i++) {
 		schedule_lease_timeout(pools[i]);
+	}
+}
+
+static void
+cleanup_old_pexpired(struct ipv6_ppool *ppool) {
+	struct iaprefix *tmp;
+	struct ia_pd *ia_pd;
+	struct ia_pd *ia_active;
+	unsigned char *tmpd;
+	
+	while (ppool->num_inactive > 0) {
+		tmp = (struct iaprefix *)
+			isc_heap_element(ppool->inactive_timeouts, 1);
+		if (cur_time < 
+		    tmp->valid_lifetime_end_time + EXPIRED_IPV6_CLEANUP_TIME) {
+			break;
+		}
+
+		isc_heap_delete(ppool->inactive_timeouts, tmp->heap_index);
+		ppool->num_inactive--;
+
+		if (tmp->ia_pd != NULL) {
+			/*
+			 * Check to see if this IA_PD is in the active list,
+			 * but has no remaining prefixes. If so, remove it
+			 * from the active list.
+			 */
+			ia_pd = NULL;
+			ia_pd_reference(&ia_pd, tmp->ia_pd, MDL);
+			ia_pd_remove_iaprefix(ia_pd, tmp, MDL);
+			ia_active = NULL;
+			tmpd = (unsigned char *)ia_pd->iaid_duid.data;
+			if ((ia_pd->num_iaprefix <= 0) &&
+			    (ia_pd_hash_lookup(&ia_active, ia_pd_active,
+					       tmpd, ia_pd->iaid_duid.len,
+					       MDL) == 0) &&
+			    (ia_active == ia_pd)) {
+				ia_pd_hash_delete(ia_pd_active, tmpd, 
+					  	  ia_pd->iaid_duid.len, MDL);
+			}
+			ia_pd_dereference(&ia_pd, MDL);
+		}
+		iaprefix_dereference(&tmp, MDL);
+	}
+}
+
+static void
+prefix_timeout_support(void *vppool) {
+	struct ipv6_ppool *ppool;
+	struct iaprefix *pref;
+	
+	ppool = (struct ipv6_ppool *)vppool;
+	for (;;) {
+		/*
+		 * Get the next prefix scheduled to expire.
+		 *
+		 * Note that if there are no prefixes in the pool, 
+		 * expire_prefix6() will return ISC_R_SUCCESS with 
+		 * a NULL prefix.
+		 */
+		pref = NULL;
+		if (expire_prefix6(&pref, ppool, cur_time) != ISC_R_SUCCESS) {
+			break;
+		}
+		if (pref == NULL) {
+			break;
+		}
+
+		/* No DDNS for prefixes. */
+
+		write_ia_pd(pref->ia_pd);
+
+		iaprefix_dereference(&pref, MDL);
+	}
+
+	/*
+	 * Do some cleanup of our expired prefixes.
+	 */
+	cleanup_old_pexpired(ppool);
+
+	/*
+	 * Schedule next round of expirations.
+	 */
+	schedule_prefix_timeout(ppool);
+}
+
+/*
+ * For a given prefix pool, add a timer that will remove the next
+ * prefix to expire.
+ */
+void 
+schedule_prefix_timeout(struct ipv6_ppool *ppool) {
+	struct iaprefix *tmp;
+	time_t timeout;
+	time_t next_timeout;
+
+	next_timeout = MAX_TIME;
+
+	if (ppool->num_active > 0) {
+		tmp = (struct iaprefix *)
+			isc_heap_element(ppool->active_timeouts, 1);
+		if (tmp->valid_lifetime_end_time < next_timeout) {
+			next_timeout = tmp->valid_lifetime_end_time + 1;
+		}
+	}
+
+	if (ppool->num_inactive > 0) {
+		tmp = (struct iaprefix *)
+			isc_heap_element(ppool->inactive_timeouts, 1);
+		timeout = tmp->valid_lifetime_end_time + 
+			  EXPIRED_IPV6_CLEANUP_TIME;
+		if (timeout < next_timeout) {
+			next_timeout = timeout;
+		}
+	}
+
+	if (next_timeout < MAX_TIME) {
+		add_timeout(next_timeout, prefix_timeout_support, ppool,
+			    (tvref_t)ipv6_ppool_reference, 
+			    (tvunref_t)ipv6_ppool_dereference);
+	}
+}
+
+/*
+ * Schedule timeouts across all pools.
+ */
+void
+schedule_all_ipv6_prefix_timeouts(void) {
+	int i;
+
+	for (i=0; i<num_ppools; i++) {
+		schedule_prefix_timeout(ppools[i]);
 	}
 }
 
@@ -1303,7 +2409,7 @@ find_ipv6_pool(struct ipv6_pool **pool, const struct in6_addr *addr) {
  * pools.
  */
 static isc_result_t 
-change_leases(struct ia_na *ia_na, 
+change_leases(struct ia_na *ia, 
 	      isc_result_t (*change_func)(struct ipv6_pool *, struct iaaddr*)) {
 	isc_result_t retval;
 	isc_result_t renew_retval;
@@ -1312,11 +2418,11 @@ change_leases(struct ia_na *ia_na,
 	int i;
 
 	retval = ISC_R_SUCCESS;
-	for (i=0; i<ia_na->num_iaaddr; i++) {
+	for (i=0; i<ia->num_iaaddr; i++) {
 		pool = NULL;
-		addr = &ia_na->iaaddr[i]->addr;
+		addr = &ia->iaaddr[i]->addr;
 		if (find_ipv6_pool(&pool, addr) == ISC_R_SUCCESS) {
-			renew_retval =  change_func(pool, ia_na->iaaddr[i]);
+			renew_retval =  change_func(pool, ia->iaaddr[i]);
 			if (renew_retval != ISC_R_SUCCESS) {
 				retval = renew_retval;
 			}
@@ -1327,31 +2433,124 @@ change_leases(struct ia_na *ia_na,
 }
 
 /*
- * Renew all leases in an IA_NA from all pools.
+ * Renew all leases in an IA from all pools.
  *
  * The new valid_lifetime_end_time should be updated for the addresses.
  *
  * WARNING: lease times must only be extended, never reduced!!!
  */
 isc_result_t 
-renew_leases(struct ia_na *ia_na) {
-	return change_leases(ia_na, renew_lease6);
+renew_leases(struct ia_na *ia) {
+	return change_leases(ia, renew_lease6);
 }
 
 /*
- * Release all leases in an IA_NA from all pools.
+ * Release all leases in an IA from all pools.
  */
 isc_result_t 
-release_leases(struct ia_na *ia_na) {
-	return change_leases(ia_na, release_lease6);
+release_leases(struct ia_na *ia) {
+	return change_leases(ia, release_lease6);
 }
 
 /*
- * Decline all leases in an IA_NA from all pools.
+ * Decline all leases in an IA from all pools.
  */
 isc_result_t 
-decline_leases(struct ia_na *ia_na) {
-	return change_leases(ia_na, decline_lease6);
+decline_leases(struct ia_na *ia) {
+	return change_leases(ia, decline_lease6);
+}
+
+/*
+ * Determine if the given prefix is in the pool.
+ */
+isc_boolean_t
+ipv6_prefix_in_ppool(const struct in6_addr *pref,
+		     const struct ipv6_ppool *ppool) {
+	struct in6_addr tmp;
+	
+	ipv6_network_portion(&tmp, pref, (int)ppool->pool_plen);
+	if (memcmp(&tmp, &ppool->start_pref, sizeof(tmp)) == 0) {
+		return ISC_TRUE;
+	} else {
+		return ISC_FALSE;
+	}
+}
+
+/*
+ * Find the pool that contains the given prefix.
+ *
+ * - pool must be a pointer to a (struct ipv6_ppool *) pointer previously
+ *   initialized to NULL
+ */
+isc_result_t
+find_ipv6_ppool(struct ipv6_ppool **ppool, const struct in6_addr *pref) {
+	int i;
+
+	if (ppool == NULL) {
+		log_error("%s(%d): NULL pointer reference", MDL);
+		return ISC_R_INVALIDARG;
+	}
+	if (*ppool != NULL) {
+		log_error("%s(%d): non-NULL pointer", MDL);
+		return ISC_R_INVALIDARG;
+	}
+
+	for (i=0; i<num_ppools; i++) {
+		if (ipv6_prefix_in_ppool(pref, ppools[i])) { 
+			ipv6_ppool_reference(ppool, ppools[i], MDL);
+			return ISC_R_SUCCESS;
+		}
+	}
+	return ISC_R_NOTFOUND;
+}
+
+/*
+ * Helper function for the various functions that act across all
+ * prefix pools.
+ */
+static isc_result_t 
+change_prefixes(struct ia_pd *ia_pd, 
+		isc_result_t (*change_func)(struct ipv6_ppool *,
+					    struct iaprefix*)) {
+	isc_result_t retval;
+	isc_result_t renew_retval;
+	struct ipv6_ppool *ppool;
+	struct in6_addr *pref;
+	int i;
+
+	retval = ISC_R_SUCCESS;
+	for (i=0; i<ia_pd->num_iaprefix; i++) {
+		ppool = NULL;
+		pref = &ia_pd->iaprefix[i]->pref;
+		if (find_ipv6_ppool(&ppool, pref) == ISC_R_SUCCESS) {
+			renew_retval = change_func(ppool, ia_pd->iaprefix[i]);
+			if (renew_retval != ISC_R_SUCCESS) {
+				retval = renew_retval;
+			}
+		}
+		/* XXXsk: should we warn if we don't find a pool? */
+	}
+	return retval;
+}
+
+/*
+ * Renew all prefixes in an IA_PD from all pools.
+ *
+ * The new valid_lifetime_end_time should be updated for the addresses.
+ *
+ * WARNING: lease times must only be extended, never reduced!!!
+ */
+isc_result_t 
+renew_prefixes(struct ia_pd *ia_pd) {
+	return change_prefixes(ia_pd, renew_prefix6);
+}
+
+/*
+ * Release all prefixes in an IA_PD from all pools.
+ */
+isc_result_t 
+release_prefixes(struct ia_pd *ia_pd) {
+	return change_prefixes(ia_pd, release_prefix6);
 }
 
 #ifdef DHCPv6
@@ -1361,11 +2560,26 @@ decline_leases(struct ia_na *ia_na) {
 static int write_error;
 
 static isc_result_t 
-write_ia_na_leases(const void *name, unsigned len, void *value) {
-	struct ia_na *ia_na = (struct ia_na *)value;
+write_ia_leases(const void *name, unsigned len, void *value) {
+	struct ia_na *ia = (struct ia_na *)value;
 	
 	if (!write_error) { 
-		if (!write_ia_na(ia_na)) {
+		if (!write_ia(ia)) {
+			write_error = 1;
+		}
+	}
+	return ISC_R_SUCCESS;
+}
+
+/*
+ * Helper function to output prefixes.
+ */
+static isc_result_t 
+write_ia_pd_prefixes(const void *name, unsigned len, void *value) {
+	struct ia_pd *ia_pd = (struct ia_pd *)value;
+	
+	if (!write_error) { 
+		if (!write_ia_pd(ia_pd)) {
 			write_error = 1;
 		}
 	}
@@ -1379,7 +2593,15 @@ int
 write_leases6(void) {
 	write_error = 0;
 	write_server_duid();
-	ia_na_hash_foreach(ia_active, write_ia_na_leases);
+	ia_na_hash_foreach(ia_na_active, write_ia_leases);
+	if (write_error) {
+		return 0;
+	}
+	ia_na_hash_foreach(ia_ta_active, write_ia_leases);
+	if (write_error) {
+		return 0;
+	}
+	ia_pd_hash_foreach(ia_pd_active, write_ia_pd_prefixes);
 	if (write_error) {
 		return 0;
 	}
@@ -2070,6 +3292,26 @@ main(int argc, char *argv[]) {
 		return 1;
 	}*/
 
+	{
+		struct in6_addr r;
+		struct data_string ds;
+		char buf[64];
+		int i, j;
+
+		ds.len = 16;
+		ds.data = &addr;
+
+		inet_pton(AF_INET6, "3ffe:501:ffff:100::", &addr);
+		for (i = 32; i < 42; i++)
+			for (j = i + 1; j < 49; j++) {
+				memset(&r, 0, sizeof(r));
+				memset(buf, 0, 64);
+				create_prefix(&r, &addr, i, j, &ds);
+				inet_ntop(AF_INET6, &r, buf, 64);
+				printf("%d,%d-> %s/%d\n", i, j, buf, j);
+			}
+	}
+	
 	printf("SUCCESS: all tests passed (ignore any warning messages)\n");
 	return 0;
 }

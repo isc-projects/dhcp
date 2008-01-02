@@ -951,8 +951,14 @@ intern(char *atom, enum dhcp_token dfv) {
 	      case 'i':
 	      	if (!strcasecmp(atom+1, "a-na")) 
 			return IA_NA;
+	      	if (!strcasecmp(atom+1, "a-ta")) 
+			return IA_TA;
+	      	if (!strcasecmp(atom+1, "a-pd")) 
+			return IA_PD;
 	      	if (!strcasecmp(atom+1, "aaddr")) 
 			return IAADDR;
+	      	if (!strcasecmp(atom+1, "aprefix")) 
+			return IAPREFIX;
 		if (!strcasecmp (atom + 1, "nclude"))
 			return INCLUDE;
 		if (!strcasecmp (atom + 1, "nteger"))

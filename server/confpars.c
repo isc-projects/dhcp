@@ -266,6 +266,10 @@ isc_result_t lease_file_subparse (struct parse *cfile)
 					    "possibly corrupt lease file");
 		} else if (token == IA_NA) {
 			parse_ia_na_declaration(cfile);
+		} else if (token == IA_TA) {
+			parse_ia_ta_declaration(cfile);
+		} else if (token == IA_PD) {
+			parse_ia_pd_declaration(cfile);
 		} else if (token == CLASS) {
 			parse_class_declaration(0, cfile, root_group,
 						CLASS_TYPE_CLASS);
@@ -3801,9 +3805,9 @@ parse_ia_na_declaration(struct parse *cfile) {
 	skip_to_semi(cfile);
 #else /* defined(DHCPv6) */
 	enum dhcp_token token;
-	struct ia_na *ia_na;
+	struct ia_na *ia;
 	const char *val;
-	struct ia_na *old_ia_na;
+	struct ia_na *old_ia;
 	unsigned int len;
 	u_int32_t iaid;
 	struct iaddr iaddr;
@@ -3832,10 +3836,11 @@ parse_ia_na_declaration(struct parse *cfile) {
 	}
 
 	memcpy(&iaid, val, 4);
-	ia_na = NULL;
-	if (ia_na_allocate(&ia_na, iaid, val+4, len-4, MDL) != ISC_R_SUCCESS) {
+	ia = NULL;
+	if (ia_na_allocate(&ia, iaid, val+4, len-4, MDL) != ISC_R_SUCCESS) {
 		log_fatal("Out of memory.");
 	}
+	ia->ia_type = D6O_IA_NA;
 
 	token = next_token(&val, NULL, cfile);
 	if (token != LBRACE) {
@@ -4041,8 +4046,8 @@ parse_ia_na_declaration(struct parse *cfile) {
 		}
 
 		/* add to our various structures */
-		ia_na_add_iaaddr(ia_na, iaaddr, MDL);
-		ia_na_reference(&iaaddr->ia_na, ia_na, MDL);
+		ia_na_add_iaaddr(ia, iaaddr, MDL);
+		ia_na_reference(&iaaddr->ia_na, ia, MDL);
 		pool = NULL;
 		if (find_ipv6_pool(&pool, &iaaddr->addr) != ISC_R_SUCCESS) {
 			inet_ntop(AF_INET6, &iaaddr->addr, 
@@ -4059,25 +4064,602 @@ parse_ia_na_declaration(struct parse *cfile) {
 	/*
 	 * If we have an existing record for this IA_NA, remove it.
 	 */
-	old_ia_na = NULL;
-	if (ia_na_hash_lookup(&old_ia_na, ia_active,
-			      (unsigned char *)ia_na->iaid_duid.data,
-			      ia_na->iaid_duid.len, MDL)) {
-		ia_na_hash_delete(ia_active, 
-				  (unsigned char *)ia_na->iaid_duid.data,
-				  ia_na->iaid_duid.len, MDL);
-		ia_na_dereference(&old_ia_na, MDL);
+	old_ia = NULL;
+	if (ia_na_hash_lookup(&old_ia, ia_na_active,
+			      (unsigned char *)ia->iaid_duid.data,
+			      ia->iaid_duid.len, MDL)) {
+		ia_na_hash_delete(ia_na_active, 
+				  (unsigned char *)ia->iaid_duid.data,
+				  ia->iaid_duid.len, MDL);
+		ia_na_dereference(&old_ia, MDL);
 	}
 
 	/*
 	 * If we have addresses, add this, otherwise don't bother.
 	 */
-	if (ia_na->num_iaaddr > 0) {
-		ia_na_hash_add(ia_active, 
-			       (unsigned char *)ia_na->iaid_duid.data,
-			       ia_na->iaid_duid.len, ia_na, MDL);
+	if (ia->num_iaaddr > 0) {
+		ia_na_hash_add(ia_na_active, 
+			       (unsigned char *)ia->iaid_duid.data,
+			       ia->iaid_duid.len, ia, MDL);
 	}
-	ia_na_dereference(&ia_na, MDL);
+	ia_na_dereference(&ia, MDL);
+#endif /* defined(DHCPv6) */
+}
+
+void
+parse_ia_ta_declaration(struct parse *cfile) {
+#if !defined(DHCPv6)
+	parse_warn(cfile, "No DHCPv6 support.");
+	skip_to_semi(cfile);
+#else /* defined(DHCPv6) */
+	enum dhcp_token token;
+	struct ia_na *ia;
+	const char *val;
+	struct ia_na *old_ia;
+	unsigned int len;
+	u_int32_t iaid;
+	struct iaddr iaddr;
+	binding_state_t state;
+	TIME end_time;
+	struct iaaddr *iaaddr;
+	struct ipv6_pool *pool;
+	char addr_buf[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
+	isc_boolean_t newbinding;
+	struct binding_scope *scope=NULL;
+	struct binding *bnd;
+	struct binding_value *nv=NULL;
+
+	token = next_token(&val, &len, cfile);
+	if (token != STRING) {
+		parse_warn(cfile, "corrupt lease file; "
+				  "expecting an iaid+ia_ta string");
+		skip_to_semi(cfile);
+		return;
+	}
+	if (len < 5) {
+		parse_warn(cfile, "corrupt lease file; "
+				  "iaid+ia_ta string too short");
+		skip_to_semi(cfile);
+		return;
+	}
+
+	memcpy(&iaid, val, 4);
+	ia = NULL;
+	if (ia_na_allocate(&ia, iaid, val+4, len-4, MDL) != ISC_R_SUCCESS) {
+		log_fatal("Out of memory.");
+	}
+	ia->ia_type = D6O_IA_TA;
+
+	token = next_token(&val, NULL, cfile);
+	if (token != LBRACE) {
+		parse_warn(cfile, "corrupt lease file; expecting left brace");
+		skip_to_semi(cfile);
+		return;
+	}
+
+	for (;;) {
+		token = next_token(&val, NULL, cfile);
+		if (token == RBRACE) break;
+
+		if (token != IAADDR) {
+			parse_warn(cfile, "corrupt lease file; "
+					  "expecting IAADDR or right brace");
+			skip_to_semi(cfile);
+			return;
+		}
+
+		if (!parse_ip6_addr(cfile, &iaddr)) {
+			parse_warn(cfile, "corrupt lease file; "
+					  "expecting IPv6 address");
+			skip_to_semi(cfile);
+			return;
+		}
+
+		token = next_token(&val, NULL, cfile);
+		if (token != LBRACE) {
+			parse_warn(cfile, "corrupt lease file; "
+					  "expecting left brace");
+			skip_to_semi(cfile);
+			return;
+		}
+
+		state = FTS_LAST+1;
+		end_time = -1;
+		for (;;) {
+			token = next_token(&val, NULL, cfile);
+			if (token == RBRACE) break;
+
+			switch(token) {
+				/* Lease binding state. */
+			     case BINDING:
+				token = next_token(&val, NULL, cfile);
+				if (token != STATE) {
+					parse_warn(cfile, "corrupt lease file; "
+							  "expecting state");
+					skip_to_semi(cfile);
+					return;
+				}
+				token = next_token(&val, NULL, cfile);
+				switch (token) {
+					case TOKEN_ABANDONED:
+						state = FTS_ABANDONED;
+						break;
+					case TOKEN_FREE:
+						state = FTS_FREE;
+						break;
+					case TOKEN_ACTIVE:
+						state = FTS_ACTIVE;
+						break;
+					case TOKEN_EXPIRED:
+						state = FTS_EXPIRED;
+						break;
+					case TOKEN_RELEASED:
+						state = FTS_RELEASED;
+						break;
+					default:
+						parse_warn(cfile,
+							   "corrupt lease "
+							   "file; "
+					    		   "expecting a "
+							   "binding state.");
+						skip_to_semi(cfile);
+						return;
+				}
+
+				token = next_token(&val, NULL, cfile);
+				if (token != SEMI) {
+					parse_warn(cfile, "corrupt lease file; "
+							  "expecting "
+							  "semicolon.");
+				}
+				break;
+
+				/* Lease expiration time. */
+			      case ENDS:
+				end_time = parse_date(cfile);
+				break;
+
+				/* Lease binding scopes. */
+			      case TOKEN_SET:
+				token = next_token(&val, NULL, cfile);
+				if ((token != NAME) &&
+				    (token != NUMBER_OR_NAME)) {
+					parse_warn(cfile, "%s is not a valid "
+							  "variable name",
+						   val);
+					skip_to_semi(cfile);
+					continue;
+				}
+
+				if (scope != NULL)
+					bnd = find_binding(scope, val);
+				else {
+					if (!binding_scope_allocate(&scope,
+								    MDL)) {
+						log_fatal("Out of memory for "
+							  "lease binding "
+							  "scope.");
+					}
+
+					bnd = NULL;
+				}
+
+				if (bnd == NULL) {
+					bnd = dmalloc(sizeof(*bnd),
+							  MDL);
+					if (bnd == NULL) {
+						log_fatal("No memory for "
+							  "lease binding.");
+					}
+
+					bnd->name = dmalloc(strlen(val) + 1,
+							    MDL);
+					if (bnd->name == NULL) {
+						log_fatal("No memory for "
+							  "binding name.");
+					}
+					strcpy(bnd->name, val);
+
+					newbinding = ISC_TRUE;
+				} else {
+					newbinding = ISC_FALSE;
+				}
+
+				if (!binding_value_allocate(&nv, MDL)) {
+					log_fatal("no memory for binding "
+						  "value.");
+				}
+
+				token = next_token(NULL, NULL, cfile);
+				if (token != EQUAL) {
+					parse_warn(cfile, "expecting '=' in "
+							  "set statement.");
+					goto binding_err;
+				}
+
+				if (!parse_binding_value(cfile, nv)) {
+				      binding_err:
+					binding_value_dereference(&nv, MDL);
+					binding_scope_dereference(&scope, MDL);
+					return;
+				}
+
+				if (newbinding) {
+					binding_value_reference(&bnd->value,
+								nv, MDL);
+					bnd->next = scope->bindings;
+					scope->bindings = bnd;
+				} else {
+					binding_value_dereference(&bnd->value,
+								  MDL);
+					binding_value_reference(&bnd->value,
+								nv, MDL);
+				}
+
+				binding_value_dereference(&nv, MDL);
+				parse_semi(cfile);
+				break;
+
+			      default:
+				parse_warn(cfile, "corrupt lease file; "
+						  "expecting ia_ta contents, "
+						  "got '%s'", val);
+				skip_to_semi(cfile);
+				continue;
+			}
+		}
+
+		if (state == FTS_LAST+1) {
+			parse_warn(cfile, "corrupt lease file; "
+					  "missing state in iaaddr");
+			return;
+		}
+		if (end_time == -1) {
+			parse_warn(cfile, "corrupt lease file; "
+					  "missing end time in iaaddr");
+			return;
+		}
+
+		iaaddr = NULL;
+		if (iaaddr_allocate(&iaaddr, MDL) != ISC_R_SUCCESS) {
+			log_fatal("Out of memory.");
+		}
+		memcpy(&iaaddr->addr, iaddr.iabuf, sizeof(iaaddr->addr));
+		iaaddr->state = state;
+		iaaddr->valid_lifetime_end_time = end_time;
+
+		if (scope != NULL) {
+			binding_scope_reference(&iaaddr->scope, scope, MDL);
+			binding_scope_dereference(&scope, MDL);
+		}
+
+		/* add to our various structures */
+		ia_na_add_iaaddr(ia, iaaddr, MDL);
+		ia_na_reference(&iaaddr->ia_na, ia, MDL);
+		pool = NULL;
+		if (find_ipv6_pool(&pool, &iaaddr->addr) != ISC_R_SUCCESS) {
+			inet_ntop(AF_INET6, &iaaddr->addr, 
+				  addr_buf, sizeof(addr_buf));
+			parse_warn(cfile, "no pool found for address %s", 
+				   addr_buf);
+			return;
+		}
+		add_lease6(pool, iaaddr, end_time);
+		ipv6_pool_dereference(&pool, MDL);
+		iaaddr_dereference(&iaaddr, MDL);
+	}
+
+	/*
+	 * If we have an existing record for this IA_TA, remove it.
+	 */
+	old_ia = NULL;
+	if (ia_na_hash_lookup(&old_ia, ia_ta_active,
+			      (unsigned char *)ia->iaid_duid.data,
+			      ia->iaid_duid.len, MDL)) {
+		ia_na_hash_delete(ia_ta_active, 
+				  (unsigned char *)ia->iaid_duid.data,
+				  ia->iaid_duid.len, MDL);
+		ia_na_dereference(&old_ia, MDL);
+	}
+
+	/*
+	 * If we have addresses, add this, otherwise don't bother.
+	 */
+	if (ia->num_iaaddr > 0) {
+		ia_na_hash_add(ia_ta_active, 
+			       (unsigned char *)ia->iaid_duid.data,
+			       ia->iaid_duid.len, ia, MDL);
+	}
+	ia_na_dereference(&ia, MDL);
+#endif /* defined(DHCPv6) */
+}
+
+void
+parse_ia_pd_declaration(struct parse *cfile) {
+#if !defined(DHCPv6)
+	parse_warn(cfile, "No DHCPv6 support.");
+	skip_to_semi(cfile);
+#else /* defined(DHCPv6) */
+	enum dhcp_token token;
+	struct ia_pd *ia_pd;
+	const char *val;
+	struct ia_pd *old_ia_pd;
+	unsigned int len;
+	u_int32_t iaid;
+	struct iaddr iaddr;
+	u_int8_t plen;
+	binding_state_t state;
+	TIME end_time;
+	struct iaprefix *iapref;
+	struct ipv6_ppool *ppool;
+	char addr_buf[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
+	isc_boolean_t newbinding;
+	struct binding_scope *scope=NULL;
+	struct binding *bnd;
+	struct binding_value *nv=NULL;
+
+	token = next_token(&val, &len, cfile);
+	if (token != STRING) {
+		parse_warn(cfile, "corrupt lease file; "
+				  "expecting an iaid+ia_pd string");
+		skip_to_semi(cfile);
+		return;
+	}
+	if (len < 5) {
+		parse_warn(cfile, "corrupt lease file; "
+				  "iaid+ia_pd string too short");
+		skip_to_semi(cfile);
+		return;
+	}
+
+	memcpy(&iaid, val, 4);
+	ia_pd = NULL;
+	if (ia_pd_allocate(&ia_pd, iaid, val+4, len-4, MDL) != ISC_R_SUCCESS) {
+		log_fatal("Out of memory.");
+	}
+
+	token = next_token(&val, NULL, cfile);
+	if (token != LBRACE) {
+		parse_warn(cfile, "corrupt lease file; expecting left brace");
+		skip_to_semi(cfile);
+		return;
+	}
+
+	for (;;) {
+		token = next_token(&val, NULL, cfile);
+		if (token == RBRACE) break;
+
+		if (token != IAPREFIX) {
+			parse_warn(cfile, "corrupt lease file; expecting "
+				   "IAPREFIX or right brace");
+			skip_to_semi(cfile);
+			return;
+		}
+
+		if (!parse_ip6_prefix(cfile, &iaddr, &plen)) {
+			parse_warn(cfile, "corrupt lease file; "
+					  "expecting IPv6 prefix");
+			skip_to_semi(cfile);
+			return;
+		}
+
+		token = next_token(&val, NULL, cfile);
+		if (token != LBRACE) {
+			parse_warn(cfile, "corrupt lease file; "
+					  "expecting left brace");
+			skip_to_semi(cfile);
+			return;
+		}
+
+		state = FTS_LAST+1;
+		end_time = -1;
+		for (;;) {
+			token = next_token(&val, NULL, cfile);
+			if (token == RBRACE) break;
+
+			switch(token) {
+				/* Prefix binding state. */
+			     case BINDING:
+				token = next_token(&val, NULL, cfile);
+				if (token != STATE) {
+					parse_warn(cfile, "corrupt lease file; "
+							  "expecting state");
+					skip_to_semi(cfile);
+					return;
+				}
+				token = next_token(&val, NULL, cfile);
+				switch (token) {
+					case TOKEN_ABANDONED:
+						state = FTS_ABANDONED;
+						break;
+					case TOKEN_FREE:
+						state = FTS_FREE;
+						break;
+					case TOKEN_ACTIVE:
+						state = FTS_ACTIVE;
+						break;
+					case TOKEN_EXPIRED:
+						state = FTS_EXPIRED;
+						break;
+					case TOKEN_RELEASED:
+						state = FTS_RELEASED;
+						break;
+					default:
+						parse_warn(cfile,
+							   "corrupt lease "
+							   "file; "
+					    		   "expecting a "
+							   "binding state.");
+						skip_to_semi(cfile);
+						return;
+				}
+
+				token = next_token(&val, NULL, cfile);
+				if (token != SEMI) {
+					parse_warn(cfile, "corrupt lease file; "
+							  "expecting "
+							  "semicolon.");
+				}
+				break;
+
+				/* Prefix expiration time. */
+			      case ENDS:
+				end_time = parse_date(cfile);
+				break;
+
+				/* Prefix binding scopes. */
+			      case TOKEN_SET:
+				token = next_token(&val, NULL, cfile);
+				if ((token != NAME) &&
+				    (token != NUMBER_OR_NAME)) {
+					parse_warn(cfile, "%s is not a valid "
+							  "variable name",
+						   val);
+					skip_to_semi(cfile);
+					continue;
+				}
+
+				if (scope != NULL)
+					bnd = find_binding(scope, val);
+				else {
+					if (!binding_scope_allocate(&scope,
+								    MDL)) {
+						log_fatal("Out of memory for "
+							  "lease binding "
+							  "scope.");
+					}
+
+					bnd = NULL;
+				}
+
+				if (bnd == NULL) {
+					bnd = dmalloc(sizeof(*bnd),
+							  MDL);
+					if (bnd == NULL) {
+						log_fatal("No memory for "
+							  "prefix binding.");
+					}
+
+					bnd->name = dmalloc(strlen(val) + 1,
+							    MDL);
+					if (bnd->name == NULL) {
+						log_fatal("No memory for "
+							  "binding name.");
+					}
+					strcpy(bnd->name, val);
+
+					newbinding = ISC_TRUE;
+				} else {
+					newbinding = ISC_FALSE;
+				}
+
+				if (!binding_value_allocate(&nv, MDL)) {
+					log_fatal("no memory for binding "
+						  "value.");
+				}
+
+				token = next_token(NULL, NULL, cfile);
+				if (token != EQUAL) {
+					parse_warn(cfile, "expecting '=' in "
+							  "set statement.");
+					goto binding_err;
+				}
+
+				if (!parse_binding_value(cfile, nv)) {
+				      binding_err:
+					binding_value_dereference(&nv, MDL);
+					binding_scope_dereference(&scope, MDL);
+					return;
+				}
+
+				if (newbinding) {
+					binding_value_reference(&bnd->value,
+								nv, MDL);
+					bnd->next = scope->bindings;
+					scope->bindings = bnd;
+				} else {
+					binding_value_dereference(&bnd->value,
+								  MDL);
+					binding_value_reference(&bnd->value,
+								nv, MDL);
+				}
+
+				binding_value_dereference(&nv, MDL);
+				parse_semi(cfile);
+				break;
+
+			      default:
+				parse_warn(cfile, "corrupt lease file; "
+						  "expecting ia_pd contents, "
+						  "got '%s'", val);
+				skip_to_semi(cfile);
+				continue;
+			}
+		}
+
+		if (state == FTS_LAST+1) {
+			parse_warn(cfile, "corrupt lease file; "
+					  "missing state in iaprefix");
+			return;
+		}
+		if (end_time == -1) {
+			parse_warn(cfile, "corrupt lease file; "
+					  "missing end time in iaprefix");
+			return;
+		}
+
+		iapref = NULL;
+		if (iaprefix_allocate(&iapref, MDL) != ISC_R_SUCCESS) {
+			log_fatal("Out of memory.");
+		}
+		memcpy(&iapref->pref, iaddr.iabuf, sizeof(iapref->pref));
+		iapref->plen = plen;
+		iapref->state = state;
+		iapref->valid_lifetime_end_time = end_time;
+
+		if (scope != NULL) {
+			binding_scope_reference(&iapref->scope, scope, MDL);
+			binding_scope_dereference(&scope, MDL);
+		}
+
+		/* add to our various structures */
+		ia_pd_add_iaprefix(ia_pd, iapref, MDL);
+		ia_pd_reference(&iapref->ia_pd, ia_pd, MDL);
+		ppool = NULL;
+		if (find_ipv6_ppool(&ppool, &iapref->pref) != ISC_R_SUCCESS) {
+			inet_ntop(AF_INET6, &iapref->pref, 
+				  addr_buf, sizeof(addr_buf));
+			parse_warn(cfile, "no ppool found for address %s", 
+				   addr_buf);
+			return;
+		}
+		add_prefix6(ppool, iapref, end_time);
+		ipv6_ppool_dereference(&ppool, MDL);
+		iaprefix_dereference(&iapref, MDL);
+	}
+
+	/*
+	 * If we have an existing record for this IA_PD, remove it.
+	 */
+	old_ia_pd = NULL;
+	if (ia_pd_hash_lookup(&old_ia_pd, ia_pd_active,
+			      (unsigned char *)ia_pd->iaid_duid.data,
+			      ia_pd->iaid_duid.len, MDL)) {
+		ia_pd_hash_delete(ia_pd_active,
+				  (unsigned char *)ia_pd->iaid_duid.data,
+				  ia_pd->iaid_duid.len, MDL);
+		ia_pd_dereference(&old_ia_pd, MDL);
+	}
+
+	/*
+	 * If we have prefixes, add this, otherwise don't bother.
+	 */
+	if (ia_pd->num_iaprefix > 0) {
+		ia_pd_hash_add(ia_pd_active, 
+			       (unsigned char *)ia_pd->iaid_duid.data,
+			       ia_pd->iaid_duid.len, ia_pd, MDL);
+	}
+	ia_pd_dereference(&ia_pd, MDL);
 #endif /* defined(DHCPv6) */
 }
 

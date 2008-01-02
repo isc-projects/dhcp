@@ -435,6 +435,47 @@ parse_ip6_addr_expr(struct expression **expr,
 }
 
 /*
+ * ip6-prefix :== ip6-address "/" NUMBER
+ */
+int
+parse_ip6_prefix(struct parse *cfile, struct iaddr *addr, u_int8_t *plen) {
+	enum dhcp_token token;
+	const char *val;
+	int n;
+
+	if (!parse_ip6_addr(cfile, addr)) {
+		return 0;
+	}
+	token = next_token(&val, NULL, cfile);
+	if (token != SLASH) {
+		parse_warn(cfile, "Slash expected.");
+		if (token != SEMI)
+			skip_to_semi(cfile);
+		return 0;
+	}
+	token = next_token(&val, NULL, cfile);
+	if (token != NUMBER) {
+		parse_warn(cfile, "Number expected.");
+		if (token != SEMI)
+			skip_to_semi(cfile);
+		return 0;
+	}
+	n = atoi(val);
+	if ((n < 0) || (n > 128)) {
+		parse_warn(cfile, "Invalid IPv6 prefix length.");
+		skip_to_semi(cfile);
+		return 0;
+	}
+	if (!is_cidr_mask_valid(addr, n)) {
+		parse_warn(cfile, "network mask too short.");
+		skip_to_semi(cfile);
+		return 0;
+	}
+	*plen = n;
+	return 1;
+}
+
+/*
  * ip-address-with-subnet :== ip-address |
  *                          ip-address "/" NUMBER
  */
