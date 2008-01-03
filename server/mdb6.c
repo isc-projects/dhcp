@@ -2271,6 +2271,7 @@ schedule_prefix_timeout(struct ipv6_ppool *ppool) {
 	struct iaprefix *tmp;
 	time_t timeout;
 	time_t next_timeout;
+	struct timeval tv;
 
 	next_timeout = MAX_TIME;
 
@@ -2293,7 +2294,9 @@ schedule_prefix_timeout(struct ipv6_ppool *ppool) {
 	}
 
 	if (next_timeout < MAX_TIME) {
-		add_timeout(next_timeout, prefix_timeout_support, ppool,
+		tv.tv_sec = next_timeout;
+		tv.tv_usec = 0;
+		add_timeout(&tv, prefix_timeout_support, ppool,
 			    (tvref_t)ipv6_ppool_reference, 
 			    (tvunref_t)ipv6_ppool_dereference);
 	}
