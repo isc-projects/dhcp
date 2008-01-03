@@ -38,7 +38,7 @@
 #include <sys/time.h>
 
 static omapi_io_object_t omapi_io_states;
-time_t cur_time;
+struct timeval cur_tv;
 
 OMAPI_OBJECT_ALLOC (omapi_io,
 		    omapi_io_object_t, omapi_type_io_object)
@@ -227,7 +227,8 @@ isc_result_t omapi_one_dispatch (omapi_object_t *wo,
 	/* First, see if the timeout has expired, and if so return. */
 	if (t) {
 		gettimeofday (&now, (struct timezone *)0);
-		cur_time = now.tv_sec;
+		cur_tv.tv_sec = now.tv_sec;
+		cur_tv.tv_usec = now.tv_usec;
 		if (now.tv_sec > t -> tv_sec ||
 		    (now.tv_sec == t -> tv_sec && now.tv_usec >= t -> tv_usec))
 			return ISC_R_TIMEDOUT;
@@ -295,8 +296,7 @@ isc_result_t omapi_one_dispatch (omapi_object_t *wo,
 	count = select (max + 1, &r, &w, &x, t ? &to : (struct timeval *)0);
 
 	/* Get the current time... */
-	gettimeofday (&now, (struct timezone *)0);
-	cur_time = now.tv_sec;
+	gettimeofday (&cur_tv, (struct timezone *)0);
 
 	/* We probably have a bad file descriptor.   Figure out which one.
 	   When we find it, call the reaper function on it, which will

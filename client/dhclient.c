@@ -34,6 +34,7 @@
 #include <syslog.h>
 #include <signal.h>
 #include <errno.h>
+#include <sys/time.h>
 #include <sys/wait.h>
 #include <limits.h>
 
@@ -91,6 +92,7 @@ main(int argc, char **argv) {
 	isc_result_t status;
  	int exit_mode = 0;
  	int release_mode = 0;
+	struct timeval tv;
 	omapi_object_t *listener;
 	isc_result_t result;
 	int persist = 0;
@@ -342,7 +344,7 @@ main(int argc, char **argv) {
 	}
 
 	/* Get the current time... */
-	time(&cur_time);
+	gettimeofday(&cur_tv, NULL);
 
 	sockaddr_broadcast.sin_family = AF_INET;
 	sockaddr_broadcast.sin_port = remote_port;
@@ -492,8 +494,10 @@ main(int argc, char **argv) {
 					/* Set up a timeout to start the
 					 * initialization process.
 					 */
-					add_timeout(cur_time + random() % 5,
-						    state_reboot, client, 0, 0);
+					tv.tv_sec = cur_time + random() % 5;
+					tv.tv_usec = 0;
+					add_timeout(&tv, state_reboot,
+						    client, 0, 0);
 				}
 			}
 		}
@@ -927,6 +931,8 @@ void dhcpack (packet)
 void bind_lease (client)
 	struct client_state *client;
 {
+	struct timeval tv;
+
 	/* Remember the medium. */
 	client -> new -> medium = client -> medium;
 
@@ -966,8 +972,9 @@ void bind_lease (client)
 	client -> new = (struct client_lease *)0;
 
 	/* Set up a timeout to start the renewal process. */
-	add_timeout (client -> active -> renewal,
-		     state_bound, client, 0, 0);
+	tv . tv_sec = client -> active -> renewal;
+	tv . tv_usec = 0;
+	add_timeout (&tv, state_bound, client, 0, 0);
 
 	log_info ("bound to %s -- renewal in %ld seconds.",
 	      piaddr (client -> active -> address),
@@ -1217,6 +1224,7 @@ void dhcpoffer (packet)
 	int stop_selecting;
 	const char *name = packet -> packet_type ? "DHCPOFFER" : "BOOTREPLY";
 	char obuf [1024];
+	struct timeval tv;
 	
 #ifdef DEBUG_PACKET
 	dump_packet (packet);
@@ -1329,7 +1337,9 @@ void dhcpoffer (packet)
 	if (stop_selecting <= 0)
 		state_selecting (client);
 	else {
-		add_timeout (stop_selecting, state_selecting, client, 0, 0);
+		tv . tv_sec = stop_selecting;
+		tv . tv_usec = 0;
+		add_timeout (&tv, state_selecting, client, 0, 0);
 		cancel_timeout (send_discover, client);
 	}
 	log_info ("%s", obuf);
@@ -1546,6 +1556,7 @@ void send_discover (cpp)
 	int result;
 	int interval;
 	int increase = 1;
+	struct timeval tv;
 
 	/* Figure out how long it's been since we started transmitting. */
 	interval = cur_time - client -> first_sending;
@@ -1631,8 +1642,9 @@ void send_discover (cpp)
 			      inaddr_any, &sockaddr_broadcast,
 			      (struct hardware *)0);
 
-	add_timeout (cur_time + client -> interval,
-		     send_discover, client, 0, 0);
+	tv . tv_sec = cur_time + client -> interval;
+	tv . tv_usec = 0;
+	add_timeout (&tv, send_discover, client, 0, 0);
 }
 
 /* state_panic gets called if we haven't received any offers in a preset
@@ -1646,6 +1658,7 @@ void state_panic (cpp)
 	struct client_state *client = cpp;
 	struct client_lease *loop;
 	struct client_lease *lp;
+	struct timeval tv;
 
 	loop = lp = client -> active;
 
@@ -1679,8 +1692,9 @@ void state_panic (cpp)
 				log_info ("bound: renewal in %ld %s.",
 					  (long)(client -> active -> renewal -
 						 cur_time), "seconds");
-				add_timeout (client -> active -> renewal,
-					     state_bound, client, 0, 0);
+				tv . tv_sec = client -> active -> renewal;
+				tv . tv_usec = 0;
+				add_timeout (&tv, state_bound, client, 0, 0);
 			    } else {
 				client -> state = S_BOUND;
 				log_info ("bound: immediate renewal.");
@@ -1736,10 +1750,11 @@ void state_panic (cpp)
 		script_write_params (client, "alias_", client -> alias);
 	script_go (client);
 	client -> state = S_INIT;
-	add_timeout (cur_time +
+	tv . tv_sec = cur_time +
 		     ((client -> config -> retry_interval + 1) / 2 +
-		      (random () % client -> config -> retry_interval)),
-		     state_init, client, 0, 0);
+		      (random () % client -> config -> retry_interval));
+	tv . tv_usec = 0;
+	add_timeout (&tv, state_init, client, 0, 0);
 	go_daemon ();
 }
 
@@ -1752,6 +1767,7 @@ void send_request (cpp)
 	int interval;
 	struct sockaddr_in destination;
 	struct in_addr from;
+	struct timeval tv;
 
 	/* Figure out how long it's been since we started transmitting. */
 	interval = cur_time - client -> first_sending;
@@ -1893,8 +1909,9 @@ void send_request (cpp)
 				      from, &destination,
 				      (struct hardware *)0);
 
-	add_timeout (cur_time + client -> interval,
-		     send_request, client, 0, 0);
+	tv . tv_sec = cur_time + client -> interval;
+	tv . tv_usec = 0;
+	add_timeout (&tv, send_request, client, 0, 0);
 }
 
 void send_decline (cpp)
@@ -2961,7 +2978,7 @@ int script_go (client)
 		client -> envc = 0;
 	}
 	dfree (envp, MDL);
-	time(&cur_time);
+	gettimeofday(&cur_tv, NULL);
 	return (WIFEXITED (wstatus) ?
 		WEXITSTATUS (wstatus) : -WTERMSIG (wstatus));
 }
@@ -3252,6 +3269,7 @@ isc_result_t dhclient_interface_startup_hook (struct interface_info *interface)
 {
 	struct interface_info *ip;
 	struct client_state *client;
+	struct timeval tv;
 
 	/* This code needs some rethinking.   It doesn't test against
 	   a signal name, and it just kind of bulls into doing something
@@ -3293,8 +3311,9 @@ isc_result_t dhclient_interface_startup_hook (struct interface_info *interface)
 			client -> state = S_INIT;
 			/* Set up a timeout to start the initialization
 			   process. */
-			add_timeout (cur_time + random () % 5,
-				     state_reboot, client, 0, 0);
+			tv . tv_sec = cur_time + random () % 5;
+			tv . tv_usec = 0;
+			add_timeout (&tv, state_reboot, client, 0, 0);
 		}
 	}
 	return ISC_R_SUCCESS;
@@ -3333,6 +3352,7 @@ isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
 {
 	struct interface_info *ip;
 	struct client_state *client;
+	struct timeval tv;
 
 	/* Do the right thing for each interface. */
 	for (ip = interfaces; ip; ip = ip -> next) {
@@ -3365,8 +3385,11 @@ isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
 	    }
 	}
 
-	if (newstate == server_shutdown)
-		add_timeout (cur_time + 1, shutdown_exit, 0, 0, 0);
+	if (newstate == server_shutdown) {
+		tv . tv_sec = cur_tv . tv_sec + 1;
+		tv . tv_usec = cur_tv . tv_usec;
+		add_timeout (&tv, shutdown_exit, 0, 0, 0);
+	}
 	return ISC_R_SUCCESS;
 }
 
@@ -3377,6 +3400,7 @@ dhclient_schedule_updates(struct client_state *client, struct iaddr *addr,
 			  int offset)
 {
 	struct dns_update_state *ustate;
+	struct timeval tv;
 
 	if (!client->config->do_forward_update)
 		return;
@@ -3388,7 +3412,9 @@ dhclient_schedule_updates(struct client_state *client, struct iaddr *addr,
 		ustate->address = *addr;
 		ustate->dns_update_timeout = 1;
 
-		add_timeout(cur_time + offset, client_dns_update_timeout,
+		tv.tv_sec = cur_time + offset;
+		tv.tv_usec = 0;
+		add_timeout(&tv, client_dns_update_timeout,
 			    ustate, NULL, NULL);
 	} else {
 		log_error("Unable to allocate dns update state for %s.",
@@ -3404,6 +3430,7 @@ void client_dns_update_timeout (void *cp)
 {
 	struct dns_update_state *ustate = cp;
 	isc_result_t status = ISC_R_FAILURE;
+	struct timeval tv;
 
 	/* XXX: DNS TTL is a problem we need to solve properly.  Until
 	 * that time, 300 is a placeholder default for something that is
@@ -3417,8 +3444,10 @@ void client_dns_update_timeout (void *cp)
 	if (status == ISC_R_TIMEDOUT) {
 		if (ustate->dns_update_timeout < 3600)
 			ustate->dns_update_timeout *= 10;
-		add_timeout(cur_time + ustate->dns_update_timeout,
-			    client_dns_update_timeout, ustate, NULL, NULL);
+		tv.tv_sec = cur_time + ustate->dns_update_timeout;
+		tv.tv_usec = 0;
+		add_timeout(&tv, client_dns_update_timeout,
+			    ustate, NULL, NULL);
 	} else
 		dfree(ustate, MDL);
 }

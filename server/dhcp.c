@@ -1457,6 +1457,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 	unsigned i, j;
 	int s1;
 	int ignorep;
+	struct timeval tv;
 
 	/* If we're already acking this lease, don't do it again. */
 	if (lease -> state)
@@ -2792,7 +2793,9 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		log_debug ("Ping timeout: %ld", (long)ping_timeout);
 #endif
 
-		add_timeout (cur_time + ping_timeout, lease_ping_timeout, lease,
+		tv . tv_sec = cur_time + ping_timeout;
+		tv . tv_usec = 0;
+		add_timeout (&tv, lease_ping_timeout, lease,
 			     (tvref_t)lease_reference,
 			     (tvunref_t)lease_dereference);
 		++outstanding_pings;

@@ -1046,17 +1046,17 @@ struct client_state {
 	struct dhc6_lease *selected_lease;
 	struct dhc6_lease *held_leases;
 
-	TIME start_time;
+	struct timeval start_time;
 	u_int16_t elapsed;
 	int txcount;
 
 	/* See RFC3315 section 14. */
-	TIME RT;
-	TIME IRT;
-	TIME MRC;
-	TIME MRT;
-	TIME MRD;
-	TIME next_MRD;
+	TIME RT;		/* In hundredths of seconds. */
+	TIME IRT;		/* In hundredths of seconds. */
+	TIME MRC;		/* Count. */
+	TIME MRT;		/* In hundredths of seconds. */
+	TIME MRD;		/* In seconds, relative. */
+	TIME next_MRD;		/* In seconds, absolute. */
 
 	/* Rather than a state, we use a function that shifts around
 	 * depending what stage of life the v6 state machine is in.
@@ -1142,7 +1142,7 @@ typedef void (*tvref_t)(void *, void *, const char *, int);
 typedef void (*tvunref_t)(void *, const char *, int);
 struct timeout {
 	struct timeout *next;
-	TIME when;
+	struct timeval when;
 	void (*func) PROTO ((void *));
 	void *what;
 	tvref_t ref;
@@ -1643,7 +1643,8 @@ int add_option(struct option_state *options,
        	       unsigned int data_len);
 
 /* dhcpd.c */
-extern TIME cur_time;
+extern struct timeval cur_tv;
+#define cur_time cur_tv.tv_sec
 
 extern int ddns_update_style;
 
@@ -2362,7 +2363,7 @@ isc_result_t interface_stuff_values (omapi_object_t *,
 				     omapi_object_t *,
 				     omapi_object_t *);
 
-void add_timeout PROTO ((TIME, void (*) PROTO ((void *)), void *,
+void add_timeout PROTO ((struct timeval *, void (*) PROTO ((void *)), void *,
 			 tvref_t, tvunref_t));
 void cancel_timeout PROTO ((void (*) PROTO ((void *)), void *));
 void cancel_all_timeouts (void);

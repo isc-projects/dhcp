@@ -120,7 +120,8 @@ int MRns_name_pton(const char *, u_char *, size_t);
 #define b64_ntop MRb64_ntop
 
 extern const struct res_sym __p_type_syms[];
-extern time_t cur_time;
+extern struct timeval cur_tv;
+#define cur_time cur_tv.tv_sec
 
 int dn_comp (const char *,
 	     unsigned char *, unsigned, unsigned char **, unsigned char **);

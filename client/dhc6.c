@@ -284,7 +284,6 @@ dhc6_retrans_init(struct client_state *client)
 	int xid;
 
 	/* Initialize timers. */
-	client->start_time = cur_time;
 	client->txcount = 0;
 	client->RT = client->IRT + dhc6_rand(client->IRT);
 
@@ -309,11 +308,23 @@ dhc6_retrans_init(struct client_state *client)
 static void
 dhc6_retrans_advance(struct client_state *client)
 {
-	TIME elapsed;
+	struct timeval elapsed;
 
-	elapsed = cur_time - client->start_time;
+	/* elapsed = cur - start */
+	elapsed.tv_sec = cur_tv.tv_sec - client->start_time.tv_sec;
+	elapsed.tv_usec = cur_tv.tv_usec - client->start_time.tv_usec;
+	if (elapsed.tv_usec < 0) {
+		elapsed.tv_sec -= 1;
+		elapsed.tv_usec += 1000000;
+	}
 	/* retrans_advance is called after consuming client->RT. */
-	elapsed += client->RT;
+	/* elapsed += RT */
+	elapsed.tv_sec += client->RT / 100;
+	elapsed.tv_usec += (client->RT % 100) * 10000;
+	if (elapsed.tv_usec >= 1000000) {
+		elapsed.tv_sec += 1;
+		elapsed.tv_usec -= 1000000;
+	}
 
         /* RT for each subsequent message transmission is based on the previous
          * value of RT:
@@ -335,10 +346,27 @@ dhc6_retrans_advance(struct client_state *client)
 	/* Further, if there's an MRD, we should wake up upon reaching
 	 * the MRD rather than at some point after it.
 	 */
-	if ((client->MRD != 0) && ((elapsed + client->RT) > client->MRD)) {
-		client->RT = (client->start_time + client->MRD) - cur_time;
+	if (client->MRD == 0) {
+		/* Done. */
+		client->txcount++;
+		return;
 	}
-
+	/* elapsed += client->RT */
+	elapsed.tv_sec += client->RT / 100;
+	elapsed.tv_usec += (client->RT % 100) * 10000;
+	if (elapsed.tv_usec >= 1000000) {
+		elapsed.tv_sec += 1;
+		elapsed.tv_usec -= 1000000;
+	}
+	if (elapsed.tv_sec >= client->MRD) {
+		/*
+		 * wake at RT + cur = start + MRD
+		 */
+		client->RT = client->MRD +
+			(client->start_time.tv_sec - cur_tv.tv_sec);
+		client->RT = client->RT * 100 +
+			(client->start_time.tv_usec - cur_tv.tv_usec) / 10000;
+	}
 	client->txcount++;
 }
 
@@ -1204,12 +1232,14 @@ dhc6_score_lease(struct client_state *client, struct dhc6_lease *lease)
 void
 start_init6(struct client_state *client)
 {
+	struct timeval tv;
+
 	log_debug("PRC: Soliciting for leases (INIT).");
 	client->state = S_INIT;
 
 	/* Initialize timers, RFC3315 section 17.1.2. */
-	client->IRT = SOL_TIMEOUT;
-	client->MRT = SOL_MAX_RT;
+	client->IRT = SOL_TIMEOUT * 100;
+	client->MRT = SOL_MAX_RT * 100;
 	client->MRC = 0;
 	client->MRD = 0;
 
@@ -1219,6 +1249,10 @@ start_init6(struct client_state *client)
 	 * Also, the first RT MUST be selected to be strictly greater than IRT
 	 * by choosing RAND to be strictly greater than 0.
 	 */
+	/* if RAND < 0 then RAND = -RAND */
+	if (client->RT <= client->IRT)
+		client->RT = client->IRT + (client->IRT - client->RT);
+	/* if RAND == 0 then RAND = 1 */
 	if (client->RT <= client->IRT)
 		client->RT = client->IRT + 1;
 
@@ -1228,8 +1262,14 @@ start_init6(struct client_state *client)
 	 * between 0 and SOL_MAX_DELAY seconds.  The good news is
 	 * SOL_MAX_DELAY is 1.
 	 */
-	add_timeout(cur_time + (random() % SOL_MAX_DELAY), do_init6, client,
-		    NULL, NULL);
+	tv.tv_sec = cur_tv.tv_sec;
+	tv.tv_usec = cur_tv.tv_usec;
+	tv.tv_usec += (random() % (SOL_MAX_DELAY * 100)) * 10000;
+	if (tv.tv_usec >= 1000000) {
+		tv.tv_sec += 1;
+		tv.tv_usec -= 1000000;
+	}
+	add_timeout(&tv, do_init6, client, NULL, NULL);
 
 	if (nowait)
 		go_daemon();
@@ -1242,6 +1282,8 @@ start_init6(struct client_state *client)
 void
 start_confirm6(struct client_state *client)
 {
+	struct timeval tv;
+
 	/* If there is no active lease, there is nothing to check. */
 	if (client->active_lease == NULL) {
 		start_init6(client);
@@ -1252,8 +1294,8 @@ start_confirm6(struct client_state *client)
 	client->state = S_REBOOTING;
 
 	/* Initialize timers, RFC3315 section 17.1.3. */
-	client->IRT = CNF_TIMEOUT;
-	client->MRT = CNF_MAX_RT;
+	client->IRT = CNF_TIMEOUT * 100;
+	client->MRT = CNF_MAX_RT * 100;
 	client->MRC = 0;
 	client->MRD = CNF_MAX_RD;
 
@@ -1261,8 +1303,18 @@ start_confirm6(struct client_state *client)
 
 	client->v6_handler = reply_handler;
 
-	add_timeout(cur_time + (random() % CNF_MAX_DELAY), do_confirm6, client,
-		    NULL, NULL);
+	/* RFC3315 section 18.1.2 says we MUST start the first packet
+	 * between 0 and CNF_MAX_DELAY seconds.  The good news is
+	 * CNF_MAX_DELAY is 1.
+	 */
+	tv.tv_sec = cur_tv.tv_sec;
+	tv.tv_usec = cur_tv.tv_usec;
+	tv.tv_usec += (random() % (CNF_MAX_DELAY * 100)) * 10000;
+	if (tv.tv_usec >= 1000000) {
+		tv.tv_sec += 1;
+		tv.tv_usec -= 1000000;
+	}
+	add_timeout(&tv, do_confirm6, client, NULL, NULL);
 }
 
 /* do_init6() marshals and transmits a solicit.
@@ -1276,7 +1328,7 @@ do_init6(void *input)
 	struct data_string ds;
 	struct data_string ia;
 	struct data_string addr;
-	TIME elapsed;
+	struct timeval elapsed, tv;
 	u_int32_t t1, t2;
 	int idx, len, send_ret;
 
@@ -1295,8 +1347,22 @@ do_init6(void *input)
 		return;
 	}
 
-	elapsed = cur_time - client->start_time;
-	if ((client->MRD != 0) && (elapsed > client->MRD)) {
+	/*
+	 * Start_time starts at the first transmission.
+	 */
+	if (client->txcount == 0) {
+		client->start_time.tv_sec = cur_tv.tv_sec;
+		client->start_time.tv_usec = cur_tv.tv_usec;
+	}
+
+	/* elapsed = cur - start */
+	elapsed.tv_sec = cur_tv.tv_sec - client->start_time.tv_sec;
+	elapsed.tv_usec = cur_tv.tv_usec - client->start_time.tv_usec;
+	if (elapsed.tv_usec < 0) {
+		elapsed.tv_sec -= 1;
+		elapsed.tv_usec += 1000000;
+	}
+	if ((client->MRD != 0) && (elapsed.tv_sec > client->MRD)) {
 		log_info("Max retransmission duration exceeded.");
 		return;
 	}
@@ -1313,13 +1379,20 @@ do_init6(void *input)
 	memcpy(ds.buffer->data + 1, client->dhcpv6_transaction_id, 3);
 
 	/* Form an elapsed option. */
-	if ((elapsed < 0) || (elapsed > 655))
+	/* Maximum value is 65535 1/100s coded as 0xffff. */
+	if ((elapsed.tv_sec < 0) || (elapsed.tv_sec > 655) ||
+	    ((elapsed.tv_sec == 655) && (elapsed.tv_usec > 350000))) {
 		client->elapsed = 0xffff;
-	else
-		client->elapsed = elapsed * 100;
+	} else {
+		client->elapsed = elapsed.tv_sec * 100;
+		client->elapsed += elapsed.tv_usec / 10000;
+	}
 
-	log_debug("XMT: Forming Solicit, %u0 ms elapsed.",
-		  (unsigned)client->elapsed);
+	if (client->elapsed == 0)
+		log_debug("XMT: Forming Solicit, 0 ms elapsed.");
+	else
+		log_debug("XMT: Forming Solicit, %u0 ms elapsed.",
+			  (unsigned)client->elapsed);
 
 	client->elapsed = htons(client->elapsed);
 
@@ -1415,7 +1488,7 @@ do_init6(void *input)
 
 	/* Transmit and wait. */
 
-	log_info("XMT: Solicit on %s, interval %ld",
+	log_info("XMT: Solicit on %s, interval %ld0ms.",
 		 client->name ? client->name : client->interface->name,
 		 (long int)client->RT);
 
@@ -1428,7 +1501,14 @@ do_init6(void *input)
 
 	data_string_forget(&ds, MDL);
 
-	add_timeout(cur_time + client->RT, do_init6, client, NULL, NULL);
+	/* Wait RT */
+	tv.tv_sec = cur_tv.tv_sec + client->RT / 100;
+	tv.tv_usec = cur_tv.tv_usec + (client->RT % 100) * 10000;
+	if (tv.tv_usec >= 1000000) {
+		tv.tv_sec += 1;
+		tv.tv_usec -= 1000000;
+	}
+	add_timeout(&tv, do_init6, client, NULL, NULL);
 
 	dhc6_retrans_advance(client);
 }
@@ -1442,7 +1522,7 @@ do_confirm6(void *input)
 	struct client_state *client;
 	struct data_string ds;
 	int send_ret;
-	TIME elapsed;
+	struct timeval elapsed, tv;
 
 	client = input;
 
@@ -1469,8 +1549,22 @@ do_confirm6(void *input)
 		return;
 	}
 
-	elapsed = cur_time - client->start_time;
-	if ((client->MRD != 0) && (elapsed > client->MRD)) {
+	/*
+	 * Start_time starts at the first transmission.
+	 */
+	if (client->txcount == 0) {
+		client->start_time.tv_sec = cur_tv.tv_sec;
+		client->start_time.tv_usec = cur_tv.tv_usec;
+	}
+
+	/* elapsed = cur - start */
+	elapsed.tv_sec = cur_tv.tv_sec - client->start_time.tv_sec;
+	elapsed.tv_usec = cur_tv.tv_usec - client->start_time.tv_usec;
+	if (elapsed.tv_usec < 0) {
+		elapsed.tv_sec -= 1;
+		elapsed.tv_usec += 1000000;
+	}
+	if ((client->MRD != 0) && (elapsed.tv_sec > client->MRD)) {
 		log_info("Max retransmission duration exceeded.");
 		start_bound(client);
 		return;
@@ -1488,13 +1582,20 @@ do_confirm6(void *input)
 	memcpy(ds.buffer->data + 1, client->dhcpv6_transaction_id, 3);
 
 	/* Form an elapsed option. */
-	if ((elapsed < 0) || (elapsed > 655))
+	/* Maximum value is 65535 1/100s coded as 0xffff. */
+	if ((elapsed.tv_sec < 0) || (elapsed.tv_sec > 655) ||
+	    ((elapsed.tv_sec == 655) && (elapsed.tv_usec > 350000))) {
 		client->elapsed = 0xffff;
-	else
-		client->elapsed = elapsed * 100;
+	} else {
+		client->elapsed = elapsed.tv_sec * 100;
+		client->elapsed += elapsed.tv_usec / 10000;
+	}
 
-	log_debug("XMT: Forming Confirm, %u0 ms elapsed.",
-		  (unsigned)client->elapsed);
+	if (client->elapsed == 0)
+		log_debug("XMT: Forming Confirm, 0 ms elapsed.");
+	else
+		log_debug("XMT: Forming Confirm, %u0 ms elapsed.",
+			  (unsigned)client->elapsed);
 
 	client->elapsed = htons(client->elapsed);
 
@@ -1516,7 +1617,7 @@ do_confirm6(void *input)
 
 	/* Transmit and wait. */
 
-	log_info("XMT: Confirm on %s, interval %ld.",
+	log_info("XMT: Confirm on %s, interval %ld0ms.",
 		 client->name ? client->name : client->interface->name,
 		 (long int)client->RT);
 
@@ -1529,7 +1630,14 @@ do_confirm6(void *input)
 
 	data_string_forget(&ds, MDL);
 
-	add_timeout(cur_time + client->RT, do_confirm6, client, NULL, NULL);
+	/* Wait RT */
+	tv.tv_sec = cur_tv.tv_sec + client->RT / 100;
+	tv.tv_usec = cur_tv.tv_usec + (client->RT % 100) * 10000;
+	if (tv.tv_usec >= 1000000) {
+		tv.tv_sec += 1;
+		tv.tv_usec -= 1000000;
+	}
+	add_timeout(&tv, do_confirm6, client, NULL, NULL);
 
 	dhc6_retrans_advance(client);
 }
@@ -1555,9 +1663,9 @@ start_release6(struct client_state *client)
         unconfigure6(client, "RELEASE6");
 
 	/* Set timers per RFC3315 section 18.1.1. */
-	client->IRT = REL_TIMEOUT;
+	client->IRT = REL_TIMEOUT * 100;
 	client->MRT = 0;
-	client->MRC = REL_MAX_RC;
+	client->MRC = REL_MAX_RC * 100;
 	client->MRD = 0;
 
 	dhc6_retrans_init(client);
@@ -1577,6 +1685,7 @@ do_release6(void *input)
 	struct data_string ds;
 	struct option_cache *oc;
 	int send_ret;
+	struct timeval tv;
 
 	client = input;
 
@@ -1586,6 +1695,14 @@ do_release6(void *input)
 	if ((client->MRC != 0) && (client->txcount > client->MRC))  {
 		log_info("Max retransmission count exceeded.");
 		return;
+	}
+
+	/*
+	 * Start_time starts at the first transmission.
+	 */
+	if (client->txcount == 0) {
+		client->start_time.tv_sec = cur_tv.tv_sec;
+		client->start_time.tv_usec = cur_tv.tv_usec;
 	}
 
 	/*
@@ -1636,7 +1753,7 @@ do_release6(void *input)
 	}
 
 	/* Transmit and wait. */
-	log_info("XMT: Release on %s, interval %ld.",
+	log_info("XMT: Release on %s, interval %ld0ms.",
 		 client->name ? client->name : client->interface->name,
 		 (long int)client->RT);
 
@@ -1649,7 +1766,14 @@ do_release6(void *input)
 
 	data_string_forget(&ds, MDL);
 
-	add_timeout(cur_time + client->RT, do_release6, client, NULL, NULL);
+	/* Wait RT */
+	tv.tv_sec = cur_tv.tv_sec + client->RT / 100;
+	tv.tv_usec = cur_tv.tv_usec + (client->RT % 100) * 10000;
+	if (tv.tv_usec >= 1000000) {
+		tv.tv_sec += 1;
+		tv.tv_usec -= 1000000;
+	}
+	add_timeout(&tv, do_release6, client, NULL, NULL);
 	dhc6_retrans_advance(client);
 }
 
@@ -2359,8 +2483,8 @@ start_selecting6(struct client_state *client)
 	client->selected_lease = lease;
 
 	/* Set timers per RFC3315 section 18.1.1. */
-	client->IRT = REQ_TIMEOUT;
-	client->MRT = REQ_MAX_RT;
+	client->IRT = REQ_TIMEOUT * 100;
+	client->MRT = REQ_MAX_RT * 100;
 	client->MRC = REQ_MAX_RC;
 	client->MRD = 0;
 
@@ -2382,7 +2506,7 @@ do_select6(void *input)
 	struct client_state *client;
 	struct dhc6_lease *lease;
 	struct data_string ds;
-	TIME elapsed;
+	struct timeval elapsed, tv;
 	int abort = ISC_FALSE;
 	int send_ret;
 
@@ -2401,8 +2525,22 @@ do_select6(void *input)
 		abort = ISC_TRUE;
 	}
 
-	elapsed = cur_time - client->start_time;
-	if ((client->MRD != 0) && (elapsed > client->MRD)) {
+	/*
+	 * Start_time starts at the first transmission.
+	 */
+	if (client->txcount == 0) {
+		client->start_time.tv_sec = cur_tv.tv_sec;
+		client->start_time.tv_usec = cur_tv.tv_usec;
+	}
+
+	/* elapsed = cur - start */
+	elapsed.tv_sec = cur_tv.tv_sec - client->start_time.tv_sec;
+	elapsed.tv_usec = cur_tv.tv_usec - client->start_time.tv_usec;
+	if (elapsed.tv_usec < 0) {
+		elapsed.tv_sec -= 1;
+		elapsed.tv_usec += 1000000;
+	}
+	if ((client->MRD != 0) && (elapsed.tv_sec > client->MRD)) {
 		log_info("Max retransmission duration exceeded.");
 		abort = ISC_TRUE;
 	}
@@ -2447,13 +2585,20 @@ do_select6(void *input)
 	memcpy(ds.buffer->data + 1, client->dhcpv6_transaction_id, 3);
 
 	/* Form an elapsed option. */
-	if ((elapsed < 0) || (elapsed > 655))
+	/* Maximum value is 65535 1/100s coded as 0xffff. */
+	if ((elapsed.tv_sec < 0) || (elapsed.tv_sec > 655) ||
+	    ((elapsed.tv_sec == 655) && (elapsed.tv_usec > 350000))) {
 		client->elapsed = 0xffff;
-	else
-		client->elapsed = elapsed * 100;
+	} else {
+		client->elapsed = elapsed.tv_sec * 100;
+		client->elapsed += elapsed.tv_usec / 10000;
+	}
 
-	log_debug("XMT: Forming Request, %u0 ms elapsed.",
-		  (unsigned)client->elapsed);
+	if (client->elapsed == 0)
+		log_debug("XMT: Forming Request, 0 ms elapsed.");
+	else
+		log_debug("XMT: Forming Request, %u0 ms elapsed.",
+			  (unsigned)client->elapsed);
 
 	client->elapsed = htons(client->elapsed);
 
@@ -2473,7 +2618,7 @@ do_select6(void *input)
 		return;
 	}
 
-	log_info("XMT: Request on %s, interval %ld",
+	log_info("XMT: Request on %s, interval %ld0ms.",
 		 client->name ? client->name : client->interface->name,
 		 (long int)client->RT);
 
@@ -2486,7 +2631,14 @@ do_select6(void *input)
 
 	data_string_forget(&ds, MDL);
 
-	add_timeout(cur_time + client->RT, do_select6, client, NULL, NULL);
+	/* Wait RT */
+	tv.tv_sec = cur_tv.tv_sec + client->RT / 100;
+	tv.tv_usec = cur_tv.tv_usec + (client->RT % 100) * 10000;
+	if (tv.tv_usec >= 1000000) {
+		tv.tv_sec += 1;
+		tv.tv_usec -= 1000000;
+	}
+	add_timeout(&tv, do_select6, client, NULL, NULL);
 
 	dhc6_retrans_advance(client);
 }
@@ -2827,6 +2979,7 @@ dhc6_check_times(struct client_state *client)
 	TIME renew=MAX_TIME, rebind=MAX_TIME, depref=MAX_TIME,
 	     lo_expire=MAX_TIME, hi_expire=0, tmp;
 	int has_addrs = ISC_FALSE;
+	struct timeval tv;
 
 	lease = client->active_lease;
 
@@ -2955,8 +3108,10 @@ dhc6_check_times(struct client_state *client)
 				  "to run for %u seconds.",
 				  (int)(renew - cur_time),
 				  (unsigned)(rebind - renew));
-			client->next_MRD = rebind - cur_time;
-			add_timeout(renew, start_renew6, client, NULL, NULL);
+			client->next_MRD = rebind;
+			tv.tv_sec = renew;
+			tv.tv_usec = 0;
+			add_timeout(&tv, start_renew6, client, NULL, NULL);
 
 			break;
 		}
@@ -2972,8 +3127,10 @@ dhc6_check_times(struct client_state *client)
 				  "to run for %d seconds.",
 				  (int)(rebind - cur_time),
 				  (int)(hi_expire - rebind));
-			client->next_MRD = hi_expire - cur_time;
-			add_timeout(rebind, start_rebind6, client, NULL, NULL);
+			client->next_MRD = hi_expire;
+			tv.tv_sec = rebind;
+			tv.tv_usec = 0;
+			add_timeout(&tv, start_rebind6, client, NULL, NULL);
 		}
 		break;
 
@@ -2996,12 +3153,16 @@ dhc6_check_times(struct client_state *client)
 	if (depref != MAX_TIME) {
 		log_debug("PRC: Depreference scheduled in %d seconds.",
 			  (int)(depref - cur_time));
-		add_timeout(depref, do_depref, client, NULL, NULL);
+		tv.tv_sec = depref;
+		tv.tv_usec = 0;
+		add_timeout(&tv, do_depref, client, NULL, NULL);
 	}
 	if (lo_expire != MAX_TIME) {
 		log_debug("PRC: Expiration scheduled in %d seconds.",
 			  (int)(lo_expire - cur_time));
-		add_timeout(lo_expire, do_expire, client, NULL, NULL);
+		tv.tv_sec = lo_expire;
+		tv.tv_usec = 0;
+		add_timeout(&tv, do_expire, client, NULL, NULL);
 	}
 }
 
@@ -3237,8 +3398,8 @@ bound_handler(struct packet *packet, struct client_state *client)
 }
 
 /* start_renew6() gets us all ready to go to start transmitting Renew packets.
- * Note that client->MRD must be set before entering this function - it must
- * be set to the time at which the client should start Rebinding.
+ * Note that client->next_MRD must be set before entering this function -
+ * it must be set to the time at which the client should start Rebinding.
  */
 void
 start_renew6(void *input)
@@ -3254,13 +3415,13 @@ start_renew6(void *input)
 	client->v6_handler = reply_handler;
 
 	/* Times per RFC3315 section 18.1.3. */
-	client->IRT = REN_TIMEOUT;
-	client->MRT = REN_MAX_RT;
+	client->IRT = REN_TIMEOUT * 100;
+	client->MRT = REN_MAX_RT * 100;
 	client->MRC = 0;
 	/* MRD is special in renew - we need to set it by checking timer
 	 * state.
 	 */
-	client->MRD = client->next_MRD;
+	client->MRD = client->next_MRD - cur_time;
 
 	dhc6_retrans_init(client);
 
@@ -3280,7 +3441,7 @@ do_refresh6(void *input)
 	struct data_string ds;
 	struct client_state *client;
 	struct dhc6_lease *lease;
-	TIME elapsed;
+	struct timeval elapsed, tv;
 	int send_ret;
 
 	client = (struct client_state *)input;
@@ -3302,9 +3463,23 @@ do_refresh6(void *input)
 			  client->refresh_type, MDL);
 	}
 
-	elapsed = cur_time - client->start_time;
+	/*
+	 * Start_time starts at the first transmission.
+	 */
+	if (client->txcount == 0) {
+		client->start_time.tv_sec = cur_tv.tv_sec;
+		client->start_time.tv_usec = cur_tv.tv_usec;
+	}
+
+	/* elapsed = cur - start */
+	elapsed.tv_sec = cur_tv.tv_sec - client->start_time.tv_sec;
+	elapsed.tv_usec = cur_tv.tv_usec - client->start_time.tv_usec;
+	if (elapsed.tv_usec < 0) {
+		elapsed.tv_sec -= 1;
+		elapsed.tv_usec += 1000000;
+	}
 	if (((client->MRC != 0) && (client->txcount > client->MRC)) ||
-	    ((client->MRD != 0) && (elapsed >= client->MRD))) {
+	    ((client->MRD != 0) && (elapsed.tv_sec >= client->MRD))) {
 		/* We're done.  Move on to the next phase, if any. */
 		dhc6_check_times(client);
 		return;
@@ -3345,14 +3520,23 @@ do_refresh6(void *input)
 	ds.buffer->data[0] = client->refresh_type;
 	memcpy(ds.buffer->data + 1, client->dhcpv6_transaction_id, 3);
 
-	if ((elapsed < 0) || (elapsed > 655))
+	/* Form an elapsed option. */
+	/* Maximum value is 65535 1/100s coded as 0xffff. */
+	if ((elapsed.tv_sec < 0) || (elapsed.tv_sec > 655) ||
+	    ((elapsed.tv_sec == 655) && (elapsed.tv_usec > 350000))) {
 		client->elapsed = 0xffff;
-	else
-		client->elapsed = elapsed * 100;
+	} else {
+		client->elapsed = elapsed.tv_sec * 100;
+		client->elapsed += elapsed.tv_usec / 10000;
+	}
 
-	log_debug("XMT: Forming %s, %u0 ms elapsed.",
-		  dhcpv6_type_names[client->refresh_type],
-		  (unsigned)client->elapsed);
+	if (client->elapsed == 0)
+		log_debug("XMT: Forming %s, 0 ms elapsed.",
+			  dhcpv6_type_names[client->refresh_type]);
+	else
+		log_debug("XMT: Forming %s, %u0 ms elapsed.",
+			  dhcpv6_type_names[client->refresh_type],
+			  (unsigned)client->elapsed);
 
 	client->elapsed = htons(client->elapsed);
 
@@ -3371,7 +3555,7 @@ do_refresh6(void *input)
 		return;
 	}
 
-	log_info("XMT: %s on %s, interval %ld",
+	log_info("XMT: %s on %s, interval %ld0ms.",
 		 dhcpv6_type_names[client->refresh_type],
 		 client->name ? client->name : client->interface->name,
 		 (long int)client->RT);
@@ -3385,13 +3569,20 @@ do_refresh6(void *input)
 
 	data_string_forget(&ds, MDL);
 
-	add_timeout(cur_time + client->RT, do_refresh6, client, NULL, NULL);
+	/* Wait RT */
+	tv.tv_sec = cur_tv.tv_sec + client->RT / 100;
+	tv.tv_usec = cur_tv.tv_usec + (client->RT % 100) * 10000;
+	if (tv.tv_usec >= 1000000) {
+		tv.tv_sec += 1;
+		tv.tv_usec -= 1000000;
+	}
+	add_timeout(&tv, do_refresh6, client, NULL, NULL);
 
 	dhc6_retrans_advance(client);
 }
 
 /* start_rebind6() gets us all set up to go and rebind a lease.  Note that
- * client->MRD must be set before entering this function.  In this case,
+ * client->next_MRD must be set before entering this function.  In this case,
  * MRD must be set to the maximum time any address in the packet will
  * expire.
  */
@@ -3409,13 +3600,13 @@ start_rebind6(void *input)
 	client->v6_handler = reply_handler;
 
 	/* Times per RFC3315 section 18.1.4. */
-	client->IRT = REB_TIMEOUT;
-	client->MRT = REB_MAX_RT;
+	client->IRT = REB_TIMEOUT * 100;
+	client->MRT = REB_MAX_RT * 100;
 	client->MRC = 0;
 	/* MRD is special in rebind - it's determined by the timer
 	 * state.
 	 */
-	client->MRD = client->next_MRD;
+	client->MRD = client->next_MRD - cur_time;
 
 	dhc6_retrans_init(client);
 

@@ -44,6 +44,7 @@ static char url [] = "For info, please visit http://www.isc.org/sw/dhcp/";
 #include <errno.h>
 #include <limits.h>
 #include <sys/types.h>
+#include <sys/time.h>
 #include <signal.h>
 
 static void usage(void);
@@ -173,6 +174,7 @@ static void omapi_listener_start (void *foo)
 {
 	omapi_object_t *listener;
 	isc_result_t result;
+	struct timeval tv;
 
 	listener = (omapi_object_t *)0;
 	result = omapi_generic_new (&listener, MDL);
@@ -187,7 +189,9 @@ static void omapi_listener_start (void *foo)
 	if (result != ISC_R_SUCCESS) {
 		log_error ("Can't start OMAPI protocol: %s",
 			   isc_result_totext (result));
-		add_timeout (cur_time + 5, omapi_listener_start, 0, 0, 0);
+		tv.tv_sec = cur_time + 5;
+		tv.tv_usec = 0;
+		add_timeout (&tv, omapi_listener_start, 0, 0, 0);
 	}
 	omapi_object_dereference (&listener, MDL);
 }
@@ -496,7 +500,7 @@ main(int argc, char **argv) {
 	}
 
 	/* Get the current time... */
-	time(&cur_time);
+	gettimeofday(&cur_tv, NULL);
 
 	/* Set up the initial dhcp option universe. */
 	initialize_common_option_spaces ();
@@ -1214,6 +1218,7 @@ static isc_result_t dhcp_io_shutdown_countdown (void *vlp)
 #if defined (FAILOVER_PROTOCOL)
 	int failover_connection_count = 0;
 #endif
+	struct timeval tv;
 
       oncemore:
 	if (shutdown_state == shutdown_listeners ||
@@ -1299,7 +1304,9 @@ static isc_result_t dhcp_io_shutdown_countdown (void *vlp)
 		shutdown_time = cur_time;
 		goto oncemore;
 	}
-	add_timeout (cur_time + 1,
+	tv.tv_sec = cur_tv.tv_sec + 1;
+	tv.tv_usec = cur_tv.tv_usec;
+	add_timeout (&tv,
 		     (void (*)(void *))dhcp_io_shutdown_countdown, 0, 0, 0);
 	return ISC_R_SUCCESS;
 }

@@ -1060,6 +1060,7 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 	if (pimmediate && !commit)
 		return 0;
 #endif
+	struct timeval tv;
 
 	/* If there is no sample lease, just do the move. */
 	if (!lease)
@@ -1335,7 +1336,9 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 	    (comp -> sort_time < comp -> pool -> next_event_time ||
 	     comp -> pool -> next_event_time == MIN_TIME)) {
 		comp -> pool -> next_event_time = comp -> sort_time;
-		add_timeout (comp -> pool -> next_event_time,
+		tv . tv_sec = comp -> pool -> next_event_time;
+		tv . tv_usec = 0;
+		add_timeout (&tv,
 			     pool_timer, comp -> pool,
 			     (tvref_t)pool_reference,
 			     (tvunref_t)pool_dereference);
@@ -1753,6 +1756,7 @@ void pool_timer (vpool)
 	struct lease **lptr[RESERVED_LEASES+1];
 	TIME next_expiry = MAX_TIME;
 	int i;
+	struct timeval tv;
 
 	pool = (struct pool *)vpool;
 
@@ -1821,7 +1825,9 @@ void pool_timer (vpool)
 	}
 	if (next_expiry != MAX_TIME) {
 		pool -> next_event_time = next_expiry;
-		add_timeout (pool -> next_event_time, pool_timer, pool,
+		tv . tv_sec = pool -> next_event_time;
+		tv . tv_usec = 0;
+		add_timeout (&tv, pool_timer, pool,
 			     (tvref_t)pool_reference,
 			     (tvunref_t)pool_dereference);
 	} else

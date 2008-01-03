@@ -2136,6 +2136,7 @@ schedule_lease_timeout(struct ipv6_pool *pool) {
 	struct iaaddr *tmp;
 	time_t timeout;
 	time_t next_timeout;
+	struct timeval tv;
 
 	next_timeout = MAX_TIME;
 
@@ -2158,7 +2159,9 @@ schedule_lease_timeout(struct ipv6_pool *pool) {
 	}
 
 	if (next_timeout < MAX_TIME) {
-		add_timeout(next_timeout, lease_timeout_support, pool,
+		tv.tv_sec = next_timeout;
+		tv.tv_usec = 0;
+		add_timeout(&tv, lease_timeout_support, pool,
 			    (tvref_t)ipv6_pool_reference, 
 			    (tvunref_t)ipv6_pool_dereference);
 	}

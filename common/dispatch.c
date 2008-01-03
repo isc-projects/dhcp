@@ -40,8 +40,9 @@ static struct timeout *free_timeouts;
 void set_time(TIME t)
 {
 	/* Do any outstanding timeouts. */
-	if (cur_time != t) {
-		cur_time = t;
+	if (cur_tv . tv_sec != t) {
+		cur_tv . tv_sec = t;
+		cur_tv . tv_usec = 0;
 		process_outstanding_timeouts ((struct timeval *)0);
 	}
 }
@@ -54,7 +55,9 @@ struct timeval *process_outstanding_timeouts (struct timeval *tvp)
       another:
 	if (timeouts) {
 		struct timeout *t;
-		if (timeouts -> when <= cur_time) {
+		if ((timeouts -> when . tv_sec < cur_tv . tv_sec) ||
+		    ((timeouts -> when . tv_sec == cur_tv . tv_sec) &&
+		     (timeouts -> when . tv_usec <= cur_tv . tv_usec))) {
 			t = timeouts;
 			timeouts = timeouts -> next;
 			(*(t -> func)) (t -> what);
@@ -65,8 +68,8 @@ struct timeval *process_outstanding_timeouts (struct timeval *tvp)
 			goto another;
 		}
 		if (tvp) {
-			tvp -> tv_sec = timeouts -> when;
-			tvp -> tv_usec = 0;
+			tvp -> tv_sec = timeouts -> when . tv_sec;
+			tvp -> tv_usec = timeouts -> when . tv_usec;
 		}
 		return tvp;
 	} else
@@ -93,7 +96,7 @@ void dispatch ()
 }
 
 void add_timeout (when, where, what, ref, unref)
-	TIME when;
+	struct timeval *when;
 	void (*where) PROTO ((void *));
 	void *what;
 	tvref_t ref;
@@ -137,12 +140,15 @@ void add_timeout (when, where, what, ref, unref)
 			q -> what = what;
 	}
 
-	q -> when = when;
+	q -> when . tv_sec = when -> tv_sec;
+	q -> when . tv_usec = when -> tv_usec;
 
 	/* Now sort this timeout into the timeout list. */
 
 	/* Beginning of list? */
-	if (!timeouts || timeouts -> when > q -> when) {
+	if (!timeouts || (timeouts -> when . tv_sec > q -> when . tv_sec) ||
+	    ((timeouts -> when . tv_sec == q -> when . tv_sec) &&
+	     (timeouts -> when . tv_usec > q -> when . tv_usec))) {
 		q -> next = timeouts;
 		timeouts = q;
 		return;
@@ -150,7 +156,9 @@ void add_timeout (when, where, what, ref, unref)
 
 	/* Middle of list? */
 	for (t = timeouts; t -> next; t = t -> next) {
-		if (t -> next -> when > q -> when) {
+		if ((t -> next -> when . tv_sec > q -> when . tv_sec) ||
+		    ((t -> next -> when . tv_sec == q -> when . tv_sec) &&
+		     (t -> next -> when . tv_usec > q -> when . tv_usec))) {
 			q -> next = t -> next;
 			t -> next = q;
 			return;

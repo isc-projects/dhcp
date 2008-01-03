@@ -34,6 +34,7 @@
 
 #include "dhcpd.h"
 #include <syslog.h>
+#include <sys/time.h>
 
 static void usage PROTO ((void));
 
@@ -266,7 +267,7 @@ main(int argc, char **argv) {
 	}
 
 	/* Get the current time... */
-	time(&cur_time);
+	gettimeofday(&cur_tv, NULL);
 
 	/* Discover all the network interfaces. */
 	discover_interfaces (DISCOVER_RELAY);

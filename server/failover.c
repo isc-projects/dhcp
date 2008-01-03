@@ -59,6 +59,7 @@ void dhcp_failover_startup ()
 {
 	dhcp_failover_state_t *state;
 	isc_result_t status;
+	struct timeval tv;
 
 	for (state = failover_states; state; state = state -> next) {
 		dhcp_failover_state_transition (state, "startup");
@@ -79,7 +80,9 @@ void dhcp_failover_startup ()
 #if defined (DEBUG_FAILOVER_TIMING)
 			log_info ("add_timeout +90 dhcp_failover_reconnect");
 #endif
-			add_timeout (cur_time + 90,
+			tv . tv_sec = cur_time + 90;
+			tv . tv_usec = 0;
+			add_timeout (&tv,
 				     dhcp_failover_reconnect, state,
 				     (tvref_t)
 				     dhcp_failover_state_reference,
@@ -96,7 +99,9 @@ void dhcp_failover_startup ()
 			log_info ("add_timeout +90 %s",
 				  "dhcp_failover_listener_restart");
 #endif
-			add_timeout (cur_time + 90,
+			tv . tv_sec = cur_time + 90;
+			tv . tv_usec = 0;
+			add_timeout (&tv,
 				     dhcp_failover_listener_restart,
 				     state,
 				     (tvref_t)omapi_object_reference,
@@ -279,6 +284,7 @@ isc_result_t dhcp_failover_link_signal (omapi_object_t *h,
 	dhcp_failover_state_t *s, *state = (dhcp_failover_state_t *)0;
 	char *sname;
 	int slen;
+	struct timeval tv;
 
 	if (h -> type != dhcp_type_failover_link) {
 		/* XXX shouldn't happen.   Put an assert here? */
@@ -302,7 +308,9 @@ isc_result_t dhcp_failover_link_signal (omapi_object_t *h,
 	    log_info ("add_timeout +15 %s",
 		      "dhcp_failover_link_startup_timeout");
 #endif
-	    add_timeout (cur_time + 15,
+	    tv . tv_sec = cur_time + 15;
+	    tv . tv_usec = 0;
+	    add_timeout (&tv,
 			 dhcp_failover_link_startup_timeout,
 			 link,
 			 (tvref_t)dhcp_failover_link_reference,
@@ -326,7 +334,9 @@ isc_result_t dhcp_failover_link_signal (omapi_object_t *h,
 		    log_info ("add_timeout +5 %s",
 			      "dhcp_failover_reconnect");
 #endif
-		    add_timeout (cur_time + 5, dhcp_failover_reconnect,
+		    tv . tv_sec = cur_time + 5;
+		    tv . tv_usec = 0;
+		    add_timeout (&tv, dhcp_failover_reconnect,
 				 state,
 				 (tvref_t)dhcp_failover_state_reference,
 				 (tvunref_t)dhcp_failover_state_dereference);
@@ -356,7 +366,9 @@ isc_result_t dhcp_failover_link_signal (omapi_object_t *h,
 	      log_info ("add_timeout +5 %s",
 			"dhcp_failover_reconnect");
 #endif
-	      add_timeout (cur_time + 5, dhcp_failover_reconnect,
+	      tv . tv_sec = cur_time + 5;
+	      tv . tv_usec = 0;
+	      add_timeout (&tv, dhcp_failover_reconnect,
 			   state,
 			   (tvref_t)dhcp_failover_state_reference,
 			   (tvunref_t)dhcp_failover_state_dereference);
@@ -1195,6 +1207,7 @@ isc_result_t dhcp_failover_state_signal (omapi_object_t *o,
 	isc_result_t status;
 	dhcp_failover_state_t *state;
 	dhcp_failover_link_t *link;
+	struct timeval tv;
 
 	if (!o || o -> type != dhcp_type_failover_state)
 		return ISC_R_INVALIDARG;
@@ -1221,7 +1234,9 @@ isc_result_t dhcp_failover_state_signal (omapi_object_t *o,
 			log_info ("add_timeout +90 %s",
 				  "dhcp_failover_reconnect");
 #endif
-			add_timeout (cur_time + 90, dhcp_failover_reconnect,
+			tv . tv_sec = cur_time + 90;
+			tv . tv_usec = 0;
+			add_timeout (&tv, dhcp_failover_reconnect,
 				     state,
 				     (tvref_t)dhcp_failover_state_reference,
 				     (tvunref_t)
@@ -1359,8 +1374,10 @@ isc_result_t dhcp_failover_state_signal (omapi_object_t *o,
 			      (int)state -> partner.max_response_delay / 3,
 			      "dhcp_failover_send_contact");
 #endif
-		    add_timeout (cur_time +
-				 (int)state -> partner.max_response_delay / 3,
+		    tv . tv_sec = cur_time +
+			    (int)state -> partner.max_response_delay / 3;
+		    tv . tv_usec = 0;
+		    add_timeout (&tv,
 				 dhcp_failover_send_contact, state,
 				 (tvref_t)dhcp_failover_state_reference,
 				 (tvunref_t)dhcp_failover_state_dereference);
@@ -1369,8 +1386,10 @@ isc_result_t dhcp_failover_state_signal (omapi_object_t *o,
 			      (int)state -> me.max_response_delay,
 			      "dhcp_failover_timeout");
 #endif
-		    add_timeout (cur_time +
-				 (int)state -> me.max_response_delay,
+		    tv . tv_sec = cur_time +
+			    (int)state -> me.max_response_delay;
+		    tv . tv_usec = 0;
+		    add_timeout (&tv,
 				 dhcp_failover_timeout, state,
 				 (tvref_t)dhcp_failover_state_reference,
 				 (tvunref_t)dhcp_failover_state_dereference);
@@ -1420,8 +1439,10 @@ isc_result_t dhcp_failover_state_signal (omapi_object_t *o,
 			      (int)state -> me.max_response_delay,
 			      "dhcp_failover_timeout");
 #endif
-		    add_timeout (cur_time +
-				 (int)state -> me.max_response_delay,
+		    tv . tv_sec = cur_time +
+			    (int)state -> me.max_response_delay;
+		    tv . tv_usec = 0;
+		    add_timeout (&tv,
 				 dhcp_failover_timeout, state,
 				 (tvref_t)dhcp_failover_state_reference,
 				 (tvunref_t)dhcp_failover_state_dereference);
@@ -1649,6 +1670,7 @@ isc_result_t dhcp_failover_set_state (dhcp_failover_state_t *state,
     struct pool *p;
     struct shared_network *s;
     struct lease *l;
+    struct timeval tv;
 
     /* If we're in certain states where we're sending updates, and the peer
      * state changes, we need to re-schedule any pending updates just to
@@ -1772,7 +1794,9 @@ isc_result_t dhcp_failover_set_state (dhcp_failover_state_t *state,
 	    log_info ("add_timeout +15 %s",
 		      "dhcp_failover_startup_timeout");
 #endif
-	    add_timeout (cur_time + 15,
+	    tv . tv_sec = cur_time + 15;
+	    tv . tv_usec = 0;
+	    add_timeout (&tv,
 			 dhcp_failover_startup_timeout,
 			 state,
 			 (tvref_t)omapi_object_reference,
@@ -1790,7 +1814,9 @@ isc_result_t dhcp_failover_set_state (dhcp_failover_state_t *state,
 				    state -> me.stos + state -> mclt),
 			      "dhcp_failover_startup_timeout");
 #endif
-		    add_timeout ((int)(state -> me.stos + state -> mclt),
+		    tv . tv_sec = (int)(state -> me.stos + state -> mclt);
+		    tv . tv_usec = 0;
+		    add_timeout (&tv,
 				 dhcp_failover_recover_done,
 				 state,
 				 (tvref_t)omapi_object_reference,
@@ -1828,7 +1854,9 @@ isc_result_t dhcp_failover_set_state (dhcp_failover_state_t *state,
 				      (int)(cur_time - p->next_event_time),
 				      "pool_timer");
 #endif
-			    add_timeout(p->next_event_time, pool_timer, p,
+			    tv.tv_sec = p->next_event_time;
+			    tv.tv_usec = 0;
+			    add_timeout(&tv, pool_timer, p,
 					(tvref_t)pool_reference,
 					(tvunref_t)pool_dereference);
 			}
@@ -2496,6 +2524,7 @@ dhcp_failover_pool_check(struct pool *pool)
 {
 	dhcp_failover_state_t *peer;
 	TIME est1, est2;
+	struct timeval tv;
 
 	peer = pool->failover_peer;
 
@@ -2574,7 +2603,9 @@ dhcp_failover_pool_check(struct pool *pool)
 	log_info("add_timeout +%d dhcp_failover_pool_rebalance",
 		 est1 - cur_time);
 #endif
-	add_timeout(est1, dhcp_failover_pool_rebalance, peer,
+	tv.tv_sec = est1;
+	tv.tv_usec = 0;
+	add_timeout(&tv, dhcp_failover_pool_rebalance, peer,
 			(tvref_t)dhcp_failover_state_reference,
 			(tvunref_t)dhcp_failover_state_dereference);
 }
@@ -2750,6 +2781,8 @@ void dhcp_failover_toack_queue_timeout (void *vs)
 int dhcp_failover_queue_ack (dhcp_failover_state_t *state,
 			     failover_message_t *msg)
 {
+	struct timeval tv;
+
 	if (state -> toack_queue_head) {
 		failover_message_reference
 			(&state -> toack_queue_tail -> next, msg, MDL);
@@ -2774,7 +2807,9 @@ int dhcp_failover_queue_ack (dhcp_failover_state_t *state,
 		log_info ("add_timeout +2 %s",
 			  "dhcp_failover_toack_queue_timeout");
 #endif
-		add_timeout (cur_time + 2,
+		tv . tv_sec = cur_time + 2;
+		tv . tv_usec = 0;
+		add_timeout (&tv,
 			     dhcp_failover_toack_queue_timeout, state,
 			     (tvref_t)dhcp_failover_state_reference,
 			     (tvunref_t)dhcp_failover_state_dereference);
@@ -2915,6 +2950,7 @@ void dhcp_failover_reconnect (void *vs)
 {
 	dhcp_failover_state_t *state = vs;
 	isc_result_t status;
+	struct timeval tv;
 
 #if defined (DEBUG_FAILOVER_TIMING)
 	log_info ("dhcp_failover_reconnect");
@@ -2932,7 +2968,9 @@ void dhcp_failover_reconnect (void *vs)
 		log_info ("add_timeout +90 %s",
 			  "dhcp_failover_listener_restart");
 #endif
-		add_timeout (cur_time + 90,
+		tv . tv_sec = cur_time + 90;
+		tv . tv_usec = 0;
+		add_timeout (&tv,
 			     dhcp_failover_listener_restart, state,
 			     (tvref_t)dhcp_failover_state_reference,
 			     (tvunref_t)dhcp_failover_state_dereference);
@@ -2970,6 +3008,7 @@ void dhcp_failover_listener_restart (void *vs)
 {
 	dhcp_failover_state_t *state = vs;
 	isc_result_t status;
+	struct timeval tv;
 
 #if defined (DEBUG_FAILOVER_TIMING)
 	log_info ("dhcp_failover_listener_restart");
@@ -2983,7 +3022,9 @@ void dhcp_failover_listener_restart (void *vs)
 		log_info ("add_timeout +90 %s",
 			  "dhcp_failover_listener_restart");
 #endif
-		add_timeout (cur_time + 90,
+		tv . tv_sec = cur_time + 90;
+		tv . tv_usec = 0;
+		add_timeout (&tv,
 			     dhcp_failover_listener_restart, state,
 			     (tvref_t)dhcp_failover_state_reference,
 			     (tvunref_t)dhcp_failover_state_dereference);
@@ -4021,6 +4062,7 @@ isc_result_t dhcp_failover_put_message (dhcp_failover_link_t *link,
 	unsigned char *opbuf;
 	isc_result_t status = ISC_R_SUCCESS;
 	unsigned char cbuf;
+	struct timeval tv;
 
 	/* Run through the argument list once to compute the length of
 	   the option portion of the message. */
@@ -4104,9 +4146,11 @@ isc_result_t dhcp_failover_put_message (dhcp_failover_link_t *link,
 				partner.max_response_delay) / 3,
 			  "dhcp_failover_send_contact");
 #endif
-		add_timeout (cur_time +
-			     (int)(link -> state_object ->
-				   partner.max_response_delay) / 3,
+		tv . tv_sec = cur_time +
+			(int)(link -> state_object ->
+			      partner.max_response_delay) / 3;
+		tv . tv_usec = 0;
+		add_timeout (&tv,
 			     dhcp_failover_send_contact, link -> state_object,
 			     (tvref_t)dhcp_failover_state_reference,
 			     (tvunref_t)dhcp_failover_state_dereference);
@@ -5097,6 +5141,7 @@ isc_result_t dhcp_failover_process_bind_ack (dhcp_failover_state_t *state,
 	const char *message = "no memory";
 	u_int32_t pot_expire;
 	int send_to_backup = ISC_FALSE;
+	struct timeval tv;
 
 	ia.len = sizeof msg -> assigned_addr;
 	memcpy (ia.iabuf, &msg -> assigned_addr, ia.len);
@@ -5198,8 +5243,9 @@ isc_result_t dhcp_failover_process_bind_ack (dhcp_failover_state_t *state,
 		   succession (e.g., when stealing leases from the
 		   secondary), we do not do an immediate commit for
 		   each one. */
-		add_timeout(cur_time + 2,
-			    commit_leases_timeout, (void *)0, 0, 0);
+		tv.tv_sec = cur_time + 2;
+		tv.tv_usec = 0;
+		add_timeout(&tv, commit_leases_timeout, (void *)0, 0, 0);
 	}
 
       unqueue:
@@ -5361,6 +5407,8 @@ isc_result_t
 dhcp_failover_process_update_done (dhcp_failover_state_t *state,
 				   failover_message_t *msg)
 {
+	struct timeval tv;
+
 	log_info ("failover peer %s: peer update completed.",
 		  state -> name);
 
@@ -5419,7 +5467,9 @@ dhcp_failover_process_update_done (dhcp_failover_state_t *state,
 					state -> me.stos + state -> mclt),
 				  "dhcp_failover_recover_done");
 #endif
-			add_timeout ((int)(state -> me.stos + state -> mclt),
+			tv . tv_sec = (int)(state -> me.stos + state -> mclt);
+			tv . tv_usec = 0;
+			add_timeout (&tv,
 				     dhcp_failover_recover_done,
 				     state,
 				     (tvref_t)omapi_object_reference,
