@@ -1769,7 +1769,7 @@ reply_process_addr(struct reply_state *reply, struct option_cache *addr) {
 		if ((reply->packet->dhcpv6_msg_type != DHCPV6_RENEW) &&
 		    (reply->packet->dhcpv6_msg_type != DHCPV6_REBIND)) {
 			log_error("It is impossible to lease a client that is "
-				  "not sending a solict, request, renew, or "
+				  "not sending a solicit, request, renew, or "
 				  "rebind.");
 			status = ISC_R_FAILURE;
 			goto cleanup;
