@@ -61,6 +61,13 @@ suggested fixes to <dhcp-users@isc.org>.
   they were declared has been updated to be more helpful and identify the
   typo in configuration that created the spanning addresses.
 
+- A bug in failover pool rebalancing that caused POOLREQ message ping-pongs
+  was repaired.
+
+- A flaw in failover pool rebalancing that could cause POOLREQ messages to
+  be sent outside of the min-balance/max-balance scheduled intervals has
+  been repaired.
+
                         Changes since 4.0.0rc1
 
 - None
