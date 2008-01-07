@@ -57,6 +57,10 @@ suggested fixes to <dhcp-users@isc.org>.
 - The 'min-secs' configuration parameter's log message has been updated to
   be more helpful.
 
+- The warning logged when an address range doesn't fit in the subnets
+  they were declared has been updated to be more helpful and identify the
+  typo in configuration that created the spanning addresses.
+
                         Changes since 4.0.0rc1
 
 - None
