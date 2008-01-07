@@ -52,6 +52,11 @@ may not work on other platforms. Please report any problems and
 suggested fixes to <dhcp-users@isc.org>.
 
 
+			Changes since 4.0.0
+
+- The 'min-secs' configuration parameter's log message has been updated to
+  be more helpful.
+
                         Changes since 4.0.0rc1
 
 - None
