@@ -68,6 +68,10 @@ suggested fixes to <dhcp-users@isc.org>.
   be sent outside of the min-balance/max-balance scheduled intervals has
   been repaired.
 
+- A cosmetic bug during potential-conflict recovery that caused the peer's
+  'conflict-done' state message to be logged as 'unknown-state' has been
+  repaired.  It is now logged correctly.
+
                         Changes since 4.0.0rc1
 
 - None

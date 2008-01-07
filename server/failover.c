@@ -3561,6 +3561,9 @@ const char *dhcp_failover_state_name_print (enum failover_state state)
 	      case normal:
 		return "normal";
 
+	      case conflict_done:
+		return "conflict-done";
+
 	      case communications_interrupted:
 		return "communications-interrupted";
 
