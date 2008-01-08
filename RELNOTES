@@ -91,6 +91,9 @@ suggested fixes to <dhcp-users@isc.org>.
 
 - Timer granularity is now 1/100s in the DHCPv6 client.
 
+- A bug was fixed where the 'giaddr' may be used to find the client's subnet
+  rather than its own 'ciaddr'.
+
 			Changes since 4.0.0b3
 
 - The reverse dns name for PTR updates on IPv6 addresses has been fixed to
