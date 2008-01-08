@@ -927,20 +927,25 @@ void dhcpinform (packet, ms_nulltp)
 	struct dhcp_packet raw;
 	struct packet outgoing;
 	unsigned char dhcpack = DHCPACK;
-	struct subnet *subnet = (struct subnet *)0;
+	struct subnet *subnet = NULL;
 	struct iaddr cip, gip;
 	unsigned i;
 	int nulltp;
 	struct sockaddr_in to;
 	struct in_addr from;
+	isc_boolean_t zeroed_ciaddr;
+
+	memset(zerobuf, 0, sizeof(zerobuf));
 
 	/* The client should set ciaddr to its IP address, but apparently
 	   it's common for clients not to do this, so we'll use their IP
 	   source address if they didn't set ciaddr. */
 	if (!packet -> raw -> ciaddr.s_addr) {
+		zeroed_ciaddr = ISC_TRUE;
 		cip.len = 4;
 		memcpy (cip.iabuf, &packet -> client_addr.iabuf, 4);
 	} else {
+		zeroed_ciaddr = ISC_FALSE;
 		cip.len = 4;
 		memcpy (cip.iabuf, &packet -> raw -> ciaddr, 4);
 	}
@@ -966,19 +971,25 @@ void dhcpinform (packet, ms_nulltp)
 	}
 
 	/* Find the subnet that the client is on. */
-	if (gip.len) {
+	if (zeroed_ciaddr && (gip.len != 0)) {
 		/* XXX - do subnet selection relay agent suboption here */
 		find_subnet(&subnet, gip, MDL);
+
+		if (subnet == NULL) {
+			log_info("%s: unknown subnet for relay address %s",
+				 msgbuf, piaddr(gip));
+			return;
+		}
 	} else {
 		/* XXX - do subnet selection (not relay agent) option here */
 		find_subnet(&subnet, cip, MDL);
-	}
 
-	/* Sourceless packets don't make sense here. */
-	if (!subnet) {
-		log_info ("%s: unknown subnet for address %s",
-			  msgbuf, gip.len ? piaddr(gip) : piaddr(cip));
-		return;
+		if (subnet == NULL) {
+			log_info("%s: unknown subnet for %s address %s",
+				 msgbuf, zeroed_ciaddr ? "source" : "client",
+				 piaddr(cip));
+			return;
+		}
 	}
 
 	/* We don't respond to DHCPINFORM packets if we're not authoritative.

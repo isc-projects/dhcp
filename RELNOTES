@@ -72,6 +72,9 @@ suggested fixes to <dhcp-users@isc.org>.
   'conflict-done' state message to be logged as 'unknown-state' has been
   repaired.  It is now logged correctly.
 
+- A bug was fixed where the 'giaddr' may be used to find the client's subnet
+  rather than its own 'ciaddr'.
+
                         Changes since 4.0.0rc1
 
 - None
