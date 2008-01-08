@@ -101,6 +101,9 @@ the README file.
   be sent outside of the min-balance/max-balance scheduled intervals has
   been repaired.
 
+- A bug was fixed where the 'giaddr' may be used to find the client's subnet
+  rather than its own 'ciaddr'.
+
 			Changes since 3.1.0rc1
 
 - The parse warning that 'deny dyanmic bootp;' must be configured for
