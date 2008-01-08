@@ -98,7 +98,9 @@ main(int argc, char **argv) {
 	int no_dhclient_db = 0;
 	int no_dhclient_pid = 0;
 	int no_dhclient_script = 0;
+#ifdef DHCPv6
 	int local_family_set = 0;
+#endif /* DHCPv6 */
 	char *s;
 
 	/* Initialize client globals. */
