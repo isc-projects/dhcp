@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.63.56.15 2007/12/18 18:05:23 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.63.56.16 2008/01/08 16:23:21 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -255,6 +255,9 @@ isc_result_t dhcp_failover_link_initiate (omapi_object_t *h)
 		}
 	} else {
 		if (ds.len != sizeof (struct in_addr)) {
+			log_error("failover peer %s: 'address' parameter "
+				  "fails to resolve to an IPv4 address",
+				  state->name);
 			data_string_forget (&ds, MDL);
 			dhcp_failover_link_dereference (&obj, MDL);
 			omapi_addr_list_dereference (&addrs, MDL);

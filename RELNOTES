@@ -104,6 +104,10 @@ the README file.
 - A bug was fixed where the 'giaddr' may be used to find the client's subnet
   rather than its own 'ciaddr'.
 
+- A log message was introduced to clarify the situation where a failover
+  'address' parameter (the server's local address) did not resolve to an
+  IPv4 address.
+
 			Changes since 3.1.0rc1
 
 - The parse warning that 'deny dyanmic bootp;' must be configured for
