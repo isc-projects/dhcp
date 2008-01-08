@@ -247,6 +247,9 @@ isc_result_t dhcp_failover_link_initiate (omapi_object_t *h)
 		}
 	} else {
 		if (ds.len != sizeof (struct in_addr)) {
+			log_error("failover peer %s: 'address' parameter "
+				  "fails to resolve to an IPv4 address",
+				  state->name);
 			data_string_forget (&ds, MDL);
 			dhcp_failover_link_dereference (&obj, MDL);
 			omapi_addr_list_dereference (&addrs, MDL);
