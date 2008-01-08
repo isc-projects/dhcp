@@ -935,8 +935,6 @@ void dhcpinform (packet, ms_nulltp)
 	struct in_addr from;
 	isc_boolean_t zeroed_ciaddr;
 
-	memset(zerobuf, 0, sizeof(zerobuf));
-
 	/* The client should set ciaddr to its IP address, but apparently
 	   it's common for clients not to do this, so we'll use their IP
 	   source address if they didn't set ciaddr. */
