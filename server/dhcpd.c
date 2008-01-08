@@ -220,7 +220,9 @@ main(int argc, char **argv) {
 	int no_dhcpd_conf = 0;
 	int no_dhcpd_db = 0;
 	int no_dhcpd_pid = 0;
+#ifdef DHCPv6
 	int local_family_set = 0;
+#endif /* DHCPv6 */
 #if defined (TRACING)
 	char *traceinfile = (char *)0;
 	char *traceoutfile = (char *)0;
