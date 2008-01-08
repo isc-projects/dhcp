@@ -108,6 +108,10 @@ and for prodding me into improving it.
 - A bug was fixed where the 'giaddr' may be used to find the client's subnet
   rather than its own 'ciaddr'.
 
+- A log message was introduced to clarify the situation where a failover
+  'address' parameter (the server's local address) did not resolve to an
+  IPv4 address.
+
 			Changes since 3.0.6rc1
 
 - supersede_lease() now requeues leases in their respective hardware
