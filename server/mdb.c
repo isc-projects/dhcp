@@ -1051,6 +1051,7 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 	int pimmediate;
 {
 	struct lease *lp, **lq, *prev;
+	struct timeval tv;
 #if defined (FAILOVER_PROTOCOL)
 	int do_pool_check = 0;
 
@@ -1060,7 +1061,6 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 	if (pimmediate && !commit)
 		return 0;
 #endif
-	struct timeval tv;
 
 	/* If there is no sample lease, just do the move. */
 	if (!lease)
