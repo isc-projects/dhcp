@@ -411,6 +411,56 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 #endif /* USE_SOCKET_SEND || USE_SOCKET_FALLBACK */
 
 #ifdef DHCPv6
+/*
+ * Solaris 9 is missing the CMSG_LEN and CMSG_SPACE macros, so we will 
+ * synthesize them (based on the BIND 9 technique).
+ */
+
+#ifndef CMSG_LEN
+static size_t CMSG_LEN(size_t len) {
+	size_t hdrlen;
+	/*
+	 * Cast NULL so that any pointer arithmetic performed by CMSG_DATA
+	 * is correct.
+	 */
+	hdrlen = (size_t)CMSG_DATA(((struct cmsghdr *)NULL));
+	return hdrlen + len;
+}
+#endif /* !CMSG_LEN */
+
+#ifndef CMSG_SPACE
+static size_t CMSG_SPACE(size_t len) {
+	struct msghdr msg;
+	struct cmsghdr *cmsgp;
+
+	/*
+	 * XXX: The buffer length is an ad-hoc value, but should be enough
+	 * in a practical sense.
+	 */
+	union {
+		struct cmsghdr cmsg_sizer;
+		u_int8_t pktinfo_sizer[sizeof(struct cmsghdr) + 1024];
+	} dummybuf;
+
+	memset(&msg, 0, sizeof(msg));
+	msg.msg_control = &dummybuf;
+	msg.msg_controllen = sizeof(dummybuf);
+
+	cmsgp = (struct cmsghdr *)&dummybuf;
+	cmsgp->cmsg_len = CMSG_LEN(len);
+
+	cmsgp = CMSG_NXTHDR(&msg, cmsgp);
+	if (cmsgp != NULL) {
+		return (char *)cmsgp - (char *)msg.msg_control;
+	} else {
+		return 0;
+	}
+}
+#endif /* !CMSG_SPACE */
+
+#endif /* DHCPv6 */
+
+#ifdef DHCPv6
 /* 
  * For both send_packet6() and receive_packet6() we need to use the 
  * sendmsg()/recvmsg() functions rather than the simpler send()/recv()
