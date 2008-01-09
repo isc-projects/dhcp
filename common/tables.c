@@ -961,6 +961,7 @@ void initialize_common_option_spaces()
 	dhcp_universe.store_tag = putUChar;
 	dhcp_universe.get_length = getUChar;
 	dhcp_universe.store_length = putUChar;
+	dhcp_universe.site_code_min = 0;
 	dhcp_universe.end = DHO_END;
 	dhcp_universe.index = universe_count++;
 	universes [dhcp_universe.index] = &dhcp_universe;
@@ -1001,6 +1002,7 @@ void initialize_common_option_spaces()
 	nwip_universe.store_tag = putUChar;
 	nwip_universe.get_length = getUChar;
 	nwip_universe.store_length = putUChar;
+	nwip_universe.site_code_min = 0;
 	nwip_universe.end = 0;
 	code = DHO_NWIP_SUBOPTIONS;
 	nwip_universe.enc_opt = NULL;
@@ -1046,6 +1048,7 @@ void initialize_common_option_spaces()
 	fqdn_universe.store_tag = putUChar;
 	fqdn_universe.get_length = getUChar;
 	fqdn_universe.store_length = putUChar;
+	fqdn_universe.site_code_min = 0;
 	fqdn_universe.end = 0;
 	fqdn_universe.index = universe_count++;
 	code = DHO_FQDN;
@@ -1093,6 +1096,7 @@ void initialize_common_option_spaces()
         vendor_class_universe.store_tag = putULong;
 	vendor_class_universe.get_length = getUChar;
         vendor_class_universe.store_length = putUChar;
+	vendor_class_universe.site_code_min = 0;
 	vendor_class_universe.end = 0;
 	code = DHO_VIVCO_SUBOPTIONS;
 	vendor_class_universe.enc_opt = NULL;
@@ -1139,6 +1143,7 @@ void initialize_common_option_spaces()
         vendor_universe.store_tag = putULong;
 	vendor_universe.get_length = getUChar;
         vendor_universe.store_length = putUChar;
+	vendor_universe.site_code_min = 0;
 	vendor_universe.end = 0;
 	code = DHO_VIVSO_SUBOPTIONS;
 	vendor_universe.enc_opt = NULL;
@@ -1185,6 +1190,7 @@ void initialize_common_option_spaces()
         isc_universe.store_tag = putUShort;
 	isc_universe.get_length = getUShort;
         isc_universe.store_length = putUShort;
+	isc_universe.site_code_min = 0;
 	isc_universe.end = 0;
 	code = VENDOR_ISC_SUBOPTIONS;
 	isc_universe.enc_opt = NULL;
@@ -1230,6 +1236,7 @@ void initialize_common_option_spaces()
 	dhcpv6_universe.store_tag = putUShort;
 	dhcpv6_universe.get_length = getUShort;
 	dhcpv6_universe.store_length = putUShort;
+	dhcpv6_universe.site_code_min = 0;
 	/* DHCPv6 has no END option. */
 	dhcpv6_universe.end = 0x00;
 	dhcpv6_universe.index = universe_count++;
@@ -1270,6 +1277,7 @@ void initialize_common_option_spaces()
 	vsio_universe.store_tag = putULong;
 	vsio_universe.get_length = NULL;
 	vsio_universe.store_length = NULL;
+	vsio_universe.site_code_min = 0;
 	/* No END option. */
 	vsio_universe.end = 0x00;
 	code = D6O_VENDOR_OPTS;
@@ -1310,6 +1318,7 @@ void initialize_common_option_spaces()
 	isc6_universe.store_tag = putULong;
 	isc6_universe.get_length = NULL;
 	isc6_universe.store_length = NULL;
+	isc6_universe.site_code_min = 0;
 	/* No END option. */
 	isc6_universe.end = 0x00;
 	code = 2495;
@@ -1353,6 +1362,7 @@ void initialize_common_option_spaces()
 	fqdn6_universe.store_tag = NULL;
 	fqdn6_universe.get_length = NULL;
 	fqdn6_universe.store_length = NULL;
+	fqdn6_universe.site_code_min = 0;
 	fqdn6_universe.end = 0;
 	fqdn6_universe.index = universe_count++;
 	code = D6O_CLIENT_FQDN;
