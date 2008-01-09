@@ -39,6 +39,10 @@
 int outstanding_pings;
 
 static char dhcp_message [256];
+static int site_code_min;
+
+static int find_min_site_code(struct universe *);
+static isc_result_t lowest_site_code(const void *, unsigned, void *);
 
 static const char *dhcp_type_names [] = { 
 	"DHCPDISCOVER",
@@ -1136,7 +1140,7 @@ void dhcpinform (packet, ms_nulltp)
 		}
 
 		options -> site_universe = u -> index;
-		options -> site_code_min = 224; /* From RFC3942 */
+		options->site_code_min = find_min_site_code(u);
 		data_string_forget (&d1, MDL);
 	} else {
 		options -> site_universe = dhcp_universe.index;
@@ -2731,7 +2735,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		}
 
 		state -> options -> site_universe = u -> index;
-		state -> options -> site_code_min = 224; /* From RFC3942 */
+		state->options->site_code_min = find_min_site_code(u);
 		data_string_forget (&d1, MDL);
 	} else {
 		state -> options -> site_code_min = 0;
@@ -4023,5 +4027,67 @@ get_server_source_address(struct in_addr *from,
 	} else {
        		memset(from, 0, sizeof(*from));
 	}
+}
+
+/*
+ * Look for the lowest numbered site code number and
+ * apply a log warning if it is less than 224.  Do not
+ * permit site codes less than 128 (old code never did).
+ *
+ * Note that we could search option codes 224 down to 128
+ * on the hash table, but the table is (probably) smaller
+ * than that if it was declared as a standalone table with
+ * defaults.  So we traverse the option code hash.
+ */
+static int
+find_min_site_code(struct universe *u)
+{
+	if (u->site_code_min)
+		return u->site_code_min;
+
+	/*
+	 * Note that site_code_min has to be global as we can't pass an
+	 * argument through hash_foreach().  The value 224 is taken from
+	 * RFC 3942.
+	 */
+	site_code_min = 224;
+	option_code_hash_foreach(u->code_hash, lowest_site_code);
+
+	if (site_code_min < 224) {
+		log_error("WARNING: site-local option codes less than 224 have "
+			  "been deprecated by RFC3942.  You have options "
+			  "listed in site local space %s that number as low as "
+			  "%d.  Please investigate if these should be declared "
+			  "as regular options rather than site-local options, "
+			  "or migrated up past 224.",
+			  u->name, site_code_min);
+	}
+
+	/*
+	 * don't even bother logging, this is just silly, and never worked
+	 * on any old version of software.
+	 */
+	if (site_code_min < 128)
+		site_code_min = 128;
+
+	/*
+	 * Cache the determined minimum site code on the universe structure.
+	 * Note that due to the < 128 check above, a value of zero is
+	 * impossible.
+	 */
+	u->site_code_min = site_code_min;
+
+	return site_code_min;
+}
+
+static isc_result_t
+lowest_site_code(const void *key, unsigned len, void *object)
+{
+	struct option *option = object;
+
+	if (option->code < site_code_min)
+		site_code_min = option->code;
+
+	return ISC_R_SUCCESS;
 }
 
