@@ -21,7 +21,7 @@
 .\"   <info@isc.org>
 .\"   http://www.isc.org/
 .\"
-.\" $Id: dhclient.8,v 1.12.2.14 2007/05/01 20:42:55 each Exp $
+.\" $Id: dhclient.8,v 1.12.2.15 2008/01/09 16:13:16 shane Exp $
 .\"
 .TH dhclient 8
 .SH NAME
@@ -164,7 +164,7 @@ flag may used.  It should be followed by the udp port number that
 dhclient should use.  This is mostly useful for debugging purposes.
 If a different port is specified for the client to listen on and
 transmit on, the client will also use a different destination port -
-one greater than the specified destination port.
+one less than the specified port.
 .PP
 The DHCP client normally transmits any protocol messages it sends
 before acquiring an IP address to, 255.255.255.255, the IP limited
