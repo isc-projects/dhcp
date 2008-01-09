@@ -180,6 +180,7 @@ fi
 AC_MSG_CHECKING([for struct lifnum])
 AC_TRY_COMPILE(
 [ #include <sys/types.h>
+  #include <sys/socket.h>
   #include <net/if.h>
 ],
 [ struct lifnum a;
@@ -214,7 +215,7 @@ AC_TRY_LINK(
 	[AC_MSG_RESULT(no)])
 
 # Look for optional headers.
-AC_CHECK_HEADERS(net/if_dl.h net/if6.h regex.h)
+AC_CHECK_HEADERS(sys/socket.h net/if_dl.h net/if6.h regex.h)
 
 # find an MD5 library
 AC_SEARCH_LIBS(MD5_Init, [crypto])

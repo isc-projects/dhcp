@@ -78,14 +78,14 @@ inet_aton(cp, addr)
 				base = 8;
 		}
 		while ((c = *cp) != '\0') {
-			if (isascii(c) && isdigit(c)) {
+			if (isascii(c) && isdigit((int)c)) {
 				val = (val * base) + (c - '0');
 				cp++;
 				continue;
 			}
-			if (base == 16 && isascii(c) && isxdigit(c)) {
+			if (base == 16 && isascii(c) && isxdigit((int)c)) {
 				val = (val << 4) + 
-					(c + 10 - (islower(c) ? 'a' : 'A'));
+				      (c + 10 - (islower((int)c) ? 'a' : 'A'));
 				cp++;
 				continue;
 			}
@@ -107,7 +107,7 @@ inet_aton(cp, addr)
 	/*
 	 * Check for trailing characters.
 	 */
-	if (*cp && (!isascii(*cp) || !isspace(*cp)))
+	if (*cp && (!isascii(*cp) || !isspace((int)*cp)))
 		return (0);
 	/*
 	 * Concoct the address according to

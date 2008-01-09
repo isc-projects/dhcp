@@ -108,6 +108,8 @@ suggested fixes to <dhcp-users@isc.org>.
   initialization state may have been used to signal the relay agent
   information options sub-option code for the 'END' of the option space.
 
+- Fixes to allow code to compile and run on Solaris 9.
+
 			Changes since 4.0.0b3
 
 - The reverse dns name for PTR updates on IPv6 addresses has been fixed to
