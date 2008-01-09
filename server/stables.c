@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: stables.c,v 1.33.12.5 2007/04/27 22:48:10 each Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: stables.c,v 1.33.12.6 2008/01/09 17:18:40 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -346,6 +346,8 @@ void initialize_server_option_spaces()
 	agent_universe.store_tag = putUChar;
 	agent_universe.get_length = getUChar;
 	agent_universe.store_length = putUChar;
+	agent_universe.site_code_min = 0;
+	agent_universe.end = 0;
 	universes [agent_universe.index] = &agent_universe;
 	if (!option_name_new_hash(&agent_universe.name_hash,
 				  AGENT_HASH_SIZE, MDL) ||
@@ -383,6 +385,8 @@ void initialize_server_option_spaces()
 	server_universe.tag_size = 4;
 	server_universe.store_tag = putUChar;
 	server_universe.store_length = putUChar;
+	server_universe.site_code_min = 0;
+	server_universe.end = 0;
 	server_universe.index = universe_count++;
 	universes [server_universe.index] = &server_universe;
 	if (!option_name_new_hash(&server_universe.name_hash,

@@ -108,6 +108,16 @@ the README file.
   'address' parameter (the server's local address) did not resolve to an
   IPv4 address.
 
+- The minimum site code value was set to 224 in 3.1.0 to track RFC3942.  This
+  broke a lot of legacy site local configurations.  The new code in place will
+  track site local space minimum option codes and logs a warning to encourage
+  updates and exploration of site local code migration problems.  Option
+  codes less than 128 in site local spaces remain inaccessible.
+
+- A possible relay agent option bug was repaired where random server
+  initialization state may have been used to signal the relay agent
+  information options sub-option code for the 'END' of the option space.
+
 			Changes since 3.1.0rc1
 
 - The parse warning that 'deny dyanmic bootp;' must be configured for

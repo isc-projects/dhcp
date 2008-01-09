@@ -329,7 +329,7 @@ struct universe {
 	u_int32_t (*get_length) (const unsigned char *);
 	void (*store_length) PROTO ((unsigned char *, u_int32_t));
 	int tag_size, length_size;
-	unsigned end;
+	unsigned site_code_min, end;
 	option_name_hash_t *name_hash;
 	option_code_hash_t *code_hash;
 	struct option *enc_opt;

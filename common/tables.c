@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.58.14.5 2007/05/29 17:49:44 each Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.58.14.6 2008/01/09 17:18:40 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -661,6 +661,7 @@ void initialize_common_option_spaces()
 	dhcp_universe.store_tag = putUChar;
 	dhcp_universe.get_length = getUChar;
 	dhcp_universe.store_length = putUChar;
+	dhcp_universe.site_code_min = 0;
 	dhcp_universe.end = DHO_END;
 	dhcp_universe.index = universe_count++;
 	universes [dhcp_universe.index] = &dhcp_universe;
@@ -700,6 +701,7 @@ void initialize_common_option_spaces()
 	nwip_universe.store_tag = putUChar;
 	nwip_universe.get_length = getUChar;
 	nwip_universe.store_length = putUChar;
+	nwip_universe.site_code_min = 0;
 	nwip_universe.end = 0;
 	code = DHO_NWIP_SUBOPTIONS;
 	nwip_universe.enc_opt = NULL;
@@ -744,6 +746,7 @@ void initialize_common_option_spaces()
 	fqdn_universe.store_tag = putUChar;
 	fqdn_universe.get_length = getUChar;
 	fqdn_universe.store_length = putUChar;
+	fqdn_universe.site_code_min = 0;
 	fqdn_universe.end = 0;
 	fqdn_universe.index = universe_count++;
 	code = DHO_FQDN;
@@ -790,6 +793,7 @@ void initialize_common_option_spaces()
         vendor_class_universe.store_tag = putULong;
 	vendor_class_universe.get_length = getUChar;
         vendor_class_universe.store_length = putUChar;
+	vendor_class_universe.site_code_min = 0;
 	vendor_class_universe.end = 0;
 	code = DHO_VIVCO_SUBOPTIONS;
 	vendor_class_universe.enc_opt = NULL;
@@ -835,6 +839,7 @@ void initialize_common_option_spaces()
         vendor_universe.store_tag = putULong;
 	vendor_universe.get_length = getUChar;
         vendor_universe.store_length = putUChar;
+	vendor_universe.site_code_min = 0;
 	vendor_universe.end = 0;
 	code = DHO_VIVSO_SUBOPTIONS;
 	vendor_universe.enc_opt = NULL;
@@ -880,6 +885,7 @@ void initialize_common_option_spaces()
         isc_universe.store_tag = putUShort;
 	isc_universe.get_length = getUShort;
         isc_universe.store_length = putUShort;
+	isc_universe.site_code_min = 0;
 	isc_universe.end = 0;
 	code = VENDOR_ISC_SUBOPTIONS;
 	isc_universe.enc_opt = NULL;
