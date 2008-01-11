@@ -91,6 +91,8 @@ suggested fixes to <dhcp-users@isc.org>.
 
 - Fixes to allow code to compile and run on Solaris 9.
 
+- Fixes to allow code to compile on Mac OS X Leopard (10.5).
+
                         Changes since 4.0.0rc1
 
 - None
