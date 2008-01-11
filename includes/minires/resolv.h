@@ -56,11 +56,13 @@
 
 /*
  *	@(#)resolv.h	8.1 (Berkeley) 6/2/93
- *	$Id: resolv.h,v 1.4 2005/03/17 20:15:15 dhankins Exp $
+ *	$Id: resolv.h,v 1.4.140.1 2008/01/11 13:58:27 shane Exp $
  */
 
 #ifndef _RESOLV_H_
 #define	_RESOLV_H_
+
+#include <sys/types.h>
 
 /*
  * This used to be defined in res_query.c, now it's in herror.c.

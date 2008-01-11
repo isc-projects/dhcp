@@ -118,6 +118,8 @@ the README file.
   initialization state may have been used to signal the relay agent
   information options sub-option code for the 'END' of the option space.
 
+- Fixes to allow code to compile on Mac OS X Leopard (10.5).
+
 			Changes since 3.1.0rc1
 
 - The parse warning that 'deny dyanmic bootp;' must be configured for
