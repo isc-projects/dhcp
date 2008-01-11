@@ -76,10 +76,24 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static const char sccsid[] = "@(#)res_send.c	8.1 (Berkeley) 6/4/93";
-static const char rcsid[] = "$Id: res_send.c,v 1.8 2005/03/17 20:15:19 dhankins Exp $";
+static const char rcsid[] = "$Id: res_send.c,v 1.9 2008/01/11 14:00:06 shane Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 /* Rename the I/O functions in case we're tracing. */
+#include <omapip/omapip_p.h>
+
+ssize_t trace_mr_send(int, const void *, size_t, int);
+ssize_t trace_mr_recvfrom(int s, void *, size_t, int,
+			  struct sockaddr *, socklen_t *);
+ssize_t trace_mr_read(int, void *, size_t);
+int trace_mr_connect(int s, struct sockaddr *, socklen_t);
+int trace_mr_socket(int, int, int);
+int trace_mr_bind(int, struct sockaddr *, socklen_t);
+int trace_mr_close(int);
+time_t trace_mr_time(time_t *);
+int trace_mr_select(int, fd_set *, fd_set *, fd_set *, struct timeval *);
+unsigned int trace_mr_res_randomid(unsigned int);
+
 #define send		trace_mr_send
 #define recvfrom	trace_mr_recvfrom
 #define	read		trace_mr_read
