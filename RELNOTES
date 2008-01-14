@@ -120,6 +120,12 @@ the README file.
 
 - Fixes to allow code to compile on Mac OS X Leopard (10.5).
 
+- When server is configured with options that it overrides, a warning is
+  issued when the configuration file is read, rather than at the time the
+  option is overridden. This was important, because the warning was given
+  every time the option was overridden, which could create a lot of
+  unnecessary logging.
+
 			Changes since 3.1.0rc1
 
 - The parse warning that 'deny dyanmic bootp;' must be configured for
