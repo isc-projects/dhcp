@@ -2522,9 +2522,6 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 
 		putULong(state->expiry, (u_int32_t)offered_lease_time);
 		i = DHO_DHCP_LEASE_TIME;
-		if (lookup_option (&dhcp_universe, state -> options, i))
-			log_error ("dhcp-lease-time option for %s overridden.",
-			      inet_ntoa (state -> ciaddr));
 		oc = (struct option_cache *)0;
 		if (option_cache_allocate (&oc, MDL)) {
 			if (make_const_data(&oc->expression, state->expiry,
@@ -2542,9 +2539,6 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		offered_lease_time /= 2;
 		putULong(state->renewal, (u_int32_t)offered_lease_time);
 		i = DHO_DHCP_RENEWAL_TIME;
-		if (lookup_option (&dhcp_universe, state -> options, i))
-			log_error ("overriding dhcp-renewal-time for %s.",
-				   inet_ntoa (state -> ciaddr));
 		oc = (struct option_cache *)0;
 		if (option_cache_allocate (&oc, MDL)) {
 			if (make_const_data(&oc->expression, state->renewal,
@@ -2563,9 +2557,6 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 				       + offered_lease_time / 4);
 		putULong(state->rebind, (u_int32_t)offered_lease_time);
 		i = DHO_DHCP_REBINDING_TIME;
-		if (lookup_option (&dhcp_universe, state -> options, i))
-			log_error ("overriding dhcp-rebinding-time for %s.",
-			      inet_ntoa (state -> ciaddr));
 		oc = (struct option_cache *)0;
 		if (option_cache_allocate (&oc, MDL)) {
 			if (make_const_data(&oc->expression, state->rebind,
