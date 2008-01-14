@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.159.16.8 2008/01/14 14:56:24 shane Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.159.16.9 2008/01/14 15:48:04 shane Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -660,9 +660,8 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 			 *      options we ignore in the future, as a table.
 			 */
 			if ((option->code == DHO_DHCP_LEASE_TIME) ||
-			    ((local_family != AF_INET6) && 
-			     ((option->code == DHO_DHCP_RENEWAL_TIME) ||
-			      (option->code == DHO_DHCP_REBINDING_TIME))))
+			    (option->code == DHO_DHCP_RENEWAL_TIME) ||
+			    (option->code == DHO_DHCP_REBINDING_TIME))
 			{
 				log_error("WARNING: server ignoring option %s "
 				          "in configuration file.",
