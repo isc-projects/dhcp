@@ -4821,7 +4821,7 @@ parse_server_duid_conf(struct parse *cfile) {
 			      case TOKEN_RING:
 				ll_type = HTYPE_IEEE802;
 				break;
-			      case FDDI:
+			      case TOKEN_FDDI:
 				ll_type = HTYPE_FDDI;
 				break;
 			      default:
@@ -4876,7 +4876,7 @@ parse_server_duid_conf(struct parse *cfile) {
 			      case TOKEN_RING:
 				ll_type = HTYPE_IEEE802;
 				break;
-			      case FDDI:
+			      case TOKEN_FDDI:
 				ll_type = HTYPE_FDDI;
 				break;
 			      default:
