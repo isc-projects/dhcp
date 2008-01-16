@@ -912,7 +912,7 @@ intern(char *atom, enum dhcp_token dfv) {
 		if (!strcasecmp (atom + 1, "ixed-address6"))
 			return FIXED_ADDR6;
 		if (!strcasecmp (atom + 1, "ddi"))
-			return FDDI;
+			return TOKEN_FDDI;
 		if (!strcasecmp (atom + 1, "ormerr"))
 			return NS_FORMERR;
 		if (!strcasecmp (atom + 1, "unction"))

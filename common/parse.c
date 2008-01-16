@@ -528,7 +528,7 @@ parse_ip_addr_with_subnet(cfile, match)
 
 /*
  * hardware-parameter :== HARDWARE hardware-type colon-separated-hex-list SEMI
- * hardware-type :== ETHERNET | TOKEN_RING | FDDI
+ * hardware-type :== ETHERNET | TOKEN_RING | TOKEN_FDDI
  */
 
 void parse_hardware_param (cfile, hardware)
@@ -548,7 +548,7 @@ void parse_hardware_param (cfile, hardware)
 	      case TOKEN_RING:
 		hardware -> hbuf [0] = HTYPE_IEEE802;
 		break;
-	      case FDDI:
+	      case TOKEN_FDDI:
 		hardware -> hbuf [0] = HTYPE_FDDI;
 		break;
 	      default:

@@ -99,6 +99,9 @@ suggested fixes to <dhcp-users@isc.org>.
   every time the option was overridden, which could create a lot of 
   unnecessary logging.
 
+- Fixed a compilation problems on platforms that define a value for FDDI,
+  which conflicts with a dhcp configuration syntax token by the same name. 
+
                         Changes since 4.0.0rc1
 
 - None
