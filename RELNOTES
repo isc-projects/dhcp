@@ -121,6 +121,11 @@ suggested fixes to <dhcp-users@isc.org>.
 - Fixed a compilation problems on platforms that define a value for FDDI,
   which conflicts with a dhcp configuration syntax token by the same name.
 
+- The dhclient-script was updated to create a host route for the default
+  gateway if the supplied subnet mask for an IPv4 address was a /32.  This
+  allows the client to work in 'captive' network environments, where the
+  operator does not want clients to crosstalk directly.
+
 			Changes since 4.0.0b3
 
 - The reverse dns name for PTR updates on IPv6 addresses has been fixed to

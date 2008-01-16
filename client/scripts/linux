@@ -166,6 +166,9 @@ if [ x$reason = xBOUND ] || [ x$reason = xRENEW ] || \
       route add -net $new_network_number $new_subnet_arg dev $interface
     fi
     for router in $new_routers; do
+      if [ "x$new_subnet_mask" = "x255.255.255.255" ] ; then
+	route add -host $router dev $interface
+      fi
       route add default gw $router
     done
   fi
@@ -214,6 +217,9 @@ if [ x$reason = xTIMEOUT ]; then
       route add -net $new_network_number
     fi
     for router in $new_routers; do
+      if [ "x$new_subnet_mask" = "x255.255.255.255" ] ; then
+	route add -host $router dev $interface
+      fi
       route add default gw $router
     done
     make_resolv_conf

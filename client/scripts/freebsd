@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: freebsd,v 1.20 2007/11/30 21:28:29 fdupont Exp $
+# $Id: freebsd,v 1.21 2008/01/16 23:02:10 dhankins Exp $
 #
 # $FreeBSD$
 
@@ -186,6 +186,12 @@ if [ x$reason = xBOUND ] || [ x$reason = xRENEW ] || \
     fi
     route add $new_ip_address 127.1 >/dev/null 2>&1
     for router in $new_routers; do
+      # If the subnet is captive, eg the netmask is /32 but the default
+      # gateway is (obviously) outside of this, then we need to produce a
+      # host route to reach the gateway.
+      if [ "x$new_subnet_mask" = "x255.255.255.255" ] ; then
+	route add -host $router -interface $interface
+      fi
       route add default $router >/dev/null 2>&1
     done
     if [ -n "$new_static_routes" ]; then
@@ -257,6 +263,9 @@ if [ x$reason = xTIMEOUT ]; then
       fi
       route add $new_ip_address 127.1 >/dev/null 2>&1
       for router in $new_routers; do
+	if [ "x$new_subnet_mask" = "x255.255.255.255" ] ; then
+	  route add -host $router -interface $interface
+	fi
 	route add default $router >/dev/null 2>&1
       done
       set -- $new_static_routes
