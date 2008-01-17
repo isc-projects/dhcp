@@ -81,6 +81,8 @@ and for prodding me into improving it.
 
 			Changes since 3.0.6
 
+- Fixed "--version" flag in dhcrelay.
+
 - Fixed a buffer overflow error which could have allowed a denial
   of service under unusual server configurations
 
