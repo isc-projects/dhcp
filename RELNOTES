@@ -55,6 +55,8 @@ suggested fixes to <dhcp-users@isc.org>.
 
 			Changes since 4.0.0
 
+- Fixed "--version" flag in dhcrelay
+
 - The warning logged when an address range doesn't fit in the subnets
   they were declared has been updated to be more helpful and identify the
   typo in configuration that created the spanning addresses.

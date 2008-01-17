@@ -194,11 +194,11 @@ main(int argc, char **argv) {
 				usage ();
 		} else if (!strcmp (argv [i], "-D")) {
 			drop_agent_mismatches = 1;
- 		} else if (argv [i][0] == '-') {
- 		    usage ();
 		} else if (!strcmp (argv [i], "--version")) {
 			log_info ("isc-dhcrelay-%s", PACKAGE_VERSION);
 			exit (0);
+ 		} else if (argv [i][0] == '-') {
+			usage ();
  		} else {
 			struct hostent *he;
 			struct in_addr ia, *iap = (struct in_addr *)0;
