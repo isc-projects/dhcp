@@ -54,6 +54,8 @@ suggested fixes to <dhcp-users@isc.org>.
 
 			Changes since 4.0.0
 
+- Fixed "--version" flag in dhcrelay.
+
 - The 'min-secs' configuration parameter's log message has been updated to
   be more helpful.
 
