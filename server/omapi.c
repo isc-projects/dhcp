@@ -259,7 +259,20 @@ isc_result_t dhcp_lease_set_value  (omapi_object_t *h,
 	} else if (!omapi_ds_strcmp (name, "starts")) {
 	    return ISC_R_NOPERM;
 	} else if (!omapi_ds_strcmp (name, "ends")) {
-	    return ISC_R_NOPERM;
+	    unsigned long lease_end, old_lease_end;
+	    status = omapi_get_int_value (&lease_end, value);
+	    if (status != ISC_R_SUCCESS)
+		return status;
+	    old_lease_end = lease->ends;
+	    lease->ends = lease_end;
+	    if (supersede_lease (lease, 0, 1, 1, 1)) {
+		log_info ("lease %s end changed from %lu to %lu",
+			  piaddr(lease->ip_addr), old_lease_end, lease_end);
+		return ISC_R_SUCCESS;
+	    }
+	    log_info ("lease %s end change from %lu to %lu failed",
+		      piaddr(lease->ip_addr), old_lease_end, lease_end);
+	    return ISC_R_IOERROR;
 	} else if (!omapi_ds_strcmp(name, "flags")) {
 	    u_int8_t oldflags;
 

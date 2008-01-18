@@ -55,6 +55,10 @@ suggested fixes to <dhcp-users@isc.org>.
 
 			Changes since 4.0.0
 
+- It's now possible to update the "ends" field of a lease with OMAPI.
+  This is useful if you want not only to release a lease, but also make
+  it available for reuse right away.  Hat tip to Christof Chen.
+
 - Fixed "--version" flag in dhcrelay
 
 - The warning logged when an address range doesn't fit in the subnets
