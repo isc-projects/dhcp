@@ -2824,6 +2824,7 @@ void free_everything ()
 
 	cancel_all_timeouts ();
 	relinquish_timeouts ();
+	relinquish_ackqueue();
 	trace_free_all ();
 	group_dereference (&root_group, MDL);
 	executable_statement_dereference (&default_classification_rules, MDL);

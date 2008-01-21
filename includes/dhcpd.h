@@ -621,9 +621,14 @@ struct lease_state {
 #define SV_DHCPV6_LEASE_FILE_NAME       54
 #define SV_DHCPV6_PID_FILE_NAME         55
 #define SV_LIMIT_ADDRS_PER_IA		56
+#define SV_DELAYED_ACK			57
 
 #if !defined (DEFAULT_PING_TIMEOUT)
 # define DEFAULT_PING_TIMEOUT 1
+#endif
+
+#if !defined (DEFAULT_DELAYED_ACK)
+# define DEFAULT_DELAYED_ACK 28  /* default SO_SNDBUF size / 576 bytes */
 #endif
 
 #if !defined (DEFAULT_DEFAULT_LEASE_TIME)
@@ -1138,6 +1143,12 @@ struct hardware_link {
 	struct hardware address;
 };
 
+struct leasequeue {
+	struct leasequeue *prev;
+	struct leasequeue *next;
+	struct lease *lease;
+};
+
 typedef void (*tvref_t)(void *, void *, const char *, int);
 typedef void (*tvunref_t)(void *, const char *, int);
 struct timeout {
@@ -1147,6 +1158,11 @@ struct timeout {
 	void *what;
 	tvref_t ref;
 	tvunref_t unref;
+};
+
+struct eventqueue {
+	struct eventqueue *next;
+	void (*handler)(void *);
 };
 
 struct protocol {
@@ -1653,6 +1669,7 @@ extern const char *path_dhcpd_db;
 extern const char *path_dhcpd_pid;
 
 extern int dhcp_max_agent_option_packet_length;
+extern struct eventqueue *rw_queue_empty;
 
 int main(int, char **);
 void postconf_initialization(int);
@@ -1912,6 +1929,7 @@ int data_string_sprintfa(struct data_string *ds, const char *fmt, ...);
 
 /* dhcp.c */
 extern int outstanding_pings;
+extern int max_outstanding_acks;
 
 void dhcp PROTO ((struct packet *));
 void dhcpdiscover PROTO ((struct packet *, int));
@@ -1923,6 +1941,9 @@ void dhcpleasequery PROTO ((struct packet *, int));
 void nak_lease PROTO ((struct packet *, struct iaddr *cip));
 void ack_lease PROTO ((struct packet *, struct lease *,
 		       unsigned int, TIME, char *, int, struct host_decl *));
+void delayed_ack_enqueue(struct lease *);
+void commit_leases_readerdry(void *);
+void flush_ackqueue(void *);
 void dhcp_reply PROTO ((struct lease *));
 int find_lease PROTO ((struct lease **, struct packet *,
 		       struct shared_network *, int *, int *, struct lease *,
@@ -2537,6 +2558,7 @@ isc_result_t write_named_billing_class(const void *, unsigned, void *);
 void write_billing_classes (void);
 int write_billing_class PROTO ((struct class *));
 void commit_leases_timeout PROTO ((void *));
+void commit_leases_readerdry(void *);
 int commit_leases PROTO ((void));
 void db_startup PROTO ((int));
 int new_lease_file PROTO ((void));
@@ -2965,6 +2987,10 @@ isc_result_t binding_scope_get_value (omapi_value_t **,
 				      omapi_data_string_t *);
 isc_result_t binding_scope_stuff_values (omapi_object_t *,
 					 struct binding_scope *);
+
+void register_eventhandler(struct eventqueue **, void (*handler)(void *));
+void unregister_eventhandler(struct eventqueue **, void (*handler)(void *));
+void trigger_event(struct eventqueue **);			    
 
 /* mdb.c */
 

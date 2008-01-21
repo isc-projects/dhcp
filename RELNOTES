@@ -141,6 +141,13 @@ suggested fixes to <dhcp-users@isc.org>.
 
 - MINUS tokens should be parseable again.
 
+- Multiple (up to "delayed-ack x;" maximum) DHCPv4 packets are now queued and
+  released in bursts after single fsync() events when the upper limit is
+  reached or if the receiving sockets go dry.  The practical upshot is
+  that fsync-coupled server performance is now multiplicitively increased.
+  The default delayed ack limit is 28.  Thanks entirely to a patch from
+  Christof Chen.
+
 			Changes since 4.0.0b3
 
 - The reverse dns name for PTR updates on IPv6 addresses has been fixed to

@@ -729,6 +729,8 @@ main(int argc, char **argv) {
 	omapi_set_int_value ((omapi_object_t *)dhcp_control_object,
 			     (omapi_object_t *)0, "state", server_running);
 
+	register_eventhandler(&rw_queue_empty,commit_leases_readerdry);
+	
 	/* Receive packets and dispatch them... */
 	dispatch ();
 
@@ -962,6 +964,18 @@ void postconf_initialization (int quiet)
 				log_fatal ("invalid log facility");
 			data_string_forget (&db, MDL);
 		}
+	}
+	
+	oc = lookup_option(&server_universe, options, SV_DELAYED_ACK);
+	if (oc &&
+	    evaluate_option_cache(&db, NULL, NULL, NULL, options, NULL,
+				  &global_scope, oc, MDL)) {
+		if (db.len == 2) {
+			max_outstanding_acks = htons(getUShort(db.data));
+		} else {
+			log_fatal("invalid max delayed ACK count ");
+		}
+		data_string_forget(&db, MDL);
 	}
 
 	/* Don't need the options anymore. */

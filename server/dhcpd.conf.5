@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.91 2007/11/20 18:34:37 dhankins Exp $
+.\" $Id: dhcpd.conf.5,v 1.92 2008/01/21 19:53:21 dhankins Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -2040,6 +2040,25 @@ should be the length in seconds that will be assigned to a lease if
 the client requesting the lease does not ask for a specific expiration
 time.  This is used for both DHCPv4 and DHCPv6 leases (it is also known
 as the "valid lifetime" in DHCPv6).
+.RE
+.PP
+The
+.I delayed-ack
+statement
+.RS 0.25i
+.PP
+.B delayed-ack \fInumber\fR\fB;\fR
+.PP
+.I Number
+should be an integer value from zero to 2^16-1, and defaults to 28.  The
+number represents how many DHCPv4 replies maximum will be queued pending
+transmission until after a database commit event.  If this number is
+reached, a database commit event (commonly resulting in fsync() and
+representing a performance penalty) will be made, and the reply packets
+will be transmitted in a batch afterwards.  This preserves the RFC2131
+direction that "stable storage" be updated prior to replying to clients.
+Should the DHCPv4 sockets "go dry" (select() returns immediately with no
+read sockets), the commit is made and any queued packets are transmitted.
 .RE
 .PP
 The

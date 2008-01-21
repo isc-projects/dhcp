@@ -40,10 +40,70 @@
 static omapi_io_object_t omapi_io_states;
 struct timeval cur_tv;
 
+struct eventqueue *rw_queue_empty;
+
 OMAPI_OBJECT_ALLOC (omapi_io,
 		    omapi_io_object_t, omapi_type_io_object)
 OMAPI_OBJECT_ALLOC (omapi_waiter,
 		    omapi_waiter_object_t, omapi_type_waiter)
+
+void
+register_eventhandler(struct eventqueue **queue, void (*handler)(void *))
+{
+	struct eventqueue *t, *q;
+
+	/* traverse to end of list */
+	t = NULL;
+	for (q = *queue ; q ; q = q->next) {
+		if (q->handler == handler)
+			return; /* handler already registered */
+		t = q;
+	}
+		
+	q = ((struct eventqueue *)dmalloc(sizeof(struct eventqueue), MDL));
+	if (!q)
+		log_fatal("register_eventhandler: no memory!");
+	memset(q, 0, sizeof *q);
+	if (t)
+		t->next = q;
+	else 
+		*queue	= q;
+	q->handler = handler;
+	return;
+}
+
+void
+unregister_eventhandler(struct eventqueue **queue, void (*handler)(void *))
+{
+	struct eventqueue *t, *q;
+	
+	/* traverse to end of list */
+	t= NULL;
+	for (q = *queue ; q ; q = q->next) {
+		if (q->handler == handler) {
+			if (t)
+				t->next = q->next;
+			else
+				*queue = q->next;
+			dfree(q, MDL); /* Don't access q after this!*/
+			break;
+		}
+		t = q;
+	}
+	return;
+}
+
+void
+trigger_event(struct eventqueue **queue)
+{
+	struct eventqueue *q;
+
+	for (q=*queue ; q ; q=q->next) {
+		if (q->handler) 
+			(*q->handler)(NULL);
+	}
+}
+
 
 /* Register an I/O handle so that we can do asynchronous I/O on it. */
 
@@ -208,7 +268,7 @@ isc_result_t omapi_wait_for_completion (omapi_object_t *object,
 isc_result_t omapi_one_dispatch (omapi_object_t *wo,
 				 struct timeval *t)
 {
-	fd_set r, w, x;
+	fd_set r, w, x, rr, ww, xx;
 	int max = 0;
 	int count;
 	int desc;
@@ -284,16 +344,21 @@ isc_result_t omapi_one_dispatch (omapi_object_t *wo,
 		}
 	}
 
-	/* Wait for a packet or a timeout... XXX */
-#if 0
-#if defined (__linux__)
-#define fds_bits __fds_bits
-#endif
-	log_error ("dispatch: %d %lx %lx", max,
-		   (unsigned long)r.fds_bits [0],
-		   (unsigned long)w.fds_bits [0]);
-#endif
-	count = select (max + 1, &r, &w, &x, t ? &to : (struct timeval *)0);
+	/* poll if all reader are dry */ 
+	now.tv_sec = 0;
+	now.tv_usec = 0;
+	rr=r; 
+	ww=w; 
+	xx=x;
+
+	/* poll once */
+	count = select(max + 1, &r, &w, &x, &now);
+	if (!count) {  
+		/* We are dry now */ 
+		trigger_event(&rw_queue_empty);
+		/* Wait for a packet or a timeout... XXX */
+		count = select(max + 1, &rr, &ww, &xx, t ? &to : NULL);
+	}
 
 	/* Get the current time... */
 	gettimeofday (&cur_tv, (struct timezone *)0);
@@ -317,11 +382,6 @@ isc_result_t omapi_one_dispatch (omapi_object_t *wo,
 			if (io -> readfd && io -> inner &&
 			    (desc = (*(io -> readfd)) (io -> inner)) >= 0) {
 			    FD_SET (desc, &r);
-#if 0
-			    log_error ("read check: %d %lx %lx", max,
-				       (unsigned long)r.fds_bits [0],
-				       (unsigned long)w.fds_bits [0]);
-#endif
 			    count = select (desc + 1, &r, &w, &x, &t0);
 			   bogon:
 			    if (count < 0) {

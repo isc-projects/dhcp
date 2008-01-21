@@ -38,6 +38,12 @@
 
 int outstanding_pings;
 
+struct leasequeue *ackqueue_head, *ackqueue_tail;
+static struct leasequeue *free_ackqueue;
+TIME next_fsync;
+int outstanding_acks;
+int max_outstanding_acks = DEFAULT_DELAYED_ACK;
+
 static char dhcp_message [256];
 static int site_code_min;
 
@@ -2409,13 +2415,15 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 			packet -> raw -> chaddr,
 			sizeof packet -> raw -> chaddr); /* XXX */
 	} else {
-		/* Install the new information about this lease in the
-		   database.  If this is a DHCPACK or a dynamic BOOTREPLY
-		   and we can't write the lease, don't ACK it (or BOOTREPLY
-		   it) either. */
-
-		if (!supersede_lease (lease, lt, !offer || offer == DHCPACK,
-				      offer == DHCPACK, offer == DHCPACK)) {
+		/* Install the new information on 'lt' onto the lease at
+		* 'lease'.  We will not 'commit' this information to disk
+		* yet (fsync()), we will 'propogate' the information if
+		* this is BOOTP or a DHCPACK, but we will not 'pimmediate'ly
+		* transmit failover binding updates (this is delayed until
+		* after the fsync()).
+		*/
+		if (!supersede_lease(lease, lt, 0, !offer || offer == DHCPACK,
+				     0)) {
 			log_info ("%s: database update failed", msg);
 			free_lease_state (state, MDL);
 			lease_dereference (&lt, MDL);
@@ -2804,10 +2812,103 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 			     (tvunref_t)lease_dereference);
 		++outstanding_pings;
 	} else {
-		lease->cltt = cur_time;
-		dhcp_reply(lease);
+  		lease->cltt = cur_time;
+		if (!offer || (offer == DHCPACK)) 
+			delayed_ack_enqueue(lease);
+		else 
+			dhcp_reply(lease);
 	}
 }
+
+/* CC: queue single ACK:
+   - write the lease (but do not fsync it yet)
+   - add to double linked list
+   - commit if more than xx ACKs pending
+   - Not yet: schedule a fsync at the next interval (1 second?)
+ */
+
+void
+delayed_ack_enqueue(struct lease *lease)
+{
+	struct leasequeue *q;
+	if (!write_lease(lease)) 
+		return;
+	if (free_ackqueue) {
+	   	q = free_ackqueue;
+		free_ackqueue = q->next;
+	} else {
+		q = ((struct leasequeue *)
+			     dmalloc(sizeof(struct leasequeue), MDL));
+		if (!q)
+			log_fatal("delayed_ack_enqueue: no memory!");
+	}
+	memset(q, 0, sizeof *q);
+	/* prepend to ackqueue*/
+	q->lease = lease;
+	q->next = ackqueue_head;
+	ackqueue_head = q;
+	if (!ackqueue_tail) 
+		ackqueue_tail = q;
+	else
+		q->next->prev = q;
+
+	outstanding_acks++;
+	if (outstanding_acks > max_outstanding_acks) 
+		commit_leases();
+
+	/* If neccessary, schedule a fsync in 1 second */
+	/*
+	if (next_fsync < cur_time + 1) {
+		next_fsync = cur_time + 1;
+		add_timeout(next_fsync, commit_leases_readerdry, NULL,
+			    (tvref_t) NULL, (tvunref_t) NULL);
+	}
+	*/
+}
+
+void
+commit_leases_readerdry(void *foo) 
+{
+	if (outstanding_acks) 
+		commit_leases();
+}
+
+/* CC: process the delayed ACK responses:
+   - send out the ACK packets
+   - move the queue slots to the free list
+ */
+void
+flush_ackqueue(void *foo) 
+{
+	struct leasequeue *ack, *p;
+	/*  process from bottom to retain packet order */
+	for (ack = ackqueue_tail ; ack ; ack = p) { 
+		p = ack->prev;
+		dhcp_reply(ack->lease);
+		ack->next = free_ackqueue;
+		free_ackqueue = ack;
+	}
+	ackqueue_head = NULL;
+	ackqueue_tail = NULL;
+	outstanding_acks = 0;
+}
+
+#if defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
+void
+relinquish_ackqueue(void)
+{
+	struct leasequeue *q, *n;
+	
+	for (q = ackqueue ; q ; q = n) {
+		n = q->next;
+		dfree(q, MDL);
+	}
+	for (q = free_ackqueue ; q ; q = n) {
+		n = q->next;
+		dfree(q, MDL);
+	}
+}
+#endif
 
 void dhcp_reply (lease)
 	struct lease *lease;
