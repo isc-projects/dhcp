@@ -128,6 +128,13 @@ the README file.
   every time the option was overridden, which could create a lot of
   unnecessary logging.
 
+- When a failover server suspects it has encountered a peer running a
+  version 3.0.x failover server, a warning that the failover wire protocol
+  is incompatible is printed.
+
+- The failover server no longer issues a floating point error if it encounters
+  a previously undefined option code.
+
 			Changes since 3.1.0rc1
 
 - The parse warning that 'deny dyanmic bootp;' must be configured for

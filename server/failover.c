@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.63.56.16 2008/01/08 16:23:21 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.63.56.17 2008/01/21 19:06:58 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -643,7 +643,8 @@ static isc_result_t do_a_failover_option (c, link)
 	}
 
 	/* If it's an unknown code, skip over it. */
-	if (option_code > FTO_MAX) {
+	if ((option_code > FTO_MAX) ||
+	    (ft_options[option_code].type == FT_UNDEF)) {
 #if defined (DEBUG_FAILOVER_MESSAGES)
 		log_debug ("  option code %d (%s) len %d (not recognized)",
 			   option_code,
@@ -786,6 +787,35 @@ static isc_result_t do_a_failover_option (c, link)
 	if (op_size == 1 || ft_options [option_code].type == FT_IPADDR) {
 		omapi_connection_copyout ((unsigned char *)op, c, option_len);
 		link -> imsg_count += option_len;
+
+		/*
+		 * As of 3.1.0, many option codes were changed to conform to
+		 * draft revision 12 (which alphabetized, then renumbered all
+		 * the option codes without preserving the version option code
+		 * nor bumping its value).  As it turns out, the message codes
+		 * for CONNECT and CONNECTACK turn out the same, so it tries
+		 * its darndest to connect, and falls short (when TLS_REQUEST
+		 * comes up size 2 rather than size 1 as draft revision 12 also
+		 * mandates).
+		 *
+		 * The VENDOR_CLASS code in 3.0.x was 11, which is now the HBA
+		 * code.  Both work out to be arbitrarily long text-or-byte
+		 * strings, so they pass parsing.
+		 *
+		 * Note that it is possible (or intentional), if highly
+		 * improbable, for the HBA bit array to exactly match
+		 * isc-V3.0.x.  Warning here is not an issue; if it really is
+		 * 3.0.x, there will be a protocol error later on.  If it isn't
+		 * actually 3.0.x, then I guess the lucky user will have to
+		 * live with a weird warning.
+		 */
+		if ((option_code == 11) && (option_len > 9) &&
+		    (strncmp((const char *)op, "isc-V3.0.", 9) == 0)) {
+		        log_error("WARNING: failover as of versions 3.1.0 and "
+				  "on are not reverse compatible with "
+				  "versions 3.0.x.");
+		}
+
 		goto out;
 	}
 
