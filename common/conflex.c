@@ -649,7 +649,14 @@ static enum dhcp_token read_number (c, cfile)
 	cfile -> tlen = i;
 	cfile -> tval = cfile -> tokbuf;
 
-	return token;
+	/*
+	 * If this entire token from start to finish was "-", such as
+	 * the middle parameter in "42 - 7", return just the MINUS token.
+	 */
+	if ((i == 1) && (cfile->tokbuf[i] == '-'))
+		return MINUS;
+	else
+		return token;
 }
 
 static enum dhcp_token read_num_or_name (c, cfile)

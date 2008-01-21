@@ -139,6 +139,8 @@ suggested fixes to <dhcp-users@isc.org>.
 - The failover server no longer issues a floating point error if it encounters
   a previously undefined option code.
 
+- MINUS tokens should be parseable again.
+
 			Changes since 4.0.0b3
 
 - The reverse dns name for PTR updates on IPv6 addresses has been fixed to
