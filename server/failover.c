@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.51 2008/01/08 16:24:01 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.52 2008/01/21 19:07:49 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -593,6 +593,7 @@ static isc_result_t do_a_failover_option (c, link)
 	unsigned char *op;
 	unsigned op_size;
 	unsigned op_count;
+	unsigned op_type;
 	int i;
 	isc_result_t status;
 	
@@ -620,7 +621,8 @@ static isc_result_t do_a_failover_option (c, link)
 	}
 
 	/* If it's an unknown code, skip over it. */
-	if (option_code > FTO_MAX) {
+	if ((option_code > FTO_MAX) ||
+	    (ft_options[option_code].type == FT_UNDEF)) {
 #if defined (DEBUG_FAILOVER_MESSAGES)
 		log_debug ("  option code %d (%s) len %d (not recognized)",
 			   option_code,
@@ -682,11 +684,28 @@ static isc_result_t do_a_failover_option (c, link)
 		op_count = ft_options [option_code].num_present;
 
 		if (option_len != op_size * op_count) {
-			log_error ("FAILOVER: option size (%d:%d), option %s",
+			char *logincompat = "";
+
+			/*
+			 * Versions 3.1.0 and onwards were updated to track
+			 * the IETF draft on failover (-12), which alphabetized
+			 * and then renumbered many of the option codes.  One
+			 * option code, 27 or TLS_REQUEST, was not renumbered
+			 * by a fluke of how the alphabetization worked out,
+			 * but was clarified to be one byte in length rather
+			 * than 2.
+			 */
+			if ((option_code == 27) && (option_len == 1)) {
+				logincompat = "...please verify that the peer "
+					      "is running any 3.0.x version, "
+					      "and not 3.1.0 or onwards which "
+					      "are not reverse compatible.";
+			}
+			log_error ("FAILOVER: option size (%d:%d), option %s%s",
 				   option_len,
 				   (ft_sizes [ft_options [option_code].type] *
 				    ft_options [option_code].num_present),
-				   ft_options [option_code].name);
+				   ft_options [option_code].name, logincompat);
 			return ISC_R_PROTOCOLERROR;
 		}
 	} else {
