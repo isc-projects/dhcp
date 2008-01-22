@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.69 2008/01/08 16:17:05 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.70 2008/01/22 17:13:16 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1758,9 +1758,10 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 					   &lease -> scope, oc, MDL)) {
 			if (d1.len &&
 			    ntohs (packet -> raw -> secs) < d1.data [0]) {
-				log_info ("%s: %d secs < %d", msg,
-					  ntohs (packet -> raw -> secs),
-					  d1.data [0]);
+				log_info("%s: configured min-secs value (%d) "
+					 "is greater than secs field (%d).  "
+					 "message dropped.", msg, d1.data[0],
+					 ntohs(packet->raw->secs));
 				data_string_forget (&d1, MDL);
 				free_lease_state (state, MDL);
 				if (host)
