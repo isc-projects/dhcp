@@ -91,6 +91,10 @@ and for prodding me into improving it.
 - Bug in octal parsing fixed. Thanks to Bernd Fuhrmann for the report
   and fix.
 
+- The warning logged when an address range doesn't fit in the subnets
+  they were declared has been updated to be more helpful and identify the
+  typo in configuration that created the spanning addresses.
+
 - Fixed a bug in which write_lease() might report a failure incorrectly.
 
 - Bug in server configuration parser caused server to get stuck on
