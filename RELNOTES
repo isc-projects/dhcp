@@ -135,6 +135,10 @@ the README file.
 - The failover server no longer issues a floating point error if it encounters
   a previously undefined option code.
 
+- An incomplete addition of the 'D' atom for domain RFC1035 format domain name
+  parsing was corrected.  This corrects problems with parsing the new doamin
+  search order option in dhclient.leases.
+
 			Changes since 3.1.0rc1
 
 - The parse warning that 'deny dyanmic bootp;' must be configured for

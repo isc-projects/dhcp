@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.117.8.5 2007/05/29 17:49:44 each Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.117.8.6 2008/01/22 15:55:51 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -5003,10 +5003,12 @@ int parse_option_decl (oc, cfile)
 	struct option *option=NULL;
 	struct iaddr ip_addr;
 	u_int8_t *dp;
+	const u_int8_t *cdp;
 	unsigned len;
 	int nul_term = 0;
 	struct buffer *bp;
 	int known = 0;
+	struct expression *express = NULL;
 	struct enumeration_value *e;
 	isc_result_t status;
 
@@ -5056,6 +5058,32 @@ int parse_option_decl (oc, cfile)
 				memcpy (&hunkbuf [hunkix], val, len + 1);
 				nul_term = 1;
 				hunkix += len;
+				break;
+
+			      case 'D':
+				express = parse_domain_list(cfile);
+
+				if (express == NULL)
+					goto exit;
+
+				if (express->op != expr_const_data) {
+					parse_warn(cfile, "unexpected "
+							  "expression");
+					goto parse_exit;
+				}
+
+				len = express->data.const_data.len;
+				cdp = express->data.const_data.data;
+
+				if ((hunkix + len) > sizeof(hunkbuf)) {
+					parse_warn(cfile, "option data buffer "
+							  "overflow");
+					goto parse_exit;
+				}
+				memcpy(&hunkbuf[hunkix], cdp, len);
+				hunkix += len;
+
+				expression_dereference(&express, MDL);
 				break;
 
 			      case 'N':
