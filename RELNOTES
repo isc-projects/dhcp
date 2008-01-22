@@ -83,6 +83,8 @@ and for prodding me into improving it.
 
 - Fixed "--version" flag in dhcrelay.
 
+- Clarified error message when lease limit exceeded
+
 - Fixed a buffer overflow error which could have allowed a denial
   of service under unusual server configurations
 
