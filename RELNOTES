@@ -123,6 +123,12 @@ and for prodding me into improving it.
   'address' parameter (the server's local address) did not resolve to an
   IPv4 address.
 
+- When server is configured with options that it overrides, a warning is
+  issued when the configuration file is read, rather than at the time the
+  option is overridden. This was important, because the warning was given
+  every time the option was overridden, which could create a lot of
+  unnecessary logging.
+
 - When a failover server suspects it has encountered a peer running a
   version 3.1.x failover server, a warning that the failover wire protocol
   is incompatible is printed.
