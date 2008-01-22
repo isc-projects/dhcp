@@ -2567,6 +2567,13 @@ parse_subnet6_declaration(struct parse *cfile, struct shared_network *share) {
 				    0xF0, 0xF8, 0xFC, 0xFE };
 	struct iaddr iaddr;
 
+        if (local_family != AF_INET6) {
+                parse_warn(cfile, "subnet6 statement is only supported "
+				  "in DHCPv6 mode.");
+                skip_to_semi(cfile);
+                return;
+        }
+
 	subnet = NULL;
 	status = subnet_allocate(&subnet, MDL);
 	if (status != ISC_R_SUCCESS) {
@@ -3663,6 +3670,13 @@ parse_address_range6(struct parse *cfile, struct group *group) {
 	struct iaddrcidrnetlist *nets;
 	struct iaddrcidrnetlist *p;
 
+        if (local_family != AF_INET6) {
+                parse_warn(cfile, "range6 statement is only supported "
+				  "in DHCPv6 mode.");
+                skip_to_semi(cfile);
+                return;
+        }
+
 	/*
 	 * We'll use the shared_network from our group.
 	 */
@@ -3836,6 +3850,12 @@ parse_ia_na_declaration(struct parse *cfile) {
 	struct binding_scope *scope=NULL;
 	struct binding *bnd;
 	struct binding_value *nv=NULL;
+
+        if (local_family != AF_INET6) {
+                parse_warn(cfile, "IA_NA is only supported in DHCPv6 mode.");
+                skip_to_semi(cfile);
+                return;
+        }
 
 	token = next_token(&val, &len, cfile);
 	if (token != STRING) {
