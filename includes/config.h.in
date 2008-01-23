@@ -10,6 +10,9 @@
 /* Define to 1 if you have the /dev/random file. */
 #undef HAVE_DEV_RANDOM
 
+/* Define to 1 if you have the <ifaddrs.h> header file. */
+#undef HAVE_IFADDRS_H
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
@@ -42,6 +45,9 @@
 
 /* Define to 1 if you have the <string.h> header file. */
 #undef HAVE_STRING_H
+
+/* Define to 1 if you have the <sys/socket.h> header file. */
+#undef HAVE_SYS_SOCKET_H
 
 /* Define to 1 if you have the <sys/stat.h> header file. */
 #undef HAVE_SYS_STAT_H
@@ -82,7 +88,7 @@
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
-/* The size of `struct iaddr *', as computed by sizeof. */
+/* The size of a `struct iaddr *', as computed by sizeof. */
 #undef SIZEOF_STRUCT_IADDR_P
 
 /* Define to 1 if you have the ANSI C header files. */
