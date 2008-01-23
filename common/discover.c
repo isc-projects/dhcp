@@ -190,7 +190,23 @@ isc_result_t interface_initialize (omapi_object_t *ipo,
 #  define IF_NAMESIZE	16
 # endif
 #endif
+#elif !defined(__linux) && !defined(HAVE_IFADDRS_H)
+# define SIOCGLIFCONF SIOCGIFCONF
+# define SIOCGLIFFLAGS SIOCGIFFLAGS
+# define LIFREQ ifreq
+# define LIFCONF ifconf
+# define lifr_name ifr_name
+# define lifr_addr ifr_addr
+# define lifr_flags ifr_flags
+# define lifc_len ifc_len
+# define lifc_buf ifc_buf
+# define lifc_req ifc_req
+#ifdef _AIX
+# define ss_family __ss_family
+#endif
+#endif
 
+#if defined(SIOCGLIFCONF) && defined(SIOCGLIFFLAGS)
 /* 
  * Solaris support
  * ---------------
@@ -243,6 +259,7 @@ begin_iface_scan(struct iface_conf_list *ifaces) {
 #ifdef ISC_PLATFORM_HAVELIFNUM
 	lifnum.lifn_family = AF_UNSPEC;
 #endif
+#ifdef SIOCGLIFNUM
 	if (ioctl(ifaces->sock, SIOCGLIFNUM, &lifnum) < 0) {
 		log_error("Error finding total number of interfaces; %m");
 		close(ifaces->sock);
@@ -255,6 +272,9 @@ begin_iface_scan(struct iface_conf_list *ifaces) {
 #else
 	ifaces->num = lifnum;
 #endif
+#else
+	ifaces->num = 64;
+#endif /* SIOCGLIFNUM */
 
 	memset(&ifaces->conf, 0, sizeof(ifaces->conf));
 #ifdef ISC_HAVE_LIFC_FAMILY
@@ -309,7 +329,8 @@ next_iface(struct iface_info *info, int *err, struct iface_conf_list *ifaces) {
 			return 0;
 		}
 		strcpy(info->name, p->lifr_name);
-		info->addr = p->lifr_addr;
+		memset(&info->addr, 0, sizeof(info->addr));
+		memcpy(&info->addr, &p->lifr_addr, sizeof(p->lifr_addr));
 
 #if defined(sun) || defined(__linux)
 		/* interface aliases look like "eth0:1" or "wlan1:3" */
@@ -719,7 +740,7 @@ end_iface_scan(struct iface_conf_list *ifaces) {
 	ifaces->fp6 = NULL;
 #endif
 }
-#else /* !HAVE_SIOCGLIFCONF, !__linux */
+#else
 
 /* 
  * BSD support

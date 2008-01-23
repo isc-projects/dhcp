@@ -54,6 +54,8 @@ suggested fixes to <dhcp-users@isc.org>.
 
 			Changes since 4.0.0
 
+- DHCP now builds on AIX.
+
 - Exit with warning when DHCPv6-specific statements are used in the
   config file but -6 is not specified.
 

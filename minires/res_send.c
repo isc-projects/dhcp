@@ -76,7 +76,7 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static const char sccsid[] = "@(#)res_send.c	8.1 (Berkeley) 6/4/93";
-static const char rcsid[] = "$Id: res_send.c,v 1.8.580.2 2008/01/21 22:51:24 dhankins Exp $";
+static const char rcsid[] = "$Id: res_send.c,v 1.8.580.3 2008/01/23 23:00:43 marka Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 /*
@@ -118,14 +118,23 @@ time_t trace_mr_time(time_t *);
 int trace_mr_select(int, fd_set *, fd_set *, fd_set *, struct timeval *);
 unsigned int trace_mr_res_randomid(unsigned int);
 
+#undef send
 #define send            trace_mr_send
+#undef recvfrom
 #define recvfrom        trace_mr_recvfrom
+#undef read
 #define read            trace_mr_read
+#undef connect
 #define connect         trace_mr_connect
+#undef socket
 #define socket          trace_mr_socket
+#undef bind
 #define bind            trace_mr_bind
+#undef close
 #define close           trace_mr_close
+#undef select
 #define select          trace_mr_select
+#undef time
 #define time            trace_mr_time
 
 #define	CHECK_SRVR_ADDR
