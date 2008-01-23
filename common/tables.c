@@ -92,6 +92,7 @@ HASH_FUNCTIONS (option_code, const unsigned *, struct option,
    d - Domain name (i.e., FOO or FOO.BAR).
    D - Domain list (i.e., example.com eng.example.com)
    c - When following a 'D' atom, enables compression pointers.
+   Z - Zero-length option
 */
 
 struct universe dhcp_universe;
@@ -341,7 +342,7 @@ static struct option dhcpv6_options[] = {
 #endif
 	{ "unicast", "6",			&dhcpv6_universe, 12, 1 },
 	{ "status-code", "Nstatus-codes.to",	&dhcpv6_universe, 13, 1 },
-	{ "rapid-commit", "",			&dhcpv6_universe, 14, 1 },
+	{ "rapid-commit", "Z",			&dhcpv6_universe, 14, 1 },
 #if 0
 	/* XXX: user-class contents are of the form "StA" where the
 	 * integer describes the length of the text field.  We don't have
@@ -354,7 +355,7 @@ static struct option dhcpv6_options[] = {
 	{ "vendor-opts", "Evsio.",		&dhcpv6_universe, 17, 1 },
 	{ "interface-id", "X",			&dhcpv6_universe, 18, 1 },
 	{ "reconf-msg", "Ndhcpv6-messages.",	&dhcpv6_universe, 19, 1 },
-	{ "reconf-accept", "",			&dhcpv6_universe, 20, 1 },
+	{ "reconf-accept", "Z",			&dhcpv6_universe, 20, 1 },
 
 				/* RFC3319 OPTIONS */
 

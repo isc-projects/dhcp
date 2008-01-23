@@ -1422,6 +1422,8 @@ intern(char *atom, enum dhcp_token dfv) {
 			return NS_YXRRSET;
 		break;
 	      case 'z':
+		if (!strcasecmp (atom + 1, "erolen"))
+			return ZEROLEN;
 		if (!strcasecmp (atom + 1, "one"))
 			return ZONE;
 		break;

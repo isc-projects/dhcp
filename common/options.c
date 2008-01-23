@@ -2660,7 +2660,7 @@ append_option(struct data_string *dst, struct universe *universe,
 {
 	struct data_string tmp;
 
-	if (src->len == 0)
+	if (src->len == 0 && option->format[0] != 'Z')
 		return 0;
 
 	memset(&tmp, 0, sizeof(tmp));

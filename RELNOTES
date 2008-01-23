@@ -55,6 +55,9 @@ suggested fixes to <dhcp-users@isc.org>.
 
 			Changes since 4.0.0
 
+- Added explicit parser support for zero-length DHCP options, such as
+  rapid-commit, via format code 'Z'
+
 - Exit with warning when DHCPv6-specific statements are used in the
   config file but -6 is not specified.
 

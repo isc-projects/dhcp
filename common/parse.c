@@ -1666,6 +1666,18 @@ int parse_option_code_definition (cfile, option)
 		has_encapsulation = 1;
 		break;
 
+	      case ZEROLEN:
+		type = 'Z';
+		if (arrayp) {
+			parse_warn (cfile, "array incompatible with zerolen.");
+			skip_to_rbrace (cfile, recordp);
+			if (recordp)
+				skip_to_semi (cfile);
+			return 0;
+		}
+		no_more_in_record = 1;
+		break;
+
 	      default:
 		parse_warn (cfile, "unknown data type %s", val);
 		skip_to_rbrace (cfile, recordp);
@@ -4902,7 +4914,7 @@ struct option *option;
 			fmt = option->format;
 
 		/* 'a' means always uniform */
-		if ((fmt[0] != '\0') && (tolower((int)fmt[1]) == 'a')) 
+		if ((fmt[0] != 'Z') && (tolower((int)fmt[1]) == 'a')) 
 			uniform = 1;
 
 		do {
@@ -4913,8 +4925,9 @@ struct option *option;
 
 			tmp = *expr;
 			*expr = NULL;
+
 			if (!parse_option_token(expr, cfile, &fmt, tmp,
-                                                uniform, lookups)) {
+						uniform, lookups)) {
 				if (fmt [1] != 'o') {
 					if (tmp)
 						expression_dereference (&tmp,
@@ -4924,12 +4937,10 @@ struct option *option;
 				*expr = tmp;
 				tmp = NULL;
 			}
-                        if (tmp)
+			if (tmp)
 				expression_dereference (&tmp, MDL);
 
-			if (*fmt != '\0')
-				fmt++;
-
+			fmt++;
 		} while (*fmt != '\0');
 
 		if ((*fmt == 'A') || (*fmt == 'a')) {
@@ -4975,7 +4986,7 @@ int parse_option_statement (result, cfile, lookups, option, op)
 	int lose;
 
 	token = peek_token (&val, (unsigned *)0, cfile);
-	if ((token == SEMI) && (option->format[0] != '\0')) {
+	if ((token == SEMI) && (option->format[0] != 'Z')) {
 		/* Eat the semicolon... */
 		/*
 		 * XXXSK: I'm not sure why we should ever get here, but we 
@@ -5261,8 +5272,13 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 			return 0;
 		break;
 
-	      case '\0': /* Zero-length option. */
-	        buf[0] = '\0';
+	      case 'Z': /* Zero-length option. */
+		token = peek_token (&val, (unsigned *)0, cfile);
+		if (token != SEMI) {
+			parse_warn(cfile, "semicolon expected.");
+			skip_to_semi(cfile);
+		}
+		buf[0] = '\0';
 		if (!make_const_data(&t,        /* expression */
 				     buf,       /* buffer */ 
 				     0,         /* length */ 
@@ -5273,7 +5289,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 		break;
 
 	      default:
-		parse_warn (cfile, "Bad format %c in parse_option_token.",
+		parse_warn (cfile, "Bad format '%c' in parse_option_token.",
 			    **fmt);
 		skip_to_semi (cfile);
 		return 0;
@@ -5510,6 +5526,17 @@ int parse_option_decl (oc, cfile)
 				len = 1;
 				dp = buf;
 				goto alloc;
+
+			      case 'Z':	/* Zero-length option */
+				token = next_token(&val, (unsigned *)0, cfile);
+				if (token != SEMI) {
+					parse_warn(cfile,
+						   "semicolon expected.");
+					goto parse_exit;
+				}
+				len = 0;
+				buf[0] = '\0';
+				break;
 
 			      default:
 				log_error ("parse_option_param: Bad format %c",
