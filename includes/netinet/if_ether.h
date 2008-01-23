@@ -35,6 +35,9 @@
  *	@(#)if_ether.h	8.1 (Berkeley) 6/10/93
  */
 
+#ifndef netinet_if_ether_h
+#define netinet_if_ether_h
+
 /*
  * Ethernet address - 6 octets
  * this is only used by the ethers(3) functions.
@@ -59,3 +62,5 @@ struct	isc_ether_header {
 #define       ETHERTYPE_ARP           0x0806  /* address resolution protocol */
 
 #define ETHER_HEADER_SIZE (ETHER_ADDR_LEN * 2 + sizeof (u_int16_t))
+
+#endif

@@ -140,6 +140,9 @@ AC_ARG_WITH(relay-pid-file,
 	AC_DEFINE_UNQUOTED([_PATH_DHCRELAY_PID], ["$withval"],
 			   [File for dhcrelay process information.]))
 
+# see if ifaddrs.h is available
+AC_CHECK_HEADERS(ifaddrs.h)
+
 # figure out what IPv4 interface code to use
 AC_CHECK_HEADERS(linux/types.h)  # needed for linux/filter.h on old systems
 

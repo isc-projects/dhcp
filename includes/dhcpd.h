@@ -57,6 +57,7 @@
 #include <time.h>
 
 #include <net/if.h>
+#undef FDDI
 #include <net/route.h>
 #include <net/if_arp.h>
 #if HAVE_NET_IF_DL_H

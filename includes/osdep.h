@@ -278,6 +278,9 @@ typedef uint32_t u_int32_t;
 
 #if !defined (SOCKLEN_T)
 # define SOCKLEN_T socklen_t
+#elif defined(_AIX)
+#undef SOCKLEN_T
+#define SOCKLEN_T socklen_t
 #endif
 
 #if !defined (STDERR_FILENO)
