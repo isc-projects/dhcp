@@ -32,7 +32,8 @@
  */
 
 /*
- * Portions Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Portions Copyright (c) 2004,2007-2008 by Internet Systems Consortium,
+ *                                          Inc. ("ISC")
  * Portions Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -56,7 +57,7 @@
 
 /*
  *	@(#)resolv.h	8.1 (Berkeley) 6/2/93
- *	$Id: resolv.h,v 1.5 2008/01/11 14:00:06 shane Exp $
+ *	$Id: resolv.h,v 1.6 2008/01/24 02:43:05 each Exp $
  */
 
 #ifndef _RESOLV_H_
