@@ -30,8 +30,6 @@ release, which will be addressed in the future:
 
 - The "host-identifier" option is limited to a simple token.
 
-- Dynamically allocated leases do not respond to Confirm messages.
-
 - The client and server can only operate DHCPv4 or DHCPv6 at a time,
   not both.  To use both protocols simultaneously, two instances of the
   relevant daemon are required, one with the '-6' command line option.
