@@ -821,20 +821,24 @@ start_reply(struct packet *packet,
 			oc = lookup_option(&dhcpv6_universe,
 					   packet->options, D6O_RAPID_COMMIT);
 			if (oc != NULL) {
-				if (!save_option_buffer(&dhcpv6_universe,
-							*opt_state, NULL,
-							(unsigned char *)"", 0,
-							D6O_RAPID_COMMIT, 0)) {
-					log_error("start_reply: error saving "
-						  "RAPID_COMMIT option.");
-					return 0;
-				}
-
+				/* Rapid-commit in action. */
 				reply->msg_type = DHCPV6_REPLY;
+			} else {
+				/* Don't want a rapid-commit in advertise. */
+				delete_option(&dhcpv6_universe,
+					      *opt_state, D6O_RAPID_COMMIT);
 			}
 		}
-	} else
+	} else {
 		reply->msg_type = DHCPV6_REPLY;
+		/* Delete the rapid-commit from the sent options. */
+		oc = lookup_option(&dhcpv6_universe,
+				   *opt_state, D6O_RAPID_COMMIT);
+		if (oc != NULL) {
+			delete_option(&dhcpv6_universe,
+				      *opt_state, D6O_RAPID_COMMIT);
+		}
+	}
 
 	/* 
 	 * Use the client's transaction identifier for the reply.
