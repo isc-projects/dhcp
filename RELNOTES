@@ -50,8 +50,10 @@ work on other platforms. Please report any problems and suggested fixes to
 
 			Changes since 4.0.0 (new features)
 
+- Added DHCPv6 rapid commit support.
+
 - Added explicit parser support for zero-length DHCP options, such as
-  rapid-commit, via format code 'Z'
+  rapid-commit, via format code 'Z'.
 
 - It's now possible to update the "ends" field of a lease with OMAPI.
   This is useful if you want not only to release a lease, but also make

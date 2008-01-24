@@ -66,6 +66,7 @@ static struct dhc6_ia *find_ia_na(struct dhc6_ia *head, const char *id);
 static struct dhc6_addr *find_addr(struct dhc6_addr *head,
 				   struct iaddr *address);
 void init_handler(struct packet *packet, struct client_state *client);
+void rapid_commit_handler(struct packet *packet, struct client_state *client);
 void do_init6(void *input);
 void do_confirm6(void *input);
 void reply_handler(struct packet *packet, struct client_state *client);
@@ -1405,6 +1406,13 @@ do_init6(void *input)
 				    NULL, client->sent_options, &global_scope,
 				    &dhcpv6_universe);
 
+	/* Use a specific handler with rapid-commit.
+	 */
+	if (lookup_option(&dhcpv6_universe, client->sent_options,
+			  D6O_RAPID_COMMIT) != NULL) {
+		client->v6_handler = rapid_commit_handler;
+	}
+
 	/* Append an IA_NA. */
 	/* XXX: maybe the IA_NA('s) should be put into the sent_options
 	 * cache.  They'd have to be pulled down as they also contain
@@ -1947,6 +1955,23 @@ dhc6_check_advertise(struct dhc6_lease *lease)
 	return rval;
 }
 
+/* status code <-> action matrix for the client in INIT state
+ * (rapid/commit).  Returns always false as no action is defined.
+ */
+static isc_boolean_t
+dhc6_init_action(struct client_state *client, isc_result_t rval,
+		 unsigned code)
+{
+	if (client == NULL)
+		return ISC_R_INVALIDARG;
+
+	if (rval == ISC_R_SUCCESS)
+		return ISC_FALSE;
+
+	/* No possible action in any case... */
+	return ISC_FALSE;
+}
+
 /* status code <-> action matrix for the client in SELECT state
  * (request/reply).  Returns true if action was taken (and the
  * packet should be ignored), or false if no action was taken.
@@ -2177,6 +2202,10 @@ dhc6_check_reply(struct client_state *client, struct dhc6_lease *new)
 		return ISC_R_INVALIDARG;
 
 	switch (client->state) {
+	      case S_INIT:
+		action = dhc6_init_action;
+		break;
+
 	      case S_SELECTING:
 	      case S_REBOOTING:
 		action = dhc6_select_action;
@@ -2233,6 +2262,10 @@ dhc6_check_reply(struct client_state *client, struct dhc6_lease *new)
 
 	/* A Confirm->Reply is unsuitable for comparison to the old lease. */
 	if (client->state == S_REBOOTING)
+		return rval;
+
+	/* No old lease in rapid-commit. */
+	if (client->state == S_INIT)
 		return rval;
 
 	switch (client->state) {
@@ -2297,7 +2330,7 @@ init_handler(struct packet *packet, struct client_state *client)
 	struct dhc6_lease *lease;
 
 	/* In INIT state, we send solicits, we only expect to get
-	 * advertises (we don't support rapid commit yet).
+	 * advertises (rapid commit has its own handler).
 	 */
 	if (packet->dhcpv6_msg_type != DHCPV6_ADVERTISE)
 		return;
@@ -2338,6 +2371,82 @@ init_handler(struct packet *packet, struct client_state *client)
 		start_selecting6(client);
 	} else
 		log_debug("RCV:  Advertisement recorded.");
+}
+
+/* Specific version of init_handler() for rapid-commit.
+ */
+void
+rapid_commit_handler(struct packet *packet, struct client_state *client)
+{
+	struct dhc6_lease *lease;
+	isc_result_t check_status;
+
+	/* On ADVERTISE just fall back to the init_handler().
+	 */
+	if (packet->dhcpv6_msg_type == DHCPV6_ADVERTISE) {
+		init_handler(packet, client);
+		return;
+	} else if (packet->dhcpv6_msg_type != DHCPV6_REPLY)
+		return;
+
+	/* RFC3315 section 15.10 validation (same as 15.3 since we
+	 * always include a client id).
+	 */
+	if (!valid_reply(packet, client)) {
+		log_error("Invalid Reply - rejecting.");
+		return;
+	}
+
+	/* A rapid-commit option MUST be here. */
+	if (lookup_option(&dhcpv6_universe, packet->options,
+			  D6O_RAPID_COMMIT) == 0) {
+		log_error("Reply without Rapid-Commit - rejecting.");
+		return;
+	}
+
+	lease = dhc6_leaseify(packet);
+
+	/* This is an out of memory condition...hopefully a temporary
+	 * problem.  Returning now makes us try to retransmit later.
+	 */
+	if (lease == NULL)
+		return;
+
+	check_status = dhc6_check_reply(client, lease);
+	if (check_status != ISC_R_SUCCESS) {
+		dhc6_lease_destroy(&lease, MDL);
+		return;
+	}
+
+	/* Jump to the selecting state. */
+	cancel_timeout(do_init6, client);
+	client->state = S_SELECTING;
+
+	/* Merge any bindings in the active lease (if there is one) into
+	 * the new active lease.
+	 */
+	dhc6_merge_lease(client->active_lease, lease);
+
+	/* Cleanup if a previous attempt to go bound failed. */
+	if (client->old_lease != NULL) {
+		dhc6_lease_destroy(&client->old_lease, MDL);
+		client->old_lease = NULL;
+	}
+
+	/* Make this lease active and BIND to it. */
+	if (client->active_lease != NULL)
+		client->old_lease = client->active_lease;
+	client->active_lease = lease;
+
+	/* We're done with the ADVERTISEd leases, if any. */
+	while(client->advertised_leases != NULL) {
+		lease = client->advertised_leases;
+		client->advertised_leases = lease->next;
+
+		dhc6_lease_destroy(&lease, MDL);
+	}
+
+	start_bound(client);
 }
 
 /* Find the 'best' lease in the cache of advertised leases (usually).  From
@@ -3810,6 +3919,10 @@ make_client6_options(struct client_state *client, struct option_state **op,
 					    *op, &global_scope,
 					    client->config->on_transmission,
 					    NULL);
+
+	/* Rapid-commit is only for SOLICITs. */
+	if (message != DHCPV6_SOLICIT)
+		delete_option(&dhcpv6_universe, *op, D6O_RAPID_COMMIT);
 
 	/* See if the user configured a DUID in a relevant scope.  If not,
 	 * introduce our default manufactured id.
