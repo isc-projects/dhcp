@@ -1,32 +1,28 @@
 	      Internet Systems Consortium DHCP Distribution
-		            Version 4.0.0rc1
-			    December 10, 2007
+		            Version 4.1.0a1
+			    24 January 2007
 
 			     Release Notes
 
 			     NEW FEATURES
 
-The DHCP server in version 4.0.x of the ISC DHCP Distribution supports
-DHCPv6 in addition to DHCP for IPv4.
+ISC DHCP 4.1.x includes several new DHCPv6 features that were not included
+in DHCP 4.0.x.  These include:
 
-Several new options have been added to the dhcpd executable, which are
-documented in the man page. Several changes have been made to the
-configuration file as well, which are also documented in the man
-pages.
+- Support for the rapid-commit option on the client side
+
+- Prefix Delegation support
+
+- IA_TA address support
+
+- A basic DHCPv6 relay agent, dhcrelay6
 
 There are a number of DHCPv6 limitations and features missing in this
-release, which will be addressed shortly:
+release, which will be addressed in the future:
 
 - Only Solaris, Linux, FreeBSD, NetBSD, and OpenBSD are supported.
 
-- There is no DHCPv6 Relay Agent implementation.  There are only DHCPv6
-  Server and Client implementations.
-
 - Only a single address is supported per IA.
-
-- IA_TA addresses are not supported.
-
-- IA_PD prefixes are not supported.
 
 - DHCPv6 includes human-readable text in status code messages. These
   should be configurable, and probably localized via gettext() or the
@@ -40,53 +36,29 @@ release, which will be addressed shortly:
   not both.  To use both protocols simultaneously, two instances of the
   relevant daemon are required, one with the '-6' command line option.
 
-For information on how to install, configure and run this software,
-as well as how to find documentation and report bugs, please consult
-the README file.
+For information on how to install, configure and run this software, as
+well as how to find documentation and report bugs, please consult the
+README file.
 
-ISC DHCP now uses standard GNU configure for installation. Please
-review the output of "./configure --help" to see what options are
-available.
+ISC DHCP uses standard GNU configure for installation. Please review the
+output of "./configure --help" to see what options are available.
 
-The system has only been tested on Linux, FreeBSD, and Solaris, and 
-may not work on other platforms. Please report any problems and 
-suggested fixes to <dhcp-users@isc.org>.
+The system has only been tested on Linux, FreeBSD, and Solaris, and may not
+work on other platforms. Please report any problems and suggested fixes to
+<dhcp-users@isc.org>.
 
 
-			Changes since 4.0.0
+			Changes since 4.0.0 (new features)
 
 - Added explicit parser support for zero-length DHCP options, such as
   rapid-commit, via format code 'Z'
-
-- Exit with warning when DHCPv6-specific statements are used in the
-  config file but -6 is not specified.
 
 - It's now possible to update the "ends" field of a lease with OMAPI.
   This is useful if you want not only to release a lease, but also make
   it available for reuse right away.  Hat tip to Christof Chen.
 
-- Fixed "--version" flag in dhcrelay
-
-- The warning logged when an address range doesn't fit in the subnets
-  they were declared has been updated to be more helpful and identify the
-  typo in configuration that created the spanning addresses.
-
-- The 'min-secs' configuration parameter's log message has been updated to
-  be more helpful.
-
-- A cosmetic bug during potential-conflict recovery that caused the peer's
-  'conflict-done' state message to be logged as 'unknown-state' has been
-  repaired.  It is now logged correctly.
-
 - Fixed definition of the iaaddr hash functions to use the correct 
   functions when referencing and dereferencing memory.
-
-- A bug in failover pool rebalancing that caused POOLREQ message ping-pongs
-  was repaired.
-
-- A flaw in failover pool rebalancing that could cause POOLREQ messages to
-  be sent outside of the min-balance/max-balance scheduled intervals has
-  been repaired.
 
 - Some definitions not in phase with the IANA registry were updated.
 
@@ -102,6 +74,47 @@ suggested fixes to <dhcp-users@isc.org>.
   an empty active lease.
 
 - Timer granularity is now 1/100s in the DHCPv6 client.
+
+- The dhclient-script was updated to create a host route for the default
+  gateway if the supplied subnet mask for an IPv4 address was a /32.  This
+  allows the client to work in 'captive' network environments, where the
+  operator does not want clients to crosstalk directly.
+
+- MINUS tokens should be parseable again.
+
+- Multiple (up to "delayed-ack x;" maximum) DHCPv4 packets are now queued and
+  released in bursts after single fsync() events when the upper limit is
+  reached or if the receiving sockets go dry.  The practical upshot is
+  that fsync-coupled server performance is now multiplicitively increased.
+  The default delayed ack limit is 28.  Thanks entirely to a patch from
+  Christof Chen.
+
+			Changes since 4.0.0 (bug fixes)
+
+- DHCP now builds on AIX.
+
+- Exit with warning when DHCPv6-specific statements are used in the
+  config file but -6 is not specified.
+
+- Fixed "--version" flag in dhcrelay
+
+- The 'min-secs' configuration parameter's log message has been updated to
+  be more helpful.
+
+- The warning logged when an address range doesn't fit in the subnets
+  they were declared has been updated to be more helpful and identify the
+  typo in configuration that created the spanning addresses.
+
+- A bug in failover pool rebalancing that caused POOLREQ message ping-pongs
+  was repaired.
+
+- A flaw in failover pool rebalancing that could cause POOLREQ messages to
+  be sent outside of the min-balance/max-balance scheduled intervals has
+  been repaired.
+
+- A cosmetic bug during potential-conflict recovery that caused the peer's
+  'conflict-done' state message to be logged as 'unknown-state' has been
+  repaired.  It is now logged correctly.
 
 - A bug was fixed where the 'giaddr' may be used to find the client's subnet
   rather than its own 'ciaddr'.
@@ -133,26 +146,12 @@ suggested fixes to <dhcp-users@isc.org>.
 - Fixed a compilation problems on platforms that define a value for FDDI,
   which conflicts with a dhcp configuration syntax token by the same name.
 
-- The dhclient-script was updated to create a host route for the default
-  gateway if the supplied subnet mask for an IPv4 address was a /32.  This
-  allows the client to work in 'captive' network environments, where the
-  operator does not want clients to crosstalk directly.
-
 - When a failover server suspects it has encountered a peer running a
   version 3.0.x failover server, a warning that the failover wire protocol
   is incompatible is printed.
 
 - The failover server no longer issues a floating point error if it encounters
   a previously undefined option code.
-
-- MINUS tokens should be parseable again.
-
-- Multiple (up to "delayed-ack x;" maximum) DHCPv4 packets are now queued and
-  released in bursts after single fsync() events when the upper limit is
-  reached or if the receiving sockets go dry.  The practical upshot is
-  that fsync-coupled server performance is now multiplicitively increased.
-  The default delayed ack limit is 28.  Thanks entirely to a patch from
-  Christof Chen.
 
 			Changes since 4.0.0b3
 
