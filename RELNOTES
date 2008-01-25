@@ -116,6 +116,9 @@ suggested fixes to <dhcp-users@isc.org>.
 - The failover server no longer issues a floating point error if it encounters
   a previously undefined option code.
 
+- DHCPv6 client timestamp in DUID was based on the year 1970 rather 
+  than the year 2000.
+
                         Changes since 4.0.0rc1
 
 - None

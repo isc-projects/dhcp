@@ -168,3 +168,9 @@ struct dhcpv6_relay_packet {
 	unsigned char options[0];
 };
 
+/*
+ * DUID time starts 2000-01-01.
+ * This constant is the number of seconds since 1970-01-01,
+ * when the Unix epoch began.
+ */
+#define DUID_TIME_EPOCH 946684800
