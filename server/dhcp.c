@@ -2813,7 +2813,8 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		++outstanding_pings;
 	} else {
   		lease->cltt = cur_time;
-		if (!offer || (offer == DHCPACK)) 
+		if (!(lease->flags & STATIC_LEASE) &&
+		    (!offer || (offer == DHCPACK)))
 			delayed_ack_enqueue(lease);
 		else 
 			dhcp_reply(lease);
@@ -2844,7 +2845,7 @@ delayed_ack_enqueue(struct lease *lease)
 	}
 	memset(q, 0, sizeof *q);
 	/* prepend to ackqueue*/
-	q->lease = lease;
+	lease_reference(&q->lease, lease, MDL);
 	q->next = ackqueue_head;
 	ackqueue_head = q;
 	if (!ackqueue_tail) 
@@ -2884,7 +2885,15 @@ flush_ackqueue(void *foo)
 	/*  process from bottom to retain packet order */
 	for (ack = ackqueue_tail ; ack ; ack = p) { 
 		p = ack->prev;
-		dhcp_reply(ack->lease);
+
+		/* dhcp_reply() requires that the reply state still be valid */
+		if (ack->lease->state == NULL)
+			log_error("delayed ack for %s has gone stale",
+				  piaddr(ack->lease->ip_addr));
+		else
+			dhcp_reply(ack->lease);
+
+		lease_dereference(&ack->lease, MDL);
 		ack->next = free_ackqueue;
 		free_ackqueue = ack;
 	}
