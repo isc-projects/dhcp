@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-		             Version 3.1.0
-			     July 13, 2007
+		          Version 3.1.0.PBSG0
+			    February 5, 2008
 
 			      Release Notes
 
@@ -36,6 +36,44 @@ changes list directly following this section.
 For information on how to install, configure and run this software,
 as well as how to find documentation and report bugs, please consult
 the README file.
+
+
+			Changes since 3.1.0
+
+- Log messages when failover peer names mismatch have been improved to
+  point out the problem.
+
+- A bug was repaired where MAC Address Affinity for virgin leases always
+  mapped to the primary.  Virgin leases now have an interleaved preference
+  between primary and secondary.
+
+- A bug was repaired where MAC Address Affinity for clients with no client
+  identifier was sometimes mishashed to the peer.  Load balancing during
+  runtime and pool rebalancing were opposing.
+
+- An assertion in lease counting relating to reserved leases was repaired.
+
+- A cosmetic bug during potential-conflict recovery that caused the peer's
+  'conflict-done' state message to be logged as 'unknown-state' has been
+  repaired.  It is now logged correctly.
+
+- A bug in failover pool rebalancing that caused POOLREQ message ping-pongs
+  was repaired.
+
+- A flaw in failover pool rebalancing that could cause POOLREQ messages to
+  be sent outside of the min-balance/max-balance scheduled intervals has
+  been repaired.
+
+- A log message was introduced to clarify the situation where a failover
+  'address' parameter (the server's local address) did not resolve to an
+  IPv4 address.
+
+- When a failover server suspects it has encountered a peer running a
+  version 3.0.x failover server, a warning that the failover wire protocol
+  is incompatible is printed.
+
+- The failover server no longer issues a floating point error if it encounters
+  a previously undefined option code.
 
 			Changes since 3.1.0rc1
 

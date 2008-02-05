@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.83.16.7 2007/06/08 18:57:02 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.83.16.7.8.1 2008/02/05 23:26:30 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2330,13 +2330,13 @@ void expire_all_pools ()
 				if (l->binding_state == FTS_FREE) {
 					if (i == FREE_LEASES)
 						p->free_leases++;
-					else
+					else if (i != RESERVED_LEASES)
 						log_fatal("Impossible case "
 							  "at %s:%d.", MDL);
 				} else if (l->binding_state == FTS_BACKUP) {
 					if (i == BACKUP_LEASES)
 						p->backup_leases++;
-					else
+					else if (i != RESERVED_LEASES)
 						log_fatal("Impossible case "
 							  "at %s:%d.", MDL);
 				}
@@ -2565,7 +2565,7 @@ void free_everything ()
 		    pool_reference (&pn, nc -> pools, MDL);
 		    do {
 			struct lease **lptr[RESERVED_LEASES+1];
-			
+
 			if (pn) {
 			    pool_reference (&pc, pn, MDL);
 			    pool_dereference (&pn, MDL);
@@ -2574,7 +2574,7 @@ void free_everything ()
 			    pool_reference (&pn, pc -> next, MDL);
 			    pool_dereference (&pc -> next, MDL);
 			}
-			
+
 			lptr [FREE_LEASES] = &pc -> free;
 			lptr [ACTIVE_LEASES] = &pc -> active;
 			lptr [EXPIRED_LEASES] = &pc -> expired;

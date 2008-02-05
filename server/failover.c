@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.63.56.9 2007/06/01 22:26:58 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.63.56.9.4.1 2008/02/05 23:26:30 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -55,7 +55,8 @@ static isc_result_t failover_message_dereference (failover_message_t **,
 
 static void dhcp_failover_pool_balance(dhcp_failover_state_t *state);
 static void dhcp_failover_pool_reqbalance(dhcp_failover_state_t *state);
-static int dhcp_failover_pool_dobalance(dhcp_failover_state_t *state);
+static int dhcp_failover_pool_dobalance(dhcp_failover_state_t *state,
+					isc_boolean_t *sendreq);
 static INLINE int secondary_not_hoarding(dhcp_failover_state_t *state,
 					 struct pool *p);
 
@@ -254,6 +255,9 @@ isc_result_t dhcp_failover_link_initiate (omapi_object_t *h)
 		}
 	} else {
 		if (ds.len != sizeof (struct in_addr)) {
+			log_error("failover peer %s: 'address' parameter "
+				  "fails to resolve to an IPv4 address",
+				  state->name);
 			data_string_forget (&ds, MDL);
 			dhcp_failover_link_dereference (&obj, MDL);
 			omapi_addr_list_dereference (&addrs, MDL);
@@ -286,6 +290,8 @@ isc_result_t dhcp_failover_link_signal (omapi_object_t *h,
 	u_int16_t nlen;
 	u_int32_t vlen;
 	dhcp_failover_state_t *s, *state = (dhcp_failover_state_t *)0;
+	char *sname;
+	int slen;
 
 	if (h -> type != dhcp_type_failover_link) {
 		/* XXX shouldn't happen.   Put an assert here? */
@@ -500,19 +506,32 @@ isc_result_t dhcp_failover_link_signal (omapi_object_t *h,
 			if (dhcp_failover_state_match_by_name(s,
 			    &link->imsg->relationship_name))
 				state = s;
-		    }		
+		    }
 
 		    /* If we can't find a failover protocol state
 		       for this remote host, drop the connection */
 		    if (!state) {
-			    errmsg = "unknown server";
+			    errmsg = "unknown failover relationship name";
 			    reason = FTR_INVALID_PARTNER;
 
 			  badconnect:
 				/* XXX Send a refusal message first?
 				   XXX Look in protocol spec for guidance. */
-			    log_error ("Failover CONNECT from %s: %s",
-				       state? state->name : "unknown", errmsg);
+
+			    if (state != NULL) {
+				sname = state->name;
+				slen = strlen(sname);
+			    } else if (link->imsg->options_present &
+				       FTB_RELATIONSHIP_NAME) {
+				sname = link->imsg->relationship_name.data;
+				slen = link->imsg->relationship_name.count;
+			    } else {
+				sname = "unknown";
+				slen = strlen(sname);
+			    }
+
+			    log_error("Failover CONNECT from %.*s: %s",
+				      slen, sname, errmsg);
 			    dhcp_failover_send_connectack
 				    ((omapi_object_t *)link, state,
 				     reason, errmsg);
@@ -582,7 +601,7 @@ isc_result_t dhcp_failover_link_signal (omapi_object_t *h,
 		break;
 
 	      default:
-		/* XXX should never get here.   Assertion? */
+		log_fatal("Impossible case at %s:%d.", MDL);
 		break;
 	}
 	return ISC_R_SUCCESS;
@@ -624,7 +643,8 @@ static isc_result_t do_a_failover_option (c, link)
 	}
 
 	/* If it's an unknown code, skip over it. */
-	if (option_code > FTO_MAX) {
+	if ((option_code > FTO_MAX) ||
+	    (ft_options[option_code].type == FT_UNDEF)) {
 #if defined (DEBUG_FAILOVER_MESSAGES)
 		log_debug ("  option code %d (%s) len %d (not recognized)",
 			   option_code,
@@ -767,6 +787,35 @@ static isc_result_t do_a_failover_option (c, link)
 	if (op_size == 1 || ft_options [option_code].type == FT_IPADDR) {
 		omapi_connection_copyout ((unsigned char *)op, c, option_len);
 		link -> imsg_count += option_len;
+
+		/*
+		 * As of 3.1.0, many option codes were changed to conform to
+		 * draft revision 12 (which alphabetized, then renumbered all
+		 * the option codes without preserving the version option code
+		 * nor bumping its value).  As it turns out, the message codes
+		 * for CONNECT and CONNECTACK turn out the same, so it tries
+		 * its darndest to connect, and falls short (when TLS_REQUEST
+		 * comes up size 2 rather than size 1 as draft revision 12 also
+		 * mandates).
+		 *
+		 * The VENDOR_CLASS code in 3.0.x was 11, which is now the HBA
+		 * code.  Both work out to be arbitrarily long text-or-byte
+		 * strings, so they pass parsing.
+		 *
+		 * Note that it is possible (or intentional), if highly
+		 * improbable, for the HBA bit array to exactly match
+		 * isc-V3.0.x.  Warning here is not an issue; if it really is
+		 * 3.0.x, there will be a protocol error later on.  If it isn't
+		 * actually 3.0.x, then I guess the lucky user will have to
+		 * live with a weird warning.
+		 */
+		if ((option_code == 11) && (option_len > 9) &&
+		    (strncmp((const char *)op, "isc-V3.0.", 9) == 0)) {
+		        log_error("WARNING: failover as of versions 3.1.0 and "
+				  "on are not reverse compatible with "
+				  "versions 3.0.x.");
+		}
+
 		goto out;
 	}
 
@@ -1276,6 +1325,7 @@ isc_result_t dhcp_failover_state_signal (omapi_object_t *o,
 					link);
 		} else if (link -> imsg -> type == FTM_CONNECTACK) {
 		    const char *errmsg;
+		    char errbuf[1024];
 		    int reason;
 
 		    cancel_timeout (dhcp_failover_link_startup_timeout,
@@ -1298,14 +1348,19 @@ isc_result_t dhcp_failover_state_signal (omapi_object_t *o,
 			omapi_disconnect (link -> outer, 1);
 			return ISC_R_SUCCESS;
 		    }
-				      
+
 		    if (!dhcp_failover_state_match_by_name(state,
 			&link->imsg->relationship_name)) {
-			errmsg = "unknown server";
+			/* XXX: Overflow results in log truncation, safe. */
+			snprintf(errbuf, sizeof(errbuf), "remote failover "
+				 "relationship name %.*s does not match",
+				 link->imsg->relationship_name.count,
+				 link->imsg->relationship_name.data);
+			errmsg = errbuf;
 			reason = FTR_INVALID_PARTNER;
 		      badconnectack:
-			log_error ("Failover CONNECTACK from %s: %s",
-				   state ? state->name : "unknown", errmsg);
+			log_error("Failover CONNECTACK from %s: %s",
+				  state->name, errmsg);
 			dhcp_failover_send_disconnect ((omapi_object_t *)link,
 						       reason, errmsg);
 			omapi_disconnect (link -> outer, 0);
@@ -2229,7 +2284,11 @@ isc_result_t dhcp_failover_peer_state_changed (dhcp_failover_state_t *state,
 	return ISC_R_SUCCESS;
 }
 
-/* Balance operation manual entry. */
+/*
+ * Balance operation manual entry; startup, entrance to normal state.  No
+ * sense sending a POOLREQ at this stage; the peer is likely about to schedule
+ * their own rebalance event upon entering normal themselves.
+ */
 static void
 dhcp_failover_pool_balance(dhcp_failover_state_t *state)
 {
@@ -2237,25 +2296,36 @@ dhcp_failover_pool_balance(dhcp_failover_state_t *state)
 	cancel_timeout(dhcp_failover_pool_rebalance, state);
 	state->sched_balance = 0;
 
-	dhcp_failover_pool_dobalance(state);
+	dhcp_failover_pool_dobalance(state, NULL);
 }
 
-/* Balance operation entry from timer event. */
+/*
+ * Balance operation entry from timer event.  Once per timer interval is
+ * the only time we want to emit POOLREQs (asserting an interrupt in our
+ * peer).
+ */
 void
 dhcp_failover_pool_rebalance(void *failover_state)
 {
 	dhcp_failover_state_t *state;
+	isc_boolean_t sendreq = ISC_FALSE;
 
 	state = (dhcp_failover_state_t *)failover_state;
 
 	/* Clear scheduled event indicator. */
 	state->sched_balance = 0;
 
-	if (dhcp_failover_pool_dobalance(state))
+	if (dhcp_failover_pool_dobalance(state, &sendreq))
 		dhcp_failover_send_updates(state);
+
+	if (sendreq)
+		dhcp_failover_send_poolreq(state);
 }
 
-/* Balance operation entry from POOLREQ protocol message. */
+/*
+ * Balance operation entry from POOLREQ protocol message.  Do not permit a
+ * POOLREQ to send back a POOLREQ.  Ping pong.
+ */
 static void
 dhcp_failover_pool_reqbalance(dhcp_failover_state_t *state)
 {
@@ -2265,7 +2335,7 @@ dhcp_failover_pool_reqbalance(dhcp_failover_state_t *state)
 	cancel_timeout(dhcp_failover_pool_rebalance, state);
 	state->sched_balance = 0;
 
-	queued = dhcp_failover_pool_dobalance(state);
+	queued = dhcp_failover_pool_dobalance(state, NULL);
 
 	dhcp_failover_send_poolresp(state, queued);
 
@@ -2277,12 +2347,19 @@ dhcp_failover_pool_reqbalance(dhcp_failover_state_t *state)
 			 state->name);
 }
 
-/* Do the meat of the work common to all forms of pool rebalance. */
-static int dhcp_failover_pool_dobalance(dhcp_failover_state_t *state)
+/*
+ * Do the meat of the work common to all forms of pool rebalance.  If the
+ * caller deems it appropriate to transmit POOLREQ messages, it can use the
+ * sendreq pointer to pass in the address of a FALSE value which this function
+ * will conditionally turn TRUE if a POOLREQ is determined to be necessary.
+ * A NULL value may be passed, in which case no action is taken.
+ */
+static int
+dhcp_failover_pool_dobalance(dhcp_failover_state_t *state,
+			    isc_boolean_t *sendreq)
 {
-	int lts, total, thresh, hold, pass;
+	int lts, total, thresh, hold, panic, pass;
 	int leases_queued = 0;
-	int reqsent = 0;
 	struct lease *lp = (struct lease *)0;
 	struct lease *next = (struct lease *)0;
 	struct shared_network *s;
@@ -2292,7 +2369,7 @@ static int dhcp_failover_pool_dobalance(dhcp_failover_state_t *state)
 	binding_state_t my_lease_state;
 	struct lease **lq;
 	int (*log_func)(const char *, ...);
-	const char *result;
+	const char *result, *reqlog;
 
 	if (state -> me.state != normal)
 		return 0;
@@ -2327,21 +2404,37 @@ static int dhcp_failover_pool_dobalance(dhcp_failover_state_t *state)
 		thresh = ((total * state->max_lease_misbalance) + 50) / 100;
 		hold = ((total * state->max_lease_ownership) + 50) / 100;
 
+		/*
+		 * If we need leases (so lts is negative) more than negative
+		 * double the thresh%, panic and send poolreq to hopefully wake
+		 * up the peer (but more likely the db is inconsistent).  But,
+		 * if this comes out zero, switch to -1 so that the POOLREQ is
+		 * sent on lts == -2 rather than right away at -1.
+		 *
+		 * Note that we do not subtract -1 from panic all the time
+		 * because thresh% and hold% may come out to the same number,
+		 * and that is correct operation...where thresh% and hold% are
+		 * both -1, we want to send poolreq when lts reaches -3.  So,
+		 * "-3 < -2", lts < panic.
+		 */
+		panic = thresh * -2;
+
+		if (panic == 0)
+			panic = -1;
+
+		if ((sendreq != NULL) && (lts < panic)) {
+			reqlog = "  (requesting peer rebalance!)";
+			*sendreq = ISC_TRUE;
+		} else
+			reqlog = "";
+
 		log_info("balancing pool %lx %s  total %d  free %d  "
-			 "backup %d  lts %d  max-own (+/-)%d",
+			 "backup %d  lts %d  max-own (+/-)%d%s",
 			 (unsigned long)p,
 			 (p->shared_network ?
 			  p->shared_network->name : ""), p->lease_count,
-			 p->free_leases, p->backup_leases, lts, hold);
-
-		/* If lts is in the negatives (we need leases) more than
-		 * negative double the thresh%, panic and send poolreq to
-		 * hopefully wake up the peer.
-		 */
-		if (!reqsent && (lts < (thresh * -2))) {
-			dhcp_failover_send_poolreq(state);
-			reqsent = 1;
-		}
+			 p->free_leases, p->backup_leases, lts, hold,
+			 reqlog);
 
 		/* In the first pass, try to allocate leases to the
 		 * peer which it would normally be responsible for (if
@@ -3499,6 +3592,9 @@ const char *dhcp_failover_state_name_print (enum failover_state state)
 
 	      case normal:
 		return "normal";
+
+	      case conflict_done:
+		return "conflict-done";
 
 	      case communications_interrupted:
 		return "communications-interrupted";
@@ -5506,10 +5602,18 @@ peer_wants_lease(struct lease *lp)
 		return 0;
 
 	if (lp->uid_len)
-		hbaix = loadb_p_hash (lp->uid, lp->uid_len);
-	else
-		hbaix = loadb_p_hash (lp->hardware_addr.hbuf,
-				      lp->hardware_addr.hlen);
+		hbaix = loadb_p_hash(lp->uid, lp->uid_len);
+	else if (lp->hardware_addr.hlen > 1)
+		/* Skip the first byte, which is the hardware type, and is
+		 * not included during actual load balancing checks above
+		 * since it is separate from the packet header chaddr field.
+		 * The remainder of the hardware address should be identical
+		 * to the chaddr contents.
+		 */
+		hbaix = loadb_p_hash(lp->hardware_addr.hbuf + 1,
+				     lp->hardware_addr.hlen - 1);
+	else /* Consistent 50/50 split */
+		return(lp->ip_addr.iabuf[lp->ip_addr.len-1] & 0x01);
 
 	hm = state->hba[(hbaix >> 3) & 0x1F] & (1 << (hbaix & 0x07));
 
