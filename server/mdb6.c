@@ -35,7 +35,7 @@ HASH_FUNCTIONS(ia_na, unsigned char *, struct ia_na, ia_na_hash_t,
 ia_na_hash_t *ia_active;
 
 HASH_FUNCTIONS(iaaddr, struct in6_addr *, struct iaaddr, iaaddr_hash_t,
-	       ia_na_reference, ia_na_dereference, do_string_hash);
+	       iaaddr_reference, iaaddr_dereference, do_string_hash);
 
 struct ipv6_pool **pools;
 int num_pools;

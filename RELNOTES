@@ -121,6 +121,9 @@ suggested fixes to <dhcp-users@isc.org>.
 
 - Warn when attempting to use a hardware parameter in DHCPv6.
 
+- Fixed definition of the iaaddr hash functions to use the correct 
+  functions when referencing and dereferencing memory.
+
                         Changes since 4.0.0rc1
 
 - None
