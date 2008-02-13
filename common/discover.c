@@ -1141,7 +1141,7 @@ discover_interfaces(int state) {
 				} else {
 					strcpy(abuf, "no IPv6 addresses");
 				}
-				log_error("No subnet declaration for %s (%s).",
+				log_error("No subnet6 declaration for %s (%s).",
 					  tmp->name,
 					  abuf);
 #endif /* DHCPv6 */
@@ -1150,6 +1150,10 @@ discover_interfaces(int state) {
 				log_error ("** Ignoring requests on %s.  %s",
 					   tmp -> name, "If this is not what");
 				log_error ("   you want, please write %s",
+#ifdef DHCPv6
+				           (local_family != AF_INET) ?
+					   "a subnet6 declaration" :
+#endif
 					   "a subnet declaration");
 				log_error ("   in your dhcpd.conf file %s",
 					   "for the network segment");
@@ -1159,8 +1163,12 @@ discover_interfaces(int state) {
 				log_error ("%s", "");
 				goto next;
 			} else {
-				log_error ("You must write a subnet %s",
-					   " declaration for this");
+				log_error ("You must write a %s",
+#ifdef DHCPv6
+				           (local_family != AF_INET) ?
+					   "subnet6 declaration for this" :
+#endif
+					   "subnet declaration for this");
 				log_error ("subnet.   You cannot prevent %s",
 					   "the DHCP server");
 				log_error ("from listening on this subnet %s",

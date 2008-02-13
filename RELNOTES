@@ -153,6 +153,9 @@ work on other platforms. Please report any problems and suggested fixes to
 - The failover server no longer issues a floating point error if it encounters
   a previously undefined option code.
 
+- Fix startup error messages to report a missing "subnet6 declaration", rather
+  than a missing "subnet declaration", when running as a DHCPv6 server.
+
 			Changes since 4.0.0b3
 
 - The reverse dns name for PTR updates on IPv6 addresses has been fixed to
