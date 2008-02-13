@@ -124,6 +124,9 @@ suggested fixes to <dhcp-users@isc.org>.
 - Fixed definition of the iaaddr hash functions to use the correct 
   functions when referencing and dereferencing memory.
 
+- Fix startup error messages to report a missing "subnet6 declaration", rather
+  than a missing "subnet declaration", when running as a DHCPv6 server.
+
                         Changes since 4.0.0rc1
 
 - None
