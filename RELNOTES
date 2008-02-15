@@ -159,6 +159,8 @@ work on other platforms. Please report any problems and suggested fixes to
 - DHCPv6 client timestamp in DUID was based on the year 1970 rather 
   than the year 2000.
 
+- Warn when attempting to use a hardware parameter in DHCPv6.
+
 			Changes since 4.0.0b3
 
 - The reverse dns name for PTR updates on IPv6 addresses has been fixed to
