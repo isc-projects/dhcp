@@ -135,7 +135,7 @@ form_duid(struct data_string *duid, const char *file, int line)
 	/* Basic Link Local Address type of DUID. */
 	putUShort(duid->buffer->data, DUID_LLT);
 	putUShort(duid->buffer->data + 2, ip->hw_address.hbuf[0]);
-	putULong(duid->buffer->data + 4, cur_time);
+	putULong(duid->buffer->data + 4, cur_time - DUID_TIME_EPOCH);
 	memcpy(duid->buffer->data + 8, ip->hw_address.hbuf + 1,
 	       ip->hw_address.hlen - 1);
 }

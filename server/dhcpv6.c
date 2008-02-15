@@ -113,13 +113,6 @@ static isc_result_t reply_process_send_addr(struct reply_state *reply,
 static struct iaaddr *lease_compare(struct iaaddr *alpha, struct iaaddr *beta);
 
 /*
- * DUID time starts 2000-01-01.
- * This constant is the number of seconds since 1970-01-01,
- * when the Unix epoch began.
- */
-#define DUID_TIME_EPOCH 946684800
-
-/*
  * This function returns the time since DUID time start for the
  * given time_t value.
  */
