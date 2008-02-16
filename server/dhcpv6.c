@@ -637,6 +637,12 @@ static const int required_opts[] = {
 	D6O_PREFERENCE,
 	0
 };
+static const int required_opts_NAA[] = {
+	D6O_CLIENTID,
+	D6O_SERVERID,
+	D6O_STATUS_CODE,
+	0
+};
 static const int required_opts_solicit[] = {
 	D6O_CLIENTID,
 	D6O_SERVERID,
@@ -1130,28 +1136,12 @@ lease_to_client(struct data_string *reply_ret,
 	 * the Reply message with no addresses in the IA and a Status
 	 * Code option in the IA containing status code NoAddrsAvail.
 	 *
-	 * Section 18.2.3 (Renew):
+	 * Section 18.1.8 (Client Behavior):
 	 *
-	 * The server may choose to change the list of addresses and
-	 * the lifetimes of addresses in IAs that are returned to the
-	 * client.
-	 *
-	 * Section 18.2.4 (Rebind):
-	 *
-	 * Absolutely nothing.
-	 *
-	 * INTERPRETATION;
-	 *
-	 * Solicit and Request are fairly explicit; we send NoAddrsAvail.
-	 * We handle SOLICIT here and REQUEST in the reply_process_ia()
-	 * function (because SOLICIT only counts if we never get around to
-	 * it).
-	 *
-	 * Renew and Rebind are totally undefined.  If we send a reply with
-	 * empty IA's, however, the client will stop renewing or rebinding,
-	 * and this is a problem if they could have gotten addressed from
-	 * another server.  So we ignore client packets...they will eventually
-	 * time out in the worst case.
+	 * Leave unchanged any information about addresses the client has
+	 * recorded in the IA but that were not included in the IA from
+	 * the server.
+	 * Sends a Renew/Rebind if the IA is not in the Reply message.
 	 */
 	if (no_addrs_avail &&
 	    (reply.packet->dhcpv6_msg_type == DHCPV6_SOLICIT))
@@ -1169,7 +1159,7 @@ lease_to_client(struct data_string *reply_ret,
 		reply.cursor = REPLY_OPTIONS_INDEX;
 
 		/*
-		 * Produce a reply that includes;
+		 * Produce an advertise that includes only:
 		 *
 		 * Status code.
 		 * Server DUID.
@@ -1180,12 +1170,8 @@ lease_to_client(struct data_string *reply_ret,
 					       sizeof(reply.buf) -
 					       		reply.cursor,
 					       reply.opt_state, reply.packet,
-					       required_opts,
+					       required_opts_NAA,
 					       NULL);
-	} else if (no_addrs_avail &&
-		   (reply.packet->dhcpv6_msg_type != DHCPV6_REQUEST))
-	{
-		goto exit;
 	} else {
 		/*
 		 * Having stored the client's IA_NA's, store any options that
@@ -1339,8 +1325,13 @@ reply_process_ia(struct reply_state *reply, struct option_cache *ia) {
 	reply->cursor += 4;
 
 	/* 
-	 * For each address in this IA_NA, decide what to do about
-	 * it.
+	 * For each address in this IA_NA, decide what to do about it.
+	 *
+	 * Guidelines:
+	 *
+	 * The client leaves unchanged any infomation about addresses
+	 * it has recorded but are not included ("cancel/break" below).
+	 * A not included IA ("cleanup" below) could give a Renew/Rebind.
 	 */
 	oc = lookup_option(&dhcpv6_universe, packet_ia, D6O_IAADDR);
 	reply->valid = reply->prefer = 0xffffffff;
@@ -1374,10 +1365,9 @@ reply_process_ia(struct reply_state *reply, struct option_cache *ia) {
 			switch (reply->packet->dhcpv6_msg_type) {
 			      case DHCPV6_SOLICIT:
 				/*
-				 * Solicit is handled by the caller, because
-				 * it has to be the sum of all the IA's.
+				 * No address for all the IA's is handled
+				 * by the caller.
 				 */
-				goto cleanup;
 
 			      case DHCPV6_REQUEST:
 				/* Section 18.2.1 (Request):
@@ -1429,10 +1419,7 @@ reply_process_ia(struct reply_state *reply, struct option_cache *ia) {
 				 *
 				 * We don't want to include the IA if we
 				 * provide zero addresses including zeroed
-				 * lifetimes...if we did, the client would
-				 * reset its renew/rebind behaviour.  If we do
-				 * not, the client may get a success off
-				 * another server.
+				 * lifetimes.
 				 */
 				if (reply->ia_addrs_included)
 					status = ISC_R_SUCCESS;
@@ -1781,6 +1768,9 @@ reply_process_addr(struct reply_state *reply, struct option_cache *addr) {
 		 * If the server cannot find a client entry for the IA the
 		 * server returns the IA containing no addresses with a Status
 		 * Code option set to NoBinding in the Reply message.
+		 *
+		 * On mismatch we (ab)use this pretending we have not the IA
+		 * as soon as we have not an address.
 		 */
 		} else if (reply->packet->dhcpv6_msg_type == DHCPV6_RENEW) {
 			/* Rewind the IA_NA to empty. */
