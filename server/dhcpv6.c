@@ -1368,6 +1368,7 @@ reply_process_ia(struct reply_state *reply, struct option_cache *ia) {
 				 * No address for all the IA's is handled
 				 * by the caller.
 				 */
+				/* FALL THROUGH */
 
 			      case DHCPV6_REQUEST:
 				/* Section 18.2.1 (Request):
