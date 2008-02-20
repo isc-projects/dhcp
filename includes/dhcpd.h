@@ -622,7 +622,8 @@ struct lease_state {
 #define SV_DHCPV6_LEASE_FILE_NAME       54
 #define SV_DHCPV6_PID_FILE_NAME         55
 #define SV_LIMIT_ADDRS_PER_IA		56
-#define SV_DELAYED_ACK			57
+#define SV_LIMIT_PREFS_PER_IA		57
+#define SV_DELAYED_ACK			58
 
 #if !defined (DEFAULT_PING_TIMEOUT)
 # define DEFAULT_PING_TIMEOUT 1
@@ -741,6 +742,7 @@ struct host_decl {
 		  not an option_cache, but it's referenced in a lot of
 		  places, so we'll leave it for now. */
 	struct option_cache *fixed_addr;
+	struct iaddrcidrnetlist *fixed_prefix;
 	struct group *group;
 	struct group_object *named_group;
 	struct data_string auth_key_id;
@@ -1358,6 +1360,7 @@ extern ia_na_hash_t *ia_ta_active;
 struct ipv6_pool {
 	int refcnt;				/* reference count */
 	struct in6_addr start_addr;		/* first IPv6 address */
+#define POOL_IS_FOR_TEMP	0x8000
 	int bits;				/* number of bits, CIDR style */
 	iaaddr_hash_t *addrs;			/* non-free IAADDR */
 	int num_active;				/* count of active IAADDR */
@@ -1738,6 +1741,8 @@ int parse_ip6_prefix(struct parse *, struct iaddr *, u_int8_t *);
 void parse_address_range PROTO ((struct parse *, struct group *, int,
 				 struct pool *, struct lease **));
 void parse_address_range6(struct parse *cfile, struct group *group);
+void parse_prefix6(struct parse *cfile, struct group *group);
+void parse_fixed_prefix6(struct parse *cfile, struct host_decl *host_decl);
 void parse_ia_na_declaration(struct parse *);
 void parse_ia_ta_declaration(struct parse *);
 void parse_ia_pd_declaration(struct parse *);
@@ -3290,6 +3295,7 @@ isc_result_t ia_pd_add_iaprefix(struct ia_pd *ia_pd, struct iaprefix *iaprefix,
 				const char *file, int line);
 void ia_pd_remove_iaprefix(struct ia_pd *ia_pd, struct iaprefix *iaprefix,
 			   const char *file, int line);
+isc_boolean_t ia_pd_equal(const struct ia_pd *a, const struct ia_pd *b);
 
 isc_result_t ipv6_pool_allocate(struct ipv6_pool **pool,
 				const struct in6_addr *start_addr, int bits, 
@@ -3342,13 +3348,15 @@ isc_boolean_t prefix6_exists(const struct ipv6_ppool *ppool,
 			     const struct in6_addr *pref, u_int8_t plen);
 
 isc_result_t add_ipv6_pool(struct ipv6_pool *pool);
-isc_result_t find_ipv6_pool(struct ipv6_pool **pool, 
+isc_result_t find_ipv6_pool(struct ipv6_pool **pool, int temp,
 			    const struct in6_addr *addr);
 isc_boolean_t ipv6_addr_in_pool(const struct in6_addr *addr, 
 				const struct ipv6_pool *pool);
 isc_result_t add_ipv6_ppool(struct ipv6_ppool *ppool);
 isc_result_t find_ipv6_ppool(struct ipv6_ppool **pool,
 			     const struct in6_addr *pref);
+isc_boolean_t ipv6_prefix_in_ppool(const struct in6_addr *pref,
+				   const struct ipv6_ppool *ppool);
 
 isc_result_t renew_leases(struct ia_na *ia_na);
 isc_result_t release_leases(struct ia_na *ia_na);
@@ -3362,5 +3370,6 @@ void schedule_prefix_timeout(struct ipv6_ppool *ppool);
 void schedule_all_ipv6_prefix_timeouts();
 
 void mark_hosts_unavailable(void);
+void mark_phosts_unavailable(void);
 void mark_interfaces_unavailable(void);
 

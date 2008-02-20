@@ -611,6 +611,7 @@ main(int argc, char **argv) {
 	 */
 	if (local_family == AF_INET6) {
 		mark_hosts_unavailable();
+		mark_phosts_unavailable();
 		mark_interfaces_unavailable();
 	}
 #endif /* DHCPv6 */

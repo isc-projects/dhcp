@@ -49,16 +49,26 @@ struct reply_state {
 
 	/* IA level persistent state */
 	unsigned ia_count;
+	unsigned ia_pd_count;
 	unsigned client_resources;
-	isc_boolean_t ia_addrs_included;
+	isc_boolean_t ia_resources_included;
 	isc_boolean_t static_lease;
+	unsigned static_prefixes;
 	struct ia_na *ia_na;
-	struct ia_na *old_ia_na;
+	struct ia_na *ia_ta;
+	union {
+		struct ia_na *old__ia;
+		struct ia_pd *old__pd;
+	} old;
+#define old_ia		old.old__ia
+#define old_ia_pd	old.old__pd
+	struct ia_pd *ia_pd;
 	struct option_state *reply_ia;
 	struct data_string fixed;
 
-	/* IAADDR level persistent state */
+	/* IAADDR/IAPREFIX level persistent state */
 	struct iaaddr *lease;
+	struct iaprefix *prefix;
 
 	/*
 	 * "t1", "t2", preferred, and valid lifetimes records for calculating
@@ -71,6 +81,9 @@ struct reply_state {
 
 	/* Chosen values to transmit for valid and preferred lifetimes. */
 	u_int32_t send_valid, send_prefer;
+
+	/* Preferred prefix length (-1 is any). */
+	int preflen;
 
 	/* Index into the data field that has been consumed. */
 	unsigned cursor;
@@ -90,27 +103,49 @@ static int get_encapsulated_IA_state(struct option_state **enc_opt_state,
 				     struct option_cache *oc,
 				     int offset);
 static void build_dhcpv6_reply(struct data_string *, struct packet *);
-static isc_result_t shared_network_from_packet6(struct shared_network **shared,
-						struct packet *packet);
+static void shared_network_from_packet6(struct shared_network **shared,
+					struct packet *packet);
 static void seek_shared_host(struct host_decl **hp,
 			     struct shared_network *shared);
 static isc_boolean_t fixed_matches_shared(struct host_decl *host,
 					  struct shared_network *shared);
 static isc_result_t reply_process_ia_na(struct reply_state *reply,
 					struct option_cache *ia);
+static isc_result_t reply_process_ia_ta(struct reply_state *reply,
+					struct option_cache *ia);
 static isc_result_t reply_process_addr(struct reply_state *reply,
 				       struct option_cache *addr);
 static isc_boolean_t address_is_owned(struct reply_state *reply,
 				      struct iaddr *addr);
+static isc_result_t find_client_temporaries(struct reply_state *reply);
 static isc_result_t reply_process_try_addr(struct reply_state *reply,
 					   struct iaddr *addr);
 static isc_result_t find_client_address(struct reply_state *reply);
 static isc_result_t reply_process_is_addressed(struct reply_state *reply,
+					       struct ia_na *ia,
 					       struct binding_scope **scope,
 					       struct group *group);
 static isc_result_t reply_process_send_addr(struct reply_state *reply,
 					    struct iaddr *addr);
 static struct iaaddr *lease_compare(struct iaaddr *alpha, struct iaaddr *beta);
+static isc_result_t reply_process_ia_pd(struct reply_state *reply,
+					struct option_cache *ia_pd);
+static isc_result_t reply_process_prefix(struct reply_state *reply,
+					 struct option_cache *pref);
+static isc_boolean_t prefix_is_owned(struct reply_state *reply,
+				     struct iaddrcidrnet *pref);
+static isc_result_t find_client_prefix(struct reply_state *reply);
+static isc_result_t reply_process_try_prefix(struct reply_state *reply,
+					     struct iaddrcidrnet *pref);
+static isc_result_t reply_process_is_prefixed(struct reply_state *reply,
+					      struct ia_pd *ia_pd,
+					      struct binding_scope **scope,
+					      struct group *group);
+static isc_result_t reply_process_send_prefix(struct reply_state *reply,
+					      struct iaddrcidrnet *pref);
+static struct iaprefix *prefix_compare(struct reply_state *reply,
+				       struct iaprefix *alpha,
+				       struct iaprefix *beta);
 
 /*
  * This function returns the time since DUID time start for the
@@ -664,14 +699,7 @@ static const int required_opts_solicit[] = {
 	D6O_PREFERENCE,
 	0
 };
-static const int required_opts_IA_NA[] = {
-	D6O_IAADDR,
-	D6O_STATUS_CODE,
-	D6O_VENDOR_OPTS,
-	0
-};
-/*
-static const int required_opts_IA_TA[] = {
+static const int required_opts_IA[] = {
 	D6O_IAADDR,
 	D6O_STATUS_CODE,
 	D6O_VENDOR_OPTS,
@@ -683,7 +711,6 @@ static const int required_opts_IA_PD[] = {
 	D6O_VENDOR_OPTS,
 	0
 };
-*/
 static const int required_opts_STATUS_CODE[] = {
 	D6O_STATUS_CODE,
 	0
@@ -973,12 +1000,24 @@ pick_v6_address(struct iaaddr **addr, struct shared_network *shared_network,
 	char tmp_buf[INET6_ADDRSTRLEN];
 
 	/*
-	 * No pools, we're done.
+	 * No pools or all temporary, we're done.
 	 */
 	if (shared_network->ipv6_pools == NULL) {
 		log_debug("Unable to pick client address: "
 			  "no IPv6 pools on this shared network");
 		return ISC_R_NORESOURCES;
+	}
+	for (i = 0;; i++) {
+		p = shared_network->ipv6_pools[i];
+		if (p == NULL) {
+			log_debug("Unable to pick client address: "
+				  "only temporary IPv6 pools "
+				  "on this shared network");
+			return ISC_R_NORESOURCES;
+		}
+		if ((p->bits & POOL_IS_FOR_TEMP) == 0) {
+			break;
+		}
 	}
 
 	/*
@@ -993,8 +1032,9 @@ pick_v6_address(struct iaaddr **addr, struct shared_network *shared_network,
 	do {
 
 		p = shared_network->ipv6_pools[i];
-		if (activate_lease6(p, addr, &attempts, 
-				    client_id, 0) == ISC_R_SUCCESS) {
+		if (((p->bits & POOL_IS_FOR_TEMP) == 0) &&
+		    (activate_lease6(p, addr, &attempts, 
+				     client_id, 0) == ISC_R_SUCCESS)) {
 			/*
 			 * Record the pool used (or next one if there 
 			 * was a collision).
@@ -1024,6 +1064,125 @@ pick_v6_address(struct iaaddr **addr, struct shared_network *shared_network,
 	 * Presumably that means we have no addresses for the client.
 	 */
 	log_debug("Unable to pick client address: no addresses available");
+	return ISC_R_NORESOURCES;
+}
+
+/*
+ * Try to get the IPv6 prefix the client asked for from the
+ * prefix pool.
+ *
+ * pref is the result (should be a pointer to NULL on entry)
+ * ppool is the prefix pool to search in
+ * requested_pref is the address the client wants
+ */
+static isc_result_t
+try_client_v6_prefix(struct iaprefix **pref,
+		     struct ipv6_ppool *ppool,
+		     const struct data_string *requested_pref)
+{
+	u_int8_t tmp_plen;
+	struct in6_addr tmp_pref;
+	struct iaddr ia;
+	isc_result_t result;
+
+	if (requested_pref->len < sizeof(tmp_plen) + sizeof(tmp_pref)) {
+		return ISC_R_INVALIDARG;
+	}
+	tmp_plen = (int) requested_pref->data[0];
+	if ((tmp_plen < 3) || (tmp_plen > 128)) {
+		return ISC_R_FAILURE;
+	}
+	memcpy(&tmp_pref, requested_pref->data + 1, sizeof(tmp_pref));
+	if (IN6_IS_ADDR_UNSPECIFIED(&tmp_pref)) {
+		return ISC_R_FAILURE;
+	}
+	ia.len = 16;
+	memcpy(&ia.iabuf, &tmp_pref, 16);
+	if (!is_cidr_mask_valid(&ia, (int) tmp_plen)) {
+		return ISC_R_FAILURE;
+	}
+
+	if ((tmp_plen != ppool->alloc_plen) ||
+	    !ipv6_prefix_in_ppool(&tmp_pref, ppool)) {
+		return ISC_R_FAILURE;
+	}
+
+	if (prefix6_exists(ppool, &tmp_pref, tmp_plen)) {
+		return ISC_R_ADDRINUSE;
+	}
+
+	result = iaprefix_allocate(pref, MDL);
+	if (result != ISC_R_SUCCESS) {
+		return result;
+	}
+	(*pref)->pref = tmp_pref;
+	(*pref)->plen = tmp_plen;
+
+	result = add_prefix6(ppool, *pref, 0);
+	if (result != ISC_R_SUCCESS) {
+		iaprefix_dereference(pref, MDL);
+	}
+	return result;
+}
+
+/*
+ * Get an IPv6 prefix for the client.
+ *
+ * pref is the result (should be a pointer to NULL on entry)
+ * packet is the information about the packet from the client
+ * requested_iaprefix is a hint from the client
+ * plen is -1 or the requested prefix length
+ * client_id is the DUID for the client
+ */
+static isc_result_t 
+pick_v6_prefix(struct iaprefix **pref, int plen,
+	       const struct data_string *client_id)
+{
+	struct ipv6_ppool *p;
+	int i;
+	unsigned int attempts;
+	char tmp_buf[INET6_ADDRSTRLEN];
+
+	/*
+	 * No prefix pools, we're done.
+	 */
+	if (!num_ppools) {
+		log_debug("Unable to pick client prefix: "
+			  "no IPv6 prefix pools");
+		return ISC_R_NORESOURCES;
+	}
+
+	/*
+	 * Otherwise try to get a prefix.
+	 */
+	for (i = 0; i < num_ppools; i++) {
+		p = ppools[i];
+		if (p == NULL) {
+			continue;
+		}
+
+		/*
+		 * Try only pools with the requested prefix length if any.
+		 */
+		if ((plen >= 0) && ((int) p->alloc_plen != plen)) {
+			continue;
+		}
+
+		if (activate_prefix6(p, pref, &attempts, 
+				     client_id, 0) == ISC_R_SUCCESS) {
+			log_debug("Picking pool prefix %s/%u",
+				  inet_ntop(AF_INET6, &((*pref)->pref),
+				  	    tmp_buf, sizeof(tmp_buf)),
+				  (unsigned) (*pref)->plen);
+			return ISC_R_SUCCESS;
+		}
+	}
+
+	/*
+	 * If we failed to pick an IPv6 prefix
+	 * Presumably that means we have no prefixes for the client.
+	 */
+	log_debug("Unable to pick client prefix: no prefixes available");
 	return ISC_R_NORESOURCES;
 }
 
@@ -1060,12 +1219,10 @@ lease_to_client(struct data_string *reply_ret,
 	static struct reply_state reply;
 	struct option_cache *oc;
 	struct data_string packet_oro;
-	isc_boolean_t no_addrs_avail;
+	isc_boolean_t no_resources_avail;
 
 	/* Locate the client.  */
-	if (shared_network_from_packet6(&reply.shared,
-					packet) != ISC_R_SUCCESS)
-		goto exit;
+	shared_network_from_packet6(&reply.shared, packet);
 
 	/* 
 	 * Initialize the reply.
@@ -1100,25 +1257,33 @@ lease_to_client(struct data_string *reply_ret,
 	 * valid for the shared network the client is on.
 	 */
 	if (find_hosts_by_option(&reply.host, packet, packet->options, MDL)) {
-		seek_shared_host(&reply.host, reply.shared);
+		if (reply.shared != NULL) {
+			seek_shared_host(&reply.host, reply.shared);
+		}
 	}
 
 	if ((reply.host == NULL) &&
 	    find_hosts_by_uid(&reply.host, client_id->data, client_id->len,
 			      MDL)) {
-		seek_shared_host(&reply.host, reply.shared);
+		if (reply.shared != NULL) {
+			seek_shared_host(&reply.host, reply.shared);
+		}
 	}
 
-	/* Process the client supplied IA_NA's onto the reply buffer. */
+	/* Process the client supplied IA's onto the reply buffer. */
 	reply.ia_count = 0;
 	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_IA_NA);
-	no_addrs_avail = ISC_FALSE;
+	no_resources_avail = ISC_FALSE;
 	for (; oc != NULL ; oc = oc->next) {
 		isc_result_t status;
 
+		/* A shared network is required. */
+		if (reply.shared == NULL)
+			goto exit;
+
 		/* Start counting resources (addresses) offered. */
 		reply.client_resources = 0;
-		reply.ia_addrs_included = ISC_FALSE;
+		reply.ia_resources_included = ISC_FALSE;
 
 		status = reply_process_ia_na(&reply, oc);
 
@@ -1131,21 +1296,76 @@ lease_to_client(struct data_string *reply_ret,
 			goto exit;
 
 		/*
-		 * If any address can be given to any IA, then do not set the
+		 * If any address cannot be given to any IA, then set the
 		 * NoAddrsAvail status code.
 		 */
 		if (reply.client_resources == 0)
-			no_addrs_avail = ISC_TRUE;
+			no_resources_avail = ISC_TRUE;
+	}
+	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_IA_TA);
+	for (; oc != NULL ; oc = oc->next) {
+		isc_result_t status;
+
+		/* A shared network is required. */
+		if (reply.shared == NULL)
+			goto exit;
+
+		/* Start counting resources (addresses) offered. */
+		reply.client_resources = 0;
+		reply.ia_resources_included = ISC_FALSE;
+
+		status = reply_process_ia_ta(&reply, oc);
+
+		/*
+		 * We continue to try other IA's whether we can address
+		 * this one or not.  Any other result is an immediate fail.
+		 */
+		if ((status != ISC_R_SUCCESS) &&
+		    (status != ISC_R_NORESOURCES))
+			goto exit;
+
+		/*
+		 * If any address cannot be given to any IA, then set the
+		 * NoAddrsAvail status code.
+		 */
+		if (reply.client_resources == 0)
+			no_resources_avail = ISC_TRUE;
 	}
 
-	/* Do IA_TA and IA_PD */
+	/* Same for IA_PD's. */
+	reply.ia_pd_count = 0;
+	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_IA_PD);
+	for (; oc != NULL ; oc = oc->next) {
+		isc_result_t status;
+
+		/* Start counting resources (prefixes) offered. */
+		reply.client_resources = 0;
+		reply.ia_resources_included = ISC_FALSE;
+
+		status = reply_process_ia_pd(&reply, oc);
+
+		/*
+		 * We continue to try other IA_PD's whether we can address
+		 * this one or not.  Any other result is an immediate fail.
+		 */
+		if ((status != ISC_R_SUCCESS) &&
+		    (status != ISC_R_NORESOURCES))
+			goto exit;
+
+		/*
+		 * If any prefix cannot be given to any IA_PD, then
+		 * set the NoPrefixAvail status code.
+		 */
+		if (reply.client_resources == 0)
+			no_resources_avail = ISC_TRUE;
+	}
 
 	/*
 	 * Make no reply if we gave no resources and is not
 	 * for Information-Request.
 	 */
-	if ((reply.ia_count == 0) &&
-	    (packet->dhcpv6_msg_type != DHCPV6_INFORMATION_REQUEST))
+	if ((reply.ia_count == 0) && (reply.ia_pd_count == 0) &&
+	    (reply.packet->dhcpv6_msg_type != DHCPV6_INFORMATION_REQUEST))
 	        goto exit;
 
 	/*
@@ -1172,7 +1392,7 @@ lease_to_client(struct data_string *reply_ret,
 	 * the server.
 	 * Sends a Renew/Rebind if the IA is not in the Reply message.
 	 */
-	if (no_addrs_avail &&
+	if (no_resources_avail && (reply.ia_count != 0) &&
 	    (reply.packet->dhcpv6_msg_type == DHCPV6_SOLICIT))
 	{
 		/* Set the NoAddrsAvail status code. */
@@ -1202,9 +1422,39 @@ lease_to_client(struct data_string *reply_ret,
 					       reply.opt_state, reply.packet,
 					       required_opts_NAA,
 					       NULL);
+	} else if (no_resources_avail && (reply.ia_count == 0) &&
+		   (reply.packet->dhcpv6_msg_type == DHCPV6_SOLICIT))
+	{
+		/* Set the NoPrefixAvail status code. */
+		if (!set_status_code(STATUS_NoPrefixAvail,
+				     "No prefixes available for this "
+				     "interface.", reply.opt_state)) {
+			log_error("lease_to_client: Unable to set "
+				  "NoPrefixAvail status code.");
+			goto exit;
+		}
+
+		/* Rewind the cursor to the start. */
+		reply.cursor = REPLY_OPTIONS_INDEX;
+
+		/*
+		 * Produce an advertise that includes only:
+		 *
+		 * Status code.
+		 * Server DUID.
+		 * Client DUID.
+		 */
+		reply.buf.reply.msg_type = DHCPV6_ADVERTISE;
+		reply.cursor += store_options6((char *)reply.buf.data +
+							reply.cursor,
+					       sizeof(reply.buf) -
+					       		reply.cursor,
+					       reply.opt_state, reply.packet,
+					       required_opts_NAA,
+					       NULL);
 	} else {
 		/*
-		 * Having stored the client's IA_NA's, store any options that
+		 * Having stored the client's IA's, store any options that
 		 * will fit in the remaining space.
 		 */
 		reply.cursor += store_options6((char *)reply.buf.data +
@@ -1293,7 +1543,7 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 	reply->ia_na->ia_type = D6O_IA_NA;
 
 	/* Cache pre-existing IA, if any. */
-	ia_na_hash_lookup(&reply->old_ia_na, ia_na_active,
+	ia_na_hash_lookup(&reply->old_ia, ia_na_active,
 			  (unsigned char *)reply->ia_na->iaid_duid.data,
 			  reply->ia_na->iaid_duid.len, MDL);
 
@@ -1396,9 +1646,10 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 			switch (reply->packet->dhcpv6_msg_type) {
 			      case DHCPV6_SOLICIT:
 				/*
-				 * No address for all the IA's is handled
+				 * No address for any IA is handled
 				 * by the caller.
 				 */
+				/* FALL THROUGH */
 
 			      case DHCPV6_REQUEST:
 				/* Section 18.2.1 (Request):
@@ -1452,7 +1703,7 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 				 * provide zero addresses including zeroed
 				 * lifetimes.
 				 */
-				if (reply->ia_addrs_included)
+				if (reply->ia_resources_included)
 					status = ISC_R_SUCCESS;
 				else
 					goto cleanup;
@@ -1467,7 +1718,7 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 	reply->cursor += store_options6((char *)reply->buf.data + reply->cursor,
 					sizeof(reply->buf) - reply->cursor,
 					reply->reply_ia, reply->packet,
-					required_opts_IA_NA, NULL);
+					required_opts_IA, NULL);
 
 	/* Reset the length of this IA to match what was just written. */
 	putUShort(reply->buf.data + ia_cursor + 2,
@@ -1561,12 +1812,12 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 		}
 
 		/* Remove any old ia_na from the hash. */
-		if (reply->old_ia_na != NULL) {
-			ia_id = &reply->old_ia_na->iaid_duid;
+		if (reply->old_ia != NULL) {
+			ia_id = &reply->old_ia->iaid_duid;
 			ia_na_hash_delete(ia_na_active,
 					  (unsigned char *)ia_id->data,
 					  ia_id->len, MDL);
-			ia_na_dereference(&reply->old_ia_na, MDL);
+			ia_na_dereference(&reply->old_ia, MDL);
 		}
 
 		/* Put new ia_na into the hash. */
@@ -1588,8 +1839,8 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 	 * suggesting the existing database entry to the client.
 	 */
 	} else if ((status != ISC_R_CANCELED) && !reply->static_lease &&
-	    (reply->old_ia_na != NULL)) {
-	    	if (ia_na_equal(reply->old_ia_na, reply->ia_na)) {
+	    (reply->old_ia != NULL)) {
+	    	if (ia_na_equal(reply->old_ia, reply->ia_na)) {
 			lease_in_database = ISC_TRUE;
 		}
 	}
@@ -1605,8 +1856,8 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 		data_string_forget(&data, MDL);
 	if (reply->ia_na != NULL)
 		ia_na_dereference(&reply->ia_na, MDL);
-	if (reply->old_ia_na != NULL)
-		ia_na_dereference(&reply->old_ia_na, MDL);
+	if (reply->old_ia != NULL)
+		ia_na_dereference(&reply->old_ia, MDL);
 	if (reply->lease != NULL) {
 		if (!lease_in_database) {
 			release_lease6(reply->lease->ipv6_pool, reply->lease);
@@ -1890,7 +2141,7 @@ reply_process_addr(struct reply_state *reply, struct option_cache *addr) {
 			goto cleanup;
 	}
 
-	status = reply_process_is_addressed(reply, scope, group);
+	status = reply_process_is_addressed(reply, reply->ia_na, scope, group);
 	if (status != ISC_R_SUCCESS)
 		goto cleanup;
 
@@ -1931,13 +2182,13 @@ address_is_owned(struct reply_state *reply, struct iaddr *addr) {
 		return ISC_FALSE;
 	}
 
-	if ((reply->old_ia_na == NULL) || (reply->old_ia_na->num_iaaddr == 0))
+	if ((reply->old_ia == NULL) || (reply->old_ia->num_iaaddr == 0))
 		return ISC_FALSE;
 
-	for (i = 0 ; i < reply->old_ia_na->num_iaaddr ; i++) {
+	for (i = 0 ; i < reply->old_ia->num_iaaddr ; i++) {
 		struct iaaddr *tmp;
 
-		tmp = reply->old_ia_na->iaaddr[i];
+		tmp = reply->old_ia->iaaddr[i];
 
 		if (memcmp(addr->iabuf, &tmp->addr, 16) == 0) {
 			iaaddr_reference(&reply->lease, tmp, MDL);
@@ -1946,6 +2197,350 @@ address_is_owned(struct reply_state *reply, struct iaddr *addr) {
 	}
 
 	return ISC_FALSE;
+}
+
+/* Process a client-supplied IA_TA.  This may append options to the tail of
+ * the reply packet being built in the reply_state structure.
+ */
+static isc_result_t
+reply_process_ia_ta(struct reply_state *reply, struct option_cache *ia) {
+	isc_result_t status = ISC_R_SUCCESS;
+	u_int32_t iaid;
+	unsigned ia_cursor;
+	struct option_state *packet_ia;
+	struct option_cache *oc;
+	struct data_string ia_data, data;
+	struct data_string iaaddr;
+	u_int32_t pref_life, valid_life;
+
+	/* Initialize values that will get cleaned up on return. */
+	packet_ia = NULL;
+	memset(&ia_data, 0, sizeof(ia_data));
+	memset(&data, 0, sizeof(data));
+	memset(&iaaddr, 0, sizeof(iaaddr));
+
+	/* Make sure there is at least room for the header. */
+	if ((reply->cursor + IA_TA_OFFSET + 4) > sizeof(reply->buf)) {
+		log_error("reply_process_ia_ta: Reply too long for IA.");
+		return ISC_R_NOSPACE;
+	}
+
+
+	/* Fetch the IA_TA contents. */
+	if (!get_encapsulated_IA_state(&packet_ia, &ia_data, reply->packet,
+				       ia, IA_TA_OFFSET)) {
+		log_error("reply_process_ia_ta: error evaluating ia_ta");
+		status = ISC_R_FAILURE;
+		goto cleanup;
+	}
+
+	/* Extract IA_TA header contents. */
+	iaid = getULong(ia_data.data);
+
+	/* Create an IA_TA structure. */
+	if (ia_na_allocate(&reply->ia_ta, iaid, (char *)reply->client_id.data, 
+			   reply->client_id.len, MDL) != ISC_R_SUCCESS) {
+		log_error("lease_to_client: no memory for ia_ta.");
+		status = ISC_R_NOMEMORY;
+		goto cleanup;
+	}
+	reply->ia_ta->ia_type = D6O_IA_TA;
+
+	/* Cache pre-existing IA, if any. */
+	ia_na_hash_lookup(&reply->old_ia, ia_ta_active,
+			  (unsigned char *)reply->ia_ta->iaid_duid.data,
+			  reply->ia_ta->iaid_duid.len, MDL);
+
+	/*
+	 * Create an option cache to carry the IA_TA option contents, and
+	 * execute any user-supplied values into it.
+	 */
+	if (!option_state_allocate(&reply->reply_ia, MDL)) {
+		status = ISC_R_NOMEMORY;
+		goto cleanup;
+	}
+
+	/*
+	 * Temporary leases are dynamic by definition.
+	 */
+	reply->static_lease = ISC_FALSE;
+
+	/*
+	 * Save the cursor position at the start of the IA, so we can
+	 * set length later.  We write a temporary
+	 * header out now just in case we decide to adjust the packet
+	 * within sub-process functions.
+	 */
+	ia_cursor = reply->cursor;
+
+	/* Initialize the IA_TA header.  First the code. */
+	putUShort(reply->buf.data + reply->cursor, (unsigned)D6O_IA_TA);
+	reply->cursor += 2;
+
+	/* Then option length. */
+	putUShort(reply->buf.data + reply->cursor, 0x04u);
+	reply->cursor += 2;
+
+	/* Then IA_TA header contents; IAID. */
+	putULong(reply->buf.data + reply->cursor, iaid);
+	reply->cursor += 4;
+
+	/* 
+	 * Deal with an IAADDR for lifetimes.
+	 */
+	reply->valid = reply->prefer = 0xffffffff;
+	reply->client_valid = reply->client_prefer = 0;
+	oc = lookup_option(&dhcpv6_universe, packet_ia, D6O_IAADDR);
+	if (oc != NULL) {
+		if (!evaluate_option_cache(&iaaddr, reply->packet,
+					   NULL, NULL,
+					   reply->packet->options, NULL,
+					   &global_scope, oc, MDL) ||
+		    (iaaddr.len < IAADDR_OFFSET)) {
+			log_error("reply_process_ia_ta: error "
+				  "evaluating IAADDR.");
+			status = ISC_R_FAILURE;
+			goto cleanup;
+		}
+		/* The first 16 bytes are the IPv6 address. */
+		pref_life = getULong(iaaddr.data + 16);
+		valid_life = getULong(iaaddr.data + 20);
+
+		if ((reply->client_valid == 0) ||
+		    (reply->client_valid > valid_life))
+			reply->client_valid = valid_life;
+
+		if ((reply->client_prefer == 0) ||
+		    (reply->client_prefer > pref_life))
+			reply->client_prefer = pref_life;
+	}
+	reply->ia_count++;
+
+	/*
+	 * Cancel if not Solicit or Request.
+	 */
+	if ((reply->packet->dhcpv6_msg_type != DHCPV6_SOLICIT) &&
+	    (reply->packet->dhcpv6_msg_type != DHCPV6_REQUEST)) {
+		if (!set_status_code(STATUS_UnspecFail,
+				     "Unsupported message for temporary.",
+				     reply->reply_ia)) {
+			log_error("reply_process_ia_ta: Unable to set "
+				  "UnspecFail status code.");
+			status = ISC_R_FAILURE;
+			goto cleanup;
+		}
+		status = ISC_R_CANCELED;
+		goto store;
+	}
+
+	/*
+	 * Give the client temporary addresses.
+	 */
+	status = find_client_temporaries(reply);
+	if (status == ISC_R_NORESOURCES) {
+		switch (reply->packet->dhcpv6_msg_type) {
+		      case DHCPV6_SOLICIT:
+			/*
+			 * No address for any IA is handled
+			 * by the caller.
+			 */
+			/* FALL THROUGH */
+
+		      case DHCPV6_REQUEST:
+			/* Section 18.2.1 (Request):
+			 *
+			 * If the server cannot assign any addresses to
+			 * an IA in the message from the client, the
+			 * server MUST include the IA in the Reply
+			 * message with no addresses in the IA and a
+			 * Status Code option in the IA containing
+			 * status code NoAddrsAvail.
+			 */
+			option_state_dereference(&reply->reply_ia, MDL);
+			if (!option_state_allocate(&reply->reply_ia,  MDL)) {
+				log_error("reply_process_ia_ta: No "
+					  "memory for option state wipe.");
+				status = ISC_R_NOMEMORY;
+				goto cleanup;
+			}
+
+			if (!set_status_code(STATUS_NoAddrsAvail,
+					     "No addresses available "
+					     "for this interface.",
+					      reply->reply_ia)) {
+				log_error("reply_process_ia_ta: Unable "
+					  "to set NoAddrsAvail status code.");
+				status = ISC_R_FAILURE;
+				goto cleanup;
+			}
+
+			status = ISC_R_SUCCESS;
+			break;
+
+		      default:
+			/* Should not happen! */
+			goto cleanup;
+		}
+	} else if (status != ISC_R_SUCCESS)
+		goto cleanup;
+
+      store:
+	reply->cursor += store_options6((char *)reply->buf.data + reply->cursor,
+					sizeof(reply->buf) - reply->cursor,
+					reply->reply_ia, reply->packet,
+					required_opts_IA, NULL);
+
+	/* Reset the length of this IA to match what was just written. */
+	putUShort(reply->buf.data + ia_cursor + 2,
+		  reply->cursor - (ia_cursor + 4));
+
+	/*
+	 * Consume the new changes into the database (if any have been
+	 * attached to the ia_ta).
+	 *
+	 * Loop through the assigned dynamic addresses, referencing the
+	 * leases onto this IA_TA rather than any old ones, and updating
+	 * pool timers for each (if any).
+	 */
+	if ((status != ISC_R_CANCELED) &&
+	    (reply->buf.reply.msg_type == DHCPV6_REPLY) &&
+	    (reply->ia_ta->num_iaaddr != 0)) {
+		struct iaaddr *tmp;
+		struct data_string *ia_id;
+		int i;
+
+		for (i = 0 ; i < reply->ia_ta->num_iaaddr ; i++) {
+			tmp = reply->ia_ta->iaaddr[i];
+
+			if (tmp->ia_na != NULL)
+				ia_na_dereference(&tmp->ia_na, MDL);
+			ia_na_reference(&tmp->ia_na, reply->ia_ta, MDL);
+
+			schedule_lease_timeout(tmp->ipv6_pool);
+
+			/*
+			 * Perform ddns updates.
+			 */
+			oc = lookup_option(&server_universe, reply->opt_state,
+					   SV_DDNS_UPDATES);
+			if ((oc == NULL) ||
+			    evaluate_boolean_option_cache(NULL, reply->packet,
+							  NULL, NULL,
+							reply->packet->options,
+							  reply->opt_state,
+							  &tmp->scope,
+							  oc, MDL)) {
+				ddns_updates(reply->packet, NULL, NULL,
+					     tmp, NULL, reply->opt_state);
+			}
+		}
+
+		/* Remove any old ia_ta from the hash. */
+		if (reply->old_ia != NULL) {
+			ia_id = &reply->old_ia->iaid_duid;
+			ia_na_hash_delete(ia_ta_active,
+					  (unsigned char *)ia_id->data,
+					  ia_id->len, MDL);
+			ia_na_dereference(&reply->old_ia, MDL);
+		}
+
+		/* Put new ia_ta into the hash. */
+		ia_id = &reply->ia_ta->iaid_duid;
+		ia_na_hash_add(ia_ta_active, (unsigned char *)ia_id->data,
+			       ia_id->len, reply->ia_ta, MDL);
+
+		write_ia(reply->ia_ta);
+	}
+
+      cleanup:
+	if (packet_ia != NULL)
+		option_state_dereference(&packet_ia, MDL);
+	if (iaaddr.data != NULL)
+		data_string_forget(&iaaddr, MDL);
+	if (reply->reply_ia != NULL)
+		option_state_dereference(&reply->reply_ia, MDL);
+	if (ia_data.data != NULL)
+		data_string_forget(&ia_data, MDL);
+	if (data.data != NULL)
+		data_string_forget(&data, MDL);
+	if (reply->ia_ta != NULL)
+		ia_na_dereference(&reply->ia_ta, MDL);
+	if (reply->old_ia != NULL)
+		ia_na_dereference(&reply->old_ia, MDL);
+
+	/*
+	 * ISC_R_CANCELED is a status code used by the addr processing to
+	 * indicate we're replying with a status code.  This is still a
+	 * success at higher layers.
+	 */
+	return((status == ISC_R_CANCELED) ? ISC_R_SUCCESS : status);
+}
+
+/*
+ * Get a temporary address per prefix.
+ */
+static isc_result_t
+find_client_temporaries(struct reply_state *reply) {
+	struct shared_network *shared;
+	int i;
+	struct ipv6_pool *p;
+	isc_result_t status;
+	unsigned int attempts;
+	struct iaddr send_addr;
+
+	/*
+	 * No pools, we're done.
+	 */
+	shared = reply->shared;
+	if (shared->ipv6_pools == NULL) {
+		log_debug("Unable to get client addresses: "
+			  "no IPv6 pools on this shared network");
+		return ISC_R_NORESOURCES;
+	}
+
+	status = ISC_R_NORESOURCES;
+	for (i = 0;; i++) {
+		p = shared->ipv6_pools[i];
+		if (p == NULL) {
+			break;
+		}
+		if ((p->bits & POOL_IS_FOR_TEMP) == 0) {
+			continue;
+		}
+
+		/*
+		 * Get an address in this temporary pool.
+		 */
+		status = activate_lease6(p, &reply->lease, &attempts,
+					 &reply->client_id, 0);
+		if (status != ISC_R_SUCCESS) {
+			log_debug("Unable to get a temporary address.");
+			goto cleanup;
+		}
+
+		status = reply_process_is_addressed(reply,
+						    reply->ia_ta,
+						    &reply->lease->scope,
+						    reply->shared->group);
+		if (status != ISC_R_SUCCESS) {
+			goto cleanup;
+		}
+		send_addr.len = 16;
+		memcpy(send_addr.iabuf, &reply->lease->addr, 16);
+		status = reply_process_send_addr(reply, &send_addr);
+		if (status != ISC_R_SUCCESS) {
+			goto cleanup;
+		}
+		if (reply->lease != NULL) {
+			iaaddr_dereference(&reply->lease, MDL);
+		}
+	}
+
+      cleanup:
+	if (reply->lease != NULL) {
+		iaaddr_dereference(&reply->lease, MDL);
+	}
+	return status;
 }
 
 /*
@@ -2011,9 +2606,9 @@ find_client_address(struct reply_state *reply) {
 		goto send_addr;
 	}
 
-	if (reply->old_ia_na != NULL)  {
-		for (i = 0 ; i < reply->old_ia_na->num_iaaddr ; i++) {
-			lease = reply->old_ia_na->iaaddr[i];
+	if (reply->old_ia != NULL)  {
+		for (i = 0 ; i < reply->old_ia->num_iaaddr ; i++) {
+			lease = reply->old_ia->iaaddr[i];
 
 			best_lease = lease_compare(lease, best_lease);
 		}
@@ -2053,7 +2648,7 @@ find_client_address(struct reply_state *reply) {
 	memcpy(send_addr.iabuf, &reply->lease->addr, 16);
 
       send_addr:
-	status = reply_process_is_addressed(reply, scope, group);
+	status = reply_process_is_addressed(reply, reply->ia_na, scope, group);
 	if (status != ISC_R_SUCCESS)
 		return status;
 
@@ -2066,7 +2661,7 @@ find_client_address(struct reply_state *reply) {
  * into the option state.
  */
 static isc_result_t
-reply_process_is_addressed(struct reply_state *reply,
+reply_process_is_addressed(struct reply_state *reply, struct ia_na *ia,
 			   struct binding_scope **scope, struct group *group)
 {
 	isc_result_t status = ISC_R_SUCCESS;
@@ -2161,18 +2756,18 @@ reply_process_is_addressed(struct reply_state *reply,
 							reply->send_valid;
 		renew_lease6(reply->lease->ipv6_pool, reply->lease);
 
-		status = ia_na_add_iaaddr(reply->ia_na, reply->lease, MDL);
+		status = ia_na_add_iaaddr(ia, reply->lease, MDL);
 		if (status != ISC_R_SUCCESS) {
-			log_fatal("reply_process_addr: Unable to attach lease "
-				  "to new IA: %s", isc_result_totext(status));
+			log_fatal("reply_process_is_addressed: Unable to "
+				  "attach lease to new IA: %s",
+				  isc_result_totext(status));
 		}
 
 		/*
 		 * If this is a new lease, make sure it is attached somewhere.
 		 */
 		if (reply->lease->ia_na == NULL) {
-			ia_na_reference(&reply->lease->ia_na, reply->ia_na,
-					MDL);
+			ia_na_reference(&reply->lease->ia_na, ia, MDL);
 		}
 	}
 
@@ -2191,7 +2786,7 @@ reply_process_is_addressed(struct reply_state *reply,
 	return status;
 }
 
-/* Simply send an IAADDR within the IA_NA scope as described. */
+/* Simply send an IAADDR within the IA scope as described. */
 static isc_result_t
 reply_process_send_addr(struct reply_state *reply, struct iaddr *addr) {
 	isc_result_t status = ISC_R_SUCCESS;
@@ -2202,8 +2797,8 @@ reply_process_send_addr(struct reply_state *reply, struct iaddr *addr) {
 	/* Now append the lease. */
 	data.len = IAADDR_OFFSET;
 	if (!buffer_allocate(&data.buffer, data.len, MDL)) {
-		log_error("reply_process_send_addr: out of memory allocating "
-			  "new IAADDR buffer.");
+		log_error("reply_process_send_addr: out of memory"
+			  "allocating new IAADDR buffer.");
 		status = ISC_R_NOMEMORY;
 		goto cleanup;
 	}
@@ -2216,13 +2811,13 @@ reply_process_send_addr(struct reply_state *reply, struct iaddr *addr) {
 	if (!append_option_buffer(&dhcpv6_universe, reply->reply_ia,
 				  data.buffer, data.buffer->data,
 				  data.len, D6O_IAADDR, 0)) {
-		log_error("reply_process_send_addr: unable to save IAADDR "
-			  "option");
+		log_error("reply_process_send_addr: unable "
+			  "to save IAADDR option");
 		status = ISC_R_FAILURE;
 		goto cleanup;
 	}
 
-	reply->ia_addrs_included = ISC_TRUE;
+	reply->ia_resources_included = ISC_TRUE;
 
       cleanup:
 	if (data.data != NULL)
@@ -2307,6 +2902,1000 @@ lease_compare(struct iaaddr *alpha, struct iaaddr *beta) {
 	return NULL;
 }
 
+/* Process a client-supplied IA_PD.  This may append options to the tail of
+ * the reply packet being built in the reply_state structure.
+ */
+static isc_result_t
+reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia_pd) {
+	isc_result_t status = ISC_R_SUCCESS;
+	u_int32_t iaid;
+	unsigned ia_cursor;
+	struct option_state *packet_ia;
+	struct option_cache *oc;
+	struct data_string ia_pd_data, data;
+	isc_boolean_t prefix_in_database;
+
+	/* Initialize values that will get cleaned up on return. */
+	packet_ia = NULL;
+	memset(&ia_pd_data, 0, sizeof(ia_pd_data));
+	memset(&data, 0, sizeof(data));
+	prefix_in_database = ISC_FALSE;
+	/* 
+	 * Note that find_client_prefix() may set reply->prefix. 
+	 */
+
+	/* Make sure there is at least room for the header. */
+	if ((reply->cursor + IA_PD_OFFSET + 4) > sizeof(reply->buf)) {
+		log_error("reply_process_ia_pd: Reply too long for IA.");
+		return ISC_R_NOSPACE;
+	}
+
+
+	/* Fetch the IA_PD contents. */
+	if (!get_encapsulated_IA_state(&packet_ia, &ia_pd_data, reply->packet,
+				       ia_pd, IA_PD_OFFSET)) {
+		log_error("reply_process_ia_pd: error evaluating ia_pd");
+		status = ISC_R_FAILURE;
+		goto cleanup;
+	}
+
+	/* Extract IA_PD header contents. */
+	iaid = getULong(ia_pd_data.data);
+	reply->renew = getULong(ia_pd_data.data + 4);
+	reply->rebind = getULong(ia_pd_data.data + 8);
+
+	/* Create an IA_PD structure. */
+	if (ia_pd_allocate(&reply->ia_pd, iaid, (char *)reply->client_id.data, 
+			   reply->client_id.len, MDL) != ISC_R_SUCCESS) {
+		log_error("reply_process_ia_pd: no memory for ia_pd.");
+		status = ISC_R_NOMEMORY;
+		goto cleanup;
+	}
+
+	/* Cache pre-existing IA_PD, if any. */
+	ia_pd_hash_lookup(&reply->old_ia_pd, ia_pd_active,
+			  (unsigned char *)reply->ia_pd->iaid_duid.data,
+			  reply->ia_pd->iaid_duid.len, MDL);
+
+	/*
+	 * Create an option cache to carry the IA_PD option contents, and
+	 * execute any user-supplied values into it.
+	 */
+	if (!option_state_allocate(&reply->reply_ia, MDL)) {
+		status = ISC_R_NOMEMORY;
+		goto cleanup;
+	}
+
+	/* Check & count the fixed prefix host records. */
+	reply->static_prefixes = 0;
+	if ((reply->host != NULL) && (reply->host->fixed_prefix != NULL)) {
+		struct iaddrcidrnetlist *fp;
+
+		for (fp = reply->host->fixed_prefix; fp != NULL;
+		     fp = fp->next) {
+			reply->static_prefixes += 1;
+		}
+	}
+
+	/*
+	 * Save the cursor position at the start of the IA_PD, so we can
+	 * set length and adjust t1/t2 values later.  We write a temporary
+	 * header out now just in case we decide to adjust the packet
+	 * within sub-process functions.
+	 */
+	ia_cursor = reply->cursor;
+
+	/* Initialize the IA_PD header.  First the code. */
+	putUShort(reply->buf.data + reply->cursor, (unsigned)D6O_IA_PD);
+	reply->cursor += 2;
+
+	/* Then option length. */
+	putUShort(reply->buf.data + reply->cursor, 0x0Cu);
+	reply->cursor += 2;
+
+	/* Then IA_PD header contents; IAID. */
+	putULong(reply->buf.data + reply->cursor, iaid);
+	reply->cursor += 4;
+
+	/* We store the client's t1 for now, and may over-ride it later. */
+	putULong(reply->buf.data + reply->cursor, reply->renew);
+	reply->cursor += 4;
+
+	/* We store the client's t2 for now, and may over-ride it later. */
+	putULong(reply->buf.data + reply->cursor, reply->rebind);
+	reply->cursor += 4;
+
+	/* 
+	 * For each prefix in this IA_PD, decide what to do about it.
+	 */
+	oc = lookup_option(&dhcpv6_universe, packet_ia, D6O_IAPREFIX);
+	reply->valid = reply->prefer = 0xffffffff;
+	reply->client_valid = reply->client_prefer = 0;
+	reply->preflen = -1;
+	for (; oc != NULL ; oc = oc->next) {
+		status = reply_process_prefix(reply, oc);
+
+		/*
+		 * Canceled means we did not allocate prefixes to the
+		 * client, but we're "done" with this IA - we set a status
+		 * code.  So transmit this reply, e.g., move on to the next
+		 * IA.
+		 */
+		if (status == ISC_R_CANCELED)
+			break;
+
+		if ((status != ISC_R_SUCCESS) && (status != ISC_R_ADDRINUSE))
+			goto cleanup;
+	}
+
+	reply->ia_pd_count++;
+
+	/*
+	 * If we fell through the above and never gave the client
+	 * a prefix, give it one now.
+	 */
+	if ((status != ISC_R_CANCELED) && (reply->client_resources == 0)) {
+		status = find_client_prefix(reply);
+
+		if (status == ISC_R_NORESOURCES) {
+			switch (reply->packet->dhcpv6_msg_type) {
+			      case DHCPV6_SOLICIT:
+				/*
+				 * No prefix for any IA is handled
+				 * by the caller.
+				 */
+				/* FALL THROUGH */
+
+			      case DHCPV6_REQUEST:
+				/* Same than for addresses. */
+				option_state_dereference(&reply->reply_ia, MDL);
+				if (!option_state_allocate(&reply->reply_ia,
+							   MDL))
+				{
+					log_error("reply_process_ia_pd: No "
+						  "memory for option state "
+						  "wipe.");
+					status = ISC_R_NOMEMORY;
+					goto cleanup;
+				}
+
+				if (!set_status_code(STATUS_NoPrefixAvail,
+						     "No prefixes available "
+						     "for this interface.",
+						      reply->reply_ia)) {
+					log_error("reply_process_ia_pd: "
+						  "Unable to set "
+						  "NoPrefixAvail status "
+						  "code.");
+					status = ISC_R_FAILURE;
+					goto cleanup;
+				}
+
+				status = ISC_R_SUCCESS;
+				break;
+
+			      default:
+				if (reply->ia_resources_included)
+					status = ISC_R_SUCCESS;
+				else
+					goto cleanup;
+				break;
+			}
+		}
+
+		if (status != ISC_R_SUCCESS)
+			goto cleanup;
+	}
+
+	reply->cursor += store_options6((char *)reply->buf.data + reply->cursor,
+					sizeof(reply->buf) - reply->cursor,
+					reply->reply_ia, reply->packet,
+					required_opts_IA_PD, NULL);
+
+	/* Reset the length of this IA_PD to match what was just written. */
+	putUShort(reply->buf.data + ia_cursor + 2,
+		  reply->cursor - (ia_cursor + 4));
+
+	/*
+	 * T1/T2 time selection is kind of weird.  We actually use DHCP
+	 * (v4) scoped options as handy existing places where these might
+	 * be configured by an administrator.  A value of zero tells the
+	 * client it may choose its own renewal time.
+	 */
+	reply->renew = 0;
+	oc = lookup_option(&dhcp_universe, reply->opt_state,
+			   DHO_DHCP_RENEWAL_TIME);
+	if (oc != NULL) {
+		if (!evaluate_option_cache(&data, reply->packet, NULL, NULL,
+					   reply->packet->options,
+					   reply->opt_state, &global_scope,
+					   oc, MDL) ||
+		    (data.len != 4)) {
+			log_error("Invalid renewal time.");
+		} else {
+			reply->renew = getULong(data.data);
+		}
+
+		if (data.data != NULL)
+			data_string_forget(&data, MDL);
+	}
+	putULong(reply->buf.data + ia_cursor + 8, reply->renew);
+
+	/* Now T2. */
+	reply->rebind = 0;
+	oc = lookup_option(&dhcp_universe, reply->opt_state,
+			   DHO_DHCP_REBINDING_TIME);
+	if (oc != NULL) {
+		if (!evaluate_option_cache(&data, reply->packet, NULL, NULL,
+					   reply->packet->options,
+					   reply->opt_state, &global_scope,
+					   oc, MDL) ||
+		    (data.len != 4)) {
+			log_error("Invalid rebinding time.");
+		} else {
+			reply->rebind = getULong(data.data);
+		}
+
+		if (data.data != NULL)
+			data_string_forget(&data, MDL);
+	}
+	putULong(reply->buf.data + ia_cursor + 12, reply->rebind);
+
+	/*
+	 * If this is not a 'soft' binding, consume the new changes into
+	 * the database (if any have been attached to the ia_pd).
+	 *
+	 * Loop through the assigned dynamic prefixes, referencing the
+	 * prefixes onto this IA_PD rather than any old ones, and updating
+	 * prefix pool timers for each (if any).
+	 */
+	if ((status != ISC_R_CANCELED) && (reply->static_prefixes == 0) &&
+	    (reply->buf.reply.msg_type == DHCPV6_REPLY) &&
+	    (reply->ia_pd->num_iaprefix != 0)) {
+		struct iaprefix *tmp;
+		struct data_string *ia_id;
+		int i;
+
+		for (i = 0 ; i < reply->ia_pd->num_iaprefix ; i++) {
+			tmp = reply->ia_pd->iaprefix[i];
+
+			if (tmp->ia_pd != NULL)
+				ia_pd_dereference(&tmp->ia_pd, MDL);
+			ia_pd_reference(&tmp->ia_pd, reply->ia_pd, MDL);
+
+			schedule_prefix_timeout(tmp->ipv6_ppool);
+		}
+
+		/* Remove any old ia_pd from the hash. */
+		if (reply->old_ia_pd != NULL) {
+			ia_id = &reply->old_ia_pd->iaid_duid;
+			ia_pd_hash_delete(ia_pd_active,
+					  (unsigned char *)ia_id->data,
+					  ia_id->len, MDL);
+			ia_pd_dereference(&reply->old_ia_pd, MDL);
+		}
+
+		/* Put new ia_pd into the hash. */
+		ia_id = &reply->ia_pd->iaid_duid;
+		ia_pd_hash_add(ia_pd_active, (unsigned char *)ia_id->data,
+			       ia_id->len, reply->ia_pd, MDL);
+
+		write_ia_pd(reply->ia_pd);
+
+		/* 
+		 * Note that we wrote the prefix into the database,
+		 * so that we know not to release it when we're done
+		 * with this function.
+		 */
+		prefix_in_database = ISC_TRUE;
+
+	/*
+	 * If this is a soft binding, we will check to see if we are 
+	 * suggesting the existing database entry to the client.
+	 */
+	} else if ((status != ISC_R_CANCELED) &&
+		   (reply->static_prefixes == 0) &&
+		   (reply->old_ia_pd != NULL)) {
+	    	if (ia_pd_equal(reply->old_ia_pd, reply->ia_pd)) {
+			prefix_in_database = ISC_TRUE;
+		}
+	}
+
+      cleanup:
+	if (packet_ia != NULL)
+		option_state_dereference(&packet_ia, MDL);
+	if (reply->reply_ia != NULL)
+		option_state_dereference(&reply->reply_ia, MDL);
+	if (ia_pd_data.data != NULL)
+		data_string_forget(&ia_pd_data, MDL);
+	if (data.data != NULL)
+		data_string_forget(&data, MDL);
+	if (reply->old_ia_pd != NULL)
+		ia_pd_dereference(&reply->old_ia_pd, MDL);
+	if (reply->prefix != NULL)
+		iaprefix_dereference(&reply->prefix, MDL);
+	if (!prefix_in_database) {
+		/*
+		 * Cleanup soft bindings, assume:
+		 *  reply->static_prefixes == 0
+		 *  reply->ia_pd != NULL
+		 *  reply->ia_pd->num_iaprefix != 0
+		 */
+		struct iaprefix *tmp;
+		int i;
+
+		for (i = 0 ; i < reply->ia_pd->num_iaprefix ; i++) {
+			tmp = reply->ia_pd->iaprefix[i];
+			release_prefix6(tmp->ipv6_ppool, tmp);
+		}
+	}
+	if (reply->ia_pd != NULL)
+		ia_pd_dereference(&reply->ia_pd, MDL);
+
+	/*
+	 * ISC_R_CANCELED is a status code used by the prefix processing to
+	 * indicate we're replying with a status code.  This is still a
+	 * success at higher layers.
+	 */
+	return((status == ISC_R_CANCELED) ? ISC_R_SUCCESS : status);
+}
+
+/*
+ * Process an IAPREFIX within a given IA_PD, storing any IAPREFIX reply
+ * contents into the reply's current ia_pd-scoped option cache.  Returns
+ * ISC_R_CANCELED in the event we are replying with a status code and do
+ * not wish to process more IAPREFIXes within this IA_PD.
+ */
+static isc_result_t
+reply_process_prefix(struct reply_state *reply, struct option_cache *pref) {
+	u_int32_t pref_life, valid_life;
+	struct binding_scope **scope;
+	struct group *group;
+	struct iaddrcidrnet tmp_pref;
+	struct option_cache *oc;
+	struct data_string iapref, data;
+	isc_boolean_t held_prefix;
+	isc_result_t status = ISC_R_SUCCESS;
+
+	/* Initializes values that will be cleaned up. */
+	held_prefix = ISC_FALSE;
+	memset(&iapref, 0, sizeof(iapref));
+	memset(&data, 0, sizeof(data));
+	/* Note that reply->prefix may be set by prefix_is_owned() */
+
+	/*
+	 * There is no point trying to process an incoming prefix if there
+	 * is no room for an outgoing prefix.
+	 */
+	if ((reply->cursor + 29) > sizeof(reply->buf)) {
+		log_error("reply_process_prefix: Out of room for prefix.");
+		return ISC_R_NOSPACE;
+	}
+
+	/* Extract this IAPREFIX option. */
+	if (!evaluate_option_cache(&iapref, reply->packet, NULL, NULL, 
+				   reply->packet->options, NULL, &global_scope,
+				   pref, MDL) ||
+	    (iapref.len < IAPREFIX_OFFSET)) {
+		log_error("reply_process_prefix: error evaluating IAPREFIX.");
+		status = ISC_R_FAILURE;
+		goto cleanup;
+	}
+
+	/*
+	 * Layout: preferred and valid lifetimes followed by the prefix
+	 * length and the IPv6 address.
+	 */
+	pref_life = getULong(iapref.data);
+	valid_life = getULong(iapref.data + 4);
+
+	if ((reply->client_valid == 0) ||
+	    (reply->client_valid > valid_life))
+		reply->client_valid = valid_life;
+
+	if ((reply->client_prefer == 0) ||
+	    (reply->client_prefer > pref_life))
+		reply->client_prefer = pref_life;
+
+	/* 
+	 * Clients may choose to send ::/0 as a prefix, with the idea to give
+	 * hints about preferred-lifetime or valid-lifetime.
+	 */
+	tmp_pref.lo_addr.len = 16;
+	memset(tmp_pref.lo_addr.iabuf, 0, 16);
+	if ((iapref.data[8] == 0) &&
+	    (memcmp(iapref.data + 9, tmp_pref.lo_addr.iabuf, 16) == 0)) {
+		/* Status remains success; we just ignore this one. */
+		goto cleanup;
+	}
+
+	/*
+	 * Clients may choose to send ::/X as a prefix to specify a
+	 * preferred/requested prefix length. Note X is never zero here.
+	 */
+	tmp_pref.bits = (int) iapref.data[8];
+	if (reply->preflen < 0) {
+		/* Cache the first preferred prefix length. */
+		reply->preflen = tmp_pref.bits;
+	}
+	if (memcmp(iapref.data + 9, tmp_pref.lo_addr.iabuf, 16) == 0) {
+		goto cleanup;
+	}
+
+	memcpy(tmp_pref.lo_addr.iabuf, iapref.data + 9, 16);
+
+	/* Verify the prefix belongs to the client. */
+	if (!prefix_is_owned(reply, &tmp_pref)) {
+		/* Same than for addresses. */
+		if ((reply->packet->dhcpv6_msg_type == DHCPV6_SOLICIT) ||
+		    (reply->packet->dhcpv6_msg_type == DHCPV6_REQUEST) ||
+		    (reply->packet->dhcpv6_msg_type == DHCPV6_REBIND)) {
+			status = reply_process_try_prefix(reply, &tmp_pref);
+
+			/* Either error out or skip this prefix. */
+			if ((status != ISC_R_SUCCESS) && 
+			    (status != ISC_R_ADDRINUSE)) 
+				goto cleanup;
+
+			if (reply->prefix == NULL) {
+				if (reply->packet->dhcpv6_msg_type ==
+							DHCPV6_REBIND) {
+					reply->send_prefer = 0;
+					reply->send_valid = 0;
+					goto send_pref;
+				}
+
+				/* status remains success - ignore */
+				goto cleanup;
+			}
+
+			held_prefix = ISC_TRUE;
+
+		/*
+		 * RFC3633 section 18.2.3:
+		 *
+		 * If the delegating router cannot find a binding
+		 * for the requesting router's IA_PD the delegating
+		 * router returns the IA_PD containing no prefixes
+		 * with a Status Code option set to NoBinding in the
+		 * Reply message.
+		 *
+		 * On mismatch we (ab)use this pretending we have not the IA
+		 * as soon as we have not a prefix.
+		 */
+		} else if (reply->packet->dhcpv6_msg_type == DHCPV6_RENEW) {
+			/* Rewind the IA_PD to empty. */
+			option_state_dereference(&reply->reply_ia, MDL);
+			if (!option_state_allocate(&reply->reply_ia, MDL)) {
+				log_error("reply_process_prefix: No memory "
+					  "for option state wipe.");
+				status = ISC_R_NOMEMORY;
+				goto cleanup;
+			}
+
+			/* Append a NoBinding status code.  */
+			if (!set_status_code(STATUS_NoBinding,
+					     "Prefix not bound to this "
+					     "interface.", reply->reply_ia)) {
+				log_error("reply_process_prefix: Unable to "
+					  "attach status code.");
+				status = ISC_R_FAILURE;
+				goto cleanup;
+			}
+
+			/* Fin (no more IAPREFIXes). */
+			status = ISC_R_CANCELED;
+			goto cleanup;
+		} else {
+			log_error("It is impossible to lease a client that is "
+				  "not sending a solicit, request, renew, or "
+				  "rebind message.");
+			status = ISC_R_FAILURE;
+			goto cleanup;
+		}
+	}
+
+	if (reply->static_prefixes > 0) {
+		if (reply->host == NULL)
+			log_fatal("Impossible condition at %s:%d.", MDL);
+
+		scope = &global_scope;
+		group = reply->host->group;
+	} else {
+		if (reply->prefix == NULL)
+			log_fatal("Impossible condition at %s:%d.", MDL);
+
+		scope = &reply->prefix->scope;
+		group = root_group;
+	}
+
+	/*
+	 * If client_resources is nonzero, then the reply_process_is_prefixed
+	 * function has executed configuration state into the reply option
+	 * cache.  We will use that valid cache to derive configuration for
+	 * whether or not to engage in additional prefixes, and similar.
+	 */
+	if (reply->client_resources != 0) {
+		unsigned limit = 1;
+
+		/*
+		 * Does this client have "enough" prefixes already?  Default
+		 * to one.  Everybody gets one, and one should be enough for
+		 * anybody.
+		 */
+		oc = lookup_option(&server_universe, reply->opt_state,
+				   SV_LIMIT_PREFS_PER_IA);
+		if (oc != NULL) {
+			if (!evaluate_option_cache(&data, reply->packet,
+						   NULL, NULL,
+						   reply->packet->options,
+						   reply->opt_state,
+						   scope, oc, MDL) ||
+			    (data.len != 4)) {
+				log_error("reply_process_prefix: unable to "
+					  "evaluate prefs-per-ia value.");
+				status = ISC_R_FAILURE;
+				goto cleanup;
+			}
+
+			limit = getULong(data.data);
+			data_string_forget(&data, MDL);
+		}
+
+		/*
+		 * If we wish to limit the client to a certain number of
+		 * prefixes, then omit the prefix from the reply.
+		 */
+		if (reply->client_resources >= limit)
+			goto cleanup;
+	}
+
+	status = reply_process_is_prefixed(reply, reply->ia_pd, scope, group);
+	if (status != ISC_R_SUCCESS)
+		goto cleanup;
+
+      send_pref:
+	status = reply_process_send_prefix(reply, &tmp_pref);
+
+      cleanup:
+	if (iapref.data != NULL)
+		data_string_forget(&iapref, MDL);
+	if (data.data != NULL)
+		data_string_forget(&data, MDL);
+	if (held_prefix && (status != ISC_R_SUCCESS))
+		release_prefix6(reply->prefix->ipv6_ppool, reply->prefix);
+	if (reply->prefix != NULL)
+		iaprefix_dereference(&reply->prefix, MDL);
+
+	return status;
+}
+
+/*
+ * Verify the prefix belongs to the client.  If we've got a host
+ * record with fixed prefixes, it has to be an assigned prefix
+ * (fault out all else).  Otherwise it's a dynamic prefix, so lookup
+ * that prefix and make sure it belongs to this DUID:IAID pair.
+ */
+static isc_boolean_t
+prefix_is_owned(struct reply_state *reply, struct iaddrcidrnet *pref) {
+	struct iaddrcidrnetlist *l;
+	int i;
+
+	/*
+	 * This faults out prefixes that don't match fixed prefixes.
+	 */
+	if (reply->static_prefixes > 0) {
+		for (l = reply->host->fixed_prefix; l != NULL; l = l->next) {
+			if ((pref->bits == l->cidrnet.bits) &&
+			    (memcmp(pref->lo_addr.iabuf,
+				    l->cidrnet.lo_addr.iabuf, 16) == 0))
+				return ISC_TRUE;
+		}
+		return ISC_FALSE;
+	}
+
+	if ((reply->old_ia_pd == NULL) ||
+	    (reply->old_ia_pd->num_iaprefix == 0))
+		return ISC_FALSE;
+
+	for (i = 0 ; i < reply->old_ia_pd->num_iaprefix ; i++) {
+		struct iaprefix *tmp;
+
+		tmp = reply->old_ia_pd->iaprefix[i];
+
+		if ((pref->bits == (int) tmp->plen) &&
+		    memcmp(pref->lo_addr.iabuf, &tmp->pref, 16) == 0) {
+			iaprefix_reference(&reply->prefix, tmp, MDL);
+			return ISC_TRUE;
+		}
+	}
+
+	return ISC_FALSE;
+}
+
+/*
+ * This function only returns failure on 'hard' failures.  If it succeeds,
+ * it will leave a prefix structure behind.
+ */
+static isc_result_t
+reply_process_try_prefix(struct reply_state *reply,
+			 struct iaddrcidrnet *pref) {
+	isc_result_t status = ISC_R_FAILURE;
+	struct ipv6_ppool *ppool;
+	int i;
+	struct data_string data_pref;
+
+	if ((reply == NULL) || (pref == NULL) || (reply->prefix != NULL))
+		return ISC_R_INVALIDARG;
+
+	memset(&data_pref, 0, sizeof(data_pref));
+	data_pref.len = 17;
+	if (!buffer_allocate(&data_pref.buffer, data_pref.len, MDL)) {
+		log_error("reply_process_try_prefix: out of memory.");
+		return ISC_R_NOMEMORY;
+	}
+	data_pref.data = data_pref.buffer->data;
+	data_pref.buffer->data[0] = (u_int8_t) pref->bits;
+	memcpy(data_pref.buffer->data + 1, pref->lo_addr.iabuf, 16);
+
+	for (i = 0 ; i < num_ppools ; i++) {
+		ppool = ppools[i];
+		if (ppool == NULL)
+			continue;
+		status = try_client_v6_prefix(&reply->prefix, ppool,
+					      &data_pref);
+		if (status == ISC_R_SUCCESS)
+			break;
+	}
+
+	data_string_forget(&data_pref, MDL);
+	/* Return just the most recent status... */
+	return status;
+}
+
+/* Look around for a prefix to give the client.  First, look through the old
+ * IA_PD for prefixes we can extend.  Second, try to allocate a new prefix.
+ * Finally, actually add that prefix into the current reply IA_PD.
+ */
+static isc_result_t
+find_client_prefix(struct reply_state *reply) {
+	struct iaddrcidrnet send_pref;
+	isc_result_t status = ISC_R_NORESOURCES;
+	struct iaprefix *prefix, *best_prefix = NULL;
+	struct binding_scope **scope;
+	struct group *group;
+	int i;
+
+	if (reply->host != NULL)
+		group = reply->host->group;
+	else if (reply->shared != NULL)
+		group = reply->shared->group;
+	else
+		group = root_group;
+
+	if (reply->static_prefixes > 0) {
+		struct iaddrcidrnetlist *l;
+
+		if (reply->host == NULL)
+			return ISC_R_INVALIDARG;
+
+		for (l = reply->host->fixed_prefix; l != NULL; l = l->next) {
+			if (l->cidrnet.bits == reply->preflen)
+				break;
+		}
+		if (l == NULL) {
+			/*
+			 * If no fixed prefix has the preferred length,
+			 * get the first one.
+			 */
+			l = reply->host->fixed_prefix;
+		}
+		memcpy(&send_pref, &l->cidrnet, sizeof(send_pref));
+
+		status = ISC_R_SUCCESS;
+		scope = &global_scope;
+		goto send_pref;
+	}
+
+	if (reply->old_ia_pd != NULL)  {
+		for (i = 0 ; i < reply->old_ia_pd->num_iaprefix ; i++) {
+			prefix = reply->old_ia_pd->iaprefix[i];
+
+			best_prefix = prefix_compare(reply, prefix,
+						     best_prefix);
+		}
+	}
+
+	/* Try to pick a new prefix if we didn't find one, or if we found an
+	 * abandoned prefix.
+	 */
+	if ((best_prefix == NULL) || (best_prefix->state == FTS_ABANDONED)) {
+		status = pick_v6_prefix(&reply->prefix, reply->preflen,
+					&reply->client_id);
+	} else if (best_prefix != NULL) {
+		iaprefix_reference(&reply->prefix, best_prefix, MDL);
+		status = ISC_R_SUCCESS;
+	}
+
+	/* Pick the abandoned prefix as a last resort. */
+	if ((status == ISC_R_NORESOURCES) && (best_prefix != NULL)) {
+		/* I don't see how this is supposed to be done right now. */
+		log_error("Reclaiming abandoned prefixes is not yet "
+			  "supported.  Treating this as an out of space "
+			  "condition.");
+		/* prefix_reference(&reply->prefix, best_prefix, MDL); */
+	}
+
+	/* Give up now if we didn't find a prefix. */
+	if (status != ISC_R_SUCCESS)
+		return status;
+
+	if (reply->prefix == NULL)
+		log_fatal("Impossible condition at %s:%d.", MDL);
+
+	scope = &reply->prefix->scope;
+	if (reply->shared != NULL) {
+		group = reply->shared->group;
+	} else {
+		group = root_group;
+	}
+
+	send_pref.lo_addr.len = 16;
+	memcpy(send_pref.lo_addr.iabuf, &reply->prefix->pref, 16);
+	send_pref.bits = (int) reply->prefix->plen;
+
+      send_pref:
+	status = reply_process_is_prefixed(reply, reply->ia_pd, scope, group);
+	if (status != ISC_R_SUCCESS)
+		return status;
+
+	status = reply_process_send_prefix(reply, &send_pref);
+	return status;
+}
+
+/* Once a prefix is found for a client, perform several common functions;
+ * Calculate and store valid and preferred prefix times, draw client options
+ * into the option state.
+ */
+static isc_result_t
+reply_process_is_prefixed(struct reply_state *reply, struct ia_pd *ia_pd,
+			  struct binding_scope **scope, struct group *group)
+{
+	isc_result_t status = ISC_R_SUCCESS;
+	struct data_string data;
+	struct option_cache *oc;
+
+	/* Initialize values we will cleanup. */
+	memset(&data, 0, sizeof(data));
+
+	/* Execute relevant options into root scope. */
+	execute_statements_in_scope(NULL, reply->packet, NULL, NULL,
+				    reply->packet->options, reply->opt_state,
+				    scope, group, root_group);
+
+	/* Determine valid lifetime. */
+	if (reply->client_valid == 0)
+		reply->send_valid = DEFAULT_DEFAULT_LEASE_TIME;
+	else
+		reply->send_valid = reply->client_valid;
+
+	oc = lookup_option(&server_universe, reply->opt_state,
+			   SV_DEFAULT_LEASE_TIME);
+	if (oc != NULL) {
+		if (!evaluate_option_cache(&data, reply->packet, NULL, NULL,
+					   reply->packet->options,
+					   reply->opt_state,
+					   scope, oc, MDL) ||
+		    (data.len != 4)) {
+			log_error("reply_process_is_prefixed: unable to "
+				  "evaluate default prefix time");
+			status = ISC_R_FAILURE;
+			goto cleanup;
+		}
+
+		reply->send_valid = getULong(data.data);
+		data_string_forget(&data, MDL);
+	}
+
+	if (reply->client_prefer == 0)
+		reply->send_prefer = reply->send_valid;
+	else
+		reply->send_prefer = reply->client_prefer;
+
+	if (reply->send_prefer >= reply->send_valid)
+		reply->send_prefer = (reply->send_valid / 2) +
+				     (reply->send_valid / 8);
+
+	oc = lookup_option(&server_universe, reply->opt_state,
+			   SV_PREFER_LIFETIME);
+	if (oc != NULL) {
+		if (!evaluate_option_cache(&data, reply->packet, NULL, NULL,
+					   reply->packet->options,
+					   reply->opt_state,
+					   scope, oc, MDL) ||
+		    (data.len != 4)) {
+			log_error("reply_process_is_prefixed: unable to "
+				  "evaluate preferred prefix time");
+			status = ISC_R_FAILURE;
+			goto cleanup;
+		}
+
+		reply->send_prefer = getULong(data.data);
+		data_string_forget(&data, MDL);
+	}
+
+	/* Note lowest values for later calculation of renew/rebind times. */
+	if (reply->prefer > reply->send_prefer)
+		reply->prefer = reply->send_prefer;
+
+	if (reply->valid > reply->send_valid)
+		reply->valid = reply->send_valid;
+
+	/* Perform dynamic prefix related update work. */
+	if (reply->prefix != NULL) {
+		/* Advance (or rewind) the valid lifetime. */
+		reply->prefix->valid_lifetime_end_time = cur_time +
+							reply->send_valid;
+		renew_prefix6(reply->prefix->ipv6_ppool, reply->prefix);
+
+		status = ia_pd_add_iaprefix(ia_pd, reply->prefix, MDL);
+		if (status != ISC_R_SUCCESS) {
+			log_fatal("reply_process_is_prefixed: Unable to "
+				  "attach prefix to new IA_PD: %s",
+				  isc_result_totext(status));
+		}
+
+		/*
+		 * If this is a new prefix, make sure it is attached somewhere.
+		 */
+		if (reply->prefix->ia_pd == NULL) {
+			ia_pd_reference(&reply->prefix->ia_pd, ia_pd, MDL);
+		}
+	}
+
+	/* Bring a copy of the relevant options into the IA_PD scope. */
+	execute_statements_in_scope(NULL, reply->packet, NULL, NULL,
+				    reply->packet->options, reply->reply_ia,
+				    scope, group, root_group);
+
+      cleanup:
+	if (data.data != NULL)
+		data_string_forget(&data, MDL);
+
+	if (status == ISC_R_SUCCESS)
+		reply->client_resources++;
+
+	return status;
+}
+
+/* Simply send an IAPREFIX within the IA_PD scope as described. */
+static isc_result_t
+reply_process_send_prefix(struct reply_state *reply,
+			  struct iaddrcidrnet *pref) {
+	isc_result_t status = ISC_R_SUCCESS;
+	struct data_string data;
+
+	memset(&data, 0, sizeof(data));
+
+	/* Now append the prefix. */
+	data.len = IAPREFIX_OFFSET;
+	if (!buffer_allocate(&data.buffer, data.len, MDL)) {
+		log_error("reply_process_send_prefix: out of memory"
+			  "allocating new IAPREFIX buffer.");
+		status = ISC_R_NOMEMORY;
+		goto cleanup;
+	}
+	data.data = data.buffer->data;
+
+	putULong(data.buffer->data, reply->send_prefer);
+	putULong(data.buffer->data + 4, reply->send_valid);
+	data.buffer->data[8] = pref->bits;
+	memcpy(data.buffer->data + 9, pref->lo_addr.iabuf, 16);
+
+	if (!append_option_buffer(&dhcpv6_universe, reply->reply_ia,
+				  data.buffer, data.buffer->data,
+				  data.len, D6O_IAPREFIX, 0)) {
+		log_error("reply_process_send_prefix: unable "
+			  "to save IAPREFIX option");
+		status = ISC_R_FAILURE;
+		goto cleanup;
+	}
+
+	reply->ia_resources_included = ISC_TRUE;
+
+      cleanup:
+	if (data.data != NULL)
+		data_string_forget(&data, MDL);
+
+	return status;
+}
+
+/* Choose the better of two prefixes. */
+static struct iaprefix *
+prefix_compare(struct reply_state *reply,
+	       struct iaprefix *alpha, struct iaprefix *beta) {
+	if (alpha == NULL)
+		return beta;
+	if (beta == NULL)
+		return alpha;
+
+	if (reply->preflen >= 0) {
+		if ((alpha->plen == reply->preflen) &&
+		    (beta->plen != reply->preflen))
+			return alpha;
+		if ((beta->plen == reply->preflen) &&
+		    (alpha->plen != reply->preflen))
+			return beta;
+	}
+
+	switch(alpha->state) {
+	      case FTS_ACTIVE:
+		switch(beta->state) {
+		      case FTS_ACTIVE:
+			/* Choose the prefix with the longest lifetime (most
+			 * likely the most recently allocated).
+			 */
+			if (alpha->valid_lifetime_end_time < 
+			    beta->valid_lifetime_end_time)
+				return beta;
+			else
+				return alpha;
+
+		      case FTS_EXPIRED:
+		      case FTS_ABANDONED:
+			return alpha;
+
+		      default:
+			log_fatal("Impossible condition at %s:%d.", MDL);
+		}
+		break;
+
+	      case FTS_EXPIRED:
+		switch (beta->state) {
+		      case FTS_ACTIVE:
+			return beta;
+
+		      case FTS_EXPIRED:
+			/* Choose the most recently expired prefix. */
+			if (alpha->valid_lifetime_end_time <
+			    beta->valid_lifetime_end_time)
+				return beta;
+			else
+				return alpha;
+
+		      case FTS_ABANDONED:
+			return alpha;
+
+		      default:
+			log_fatal("Impossible condition at %s:%d.", MDL);
+		}
+		break;
+
+	      case FTS_ABANDONED:
+		switch (beta->state) {
+		      case FTS_ACTIVE:
+		      case FTS_EXPIRED:
+			return alpha;
+
+		      case FTS_ABANDONED:
+			/* Choose the prefix that was abandoned longest ago. */
+			if (alpha->valid_lifetime_end_time <
+			    beta->valid_lifetime_end_time)
+				return alpha;
+
+		      default:
+			log_fatal("Impossible condition at %s:%d.", MDL);
+		}
+		break;
+
+	      default:
+		log_fatal("Impossible condition at %s:%d.", MDL);
+	}
+
+	log_fatal("Triple impossible condition at %s:%d.", MDL);
+	return NULL;
+}
+
 /*
  * Solicit is how a client starts requesting addresses.
  *
@@ -2368,7 +3957,7 @@ dhcpv6_request(struct data_string *reply_ret, struct packet *packet) {
 
 /* Find a DHCPv6 packet's shared network from hints in the packet.
  */
-static isc_result_t
+static void
 shared_network_from_packet6(struct shared_network **shared,
 			    struct packet *packet)
 {
@@ -2376,10 +3965,11 @@ shared_network_from_packet6(struct shared_network **shared,
 	const struct in6_addr *link_addr, *first_link_addr;
 	struct iaddr tmp_addr;
 	struct subnet *subnet;
-	isc_result_t status;
 
-	if ((shared == NULL) || (*shared != NULL) || (packet == NULL))
-		return ISC_R_INVALIDARG;
+	if ((shared == NULL) || (*shared != NULL) || (packet == NULL)) {
+		log_error("shared_network_from_packet6: invalid arg.");
+		return;
+	}
 
 	/*
 	 * First, find the link address where the packet from the client
@@ -2409,10 +3999,9 @@ shared_network_from_packet6(struct shared_network **shared,
 		if (!find_subnet(&subnet, tmp_addr, MDL)) {
 			log_debug("No subnet found for link-address %s.",
 				  piaddr(tmp_addr));
-			return ISC_R_NOTFOUND;
+			return;
 		}
-		status = shared_network_reference(shared,
-						  subnet->shared_network, MDL);
+		shared_network_reference(shared, subnet->shared_network, MDL);
 		subnet_dereference(&subnet, MDL);
 
 	/*
@@ -2420,12 +4009,10 @@ shared_network_from_packet6(struct shared_network **shared,
 	 * that this packet came in on to pick the shared_network.
 	 */
 	} else {
-		status = shared_network_reference(shared,
+		shared_network_reference(shared,
 					 packet->interface->shared_network,
 					 MDL);
 	}
-
-	return status;
 }
 
 /*
@@ -2468,12 +4055,18 @@ dhcpv6_confirm(struct data_string *reply_ret, struct packet *packet) {
 		return;
 	}
 
-	/* Do not process Confirms that do not have IA's we do not recognize.
+	/*
+	 * Do not process Confirms that do not have IA's we do not recognize.
 	 */
 	ia = lookup_option(&dhcpv6_universe, packet->options, D6O_IA_NA);
 	ta = lookup_option(&dhcpv6_universe, packet->options, D6O_IA_TA);
 	if ((ia == NULL) && (ta == NULL))
 		return;
+
+	/*
+	 * IA_PD's are simply ignored.
+	 */
+	delete_option(&dhcpv6_universe, packet->options, D6O_IA_PD);
 
 	/* 
 	 * Bit of variable initialization.
@@ -2488,8 +4081,8 @@ dhcpv6_confirm(struct data_string *reply_ret, struct packet *packet) {
 	 * network the client is on.
 	 */
 	shared = NULL;
-	if ((shared_network_from_packet6(&shared, packet) != ISC_R_SUCCESS) ||
-	    (shared == NULL))
+	shared_network_from_packet6(&shared, packet);
+	if (shared == NULL)
 		goto exit;
 
 	/* If there are no recorded subnets, then we have no
@@ -2643,10 +4236,10 @@ exit:
 }
 
 /*
- * Renew is when a client wants to extend its lease, at time T1.
+ * Renew is when a client wants to extend its lease/prefix, at time T1.
  *
- * We handle this the same as if the client wants a new lease, except
- * for the error code of when addresses don't match.
+ * We handle this the same as if the client wants a new lease/prefix,
+ * except for the error code of when addresses don't match.
  */
 
 /* TODO: reject unicast messages, unless we set unicast option */
@@ -3098,10 +4691,18 @@ dhcpv6_decline(struct data_string *reply, struct packet *packet) {
 	}
 
 	/*
+	 * Undefined for IA_PD.
+	 */
+	delete_option(&dhcpv6_universe, packet->options, D6O_IA_PD);
+
+	/*
 	 * And operate on each IA_NA in this packet.
 	 */
 	iterate_over_ia_na(reply, packet, &client_id, &server_id, "Decline", 
 			   ia_na_match_decline, ia_na_nomatch_decline);
+
+	data_string_forget(&server_id, MDL);
+	data_string_forget(&client_id, MDL);
 }
 
 static void
@@ -3194,6 +4795,348 @@ exit:
 	option_state_dereference(&host_opt_state, MDL);
 }
 
+static void
+ia_pd_match_release(const struct data_string *client_id,
+		    const struct data_string *iapref,
+		    struct iaprefix *prefix)
+{
+	char tmp_addr[INET6_ADDRSTRLEN];
+
+	log_info("Client %s releases prefix %s/%u",
+		 print_hex_1(client_id->len, client_id->data, 60),
+		 inet_ntop(AF_INET6, iapref->data + 9,
+			   tmp_addr, sizeof(tmp_addr)),
+		 (unsigned) getUChar(iapref->data + 8));
+	if (prefix != NULL) {
+		release_prefix6(prefix->ipv6_ppool, prefix);
+		write_ia_pd(prefix->ia_pd);
+	}
+}
+
+static void
+ia_pd_nomatch_release(const struct data_string *client_id,
+		      const struct data_string *iapref,
+		      u_int32_t *ia_pd_id,
+		      struct packet *packet,
+		      char *reply_data,
+		      int *reply_ofs,
+		      int reply_len)
+{
+	char tmp_addr[INET6_ADDRSTRLEN];
+	struct option_state *host_opt_state;
+	int len;
+
+	log_info("Client %s releases prefix %s/%u, which is not leased to it.",
+		 print_hex_1(client_id->len, client_id->data, 60),
+		 inet_ntop(AF_INET6, iapref->data + 9,
+			   tmp_addr, sizeof(tmp_addr)),
+		 (unsigned) getUChar(iapref->data + 8));
+
+	/*
+	 * Create state for this IA_PD.
+	 */
+	host_opt_state = NULL;
+	if (!option_state_allocate(&host_opt_state, MDL)) {
+		log_error("ia_pd_nomatch_release: out of memory "
+			  "allocating option_state.");
+		goto exit;
+	}
+
+	if (!set_status_code(STATUS_NoBinding, 
+			     "Release for non-leased prefix.",
+			     host_opt_state)) {
+		goto exit;
+	}
+
+	/*
+	 * Insure we have enough space
+	 */
+	if (reply_len < (*reply_ofs + 16)) {
+		log_error("ia_pd_nomatch_release: "
+			  "out of space for reply packet.");
+		goto exit;
+	}
+
+	/*
+	 * Put our status code into the reply packet.
+	 */
+	len = store_options6(reply_data+(*reply_ofs)+16,
+			     reply_len-(*reply_ofs)-16,
+			     host_opt_state, packet,
+			     required_opts_STATUS_CODE, NULL);
+
+	/*
+	 * Store the non-encapsulated option data for this 
+	 * IA_PD into our reply packet. Defined in RFC 3315, 
+	 * section 22.4.  
+	 */
+	/* option number */
+	putUShort((unsigned char *)reply_data+(*reply_ofs), D6O_IA_PD);
+	/* option length */
+	putUShort((unsigned char *)reply_data+(*reply_ofs)+2, len + 12);
+	/* IA_PD, copied from the client */
+	memcpy(reply_data+(*reply_ofs)+4, ia_pd_id, 4);
+	/* t1 and t2, odd that we need them, but here it is */
+	putULong((unsigned char *)reply_data+(*reply_ofs)+8, 0);
+	putULong((unsigned char *)reply_data+(*reply_ofs)+12, 0);
+
+	/*
+	 * Get ready for next IA_PD.
+	 */
+	*reply_ofs += (len + 16);
+
+exit:
+	option_state_dereference(&host_opt_state, MDL);
+}
+
+static void
+iterate_over_ia_pd(struct data_string *reply_ret, 
+		   struct packet *packet,
+		   const struct data_string *client_id,
+		   const struct data_string *server_id,
+		   const char *packet_type,
+		   void (*ia_pd_match)(),
+		   void (*ia_pd_nomatch)())
+{
+	struct data_string reply_new;
+	int reply_len;
+	struct option_state *opt_state;
+	struct host_decl *packet_host;
+	struct option_cache *ia;
+	struct option_cache *oc;
+	/* cli_enc_... variables come from the IA_PD options */
+	struct data_string cli_enc_opt_data;
+	struct option_state *cli_enc_opt_state;
+	struct host_decl *host;
+	struct option_state *host_opt_state;
+	struct data_string iaprefix;
+	int iaprefix_is_found;
+	char reply_data[65536];
+	int reply_ofs;
+	struct iaprefix *prefix;
+	struct ia_pd *existing_ia_pd;
+	int i;
+	struct data_string key;
+	u_int32_t iaid;
+
+	/*
+	 * Initialize to empty values, in case we have to exit early.
+	 */
+	memset(&reply_new, 0, sizeof(reply_new));
+	opt_state = NULL;
+	memset(&cli_enc_opt_data, 0, sizeof(cli_enc_opt_data));
+	cli_enc_opt_state = NULL;
+	memset(&iaprefix, 0, sizeof(iaprefix));
+	host_opt_state = NULL;
+	prefix = NULL;
+
+	/*
+	 * Compute the available length for the reply.
+	 */
+	reply_len = sizeof(reply_data) - reply_ret->len;
+	reply_ofs = 0;
+
+	/* 
+	 * Find the host record that matches from the packet, if any.
+	 */
+	packet_host = NULL;
+	if (!find_hosts_by_uid(&packet_host, 
+			       client_id->data, client_id->len, MDL)) {
+		packet_host = NULL;
+		/* 
+		 * Note: In general, we don't expect a client to provide
+		 *       enough information to match by option for these
+		 *       types of messages, but if we don't have a UID
+		 *       match we can check anyway.
+		 */
+		if (!find_hosts_by_option(&packet_host, 
+					  packet, packet->options, MDL)) {
+			packet_host = NULL;
+		}
+	}
+
+	/*
+	 * Build our option state for reply.
+	 */
+	opt_state = NULL;
+	if (!option_state_allocate(&opt_state, MDL)) {
+		log_error("iterate_over_ia_pd: no memory for option_state.");
+		goto exit;
+	}
+	execute_statements_in_scope(NULL, packet, NULL, NULL, 
+				    packet->options, opt_state, 
+				    &global_scope, root_group, NULL);
+
+	/*
+	 * Loop through the IA_PD reported by the client, and deal with
+	 * prefixes reported as already in use.
+	 */
+	for (ia = lookup_option(&dhcpv6_universe, packet->options, D6O_IA_PD);
+	     ia != NULL; ia = ia->next) {
+	    iaprefix_is_found = 0;
+
+	    if (!get_encapsulated_IA_state(&cli_enc_opt_state,
+					   &cli_enc_opt_data,
+					   packet, ia, IA_PD_OFFSET)) {
+		goto exit;
+	    }
+
+	    iaid = getULong(cli_enc_opt_data.data);
+
+	    oc = lookup_option(&dhcpv6_universe, cli_enc_opt_state, 
+			       D6O_IAPREFIX);
+	    if (oc == NULL) {
+		/* no prefix given for this IA_PD, ignore */
+		option_state_dereference(&cli_enc_opt_state, MDL);
+		data_string_forget(&cli_enc_opt_data, MDL);
+		continue;
+	    }
+
+	    for (; oc != NULL; oc = oc->next) {
+		memset(&iaprefix, 0, sizeof(iaprefix));
+		if (!evaluate_option_cache(&iaprefix, packet, NULL, NULL, 
+					   packet->options, NULL,
+					   &global_scope, oc, MDL)) {
+			log_error("iterate_over_ia_pd: "
+				  "error evaluating IAPREFIX.");
+			goto exit;
+		}
+
+		/* 
+		 * Now we need to figure out which host record matches
+		 * this IA_PD and IAPREFIX.
+		 *
+		 * XXX: We don't currently track IA_PD separately, but
+		 *      we will need to do this!
+		 */
+		host = NULL;
+		if (!find_hosts_by_option(&host, packet, 
+					  cli_enc_opt_state, MDL)) { 
+			if (packet_host != NULL) {
+				host = packet_host;
+			} else {
+				host = NULL;
+			}
+		}
+		while (host != NULL) {
+			if (host->fixed_prefix != NULL) {
+				struct iaddrcidrnetlist *l;
+				int plen = (int) getUChar(iaprefix.data + 8);
+
+				for (l = host->fixed_prefix; l != NULL;
+				     l = l->next) {
+					if (plen != l->cidrnet.bits)
+						continue;
+					if (memcmp(iaprefix.data + 9,
+						   l->cidrnet.lo_addr.iabuf,
+						   16) == 0)
+						break;
+				}
+				if ((l != NULL) && (iaprefix.len >= 17))
+					break;
+			}
+			host = host->n_ipaddr;
+		}
+
+		if ((host == NULL) && (iaprefix.len >= IAPREFIX_OFFSET)) {
+			/*
+			 * Find existing IA_PD.
+			 */
+			if (ia_make_key(&key, iaid, 
+					(char *)client_id->data,
+					client_id->len, 
+					MDL) != ISC_R_SUCCESS) {
+				log_fatal("iterate_over_ia_pd: no memory for "
+					  "key.");
+			}
+
+			existing_ia_pd = NULL;
+			if (ia_pd_hash_lookup(&existing_ia_pd, ia_pd_active, 
+					      (unsigned char *)key.data, 
+					      key.len, MDL)) {
+				/* 
+				 * Make sure this prefix is in the IA_PD.
+				 */
+				for (i = 0;
+				     i < existing_ia_pd->num_iaprefix;
+				     i++) {
+					struct iaprefix *tmp;
+					u_int8_t plen;
+
+					plen = getUChar(iaprefix.data + 8);
+					tmp = existing_ia_pd->iaprefix[i];
+					if ((tmp->plen == plen) &&
+					    (memcmp(&tmp->pref,
+						    iaprefix.data + 9,
+						    16) == 0)) {
+						iaprefix_reference(&prefix,
+								   tmp, MDL);
+						break;
+					}
+				}
+			}
+
+			data_string_forget(&key, MDL);
+		}
+
+		if ((host != NULL) || (prefix != NULL)) {
+			ia_pd_match(client_id, &iaprefix, prefix);
+		} else {
+			ia_pd_nomatch(client_id, &iaprefix, 
+				      (u_int32_t *)cli_enc_opt_data.data, 
+				      packet, reply_data, &reply_ofs, 
+				      reply_len - reply_ofs);
+		}
+
+		if (prefix != NULL) {
+			iaprefix_dereference(&prefix, MDL);
+		}
+
+		data_string_forget(&iaprefix, MDL);
+	    }
+
+	    option_state_dereference(&cli_enc_opt_state, MDL);
+	    data_string_forget(&cli_enc_opt_data, MDL);
+	}
+
+	/* 
+	 * Return our reply to the caller.
+	 * The IA_NA routine has already filled at least the header.
+	 */
+	reply_new.len = reply_ret->len + reply_ofs;
+	if (!buffer_allocate(&reply_new.buffer, reply_new.len, MDL)) {
+		log_fatal("No memory to store reply.");
+	}
+	reply_new.data = reply_new.buffer->data;
+	memcpy(reply_new.buffer->data,
+	       reply_ret->buffer->data, reply_ret->len);
+	memcpy(reply_new.buffer->data + reply_ret->len,
+	       reply_data, reply_ofs);
+	data_string_forget(reply_ret, MDL);
+	data_string_copy(reply_ret, &reply_new, MDL);
+	data_string_forget(&reply_new, MDL);
+
+exit:
+	if (prefix != NULL) {
+		iaprefix_dereference(&prefix, MDL);
+	}
+	if (host_opt_state != NULL) {
+		option_state_dereference(&host_opt_state, MDL);
+	}
+	if (iaprefix.buffer != NULL) {
+		data_string_forget(&iaprefix, MDL);
+	}
+	if (cli_enc_opt_state != NULL) {
+		option_state_dereference(&cli_enc_opt_state, MDL);
+	}
+	if (cli_enc_opt_data.buffer != NULL) {
+		data_string_forget(&cli_enc_opt_data, MDL);
+	}
+	if (opt_state != NULL) {
+		option_state_dereference(&opt_state, MDL);
+	}
+}
+
 /*
  * Release means a client is done with the addresses.
  */
@@ -3216,6 +5159,12 @@ dhcpv6_release(struct data_string *reply, struct packet *packet) {
 	 */
 	iterate_over_ia_na(reply, packet, &client_id, &server_id, "Release", 
 			   ia_na_match_release, ia_na_nomatch_release);
+
+	/*
+	 * And operate on each IA_PD in this packet.
+	 */
+	iterate_over_ia_pd(reply, packet, &client_id, &server_id, "Release",
+			   ia_pd_match_release, ia_pd_nomatch_release);
 
 	data_string_forget(&server_id, MDL);
 	data_string_forget(&client_id, MDL);
@@ -3249,8 +5198,8 @@ dhcpv6_information_request(struct data_string *reply, struct packet *packet) {
 	/*
 	 * Use the lease_to_client() function. This will work fine, 
 	 * because the valid_client_info_req() insures that we 
-	 * don't have any IA_NA or IA_TA that would cause us to
-	 * allocate addresses to the client.
+	 * don't have any IA that would cause us to allocate
+	 * resources to the client.
 	 */
 	lease_to_client(reply, packet, &client_id,
 			server_id.data != NULL ? &server_id : NULL);

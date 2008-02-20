@@ -1012,12 +1012,12 @@ dhc6_parse_prefs(struct dhc6_addr **ppref, struct packet *packet,
 						 oc, MDL) &&
 			   (ds.len >= 25)) {
 
-			pref->plen = getUChar(ds.data);
+			pref->preferred_life = getULong(ds.data);
+			pref->max_life = getULong(ds.data + 4);
+			pref->plen = getUChar(ds.data + 8);
 			pref->address.len = 16;
-			memcpy(pref->address.iabuf, ds.data + 1, 16);
+			memcpy(pref->address.iabuf, ds.data + 9, 16);
 			pref->starts = cur_time;
-			pref->preferred_life = getULong(ds.data + 17);
-			pref->max_life = getULong(ds.data + 21);
 
 			log_debug("RCV:  | | X-- IAPREFIX %s/%d",
 				  piaddr(pref->address), (int)pref->plen);

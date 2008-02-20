@@ -617,6 +617,30 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		}
 	      	parse_address_range6(cfile, group);
 		return declaration;
+
+	      case PREFIX6:
+		next_token(NULL, NULL, cfile);
+		if (type != ROOT_GROUP) {
+			parse_warn (cfile,
+				    "prefix6 definitions may not be scoped.");
+			skip_to_semi(cfile);
+			return declaration;
+		}
+	      	parse_prefix6(cfile, group);
+		return declaration;
+
+	      case FIXED_PREFIX6:
+		next_token(&val, NULL, cfile);
+		if (!host_decl) {
+			parse_warn (cfile,
+				    "fixed-prefix6 declaration not "
+				    "allowed here.");
+			skip_to_semi(cfile);
+			break;
+		}
+		parse_fixed_prefix6(cfile, host_decl);
+		break;
+
 #endif /* DHCPv6 */
 
 	      case TOKEN_NOT:
@@ -3672,7 +3696,8 @@ add_ipv6_pool_to_shared_network(struct shared_network *share,
 }
 
 /* address-range6-declaration :== ip-address6 ip-address6 SEMI
-			       | ip-address6 SLASH number SEMI */
+			       | ip-address6 SLASH number SEMI
+			       | ip-address6 TEMPORARY SEMI */
 
 void 
 parse_address_range6(struct parse *cfile, struct group *group) {
@@ -3707,7 +3732,7 @@ parse_address_range6(struct parse *cfile, struct group *group) {
 	}
 
 	/* 
-	 * See if we we're using range or CIDR notation.
+	 * See if we we're using range or CIDR notation or TEMPORARY
 	 */
 	token = peek_token(&val, NULL, cfile);
 	if (token == SLASH) {
@@ -3735,6 +3760,20 @@ parse_address_range6(struct parse *cfile, struct group *group) {
 
 		add_ipv6_pool_to_shared_network(share, &lo, bits);
 
+	} else if (token == TEMPORARY) {
+		/*
+		 * temporary (RFC 4941)
+		 */
+		next_token(NULL, NULL, cfile);
+		bits = 64;
+		if (!is_cidr_mask_valid(&lo, bits)) {
+			parse_warn(cfile, "network mask too short");
+			skip_to_semi(cfile);
+			return;
+		}
+		bits |= POOL_IS_FOR_TEMP;
+
+		add_ipv6_pool_to_shared_network(share, &lo, bits);
 	} else {
 		/*
 		 * No '/', so we are looking for the end address of 
@@ -3768,6 +3807,196 @@ parse_address_range6(struct parse *cfile, struct group *group) {
 		skip_to_semi(cfile);
 		return;
 	}
+}
+
+static void
+add_ipv6_ppool_to_global(struct iaddr *start_addr,
+			 int pool_bits,
+			 int alloc_bits) {
+	struct ipv6_ppool *ppool;
+	struct in6_addr tmp_in6_addr;
+
+	/*
+	 * Create our prefix pool.
+	 */
+	if (start_addr->len != sizeof(tmp_in6_addr)) {
+		log_fatal("Internal error: Attempt to add non-IPv6 prefix.");
+	}
+	memcpy(&tmp_in6_addr, start_addr->iabuf, sizeof(tmp_in6_addr));
+	ppool = NULL;
+	if (ipv6_ppool_allocate(&ppool, &tmp_in6_addr,
+				(u_int8_t) pool_bits, (u_int8_t) alloc_bits,
+				MDL) != ISC_R_SUCCESS) {
+		log_fatal("Out of memory");
+	}
+
+	/*
+	 * Add to our IPv6 prefix pool set.
+	 */
+	if (add_ipv6_ppool(ppool) != ISC_R_SUCCESS) {
+		log_fatal ("Out of memory");
+	}
+}
+
+/* prefix6-declaration :== ip-address6 ip-address6 SLASH number SEMI */
+
+void 
+parse_prefix6(struct parse *cfile, struct group *group) {
+	struct iaddr lo, hi;
+	int bits;
+	enum dhcp_token token;
+	const char *val;
+	struct iaddrcidrnetlist *nets;
+	struct iaddrcidrnetlist *p;
+
+	/*
+	 * Read starting and ending address.
+	 */
+	if (!parse_ip6_addr(cfile, &lo)) {
+		return;
+	}
+	if (!parse_ip6_addr(cfile, &hi)) {
+		return;
+	}
+
+	/*
+	 * Next is '/' number ';'.
+	 */
+	token = next_token(NULL, NULL, cfile);
+	if (token != SLASH) {
+		parse_warn(cfile, "expecting '/'");
+		if (token != SEMI)
+			skip_to_semi(cfile);
+		return;
+	}
+	token = next_token(&val, NULL, cfile);
+	if (token != NUMBER) {
+		parse_warn(cfile, "expecting number");
+		if (token != SEMI)
+			skip_to_semi(cfile);
+		return;
+	}
+	bits = atoi(val);
+	if ((bits <= 0) || (bits >= 128)) {
+		parse_warn(cfile, "networks have 0 to 128 bits (exclusive)");
+		return;
+	}
+	if (!is_cidr_mask_valid(&lo, bits) ||
+	    !is_cidr_mask_valid(&hi, bits)) {
+		parse_warn(cfile, "network mask too short");
+		return;
+	}
+	token = next_token(NULL, NULL, cfile);
+	if (token != SEMI) {
+		parse_warn(cfile, "semicolon expected.");
+		skip_to_semi(cfile);
+		return;
+	}
+
+
+	/*
+	 * Convert our range to a set of CIDR networks.
+	 */
+	nets = NULL;
+	if (range2cidr(&nets, &lo, &hi) != ISC_R_SUCCESS) {
+		log_fatal("Error converting prefix to CIDR");
+	}
+
+	for (p = nets; p != NULL; p = p->next) {
+		/* Normalize and check. */
+		if (p->cidrnet.bits == 128) {
+			p->cidrnet.bits = bits;
+		}
+		if (p->cidrnet.bits > bits) {
+			parse_warn(cfile, "impossible mask length");
+			continue;
+		}
+		add_ipv6_ppool_to_global(&p->cidrnet.lo_addr,
+					 p->cidrnet.bits, bits);
+	}
+
+	free_iaddrcidrnetlist(&nets);
+}
+
+/* fixed-prefix6 :== ip6-address SLASH number SEMI */
+
+void
+parse_fixed_prefix6(struct parse *cfile, struct host_decl *host_decl) {
+	struct iaddrcidrnetlist *ia, **h;
+	enum dhcp_token token;
+	const char *val;
+
+	/*
+	 * Get the head of the fixed-prefix list.
+	 */
+	h = &host_decl->fixed_prefix;
+
+	/*
+	 * Walk to the end.
+	 */
+	while (*h != NULL) {
+		h = &((*h)->next);
+	}
+
+	/*
+	 * Allocate a new iaddrcidrnetlist structure.
+	 */
+	ia = dmalloc(sizeof(*ia), MDL);
+	if (!ia) {
+		log_fatal("Out of memory");
+	}
+
+	/*
+	 * Parse it.
+	 */
+	if (!parse_ip6_addr(cfile, &ia->cidrnet.lo_addr)) {
+		dfree(ia, MDL);
+		return;
+	}
+	token = next_token(NULL, NULL, cfile);
+	if (token != SLASH) {
+		dfree(ia, MDL);
+		parse_warn(cfile, "expecting '/'");
+		if (token != SEMI)
+			skip_to_semi(cfile);
+		return;
+	}
+	token = next_token(&val, NULL, cfile);
+	if (token != NUMBER) {
+		dfree(ia, MDL);
+		parse_warn(cfile, "expecting number");
+		if (token != SEMI)
+			skip_to_semi(cfile);
+		return;
+	}
+	token = next_token(NULL, NULL, cfile);
+	if (token != SEMI) {
+		dfree(ia, MDL);
+		parse_warn(cfile, "semicolon expected.");
+		skip_to_semi(cfile);
+		return;
+	}
+
+	/*
+	 * Fill it.
+	 */
+	ia->cidrnet.bits = atoi(val);
+	if ((ia->cidrnet.bits < 0) || (ia->cidrnet.bits > 128)) {
+		dfree(ia, MDL);
+		parse_warn(cfile, "networks have 0 to 128 bits");
+		return;
+	}
+	if (!is_cidr_mask_valid(&ia->cidrnet.lo_addr, ia->cidrnet.bits)) {
+		dfree(ia, MDL);
+		parse_warn(cfile, "network mask too short");
+		return;
+	}
+
+	/*
+	 * Store it.
+	 */
+	*h = ia;
+	return;
 }
 #endif /* DHCPv6 */
 
@@ -4099,7 +4328,7 @@ parse_ia_na_declaration(struct parse *cfile) {
 		ia_na_add_iaaddr(ia, iaaddr, MDL);
 		ia_na_reference(&iaaddr->ia_na, ia, MDL);
 		pool = NULL;
-		if (find_ipv6_pool(&pool, &iaaddr->addr) != ISC_R_SUCCESS) {
+		if (find_ipv6_pool(&pool, 0, &iaaddr->addr) != ISC_R_SUCCESS) {
 			inet_ntop(AF_INET6, &iaaddr->addr, 
 				  addr_buf, sizeof(addr_buf));
 			parse_warn(cfile, "no pool found for address %s", 
@@ -4393,7 +4622,7 @@ parse_ia_ta_declaration(struct parse *cfile) {
 		ia_na_add_iaaddr(ia, iaaddr, MDL);
 		ia_na_reference(&iaaddr->ia_na, ia, MDL);
 		pool = NULL;
-		if (find_ipv6_pool(&pool, &iaaddr->addr) != ISC_R_SUCCESS) {
+		if (find_ipv6_pool(&pool, 1, &iaaddr->addr) != ISC_R_SUCCESS) {
 			inet_ntop(AF_INET6, &iaaddr->addr, 
 				  addr_buf, sizeof(addr_buf));
 			parse_warn(cfile, "no pool found for address %s", 

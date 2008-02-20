@@ -918,6 +918,8 @@ intern(char *atom, enum dhcp_token dfv) {
 			return FIXED_ADDR;
 		if (!strcasecmp (atom + 1, "ixed-address6"))
 			return FIXED_ADDR6;
+		if (!strcasecmp (atom + 1, "ixed-prefix6"))
+			return FIXED_PREFIX6;
 		if (!strcasecmp (atom + 1, "ddi"))
 			return TOKEN_FDDI;
 		if (!strcasecmp (atom + 1, "ormerr"))
@@ -1145,6 +1147,8 @@ intern(char *atom, enum dhcp_token dfv) {
 			return PACKET;
 		if (!strcasecmp (atom + 1, "ool"))
 			return POOL;
+		if (!strcasecmp (atom + 1, "refix6"))
+			return PREFIX6;
 		if (!strcasecmp (atom + 1, "seudo"))
 			return PSEUDO;
 		if (!strcasecmp (atom + 1, "eer"))
@@ -1365,6 +1369,8 @@ intern(char *atom, enum dhcp_token dfv) {
 			return TSFP;
 		if (!strcasecmp (atom + 1, "ransmission"))
 			return TRANSMISSION;
+		if (!strcasecmp(atom + 1, "emporary"))
+			return TEMPORARY;
 		break;
 	      case 'u':
 		if (!strcasecmp (atom + 1, "case"))

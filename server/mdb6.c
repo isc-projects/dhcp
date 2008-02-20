@@ -1149,6 +1149,50 @@ create_address(struct in6_addr *addr,
 		str[8] &= ~0x02;
 }
 
+/* 
+ * Create a temporary address by a variant of RFC 4941 algo.
+ */
+static void
+create_temporary(struct in6_addr *addr, 
+		 const struct in6_addr *net_start_addr, 
+		 const struct data_string *input) {
+	static u_int8_t history[8];
+	static u_int32_t counter = 0;
+	MD5_CTX ctx;
+	unsigned char md[16];
+	extern int dst_s_random(u_int8_t *, unsigned);
+
+	/*
+	 * First time/time to reseed.
+	 * Please use a good pseudo-random generator here!
+	 */
+	if (counter == 0) {
+		if (dst_s_random(history, 8) != 8)
+			log_fatal("Random failed.");
+	}
+
+	/* 
+	 * Use MD5 as recommended by RFC 4941.
+	 */
+	MD5_Init(&ctx);
+	MD5_Update(&ctx, history, 8UL);
+	MD5_Update(&ctx, input->data, input->len);
+	MD5_Final(md, &ctx);
+
+	/*
+	 * Build the address.
+	 */
+	memcpy(&addr->s6_addr[0], &net_start_addr->s6_addr[0], 8);
+	memcpy(&addr->s6_addr[8], md, 8);
+	addr->s6_addr[8] &= ~0x02;
+
+	/*
+	 * Save history for the next call.
+	 */
+	memcpy(history, md + 8, 8);
+	counter++;
+}
+
 /* Reserved Subnet Router Anycast ::0:0:0:0. */
 static struct in6_addr rtany;
 /* Reserved Subnet Anycasts ::fdff:ffff:ffff:ff80-::fdff:ffff:ffff:ffff. */
@@ -1216,9 +1260,14 @@ activate_lease6(struct ipv6_pool *pool, struct iaaddr **addr,
 		}
 
 		/* 
-		 * Create an address
+		 * Create an address or a temporary address.
 		 */
-		create_address(&tmp, &pool->start_addr, pool->bits, &ds);
+		if ((pool->bits & POOL_IS_FOR_TEMP) == 0) {
+			create_address(&tmp, &pool->start_addr,
+				       pool->bits, &ds);
+		} else {
+			create_temporary(&tmp, &pool->start_addr, &ds);
+		}
 
 		/*
 		 * Avoid reserved interface IDs.
@@ -1277,7 +1326,7 @@ activate_lease6(struct ipv6_pool *pool, struct iaaddr **addr,
 	memcpy(&iaaddr->addr, &tmp, sizeof(iaaddr->addr));
 
 	/*
-	 * Add the lease to the pool.
+	 * Add the lease to the pool (note state is free, not active?!).
 	 */
 	result = add_lease6(pool, iaaddr, valid_lifetime_end_time);
 	if (result == ISC_R_SUCCESS) {
@@ -1578,6 +1627,7 @@ create_prefix(struct in6_addr *pref,
 	for (i=0; i<net_bytes; i++) {
 		str[i] = net_str[i];
 	}
+	i = net_bytes;
 	switch (pool_bits % 8) {
 		case 1: str[i] = (str[i] & 0x7F) | (net_str[i] & 0x80); break;
 		case 2: str[i] = (str[i] & 0x3F) | (net_str[i] & 0xC0); break;
@@ -1594,15 +1644,16 @@ create_prefix(struct in6_addr *pref,
 	for (i=net_bytes+1; i<16; i++) {
 		str[i] = 0;
 	}
+	i = net_bytes;
 	switch (pref_bits % 8) {
-		case 0: str[i] &= 0;
-		case 1: str[i] &= 0x80;
-		case 2: str[i] &= 0xC0;
-		case 3: str[i] &= 0xE0;
-		case 4: str[i] &= 0xF0;
-		case 5: str[i] &= 0xF8;
-		case 6: str[i] &= 0xFC;
-		case 7: str[i] &= 0xFE;
+		case 0: str[i] &= 0; break;
+		case 1: str[i] &= 0x80; break;
+		case 2: str[i] &= 0xC0; break;
+		case 3: str[i] &= 0xE0; break;
+		case 4: str[i] &= 0xF0; break;
+		case 5: str[i] &= 0xF8; break;
+		case 6: str[i] &= 0xFC; break;
+		case 7: str[i] &= 0xFE; break;
 	}
 }
 
@@ -1628,10 +1679,10 @@ create_prefix(struct in6_addr *pref,
  * the long term.
  */
 isc_result_t
-activate_prefix(struct ipv6_ppool *ppool, struct iaprefix **pref, 
-		unsigned int *attempts,
-		const struct data_string *uid,
-		time_t valid_lifetime_end_time) {
+activate_prefix6(struct ipv6_ppool *ppool, struct iaprefix **pref, 
+		 unsigned int *attempts,
+		 const struct data_string *uid,
+		 time_t valid_lifetime_end_time) {
 	struct data_string ds;
 	struct in6_addr tmp;
 	struct iaprefix *test_iapref;
@@ -1700,10 +1751,11 @@ activate_prefix(struct ipv6_ppool *ppool, struct iaprefix **pref,
 	if (result != ISC_R_SUCCESS) {
 		return result;
 	}
+	iapref->plen = ppool->alloc_plen;
 	memcpy(&iapref->pref, &tmp, sizeof(iapref->pref));
 
 	/*
-	 * Add the prefix to the pool.
+	 * Add the prefix to the pool (note state is free, not active?!).
 	 */
 	result = add_prefix6(ppool, iapref, valid_lifetime_end_time);
 	if (result == ISC_R_SUCCESS) {
@@ -1972,6 +2024,27 @@ mark_address_unavailable(struct ipv6_pool *pool, const struct in6_addr *addr) {
 		dummy_iaaddr->addr = *addr;
 		iaaddr_hash_add(pool->addrs, &dummy_iaaddr->addr,
 				sizeof(*addr), dummy_iaaddr, MDL);
+	}
+	return result;
+}
+
+/*
+ * Mark an IPv6 prefix as unavailable from a prefix pool.
+ *
+ * This is used for host entries.
+ */
+isc_result_t
+mark_prefix_unavailable(struct ipv6_ppool *ppool,
+			const struct in6_addr *pref) {
+	struct iaprefix *dummy_iapref;
+	isc_result_t result;
+
+	dummy_iapref = NULL;
+	result = iaprefix_allocate(&dummy_iapref, MDL);
+	if (result == ISC_R_SUCCESS) {
+		dummy_iapref->pref = *pref;
+		iaprefix_hash_add(ppool->prefs, &dummy_iapref->pref,
+				  sizeof(*pref), dummy_iapref, MDL);
 	}
 	return result;
 }
@@ -2374,7 +2447,7 @@ isc_boolean_t
 ipv6_addr_in_pool(const struct in6_addr *addr, const struct ipv6_pool *pool) {
 	struct in6_addr tmp;
 	
-	ipv6_network_portion(&tmp, addr, pool->bits);
+	ipv6_network_portion(&tmp, addr, pool->bits & ~POOL_IS_FOR_TEMP);
 	if (memcmp(&tmp, &pool->start_addr, sizeof(tmp)) == 0) {
 		return ISC_TRUE;
 	} else {
@@ -2389,7 +2462,8 @@ ipv6_addr_in_pool(const struct in6_addr *addr, const struct ipv6_pool *pool) {
  *   initialized to NULL
  */
 isc_result_t
-find_ipv6_pool(struct ipv6_pool **pool, const struct in6_addr *addr) {
+find_ipv6_pool(struct ipv6_pool **pool, int temp,
+	       const struct in6_addr *addr) {
 	int i;
 
 	if (pool == NULL) {
@@ -2402,6 +2476,12 @@ find_ipv6_pool(struct ipv6_pool **pool, const struct in6_addr *addr) {
 	}
 
 	for (i=0; i<num_pools; i++) {
+		if (temp && ((pools[i]->bits & POOL_IS_FOR_TEMP) == 0)) {
+			continue;
+		}
+		if (!temp && ((pools[i]->bits & POOL_IS_FOR_TEMP) != 0)) {
+			continue;
+		}
 		if (ipv6_addr_in_pool(addr, pools[i])) { 
 			ipv6_pool_reference(pool, pools[i], MDL);
 			return ISC_R_SUCCESS;
@@ -2421,13 +2501,21 @@ change_leases(struct ia_na *ia,
 	isc_result_t renew_retval;
 	struct ipv6_pool *pool;
 	struct in6_addr *addr;
-	int i;
+	int temp, i;
 
 	retval = ISC_R_SUCCESS;
+	if (ia->ia_type == D6O_IA_NA) {
+		temp = 0;
+	} else if (ia->ia_type == D6O_IA_TA) {
+		temp = 1;
+	} else {
+		log_error("IA without type.");
+		return ISC_R_INVALIDARG;
+	}
 	for (i=0; i<ia->num_iaaddr; i++) {
 		pool = NULL;
 		addr = &ia->iaaddr[i]->addr;
-		if (find_ipv6_pool(&pool, addr) == ISC_R_SUCCESS) {
+		if (find_ipv6_pool(&pool, temp, addr) == ISC_R_SUCCESS) {
 			renew_retval =  change_func(pool, ia->iaaddr[i]);
 			if (renew_retval != ISC_R_SUCCESS) {
 				retval = renew_retval;
@@ -2655,7 +2743,11 @@ mark_hosts_unavailable_support(const void *name, unsigned len, void *value) {
 	 * sit in any pool.)
 	 */
 	p = NULL;
-	if (find_ipv6_pool(&p, &addr) == ISC_R_SUCCESS) {
+	if (find_ipv6_pool(&p, 0, &addr) == ISC_R_SUCCESS) {
+		mark_address_unavailable(p, &addr);
+		ipv6_pool_dereference(&p, MDL);
+	} 
+	if (find_ipv6_pool(&p, 1, &addr) == ISC_R_SUCCESS) {
 		mark_address_unavailable(p, &addr);
 		ipv6_pool_dereference(&p, MDL);
 	} 
@@ -2668,6 +2760,56 @@ mark_hosts_unavailable(void) {
 	hash_foreach(host_name_hash, mark_hosts_unavailable_support);
 }
 
+static isc_result_t
+mark_phosts_unavailable_support(const void *name, unsigned len, void *value) {
+	struct host_decl *h;
+	struct iaddrcidrnetlist *l;
+	struct in6_addr pref;
+	struct ipv6_ppool *p;
+
+	h = (struct host_decl *)value;
+
+	/*
+	 * If the host has no prefix, we don't need to mark anything.
+	 */
+	if (h->fixed_prefix == NULL) {
+		return ISC_R_SUCCESS;
+	}
+
+	/* 
+	 * Get the fixed prefixes.
+	 */
+	for (l = h->fixed_prefix; l != NULL; l = l->next) {
+		if (l->cidrnet.lo_addr.len != 16) {
+			continue;
+		}
+		memcpy(&pref, l->cidrnet.lo_addr.iabuf, 16);
+
+		/*
+		 * Find the pool holding this host, and mark the prefix.
+		 * (I suppose it is arguably valid to have a host that does not
+		 * sit in any pool.)
+		 */
+		p = NULL;
+		if (find_ipv6_ppool(&p, &pref) != ISC_R_SUCCESS) {
+			continue;
+		}
+		if (l->cidrnet.bits != (int) p->alloc_plen) {
+			ipv6_ppool_dereference(&p, MDL);
+			continue;
+		}
+		mark_prefix_unavailable(p, &pref);
+		ipv6_ppool_dereference(&p, MDL);
+	} 
+
+	return ISC_R_SUCCESS;
+}
+
+void
+mark_phosts_unavailable(void) {
+	hash_foreach(host_name_hash, mark_phosts_unavailable_support);
+}
+
 void 
 mark_interfaces_unavailable(void) {
 	struct interface_info *ip;
@@ -2678,7 +2820,13 @@ mark_interfaces_unavailable(void) {
 	while (ip != NULL) {
 		for (i=0; i<ip->v6address_count; i++) {
 			p = NULL;
-			if (find_ipv6_pool(&p, &ip->v6addresses[i]) 
+			if (find_ipv6_pool(&p, 0, &ip->v6addresses[i]) 
+							== ISC_R_SUCCESS) {
+				mark_address_unavailable(p, 
+							 &ip->v6addresses[i]);
+				ipv6_pool_dereference(&p, MDL);
+			} 
+			if (find_ipv6_pool(&p, 1, &ip->v6addresses[i]) 
 							== ISC_R_SUCCESS) {
 				mark_address_unavailable(p, 
 							 &ip->v6addresses[i]);
@@ -3006,8 +3154,8 @@ main(int argc, char *argv[]) {
 		printf("ERROR: activate_lease6() %s:%d\n", MDL);
 		return 1;
 	}
-	if (pool->num_active != 1) {
-		printf("ERROR: bad num_active %s:%d\n", MDL);
+	if (pool->num_inactive != 1) {
+		printf("ERROR: bad num_inactive %s:%d\n", MDL);
 		return 1;
 	}
 	if (renew_lease6(pool, iaaddr) != ISC_R_SUCCESS) {
@@ -3058,6 +3206,10 @@ main(int argc, char *argv[]) {
 		printf("ERROR: activate_lease6() %s:%d\n", MDL);
 		return 1;
 	}
+	if (renew_lease6(pool, iaaddr) != ISC_R_SUCCESS) {
+		printf("ERROR: renew_lease6() %s:%d\n", MDL);
+		return 1;
+	}
 	if (pool->num_active != 1) {
 		printf("ERROR: bad num_active %s:%d\n", MDL);
 		return 1;
@@ -3077,6 +3229,10 @@ main(int argc, char *argv[]) {
 	if (activate_lease6(pool, &iaaddr, &attempts, 
 			    &ds, 1) != ISC_R_SUCCESS) {
 		printf("ERROR: activate_lease6() %s:%d\n", MDL);
+		return 1;
+	}
+	if (renew_lease6(pool, iaaddr) != ISC_R_SUCCESS) {
+		printf("ERROR: renew_lease6() %s:%d\n", MDL);
 		return 1;
 	}
 	if (pool->num_active != 1) {
@@ -3155,6 +3311,10 @@ main(int argc, char *argv[]) {
 			printf("ERROR: activate_lease6() %s:%d\n", MDL);
 			return 1;
 		}
+		if (renew_lease6(pool, iaaddr) != ISC_R_SUCCESS) {
+			printf("ERROR: renew_lease6() %s:%d\n", MDL);
+			return 1;
+		}
 		if (iaaddr_dereference(&iaaddr, MDL) != ISC_R_SUCCESS) {
 			printf("ERROR: iaaddr_dereference() %s:%d\n", MDL);
 			return 1;
@@ -3211,6 +3371,7 @@ main(int argc, char *argv[]) {
 	 * Test 8: small pool
 	 */
 	pool = NULL;
+	addr.s6_addr[14] = 0x81;
 	if (ipv6_pool_allocate(&pool, &addr, 127, MDL) != ISC_R_SUCCESS) {
 		printf("ERROR: ipv6_pool_allocate() %s:%d\n", MDL);
 		return 1;
@@ -3220,6 +3381,10 @@ main(int argc, char *argv[]) {
 		printf("ERROR: activate_lease6() %s:%d\n", MDL);
 		return 1;
 	}
+	if (renew_lease6(pool, iaaddr) != ISC_R_SUCCESS) {
+		printf("ERROR: renew_lease6() %s:%d\n", MDL);
+		return 1;
+	}
 	if (iaaddr_dereference(&iaaddr, MDL) != ISC_R_SUCCESS) {
 		printf("ERROR: iaaddr_dereference() %s:%d\n", MDL);
 		return 1;
@@ -3227,6 +3392,10 @@ main(int argc, char *argv[]) {
 	if (activate_lease6(pool, &iaaddr, &attempts, 
 			    &ds, 11) != ISC_R_SUCCESS) {
 		printf("ERROR: activate_lease6() %s:%d\n", MDL);
+		return 1;
+	}
+	if (renew_lease6(pool, iaaddr) != ISC_R_SUCCESS) {
+		printf("ERROR: renew_lease6() %s:%d\n", MDL);
 		return 1;
 	}
 	if (iaaddr_dereference(&iaaddr, MDL) != ISC_R_SUCCESS) {
@@ -3242,6 +3411,7 @@ main(int argc, char *argv[]) {
 		printf("ERROR: ipv6_pool_dereference() %s:%d\n", MDL);
 		return 1;
 	}
+	addr.s6_addr[14] = 0;
 
 	/* 
  	 * Test 9: functions across all pools
@@ -3260,7 +3430,7 @@ main(int argc, char *argv[]) {
 		return 1;
 	}
 	pool = NULL;
-	if (find_ipv6_pool(&pool, &addr) != ISC_R_SUCCESS) {
+	if (find_ipv6_pool(&pool, 0, &addr) != ISC_R_SUCCESS) {
 		printf("ERROR: find_ipv6_pool() %s:%d\n", MDL);
 		return 1;
 	}
@@ -3270,7 +3440,7 @@ main(int argc, char *argv[]) {
 	}
 	inet_pton(AF_INET6, "1:2:3:4:ffff:ffff:ffff:ffff", &addr);
 	pool = NULL;
-	if (find_ipv6_pool(&pool, &addr) != ISC_R_SUCCESS) {
+	if (find_ipv6_pool(&pool, 0, &addr) != ISC_R_SUCCESS) {
 		printf("ERROR: find_ipv6_pool() %s:%d\n", MDL);
 		return 1;
 	}
@@ -3280,13 +3450,13 @@ main(int argc, char *argv[]) {
 	}
 	inet_pton(AF_INET6, "1:2:3:5::", &addr);
 	pool = NULL;
-	if (find_ipv6_pool(&pool, &addr) != ISC_R_NOTFOUND) {
+	if (find_ipv6_pool(&pool, 0, &addr) != ISC_R_NOTFOUND) {
 		printf("ERROR: find_ipv6_pool() %s:%d\n", MDL);
 		return 1;
 	}
 	inet_pton(AF_INET6, "1:2:3:3:ffff:ffff:ffff:ffff", &addr);
 	pool = NULL;
-	if (find_ipv6_pool(&pool, &addr) != ISC_R_NOTFOUND) {
+	if (find_ipv6_pool(&pool, 0, &addr) != ISC_R_NOTFOUND) {
 		printf("ERROR: find_ipv6_pool() %s:%d\n", MDL);
 		return 1;
 	}
@@ -3301,11 +3471,14 @@ main(int argc, char *argv[]) {
 	{
 		struct in6_addr r;
 		struct data_string ds;
+		u_char data[16];
 		char buf[64];
 		int i, j;
 
+		memset(&ds, 0, sizeof(ds));
+		memset(data, 0xaa, sizeof(data));
 		ds.len = 16;
-		ds.data = &addr;
+		ds.data = data;
 
 		inet_pton(AF_INET6, "3ffe:501:ffff:100::", &addr);
 		for (i = 32; i < 42; i++)

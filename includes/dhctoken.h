@@ -349,7 +349,10 @@ enum dhcp_token {
 	WHITESPACE = 652,
 	TOKEN_ALSO = 653,
 	AFTER = 654,
-        ZEROLEN = 655
+	ZEROLEN = 655,
+	TEMPORARY = 656,
+	PREFIX6 = 657,
+	FIXED_PREFIX6 = 658
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
