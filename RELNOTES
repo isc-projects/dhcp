@@ -89,6 +89,8 @@ work on other platforms. Please report any problems and suggested fixes to
   The default delayed ack limit is 28.  Thanks entirely to a patch from
   Christof Chen.
 
+ - ERO (RFC 4994) server support.
+
 			Changes since 4.0.0 (bug fixes)
 
 - DHCP now builds on AIX.

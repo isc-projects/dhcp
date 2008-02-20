@@ -699,6 +699,11 @@ static const int required_opts_solicit[] = {
 	D6O_PREFERENCE,
 	0
 };
+static const int required_opts_agent[] = {
+	D6O_INTERFACE_ID,
+	D6O_RELAY_MSG,
+	0
+};
 static const int required_opts_IA[] = {
 	D6O_IAADDR,
 	D6O_STATUS_CODE,
@@ -5224,7 +5229,6 @@ dhcpv6_information_request(struct data_string *reply, struct packet *packet) {
 	be combined in a clever way */
 static void
 dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
-	struct dhcpv6_relay_packet reply;
 	struct option_cache *oc;
 	struct data_string enc_opt_data;
 	struct packet *enc_packet;
@@ -5234,7 +5238,11 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 	struct data_string enc_reply;
 	char link_addr[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
 	char peer_addr[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
-	struct data_string interface_id;
+	struct data_string a_opt, packet_ero;
+	struct option_state *opt_state;
+	static char reply_data[65536];
+	struct dhcpv6_relay_packet *reply;
+	int reply_ofs;
 
 	/* 
 	 * Initialize variables for early exit.
@@ -5242,7 +5250,8 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 	memset(&enc_opt_data, 0, sizeof(enc_opt_data));
 	enc_packet = NULL;
 	memset(&enc_reply, 0, sizeof(enc_reply));
-	memset(&interface_id, 0, sizeof(interface_id));
+	memset(&a_opt, 0, sizeof(a_opt));
+	memset(&packet_ero, 0, sizeof(packet_ero));
 
 	/*
 	 * Get our encapsulated relay message.
@@ -5259,7 +5268,6 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 		goto exit;
 	}
 
-	memset(&enc_opt_data, 0, sizeof(enc_opt_data));
 	if (!evaluate_option_cache(&enc_opt_data, NULL, NULL, NULL, 
 				   NULL, NULL, &global_scope, oc, MDL)) {
 		log_error("dhcpv6_forw_relay: error evaluating "
@@ -5347,68 +5355,140 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 	}
 
 	/*
-	 * Append the interface-id if present
+	 * Now we can use the reply_data buffer.
+	 * Packet header stuff all comes from the forward message.
 	 */
-	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_INTERFACE_ID);
-	if (oc != NULL) {
-		memset(&interface_id, 0, sizeof(interface_id));
-		if (!evaluate_option_cache(&interface_id, NULL, NULL, NULL, 
-					   NULL, NULL, &global_scope, 
-					   oc, MDL)) {
-			log_error("dhcpv6_forw_relay: error evaluating "
-				  "Interface ID.");
-			goto exit;
-		}
+	reply = (struct dhcpv6_relay_packet *)reply_data;
+	reply->msg_type = DHCPV6_RELAY_REPL;
+	reply->hop_count = packet->dhcpv6_hop_count;
+	memcpy(reply->link_address, &packet->dhcpv6_link_address,
+	       sizeof(reply->link_address));
+	memcpy(reply->peer_address, &packet->dhcpv6_peer_address,
+	       sizeof(reply->peer_address));
+	reply_ofs = (int)((char *)reply->options - (char *)reply);
+
+	/*
+	 * Get the reply option state.
+	 */
+	opt_state = NULL;
+	if (!option_state_allocate(&opt_state, MDL)) {
+		log_error("dhcpv6_relay_forw: no memory for option state.");
+		goto exit;
 	}
 
 	/*
-	 * Packet header stuff all comes from the forward message.
+	 * Append the interface-id if present.
 	 */
-	reply.msg_type = DHCPV6_RELAY_REPL;
-	reply.hop_count = packet->dhcpv6_hop_count;
-	memcpy(reply.link_address, &packet->dhcpv6_link_address,
-	       sizeof(reply.link_address));
-	memcpy(reply.peer_address, &packet->dhcpv6_peer_address,
-	       sizeof(reply.peer_address));
+	oc = lookup_option(&dhcpv6_universe, packet->options,
+			   D6O_INTERFACE_ID);
+	if (oc != NULL) {
+		if (!evaluate_option_cache(&a_opt, packet,
+					   NULL, NULL, 
+					   packet->options, NULL,
+					   &global_scope, oc, MDL)) {
+			log_error("dhcpv6_relay_forw: error evaluating "
+				  "Interface ID.");
+			goto exit;
+		}
+		if (!save_option_buffer(&dhcpv6_universe, opt_state, NULL,
+					(unsigned char *)a_opt.data,
+					a_opt.len,
+					D6O_INTERFACE_ID, 0)) {
+			log_error("dhcpv6_relay_forw: error saving "
+				  "Interface ID.");
+			goto exit;
+		}
+		data_string_forget(&a_opt, MDL);
+	}
 
 	/* 
-	 * Copy our encapsulated stuff for caller.
+	 * Append our encapsulated stuff for caller.
 	 */
-	reply_ret->len = sizeof(reply) + 4 + enc_reply.len;
-	if (interface_id.data != NULL) {
-		reply_ret->len += 4 + interface_id.len;
-	}
-	/* 
-	 * XXX: We should not allow this to happen, perhaps by letting
-	 *      build_dhcp_reply() know our space remaining.
-	 */
-	if (reply_ret->len >= 65536) {
-		log_error("dhcpv6_forw_relay: RELAY-REPL too big (%d bytes)",
-			  reply_ret->len);
+	if (!save_option_buffer(&dhcpv6_universe, opt_state, NULL,
+				(unsigned char *)enc_reply.data,
+				enc_reply.len,
+				D6O_RELAY_MSG, 0)) {
+		log_error("dhcpv6_relay_forw: error saving Relay MSG.");
 		goto exit;
 	}
+
+	/*
+	 * Get the ERO if any.
+	 */
+	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_ERO);
+	if (oc != NULL) {
+		unsigned req;
+		int i;
+
+		if (!evaluate_option_cache(&packet_ero, packet,
+					   NULL, NULL,
+					   packet->options, NULL,
+					   &global_scope, oc, MDL) ||
+			(packet_ero.len & 1)) {
+			log_error("dhcpv6_relay_forw: error evaluating ERO.");
+			goto exit;
+		}
+
+		/* Decode and apply the ERO. */
+		for (i = 0; i < packet_ero.len; i += 2) {
+			req = getUShort(packet_ero.data + i);
+			/* Already in the reply? */
+			oc = lookup_option(&dhcpv6_universe, opt_state, req);
+			if (oc != NULL)
+				continue;
+			/* Get it from the packet if present. */
+			oc = lookup_option(&dhcpv6_universe,
+					   packet->options,
+					   req);
+			if (oc == NULL)
+				continue;
+			if (!evaluate_option_cache(&a_opt, packet,
+						   NULL, NULL,
+						   packet->options, NULL,
+						   &global_scope, oc, MDL)) {
+				log_error("dhcpv6_relay_forw: error "
+					  "evaluating option %u.", req);
+				goto exit;
+			}
+			if (!save_option_buffer(&dhcpv6_universe,
+						opt_state,
+						NULL,
+						(unsigned char *)a_opt.data,
+						a_opt.len,
+						req,
+						0)) {
+				log_error("dhcpv6_relay_forw: error saving "
+					  "option %u.", req);
+				goto exit;
+			}
+			data_string_forget(&a_opt, MDL);
+		}
+	}
+
+	reply_ofs += store_options6(reply_data + reply_ofs,
+				    sizeof(reply_data) - reply_ofs,
+				    opt_state, packet,
+				    required_opts_agent, &packet_ero);
+
+	/*
+	 * Return our reply to the caller.
+	 */
+	reply_ret->len = reply_ofs;
 	reply_ret->buffer = NULL;
 	if (!buffer_allocate(&reply_ret->buffer, reply_ret->len, MDL)) {
 		log_fatal("No memory to store reply.");
 	}
 	reply_ret->data = reply_ret->buffer->data;
-	memcpy(reply_ret->buffer->data, &reply, sizeof(reply));
-	putShort(reply_ret->buffer->data+sizeof(reply), D6O_RELAY_MSG);
-	putShort(reply_ret->buffer->data+sizeof(reply)+2, enc_reply.len);
-	memcpy(reply_ret->buffer->data+sizeof(reply)+4, 
-	       enc_reply.data, enc_reply.len);
-	if (interface_id.data != NULL) {
-		putShort(reply_ret->buffer->data+sizeof(reply)+4+enc_reply.len,
-			 D6O_INTERFACE_ID);
-		putShort(reply_ret->buffer->data+sizeof(reply)+6+enc_reply.len,
-			 interface_id.len);
-		memcpy(reply_ret->buffer->data+sizeof(reply)+8+enc_reply.len,
-		       interface_id.data, interface_id.len);
-	}
+	memcpy(reply_ret->buffer->data, reply_data, reply_ofs);
 
 exit:
-	if (interface_id.data != NULL) {
-		data_string_forget(&interface_id, MDL);
+	if (opt_state != NULL)
+		option_state_dereference(&opt_state, MDL);
+	if (a_opt.data != NULL) {
+		data_string_forget(&a_opt, MDL);
+	}
+	if (packet_ero.data != NULL) {
+		data_string_forget(&packet_ero, MDL);
 	}
 	if (enc_reply.data != NULL) {
 		data_string_forget(&enc_reply, MDL);
