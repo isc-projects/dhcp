@@ -1403,6 +1403,11 @@ parse_client6_lease_statement(struct parse *cfile)
 			no_semi = 1;
 			break;
 
+		      case TOKEN_RELEASED:
+		      case TOKEN_ABANDONED:
+			lease->released = ISC_TRUE;
+			break;
+
 		      default:
 			parse_warn(cfile, "Unexpected token, %s.", val);
 			no_semi = 1;

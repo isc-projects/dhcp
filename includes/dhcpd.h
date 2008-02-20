@@ -928,6 +928,7 @@ struct dhc6_lease {
 	struct dhc6_lease *next;
 	struct data_string server_id;
 
+	isc_boolean_t released;
 	int score;
 	u_int8_t pref;
 

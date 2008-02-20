@@ -474,7 +474,8 @@ main(int argc, char **argv) {
 				/* If we have a previous binding, Confirm
 				 * that we can (or can't) still use it.
 				 */
-				if (client->active_lease != NULL)
+				if ((client->active_lease != NULL) &&
+				    !client->active_lease->released)
 					start_confirm6(client);
 				else
 					start_init6(client);
@@ -2597,6 +2598,12 @@ write_client6_lease(struct client_state *client, struct dhc6_lease *lease,
 			write_options(client, ia->options, "    ");
 
 		stat = fprintf(leaseFile, "  }\n");
+		if (stat <= 0)
+			return ISC_R_IOERROR;
+	}
+
+	if (lease->released) {
+		stat = fprintf(leaseFile, "  released;\n");
 		if (stat <= 0)
 			return ISC_R_IOERROR;
 	}

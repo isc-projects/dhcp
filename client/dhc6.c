@@ -519,6 +519,7 @@ dhc6_dup_addr(struct dhc6_addr *addr, const char *file, int line)
 
 /* Form a DHCPv6 lease structure based upon packet contents.  Creates and
  * populates IA's and any IAADDR/IAPREFIX's they contain.
+ * Parsed options are deleted in order to not save them in the lease file.
  */
 static struct dhc6_lease *
 dhc6_leaseify(struct packet *packet)
@@ -557,6 +558,7 @@ dhc6_leaseify(struct packet *packet)
 
 		data_string_forget(&ds, MDL);
 	}
+	delete_option(&dhcpv6_universe, lease->options, D6O_PREFERENCE);
 
 	/* Dig into recursive DHCPv6 pockets for IA_NA and contained IAADDR
 	 * options.
@@ -710,6 +712,7 @@ dhc6_parse_ia_na(struct dhc6_ia **pia, struct packet *packet,
 			return ISC_R_UNEXPECTED;
 		}
 	}
+	delete_option(&dhcpv6_universe, options, D6O_IA_NA);
 
 	return ISC_R_SUCCESS;
 }
@@ -792,6 +795,7 @@ dhc6_parse_ia_ta(struct dhc6_ia **pia, struct packet *packet,
 			return ISC_R_UNEXPECTED;
 		}
 	}
+	delete_option(&dhcpv6_universe, options, D6O_IA_TA);
 
 	return ISC_R_SUCCESS;
 }
@@ -892,6 +896,7 @@ dhc6_parse_ia_pd(struct dhc6_ia **pia, struct packet *packet,
 			return ISC_R_UNEXPECTED;
 		}
 	}
+	delete_option(&dhcpv6_universe, options, D6O_IA_PD);
 
 	return ISC_R_SUCCESS;
 }
@@ -986,6 +991,7 @@ dhc6_parse_addrs(struct dhc6_addr **paddr, struct packet *packet,
 			return ISC_R_UNEXPECTED;
 		}
 	}
+	delete_option(&dhcpv6_universe, options, D6O_IAADDR);
 
 	return ISC_R_SUCCESS;
 }
@@ -1089,6 +1095,7 @@ dhc6_parse_prefs(struct dhc6_addr **ppref, struct packet *packet,
 			return ISC_R_UNEXPECTED;
 		}
 	}
+	delete_option(&dhcpv6_universe, options, D6O_IAPREFIX);
 
 	return ISC_R_SUCCESS;
 }
@@ -1286,7 +1293,7 @@ start_confirm6(struct client_state *client)
 	struct timeval tv;
 
 	/* If there is no active lease, there is nothing to check. */
-	if (client->active_lease == NULL) {
+	if ((client->active_lease == NULL) || client->active_lease->released) {
 		start_init6(client);
 		return;
 	}
@@ -1669,6 +1676,12 @@ start_release6(struct client_state *client)
          * any subsequently transmitted message."  So unconfigure now.
          */
         unconfigure6(client, "RELEASE6");
+
+	/* Note this in the lease file. */
+	if (client->active_lease == NULL)
+		return;
+	client->active_lease->released = ISC_TRUE;
+	write_client6_lease(client, client->active_lease, 0, 1);
 
 	/* Set timers per RFC3315 section 18.1.1. */
 	client->IRT = REL_TIMEOUT * 100;
@@ -3390,6 +3403,7 @@ start_bound(struct client_state *client)
 			  "is selected.");
 		return;
 	}
+	lease->released = ISC_FALSE;
 	old = client->old_lease;
 
 	client->v6_handler = bound_handler;

@@ -163,6 +163,8 @@ work on other platforms. Please report any problems and suggested fixes to
 
 - Warn when attempting to use a hardware parameter in DHCPv6.
 
+- DHCPv6 released resources are now marked as released by the client.
+
 			Changes since 4.0.0b3
 
 - The reverse dns name for PTR updates on IPv6 addresses has been fixed to
