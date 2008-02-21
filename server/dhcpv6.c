@@ -979,7 +979,8 @@ try_client_v6_address(struct iaaddr **addr,
 	}
 	(*addr)->addr = tmp_addr;
 
-	result = add_lease6(pool, *addr, 0);
+	/* Default is soft binding for 2 minutes. */
+	result = add_lease6(pool, *addr, cur_time + 120);
 	if (result != ISC_R_SUCCESS) {
 		iaaddr_dereference(addr, MDL);
 	}
@@ -1038,8 +1039,8 @@ pick_v6_address(struct iaaddr **addr, struct shared_network *shared_network,
 
 		p = shared_network->ipv6_pools[i];
 		if (((p->bits & POOL_IS_FOR_TEMP) == 0) &&
-		    (activate_lease6(p, addr, &attempts, 
-				     client_id, 0) == ISC_R_SUCCESS)) {
+		    (create_lease6(p, addr, &attempts, client_id,
+				   cur_time + 120) == ISC_R_SUCCESS)) {
 			/*
 			 * Record the pool used (or next one if there 
 			 * was a collision).
@@ -1123,7 +1124,8 @@ try_client_v6_prefix(struct iaprefix **pref,
 	(*pref)->pref = tmp_pref;
 	(*pref)->plen = tmp_plen;
 
-	result = add_prefix6(ppool, *pref, 0);
+	/* Default is soft binding for 2 minutes. */
+	result = add_prefix6(ppool, *pref, cur_time + 120);
 	if (result != ISC_R_SUCCESS) {
 		iaprefix_dereference(pref, MDL);
 	}
@@ -1173,8 +1175,8 @@ pick_v6_prefix(struct iaprefix **pref, int plen,
 			continue;
 		}
 
-		if (activate_prefix6(p, pref, &attempts, 
-				     client_id, 0) == ISC_R_SUCCESS) {
+		if (create_prefix6(p, pref, &attempts, client_id,
+				   cur_time + 120) == ISC_R_SUCCESS) {
 			log_debug("Picking pool prefix %s/%u",
 				  inet_ntop(AF_INET6, &((*pref)->pref),
 				  	    tmp_buf, sizeof(tmp_buf)),
@@ -1507,13 +1509,11 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 	struct option_state *packet_ia;
 	struct option_cache *oc;
 	struct data_string ia_data, data;
-	isc_boolean_t lease_in_database;
 
 	/* Initialize values that will get cleaned up on return. */
 	packet_ia = NULL;
 	memset(&ia_data, 0, sizeof(ia_data));
 	memset(&data, 0, sizeof(data));
-	lease_in_database = ISC_FALSE;
 	/* 
 	 * Note that find_client_address() may set reply->lease. 
 	 */
@@ -1541,7 +1541,7 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 	/* Create an IA_NA structure. */
 	if (ia_na_allocate(&reply->ia_na, iaid, (char *)reply->client_id.data, 
 			   reply->client_id.len, MDL) != ISC_R_SUCCESS) {
-		log_error("lease_to_client: no memory for ia_na.");
+		log_error("reply_process_ia_na: no memory for ia_na.");
 		status = ISC_R_NOMEMORY;
 		goto cleanup;
 	}
@@ -1796,11 +1796,15 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 				ia_na_dereference(&tmp->ia_na, MDL);
 			ia_na_reference(&tmp->ia_na, reply->ia_na, MDL);
 
+			/* Commit 'hard' bindings. */
+			tmp->hard_lifetime_end_time =
+				tmp->soft_lifetime_end_time;
+			tmp->soft_lifetime_end_time = 0;
+			renew_lease6(tmp->ipv6_pool, tmp);
 			schedule_lease_timeout(tmp->ipv6_pool);
 
 			/*
-			 * If this constitutes a 'hard' binding, perform ddns
-			 * updates.
+			 * Perform ddns updates.
 			 */
 			oc = lookup_option(&server_universe, reply->opt_state,
 					   SV_DDNS_UPDATES);
@@ -1831,23 +1835,6 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 			       ia_id->len, reply->ia_na, MDL);
 
 		write_ia(reply->ia_na);
-
-		/* 
-		 * Note that we wrote the lease into the database,
-		 * so that we know not to release it when we're done
-		 * with this function.
-		 */
-		lease_in_database = ISC_TRUE;
-
-	/*
-	 * If this is a soft binding, we will check to see if we are 
-	 * suggesting the existing database entry to the client.
-	 */
-	} else if ((status != ISC_R_CANCELED) && !reply->static_lease &&
-	    (reply->old_ia != NULL)) {
-	    	if (ia_na_equal(reply->old_ia, reply->ia_na)) {
-			lease_in_database = ISC_TRUE;
-		}
 	}
 
       cleanup:
@@ -1863,12 +1850,8 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 		ia_na_dereference(&reply->ia_na, MDL);
 	if (reply->old_ia != NULL)
 		ia_na_dereference(&reply->old_ia, MDL);
-	if (reply->lease != NULL) {
-		if (!lease_in_database) {
-			release_lease6(reply->lease->ipv6_pool, reply->lease);
-		}
+	if (reply->lease != NULL)
 		iaaddr_dereference(&reply->lease, MDL);
-	}
 	if (reply->fixed.data != NULL)
 		data_string_forget(&reply->fixed, MDL);
 
@@ -2245,7 +2228,7 @@ reply_process_ia_ta(struct reply_state *reply, struct option_cache *ia) {
 	/* Create an IA_TA structure. */
 	if (ia_na_allocate(&reply->ia_ta, iaid, (char *)reply->client_id.data, 
 			   reply->client_id.len, MDL) != ISC_R_SUCCESS) {
-		log_error("lease_to_client: no memory for ia_ta.");
+		log_error("reply_process_ia_ta: no memory for ia_ta.");
 		status = ISC_R_NOMEMORY;
 		goto cleanup;
 	}
@@ -2421,6 +2404,11 @@ reply_process_ia_ta(struct reply_state *reply, struct option_cache *ia) {
 				ia_na_dereference(&tmp->ia_na, MDL);
 			ia_na_reference(&tmp->ia_na, reply->ia_ta, MDL);
 
+			/* Commit 'hard' bindings. */
+			tmp->hard_lifetime_end_time =
+				tmp->soft_lifetime_end_time;
+			tmp->soft_lifetime_end_time = 0;
+			renew_lease6(tmp->ipv6_pool, tmp);
 			schedule_lease_timeout(tmp->ipv6_pool);
 
 			/*
@@ -2472,6 +2460,8 @@ reply_process_ia_ta(struct reply_state *reply, struct option_cache *ia) {
 		ia_na_dereference(&reply->ia_ta, MDL);
 	if (reply->old_ia != NULL)
 		ia_na_dereference(&reply->old_ia, MDL);
+	if (reply->lease != NULL)
+		iaaddr_dereference(&reply->lease, MDL);
 
 	/*
 	 * ISC_R_CANCELED is a status code used by the addr processing to
@@ -2516,8 +2506,8 @@ find_client_temporaries(struct reply_state *reply) {
 		/*
 		 * Get an address in this temporary pool.
 		 */
-		status = activate_lease6(p, &reply->lease, &attempts,
-					 &reply->client_id, 0);
+		status = create_lease6(p, &reply->lease, &attempts,
+				       &reply->client_id, cur_time + 120);
 		if (status != ISC_R_SUCCESS) {
 			log_debug("Unable to get a temporary address.");
 			goto cleanup;
@@ -2757,9 +2747,11 @@ reply_process_is_addressed(struct reply_state *reply, struct ia_na *ia,
 	/* Perform dynamic lease related update work. */
 	if (reply->lease != NULL) {
 		/* Advance (or rewind) the valid lifetime. */
-		reply->lease->valid_lifetime_end_time = cur_time +
-							reply->send_valid;
-		renew_lease6(reply->lease->ipv6_pool, reply->lease);
+		if (reply->buf.reply.msg_type == DHCPV6_REPLY) {
+			reply->lease->soft_lifetime_end_time =
+				cur_time + reply->send_valid;
+			/* Wait before renew! */
+		}
 
 		status = ia_na_add_iaaddr(ia, reply->lease, MDL);
 		if (status != ISC_R_SUCCESS) {
@@ -2846,8 +2838,8 @@ lease_compare(struct iaaddr *alpha, struct iaaddr *beta) {
 			/* Choose the lease with the longest lifetime (most
 			 * likely the most recently allocated).
 			 */
-			if (alpha->valid_lifetime_end_time < 
-			    beta->valid_lifetime_end_time)
+			if (alpha->hard_lifetime_end_time < 
+			    beta->hard_lifetime_end_time)
 				return beta;
 			else
 				return alpha;
@@ -2868,8 +2860,13 @@ lease_compare(struct iaaddr *alpha, struct iaaddr *beta) {
 
 		      case FTS_EXPIRED:
 			/* Choose the most recently expired lease. */
-			if (alpha->valid_lifetime_end_time <
-			    beta->valid_lifetime_end_time)
+			if (alpha->hard_lifetime_end_time <
+			    beta->hard_lifetime_end_time)
+				return beta;
+			else if ((alpha->hard_lifetime_end_time ==
+				  beta->hard_lifetime_end_time) &&
+				 (alpha->soft_lifetime_end_time <
+				  beta->soft_lifetime_end_time))
 				return beta;
 			else
 				return alpha;
@@ -2890,8 +2887,8 @@ lease_compare(struct iaaddr *alpha, struct iaaddr *beta) {
 
 		      case FTS_ABANDONED:
 			/* Choose the lease that was abandoned longest ago. */
-			if (alpha->valid_lifetime_end_time <
-			    beta->valid_lifetime_end_time)
+			if (alpha->hard_lifetime_end_time <
+			    beta->hard_lifetime_end_time)
 				return alpha;
 
 		      default:
@@ -2918,13 +2915,11 @@ reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia_pd) {
 	struct option_state *packet_ia;
 	struct option_cache *oc;
 	struct data_string ia_pd_data, data;
-	isc_boolean_t prefix_in_database;
 
 	/* Initialize values that will get cleaned up on return. */
 	packet_ia = NULL;
 	memset(&ia_pd_data, 0, sizeof(ia_pd_data));
 	memset(&data, 0, sizeof(data));
-	prefix_in_database = ISC_FALSE;
 	/* 
 	 * Note that find_client_prefix() may set reply->prefix. 
 	 */
@@ -3168,6 +3163,11 @@ reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia_pd) {
 				ia_pd_dereference(&tmp->ia_pd, MDL);
 			ia_pd_reference(&tmp->ia_pd, reply->ia_pd, MDL);
 
+			/* Commit 'hard' bindings. */
+			tmp->hard_lifetime_end_time =
+				tmp->soft_lifetime_end_time;
+			tmp->soft_lifetime_end_time = 0;
+			renew_prefix6(tmp->ipv6_ppool, tmp);
 			schedule_prefix_timeout(tmp->ipv6_ppool);
 		}
 
@@ -3186,24 +3186,6 @@ reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia_pd) {
 			       ia_id->len, reply->ia_pd, MDL);
 
 		write_ia_pd(reply->ia_pd);
-
-		/* 
-		 * Note that we wrote the prefix into the database,
-		 * so that we know not to release it when we're done
-		 * with this function.
-		 */
-		prefix_in_database = ISC_TRUE;
-
-	/*
-	 * If this is a soft binding, we will check to see if we are 
-	 * suggesting the existing database entry to the client.
-	 */
-	} else if ((status != ISC_R_CANCELED) &&
-		   (reply->static_prefixes == 0) &&
-		   (reply->old_ia_pd != NULL)) {
-	    	if (ia_pd_equal(reply->old_ia_pd, reply->ia_pd)) {
-			prefix_in_database = ISC_TRUE;
-		}
 	}
 
       cleanup:
@@ -3215,27 +3197,12 @@ reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia_pd) {
 		data_string_forget(&ia_pd_data, MDL);
 	if (data.data != NULL)
 		data_string_forget(&data, MDL);
+	if (reply->ia_pd != NULL)
+		ia_pd_dereference(&reply->ia_pd, MDL);
 	if (reply->old_ia_pd != NULL)
 		ia_pd_dereference(&reply->old_ia_pd, MDL);
 	if (reply->prefix != NULL)
 		iaprefix_dereference(&reply->prefix, MDL);
-	if (!prefix_in_database) {
-		/*
-		 * Cleanup soft bindings, assume:
-		 *  reply->static_prefixes == 0
-		 *  reply->ia_pd != NULL
-		 *  reply->ia_pd->num_iaprefix != 0
-		 */
-		struct iaprefix *tmp;
-		int i;
-
-		for (i = 0 ; i < reply->ia_pd->num_iaprefix ; i++) {
-			tmp = reply->ia_pd->iaprefix[i];
-			release_prefix6(tmp->ipv6_ppool, tmp);
-		}
-	}
-	if (reply->ia_pd != NULL)
-		ia_pd_dereference(&reply->ia_pd, MDL);
 
 	/*
 	 * ISC_R_CANCELED is a status code used by the prefix processing to
@@ -3259,11 +3226,9 @@ reply_process_prefix(struct reply_state *reply, struct option_cache *pref) {
 	struct iaddrcidrnet tmp_pref;
 	struct option_cache *oc;
 	struct data_string iapref, data;
-	isc_boolean_t held_prefix;
 	isc_result_t status = ISC_R_SUCCESS;
 
 	/* Initializes values that will be cleaned up. */
-	held_prefix = ISC_FALSE;
 	memset(&iapref, 0, sizeof(iapref));
 	memset(&data, 0, sizeof(data));
 	/* Note that reply->prefix may be set by prefix_is_owned() */
@@ -3353,9 +3318,6 @@ reply_process_prefix(struct reply_state *reply, struct option_cache *pref) {
 				/* status remains success - ignore */
 				goto cleanup;
 			}
-
-			held_prefix = ISC_TRUE;
-
 		/*
 		 * RFC3633 section 18.2.3:
 		 *
@@ -3467,8 +3429,6 @@ reply_process_prefix(struct reply_state *reply, struct option_cache *pref) {
 		data_string_forget(&iapref, MDL);
 	if (data.data != NULL)
 		data_string_forget(&data, MDL);
-	if (held_prefix && (status != ISC_R_SUCCESS))
-		release_prefix6(reply->prefix->ipv6_ppool, reply->prefix);
 	if (reply->prefix != NULL)
 		iaprefix_dereference(&reply->prefix, MDL);
 
@@ -3739,9 +3699,11 @@ reply_process_is_prefixed(struct reply_state *reply, struct ia_pd *ia_pd,
 	/* Perform dynamic prefix related update work. */
 	if (reply->prefix != NULL) {
 		/* Advance (or rewind) the valid lifetime. */
-		reply->prefix->valid_lifetime_end_time = cur_time +
-							reply->send_valid;
-		renew_prefix6(reply->prefix->ipv6_ppool, reply->prefix);
+		if (reply->buf.reply.msg_type == DHCPV6_REPLY) {
+			reply->prefix->soft_lifetime_end_time =
+				cur_time + reply->send_valid;
+			/* Wait before renew! */
+		}
 
 		status = ia_pd_add_iaprefix(ia_pd, reply->prefix, MDL);
 		if (status != ISC_R_SUCCESS) {
@@ -3840,8 +3802,8 @@ prefix_compare(struct reply_state *reply,
 			/* Choose the prefix with the longest lifetime (most
 			 * likely the most recently allocated).
 			 */
-			if (alpha->valid_lifetime_end_time < 
-			    beta->valid_lifetime_end_time)
+			if (alpha->hard_lifetime_end_time < 
+			    beta->hard_lifetime_end_time)
 				return beta;
 			else
 				return alpha;
@@ -3862,8 +3824,13 @@ prefix_compare(struct reply_state *reply,
 
 		      case FTS_EXPIRED:
 			/* Choose the most recently expired prefix. */
-			if (alpha->valid_lifetime_end_time <
-			    beta->valid_lifetime_end_time)
+			if (alpha->hard_lifetime_end_time <
+			    beta->hard_lifetime_end_time)
+				return beta;
+			else if ((alpha->hard_lifetime_end_time ==
+				  beta->hard_lifetime_end_time) &&
+				 (alpha->soft_lifetime_end_time <
+				  beta->soft_lifetime_end_time))
 				return beta;
 			else
 				return alpha;
@@ -3884,8 +3851,8 @@ prefix_compare(struct reply_state *reply,
 
 		      case FTS_ABANDONED:
 			/* Choose the prefix that was abandoned longest ago. */
-			if (alpha->valid_lifetime_end_time <
-			    beta->valid_lifetime_end_time)
+			if (alpha->hard_lifetime_end_time <
+			    beta->hard_lifetime_end_time)
 				return alpha;
 
 		      default:

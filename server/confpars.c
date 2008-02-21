@@ -4317,7 +4317,8 @@ parse_ia_na_declaration(struct parse *cfile) {
 		}
 		memcpy(&iaaddr->addr, iaddr.iabuf, sizeof(iaaddr->addr));
 		iaaddr->state = state;
-		iaaddr->valid_lifetime_end_time = end_time;
+		if (iaaddr->state == FTS_RELEASED)
+			iaaddr->hard_lifetime_end_time = end_time;
 
 		if (scope != NULL) {
 			binding_scope_reference(&iaaddr->scope, scope, MDL);
@@ -4611,7 +4612,8 @@ parse_ia_ta_declaration(struct parse *cfile) {
 		}
 		memcpy(&iaaddr->addr, iaddr.iabuf, sizeof(iaaddr->addr));
 		iaaddr->state = state;
-		iaaddr->valid_lifetime_end_time = end_time;
+		if (iaaddr->state == FTS_RELEASED)
+			iaaddr->hard_lifetime_end_time = end_time;
 
 		if (scope != NULL) {
 			binding_scope_reference(&iaaddr->scope, scope, MDL);
@@ -4906,7 +4908,8 @@ parse_ia_pd_declaration(struct parse *cfile) {
 		memcpy(&iapref->pref, iaddr.iabuf, sizeof(iapref->pref));
 		iapref->plen = plen;
 		iapref->state = state;
-		iapref->valid_lifetime_end_time = end_time;
+		if (iapref->state == FTS_RELEASED)
+			iapref->hard_lifetime_end_time = end_time;
 
 		if (scope != NULL) {
 			binding_scope_reference(&iapref->scope, scope, MDL);

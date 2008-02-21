@@ -562,7 +562,13 @@ write_ia(const struct ia_na *ia) {
 		/* Note that from here on out, the \n is prepended to the
 		 * next write, rather than appended to the current write.
 		 */
-		tval = print_time(iaaddr->valid_lifetime_end_time);
+		if ((iaaddr->state == FTS_ACTIVE) ||
+		    (iaaddr->state == FTS_ABANDONED) ||
+		    (iaaddr->hard_lifetime_end_time != 0)) {
+			tval = print_time(iaaddr->hard_lifetime_end_time);
+		} else {
+			tval = print_time(iaaddr->soft_lifetime_end_time);
+		}
 		if (tval == NULL) {
 			goto error_exit;
 		}
@@ -665,7 +671,12 @@ write_ia_pd(const struct ia_pd *ia_pd) {
 		/* Note that from here on out, the \n is prepended to the
 		 * next write, rather than appended to the current write.
 		 */
-		tval = print_time(iapref->valid_lifetime_end_time);
+		if ((iapref->state == FTS_ACTIVE) ||
+		    (iapref->state == FTS_ABANDONED)) {
+			tval = print_time(iapref->hard_lifetime_end_time);
+		} else {
+			tval = print_time(iapref->soft_lifetime_end_time);
+		}
 		if (tval == NULL) {
 			goto error_exit;
 		}

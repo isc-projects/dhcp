@@ -1333,11 +1333,12 @@ struct iaaddr {
 	u_int8_t plen;				/* unused/placeholder */
 	binding_state_t state;			/* state */
 	struct binding_scope *scope;		/* "set var = value;" */
-	time_t valid_lifetime_end_time;		/* time address expires */
+	time_t hard_lifetime_end_time;		/* time address expires */
+	time_t soft_lifetime_end_time;		/* time ephemeral expires */
 	struct ia_na *ia_na;			/* IA for this address */
 	struct ipv6_pool *ipv6_pool;		/* pool for this address */
 /*
- * For now, just pick an arbitrary time to keep old leases
+ * For now, just pick an arbitrary time to keep old hard leases
  * around (value in seconds).
  */
 #define EXPIRED_IPV6_CLEANUP_TIME (60*60)
@@ -1388,7 +1389,8 @@ struct iaprefix {
 	u_int8_t plen;				/* prefix length */
 	binding_state_t state;			/* state */
 	struct binding_scope *scope;		/* "set var = value;" */
-	time_t valid_lifetime_end_time;		/* time prefix expires */
+	time_t hard_lifetime_end_time;		/* time prefix expires */
+	time_t soft_lifetime_end_time;		/* time ephemeral expires */
 	struct ia_pd *ia_pd;			/* IA for this prefix */
 	struct ipv6_ppool *ipv6_ppool;		/* pool for this prefix */
 	int heap_index;				/* index into heap, or -1 
@@ -3315,11 +3317,11 @@ isc_result_t ipv6_ppool_reference(struct ipv6_ppool **ppool,
 				  const char *file, int line);
 isc_result_t ipv6_ppool_dereference(struct ipv6_ppool **ppool,
 				    const char *file, int line);
-isc_result_t activate_lease6(struct ipv6_pool *pool,
-			     struct iaaddr **addr,
-			     unsigned int *attempts,
-			     const struct data_string *uid,
-			     time_t valid_lifetime_end_time);
+isc_result_t create_lease6(struct ipv6_pool *pool,
+			   struct iaaddr **addr,
+			   unsigned int *attempts,
+			   const struct data_string *uid,
+			   time_t soft_lifetime_end_time);
 isc_result_t add_lease6(struct ipv6_pool *pool,
 			struct iaaddr *addr,
 			time_t valid_lifetime_end_time);
@@ -3333,11 +3335,11 @@ isc_boolean_t lease6_exists(const struct ipv6_pool *pool,
 isc_result_t mark_address_unavailble(struct ipv6_pool *pool,
 				     const struct in6_addr *addr);
 
-isc_result_t activate_prefix6(struct ipv6_ppool *ppool,
-			      struct iaprefix **pref,
-			      unsigned int *attempts,
-			      const struct data_string *uid,
-			      time_t valid_lifetime_end_time);
+isc_result_t create_prefix6(struct ipv6_ppool *ppool,
+			    struct iaprefix **pref,
+			    unsigned int *attempts,
+			    const struct data_string *uid,
+			    time_t soft_lifetime_end_time);
 isc_result_t add_prefix6(struct ipv6_ppool *ppool,
 			 struct iaprefix *pref,
 			 time_t valid_lifetime_end_time);

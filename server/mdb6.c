@@ -782,8 +782,13 @@ lease_older(void *a, void *b) {
 	struct iaaddr *ia = (struct iaaddr *)a;
 	struct iaaddr *ib = (struct iaaddr *)b;
 
-	return difftime(ia->valid_lifetime_end_time, 
-			ib->valid_lifetime_end_time) < 0;
+	if (ia->hard_lifetime_end_time == ib->hard_lifetime_end_time) {
+		return difftime(ia->soft_lifetime_end_time,
+				ib->soft_lifetime_end_time) < 0;
+	} else {
+		return difftime(ia->hard_lifetime_end_time, 
+				ib->hard_lifetime_end_time) < 0;
+	}
 }
 
 /*
@@ -1108,7 +1113,7 @@ ipv6_ppool_dereference(struct ipv6_ppool **ppool, const char *file, int line) {
  * the non-network part.
  */
 static void
-create_address(struct in6_addr *addr, 
+build_address6(struct in6_addr *addr, 
 	       const struct in6_addr *net_start_addr, int net_bits, 
 	       const struct data_string *input) {
 	MD5_CTX ctx;
@@ -1153,7 +1158,7 @@ create_address(struct in6_addr *addr,
  * Create a temporary address by a variant of RFC 4941 algo.
  */
 static void
-create_temporary(struct in6_addr *addr, 
+build_temporary6(struct in6_addr *addr, 
 		 const struct in6_addr *net_start_addr, 
 		 const struct data_string *input) {
 	static u_int8_t history[8];
@@ -1220,9 +1225,9 @@ static struct in6_addr resany;
  * the long term.
  */
 isc_result_t
-activate_lease6(struct ipv6_pool *pool, struct iaaddr **addr, 
-		unsigned int *attempts,
-		const struct data_string *uid, time_t valid_lifetime_end_time) {
+create_lease6(struct ipv6_pool *pool, struct iaaddr **addr, 
+	      unsigned int *attempts,
+	      const struct data_string *uid, time_t soft_lifetime_end_time) {
 	struct data_string ds;
 	struct in6_addr tmp;
 	struct iaaddr *test_iaaddr;
@@ -1260,13 +1265,13 @@ activate_lease6(struct ipv6_pool *pool, struct iaaddr **addr,
 		}
 
 		/* 
-		 * Create an address or a temporary address.
+		 * Build an address or a temporary address.
 		 */
 		if ((pool->bits & POOL_IS_FOR_TEMP) == 0) {
-			create_address(&tmp, &pool->start_addr,
+			build_address6(&tmp, &pool->start_addr,
 				       pool->bits, &ds);
 		} else {
-			create_temporary(&tmp, &pool->start_addr, &ds);
+			build_temporary6(&tmp, &pool->start_addr, &ds);
 		}
 
 		/*
@@ -1328,7 +1333,7 @@ activate_lease6(struct ipv6_pool *pool, struct iaaddr **addr,
 	/*
 	 * Add the lease to the pool (note state is free, not active?!).
 	 */
-	result = add_lease6(pool, iaaddr, valid_lifetime_end_time);
+	result = add_lease6(pool, iaaddr, soft_lifetime_end_time);
 	if (result == ISC_R_SUCCESS) {
 		iaaddr_reference(addr, iaaddr, MDL);
 	}
@@ -1351,7 +1356,6 @@ add_lease6(struct ipv6_pool *pool, struct iaaddr *iaaddr,
 	if (iaaddr->state == 0)
 		iaaddr->state = FTS_ACTIVE;
 
-	iaaddr->valid_lifetime_end_time = valid_lifetime_end_time;
 	ipv6_pool_reference(&iaaddr->ipv6_pool, pool, MDL);
 
 	/*
@@ -1401,6 +1405,7 @@ add_lease6(struct ipv6_pool *pool, struct iaaddr *iaaddr,
 	iaaddr_reference(&tmp_iaaddr, iaaddr, MDL);
 	if ((tmp_iaaddr->state == FTS_ACTIVE) ||
 	    (tmp_iaaddr->state == FTS_ABANDONED)) {
+		tmp_iaaddr->hard_lifetime_end_time = valid_lifetime_end_time;
 		iaaddr_hash_add(pool->addrs, &tmp_iaaddr->addr, 
 				sizeof(tmp_iaaddr->addr), iaaddr, MDL);
 		insert_result = isc_heap_insert(pool->active_timeouts,
@@ -1408,6 +1413,7 @@ add_lease6(struct ipv6_pool *pool, struct iaaddr *iaaddr,
 		if (insert_result == ISC_R_SUCCESS)
 			pool->num_active++;
 	} else {
+		tmp_iaaddr->soft_lifetime_end_time = valid_lifetime_end_time;
 		insert_result = isc_heap_insert(pool->inactive_timeouts,
 						tmp_iaaddr);
 		if (insert_result == ISC_R_SUCCESS)
@@ -1469,7 +1475,7 @@ move_lease_to_active(struct ipv6_pool *pool, struct iaaddr *addr) {
 /*
  * Renew an lease in the pool.
  *
- * To do this, first set the new valid_lifetime_end_time for the address, 
+ * To do this, first set the new hard_lifetime_end_time for the address, 
  * and then invoke renew_lease() on the address.
  *
  * WARNING: lease times must only be extended, never reduced!!!
@@ -1550,7 +1556,7 @@ expire_lease6(struct iaaddr **addr, struct ipv6_pool *pool, time_t now) {
 	if (pool->num_active > 0) {
 		tmp = (struct iaaddr *)isc_heap_element(pool->active_timeouts, 
 							1);
-		if (now > tmp->valid_lifetime_end_time) {
+		if (now > tmp->hard_lifetime_end_time) {
 			result = move_lease_to_inactive(pool, tmp, FTS_EXPIRED);
 			if (result == ISC_R_SUCCESS) {
 				iaaddr_reference(addr, tmp, MDL);
@@ -1577,7 +1583,7 @@ decline_lease6(struct ipv6_pool *pool, struct iaaddr *addr) {
 		}
 	}
 	addr->state = FTS_ABANDONED;
-	addr->valid_lifetime_end_time = MAX_TIME;
+	addr->hard_lifetime_end_time = MAX_TIME;
 	isc_heap_decreased(pool->active_timeouts, addr->heap_index);
 	return ISC_R_SUCCESS;
 }
@@ -1599,7 +1605,7 @@ release_lease6(struct ipv6_pool *pool, struct iaaddr *addr) {
  * the part subject to allocation.
  */
 static void
-create_prefix(struct in6_addr *pref, 
+build_prefix6(struct in6_addr *pref, 
 	      const struct in6_addr *net_start_pref,
 	      int pool_bits, int pref_bits,
 	      const struct data_string *input) {
@@ -1679,10 +1685,10 @@ create_prefix(struct in6_addr *pref,
  * the long term.
  */
 isc_result_t
-activate_prefix6(struct ipv6_ppool *ppool, struct iaprefix **pref, 
-		 unsigned int *attempts,
-		 const struct data_string *uid,
-		 time_t valid_lifetime_end_time) {
+create_prefix6(struct ipv6_ppool *ppool, struct iaprefix **pref, 
+	       unsigned int *attempts,
+	       const struct data_string *uid,
+	       time_t soft_lifetime_end_time) {
 	struct data_string ds;
 	struct in6_addr tmp;
 	struct iaprefix *test_iapref;
@@ -1707,9 +1713,9 @@ activate_prefix6(struct ipv6_ppool *ppool, struct iaprefix **pref,
 		}
 
 		/* 
-		 * Create a prefix
+		 * Build a prefix
 		 */
-		create_prefix(&tmp, &ppool->start_pref,
+		build_prefix6(&tmp, &ppool->start_pref,
 			      (int)ppool->pool_plen, (int)ppool->alloc_plen,
 			      &ds);
 
@@ -1757,7 +1763,7 @@ activate_prefix6(struct ipv6_ppool *ppool, struct iaprefix **pref,
 	/*
 	 * Add the prefix to the pool (note state is free, not active?!).
 	 */
-	result = add_prefix6(ppool, iapref, valid_lifetime_end_time);
+	result = add_prefix6(ppool, iapref, soft_lifetime_end_time);
 	if (result == ISC_R_SUCCESS) {
 		iaprefix_reference(pref, iapref, MDL);
 	}
@@ -1780,7 +1786,6 @@ add_prefix6(struct ipv6_ppool *ppool, struct iaprefix *iapref,
 	if (iapref->state == 0)
 		iapref->state = FTS_ACTIVE;
 
-	iapref->valid_lifetime_end_time = valid_lifetime_end_time;
 	ipv6_ppool_reference(&iapref->ipv6_ppool, ppool, MDL);
 
 	/*
@@ -1830,6 +1835,7 @@ add_prefix6(struct ipv6_ppool *ppool, struct iaprefix *iapref,
 	iaprefix_reference(&tmp_iapref, iapref, MDL);
 	if ((tmp_iapref->state == FTS_ACTIVE) ||
 	    (tmp_iapref->state == FTS_ABANDONED)) {
+		tmp_iapref->hard_lifetime_end_time = valid_lifetime_end_time;
 		iaprefix_hash_add(ppool->prefs, &tmp_iapref->pref, 
 				  sizeof(tmp_iapref->pref), iapref, MDL);
 		insert_result = isc_heap_insert(ppool->active_timeouts,
@@ -1837,6 +1843,7 @@ add_prefix6(struct ipv6_ppool *ppool, struct iaprefix *iapref,
 		if (insert_result == ISC_R_SUCCESS)
 			ppool->num_active++;
 	} else {
+		tmp_iapref->soft_lifetime_end_time = valid_lifetime_end_time;
 		insert_result = isc_heap_insert(ppool->inactive_timeouts,
 						tmp_iapref);
 		if (insert_result == ISC_R_SUCCESS)
@@ -1902,7 +1909,7 @@ move_prefix_to_active(struct ipv6_ppool *ppool, struct iaprefix *pref) {
 /*
  * Renew a prefix in the pool.
  *
- * To do this, first set the new valid_lifetime_end_time for the prefix, 
+ * To do this, first set the new hard_lifetime_end_time for the prefix, 
  * and then invoke renew_prefix() on the prefix.
  *
  * WARNING: lease times must only be extended, never reduced!!!
@@ -1983,7 +1990,7 @@ expire_prefix6(struct iaprefix **pref, struct ipv6_ppool *ppool, time_t now) {
 	if (ppool->num_active > 0) {
 		tmp = (struct iaprefix *)
 			isc_heap_element(ppool->active_timeouts, 1);
-		if (now > tmp->valid_lifetime_end_time) {
+		if (now > tmp->hard_lifetime_end_time) {
 			result = move_prefix_to_inactive(ppool, tmp,
 							 FTS_EXPIRED);
 			if (result == ISC_R_SUCCESS) {
@@ -2107,12 +2114,18 @@ cleanup_old_expired(struct ipv6_pool *pool) {
 	struct ia_na *ia;
 	struct ia_na *ia_active;
 	unsigned char *tmpd;
+	time_t timeout;
 	
 	while (pool->num_inactive > 0) {
 		tmp = (struct iaaddr *)isc_heap_element(pool->inactive_timeouts,
 							1);
-		if (cur_time < 
-		    tmp->valid_lifetime_end_time + EXPIRED_IPV6_CLEANUP_TIME) {
+		if (tmp->hard_lifetime_end_time != 0) {
+			timeout = tmp->hard_lifetime_end_time;
+			timeout += EXPIRED_IPV6_CLEANUP_TIME;
+		} else {
+			timeout = tmp->soft_lifetime_end_time;
+		}
+		if (cur_time < timeout) {
 			break;
 		}
 
@@ -2216,16 +2229,20 @@ schedule_lease_timeout(struct ipv6_pool *pool) {
 	if (pool->num_active > 0) {
 		tmp = (struct iaaddr *)isc_heap_element(pool->active_timeouts, 
 							1);
-		if (tmp->valid_lifetime_end_time < next_timeout) {
-			next_timeout = tmp->valid_lifetime_end_time + 1;
+		if (tmp->hard_lifetime_end_time < next_timeout) {
+			next_timeout = tmp->hard_lifetime_end_time + 1;
 		}
 	}
 
 	if (pool->num_inactive > 0) {
 		tmp = (struct iaaddr *)isc_heap_element(pool->inactive_timeouts,
 							1);
-		timeout = tmp->valid_lifetime_end_time + 
-			  EXPIRED_IPV6_CLEANUP_TIME;
+		if (tmp->hard_lifetime_end_time != 0) {
+			timeout = tmp->hard_lifetime_end_time;
+			timeout += EXPIRED_IPV6_CLEANUP_TIME;
+		} else {
+			timeout = tmp->soft_lifetime_end_time + 1;
+		}
 		if (timeout < next_timeout) {
 			next_timeout = timeout;
 		}
@@ -2258,12 +2275,18 @@ cleanup_old_pexpired(struct ipv6_ppool *ppool) {
 	struct ia_pd *ia_pd;
 	struct ia_pd *ia_active;
 	unsigned char *tmpd;
+	time_t timeout;
 	
 	while (ppool->num_inactive > 0) {
 		tmp = (struct iaprefix *)
 			isc_heap_element(ppool->inactive_timeouts, 1);
-		if (cur_time < 
-		    tmp->valid_lifetime_end_time + EXPIRED_IPV6_CLEANUP_TIME) {
+		if (tmp->hard_lifetime_end_time != 0) {
+			timeout = tmp->hard_lifetime_end_time;
+			timeout += EXPIRED_IPV6_CLEANUP_TIME;
+		} else {
+			timeout = tmp->soft_lifetime_end_time;
+		}
+		if (cur_time < timeout) {
 			break;
 		}
 
@@ -2351,16 +2374,20 @@ schedule_prefix_timeout(struct ipv6_ppool *ppool) {
 	if (ppool->num_active > 0) {
 		tmp = (struct iaprefix *)
 			isc_heap_element(ppool->active_timeouts, 1);
-		if (tmp->valid_lifetime_end_time < next_timeout) {
-			next_timeout = tmp->valid_lifetime_end_time + 1;
+		if (tmp->hard_lifetime_end_time < next_timeout) {
+			next_timeout = tmp->hard_lifetime_end_time + 1;
 		}
 	}
 
 	if (ppool->num_inactive > 0) {
 		tmp = (struct iaprefix *)
 			isc_heap_element(ppool->inactive_timeouts, 1);
-		timeout = tmp->valid_lifetime_end_time + 
-			  EXPIRED_IPV6_CLEANUP_TIME;
+		if (tmp->hard_lifetime_end_time != 0) {
+			timeout = tmp->hard_lifetime_end_time;
+			timeout += EXPIRED_IPV6_CLEANUP_TIME;
+		} else {
+			timeout = tmp->soft_lifetime_end_time + 1;
+		}
 		if (timeout < next_timeout) {
 			next_timeout = timeout;
 		}
@@ -2529,7 +2556,7 @@ change_leases(struct ia_na *ia,
 /*
  * Renew all leases in an IA from all pools.
  *
- * The new valid_lifetime_end_time should be updated for the addresses.
+ * The new hard_lifetime_end_time should be updated for the addresses.
  *
  * WARNING: lease times must only be extended, never reduced!!!
  */
@@ -2630,7 +2657,7 @@ change_prefixes(struct ia_pd *ia_pd,
 /*
  * Renew all prefixes in an IA_PD from all pools.
  *
- * The new valid_lifetime_end_time should be updated for the addresses.
+ * The new hard_lifetime_end_time should be updated for the addresses.
  *
  * WARNING: lease times must only be extended, never reduced!!!
  */
@@ -3139,7 +3166,7 @@ main(int argc, char *argv[]) {
 		return 1;
 	}
 
-	/* activate_lease6, renew_lease6, expire_lease6 */
+	/* create_lease6, renew_lease6, expire_lease6 */
 	uid = "client0";
 	memset(&ds, 0, sizeof(ds));
 	ds.len = strlen(uid);
@@ -3149,9 +3176,9 @@ main(int argc, char *argv[]) {
 	}
 	ds.data = ds.buffer->data;
 	memcpy((char *)ds.data, uid, ds.len);
-	if (activate_lease6(pool, &iaaddr, 
-			    &attempts, &ds, 1) != ISC_R_SUCCESS) {
-		printf("ERROR: activate_lease6() %s:%d\n", MDL);
+	if (create_lease6(pool, &iaaddr, 
+			  &attempts, &ds, 1) != ISC_R_SUCCESS) {
+		printf("ERROR: create_lease6() %s:%d\n", MDL);
 		return 1;
 	}
 	if (pool->num_inactive != 1) {
@@ -3201,9 +3228,9 @@ main(int argc, char *argv[]) {
 	}
 
 	/* release_lease6, decline_lease6 */
-	if (activate_lease6(pool, &iaaddr, &attempts, 
-			    &ds, 1) != ISC_R_SUCCESS) {
-		printf("ERROR: activate_lease6() %s:%d\n", MDL);
+	if (create_lease6(pool, &iaaddr, &attempts, 
+			  &ds, 1) != ISC_R_SUCCESS) {
+		printf("ERROR: create_lease6() %s:%d\n", MDL);
 		return 1;
 	}
 	if (renew_lease6(pool, iaaddr) != ISC_R_SUCCESS) {
@@ -3226,9 +3253,9 @@ main(int argc, char *argv[]) {
 		printf("ERROR: iaaddr_dereference() %s:%d\n", MDL);
 		return 1;
 	}
-	if (activate_lease6(pool, &iaaddr, &attempts, 
-			    &ds, 1) != ISC_R_SUCCESS) {
-		printf("ERROR: activate_lease6() %s:%d\n", MDL);
+	if (create_lease6(pool, &iaaddr, &attempts, 
+			  &ds, 1) != ISC_R_SUCCESS) {
+		printf("ERROR: create_lease6() %s:%d\n", MDL);
 		return 1;
 	}
 	if (renew_lease6(pool, iaaddr) != ISC_R_SUCCESS) {
@@ -3306,9 +3333,9 @@ main(int argc, char *argv[]) {
 		return 1;
 	}
 	for (i=10; i<100; i+=10) {
-		if (activate_lease6(pool, &iaaddr, &attempts,
-				    &ds, i) != ISC_R_SUCCESS) {
-			printf("ERROR: activate_lease6() %s:%d\n", MDL);
+		if (create_lease6(pool, &iaaddr, &attempts,
+				  &ds, i) != ISC_R_SUCCESS) {
+			printf("ERROR: create_lease6() %s:%d\n", MDL);
 			return 1;
 		}
 		if (renew_lease6(pool, iaaddr) != ISC_R_SUCCESS) {
@@ -3343,8 +3370,8 @@ main(int argc, char *argv[]) {
 			printf("ERROR: bad num_active %s:%d\n", MDL);
 			return 1;
 		}
-		if (expired_iaaddr->valid_lifetime_end_time != i) {
-			printf("ERROR: bad valid_lifetime_end_time %s:%d\n", 
+		if (expired_iaaddr->hard_lifetime_end_time != i) {
+			printf("ERROR: bad hard_lifetime_end_time %s:%d\n", 
 			       MDL);
 			return 1;
 		}
@@ -3376,9 +3403,9 @@ main(int argc, char *argv[]) {
 		printf("ERROR: ipv6_pool_allocate() %s:%d\n", MDL);
 		return 1;
 	}
-	if (activate_lease6(pool, &iaaddr, &attempts, 
-			    &ds, 42) != ISC_R_SUCCESS) {
-		printf("ERROR: activate_lease6() %s:%d\n", MDL);
+	if (create_lease6(pool, &iaaddr, &attempts, 
+			  &ds, 42) != ISC_R_SUCCESS) {
+		printf("ERROR: create_lease6() %s:%d\n", MDL);
 		return 1;
 	}
 	if (renew_lease6(pool, iaaddr) != ISC_R_SUCCESS) {
@@ -3389,9 +3416,9 @@ main(int argc, char *argv[]) {
 		printf("ERROR: iaaddr_dereference() %s:%d\n", MDL);
 		return 1;
 	}
-	if (activate_lease6(pool, &iaaddr, &attempts, 
-			    &ds, 11) != ISC_R_SUCCESS) {
-		printf("ERROR: activate_lease6() %s:%d\n", MDL);
+	if (create_lease6(pool, &iaaddr, &attempts, 
+			  &ds, 11) != ISC_R_SUCCESS) {
+		printf("ERROR: create_lease6() %s:%d\n", MDL);
 		return 1;
 	}
 	if (renew_lease6(pool, iaaddr) != ISC_R_SUCCESS) {
@@ -3402,9 +3429,9 @@ main(int argc, char *argv[]) {
 		printf("ERROR: iaaddr_dereference() %s:%d\n", MDL);
 		return 1;
 	}
-	if (activate_lease6(pool, &iaaddr, &attempts, 
-			    &ds, 11) != ISC_R_NORESOURCES) {
-		printf("ERROR: activate_lease6() %s:%d\n", MDL);
+	if (create_lease6(pool, &iaaddr, &attempts, 
+			  &ds, 11) != ISC_R_NORESOURCES) {
+		printf("ERROR: create_lease6() %s:%d\n", MDL);
 		return 1;
 	}
 	if (ipv6_pool_dereference(&pool, MDL) != ISC_R_SUCCESS) {
