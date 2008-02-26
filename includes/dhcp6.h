@@ -140,7 +140,7 @@ extern const int dhcpv6_type_name_max;
 #define All_DHCP_Servers "FF05::1:3"
 
 /*
- * DHCPv6 Retransmission Constants (RFC3315 section 5.5)
+ * DHCPv6 Retransmission Constants (RFC3315 section 5.5, RFC 5007)
  */
 
 #define SOL_MAX_DELAY     1
@@ -167,6 +167,9 @@ extern const int dhcpv6_type_name_max;
 #define REC_TIMEOUT       2
 #define REC_MAX_RC        8
 #define HOP_COUNT_LIMIT  32
+#define LQ6_TIMEOUT       1
+#define LQ6_MAX_RT       10
+#define LQ6_MAX_RC        5
 
 /* 
  * Normal packet format, defined in section 6 of RFC 3315 

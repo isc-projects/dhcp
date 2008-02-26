@@ -17,6 +17,8 @@ in DHCP 4.0.x.  These include:
 
 - A basic DHCPv6 relay agent, dhcrelay6
 
+- Basic and partial DHCPv6 leasequery support
+
 There are a number of DHCPv6 limitations and features missing in this
 release, which will be addressed in the future:
 
@@ -89,7 +91,9 @@ work on other platforms. Please report any problems and suggested fixes to
   The default delayed ack limit is 28.  Thanks entirely to a patch from
   Christof Chen.
 
- - ERO (RFC 4994) server support.
+- ERO (RFC 4994) server support.
+
+- Basic and partial DHCPv6 leasequery support.
 
 			Changes since 4.0.0 (bug fixes)
 

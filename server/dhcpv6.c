@@ -5521,6 +5521,12 @@ build_dhcpv6_reply(struct data_string *reply, struct packet *packet) {
 		case DHCPV6_RELAY_REPL:
 			dhcpv6_discard(packet);
 			break;
+		case DHCPV6_LEASEQUERY:
+			dhcpv6_leasequery(reply, packet);
+			break;
+		case DHCPV6_LEASEQUERY_REPLY:
+			dhcpv6_discard(packet);
+			break;
 		default:
 			/* XXX: would be nice if we had "notice" level, 
 				as syslog, for this */

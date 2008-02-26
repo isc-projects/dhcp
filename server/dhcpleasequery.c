@@ -645,3 +645,565 @@ dhcpleasequery(struct packet *packet, int ms_nulltp) {
 		    NULL);
 }
 
+#ifdef DHCPv6
+
+/*
+ * TODO: RFC5007 query-by-clientid.
+ *
+ * TODO: RFC5007 look at the pools according to the link-address.
+ *
+ * TODO: get fixed leases too.
+ *
+ * TODO: RFC5007 ORO in query-options.
+ *
+ * TODO: RFC5007 not default preferred and valid time.
+ *
+ * TODO: RFC5007 not zero Client Last Transaction Time (clt-time).
+ *
+ * TODO: RFC5007 lq-relay-data.
+ *
+ * TODO: RFC5007 lq-client-link.
+ *
+ * Note: the code is still nearly compliant and usable for the target
+ * case with these missing features!
+ */
+
+/*
+ * The structure to handle a leasequery.
+ */
+struct lq6_state {
+	struct packet *packet;
+	struct data_string client_id;
+	struct data_string server_id;
+	struct data_string lq_query;
+	uint8_t query_type;
+	struct in6_addr link_addr;
+	struct option_state *query_opts;
+
+	struct option_state *reply_opts;
+	unsigned cursor;
+	union reply_buffer {
+		unsigned char data[65536];
+		struct dhcpv6_packet reply;
+	} buf;
+};
+
+/*
+ * Options that we want to send.
+ */
+static const int required_opts_lq[] = {
+	D6O_CLIENTID,
+	D6O_SERVERID,
+	D6O_STATUS_CODE,
+	D6O_CLIENT_DATA,
+	D6O_LQ_RELAY_DATA,
+	D6O_LQ_CLIENT_LINK,
+	0
+};
+static const int required_opt_CLIENT_DATA[] = {
+	D6O_CLIENTID,
+	D6O_IAADDR,
+	D6O_IAPREFIX,
+	D6O_CLT_TIME,
+	0
+};
+
+/*
+ * Get the lq-query option from the packet.
+ */
+static isc_result_t
+get_lq_query(struct lq6_state *lq)
+{
+	struct data_string *lq_query = &lq->lq_query;
+	struct packet *packet = lq->packet;
+	struct option_cache *oc;
+
+	/*
+	 * Verify our lq_query structure is empty.
+	 */
+	if ((lq_query->data != NULL) || (lq_query->len != 0)) {
+		return ISC_R_INVALIDARG;
+	}
+
+	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_LQ_QUERY);
+	if (oc == NULL) {
+		return ISC_R_NOTFOUND;
+	}
+
+	if (!evaluate_option_cache(lq_query, packet, NULL, NULL,
+				   packet->options, NULL,
+				   &global_scope, oc, MDL)) {
+		return ISC_R_FAILURE;
+	}
+
+	return ISC_R_SUCCESS;
+}
+
+/*
+ * Message validation, RFC 5007 section 4.2.1:
+ *  dhcpv6.c:valid_client_msg() - unicast + lq-query option.
+ */
+static int
+valid_query_msg(struct lq6_state *lq) {
+	struct packet *packet = lq->packet;
+	int ret_val = 0;
+	struct option_cache *oc;
+
+	/* INSIST((lq != NULL) || (packet != NULL)); */
+
+	switch (get_client_id(packet, &lq->client_id)) {
+		case ISC_R_SUCCESS:
+			break;
+		case ISC_R_NOTFOUND:
+			log_debug("Discarding %s from %s; "
+				  "client identifier missing", 
+				  dhcpv6_type_names[packet->dhcpv6_msg_type],
+				  piaddr(packet->client_addr));
+			goto exit;
+		default:
+			log_error("Error processing %s from %s; "
+				  "unable to evaluate Client Identifier",
+				  dhcpv6_type_names[packet->dhcpv6_msg_type],
+				  piaddr(packet->client_addr));
+			goto exit;
+	}
+
+	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_SERVERID);
+	if (oc != NULL) {
+		if (evaluate_option_cache(&lq->server_id, packet, NULL, NULL,
+					  packet->options, NULL, 
+					  &global_scope, oc, MDL)) {
+			log_debug("Discarding %s from %s; " 
+				  "server identifier found "
+				  "(CLIENTID %s, SERVERID %s)", 
+				  dhcpv6_type_names[packet->dhcpv6_msg_type],
+				  piaddr(packet->client_addr),
+				  print_hex_1(lq->client_id.len, 
+				  	      lq->client_id.data, 60),
+				  print_hex_2(lq->server_id.len,
+				  	      lq->server_id.data, 60));
+		} else {
+			log_debug("Discarding %s from %s; " 
+				  "server identifier found "
+				  "(CLIENTID %s)", 
+				  dhcpv6_type_names[packet->dhcpv6_msg_type],
+				  print_hex_1(lq->client_id.len, 
+				  	      lq->client_id.data, 60),
+				  piaddr(packet->client_addr));
+		}
+		goto exit;
+	}
+
+	switch (get_lq_query(lq)) {
+		case ISC_R_SUCCESS:
+			break;
+		case ISC_R_NOTFOUND:
+			log_debug("Discarding %s from %s; lq-query missing",
+				  dhcpv6_type_names[packet->dhcpv6_msg_type],
+				  piaddr(packet->client_addr));
+			goto exit;
+		default:
+			log_error("Error processing %s from %s; "
+				  "unable to evaluate LQ-Query",
+				  dhcpv6_type_names[packet->dhcpv6_msg_type],
+				  piaddr(packet->client_addr));
+			goto exit;
+	}
+
+	/* looks good */
+	ret_val = 1;
+
+exit:
+	if (!ret_val) {
+		if (lq->client_id.len > 0) {
+			data_string_forget(&lq->client_id, MDL);
+		}
+		if (lq->server_id.len > 0) {
+			data_string_forget(&lq->server_id, MDL);
+		}
+		if (lq->lq_query.len > 0) {
+			data_string_forget(&lq->lq_query, MDL);
+		}
+	}
+	return ret_val;
+}
+
+/*
+ * Set an error in a status-code option (from set_status_code).
+ */
+static int
+set_error(struct lq6_state *lq, u_int16_t code, const char *message) {
+	struct data_string d;
+	int ret_val;
+
+	memset(&d, 0, sizeof(d));
+	d.len = sizeof(code) + strlen(message);
+	if (!buffer_allocate(&d.buffer, d.len, MDL)) {
+		log_fatal("set_error: no memory for status code.");
+	}
+	d.data = d.buffer->data;
+	putUShort(d.buffer->data, code);
+	memcpy(d.buffer->data + sizeof(code), message, d.len - sizeof(code));
+	if (!save_option_buffer(&dhcpv6_universe, lq->reply_opts,
+				d.buffer, (unsigned char *)d.data, d.len, 
+				D6O_STATUS_CODE, 0)) {
+		log_error("set_error: error saving status code.");
+		ret_val = 0;
+	} else {
+		ret_val = 1;
+	}
+	data_string_forget(&d, MDL);
+	return ret_val;
+}
+
+/*
+ * Process a by-address lease query.
+ */
+static int
+process_lq_by_address(struct lq6_state *lq) {
+	struct packet *packet = lq->packet;
+	struct option_cache *oc;
+	struct ipv6_pool *pool = NULL;
+	struct data_string data;
+	struct in6_addr addr;
+	struct iaaddr *iaaddr = NULL;
+	struct option_state *opt_state = NULL;
+	u_int32_t lifetime;
+	unsigned opt_cursor;
+	int ret_val = 0;
+
+	/*
+	 * Get the IAADDR.
+	 */
+	oc = lookup_option(&dhcpv6_universe, lq->query_opts, D6O_IAADDR);
+	if (oc == NULL) {
+		if (!set_error(lq, STATUS_MalformedQuery,
+			       "No OPTION_IAADDR.")) {
+			log_error("process_lq_by_address: unable "
+				  "to set MalformedQuery status code.");
+			return 0;
+		}
+		return 1;
+	}
+	memset(&data, 0, sizeof(data));
+	if (!evaluate_option_cache(&data, packet,
+				   NULL, NULL,
+				   lq->query_opts, NULL,
+				   &global_scope, oc, MDL) ||
+	    (data.len < IAADDR_OFFSET)) {
+		log_error("process_lq_by_address: error evaluating IAADDR.");
+		goto exit;
+	}
+	memcpy(&addr, data.data, sizeof(addr));
+	data_string_forget(&data, MDL);
+
+	/*
+	 * Find the lease.
+	 * Note the RFC 5007 says to use the link-address to find the link
+	 * or the ia-aadr when it is :: but in any case the ia-addr has
+	 * to be on the link, so we ignore the link-address here.
+	 */
+	if (find_ipv6_pool(&pool, &addr) != ISC_R_SUCCESS) {
+		if (!set_error(lq, STATUS_NotConfigured,
+			       "Address not in a pool.")) {
+			log_error("process_lq_by_address: unable "
+				  "to set NotConfigured status code.");
+			goto exit;
+		}
+		ret_val = 1;
+		goto exit;
+	}
+	if (iaaddr_hash_lookup(&iaaddr, pool->addrs, &addr,
+			       sizeof(addr), MDL) == 0) {
+		ret_val = 1;
+		goto exit;
+	}
+	if ((iaaddr == NULL) || (iaaddr->state != FTS_ACTIVE) ||
+	    (iaaddr->ia_na == NULL) ||
+	    (iaaddr->ia_na->iaid_duid.len <= 4)) {
+		ret_val = 1;
+		goto exit;
+	}
+
+	/*
+	 * Build the client-data option (with client-id, ia-addr and clt-time).
+	 */
+	if (!option_state_allocate(&opt_state, MDL)) {
+		log_error("process_lq_by_address: "
+			  "no memory for option state.");
+		goto exit;
+	}
+
+	data_string_copy(&data, &iaaddr->ia_na->iaid_duid, MDL);
+	data.data += 4;
+	data.len -= 4;
+	if (!save_option_buffer(&dhcpv6_universe, opt_state,
+				NULL, (unsigned char *)data.data, data.len,
+				D6O_CLIENTID, 0)) {
+		log_error("process_lq_by_address: error saving client ID.");
+		goto exit;
+	}
+	data_string_forget(&data, MDL);
+
+	data.len = IAADDR_OFFSET;
+	if (!buffer_allocate(&data.buffer, data.len, MDL)) {
+		log_error("process_lq_by_address: no memory for ia-addr.");
+		goto exit;
+	}
+	data.data = data.buffer->data;
+	memcpy(data.buffer->data, &iaaddr->addr, 16);
+	lifetime = DEFAULT_DEFAULT_LEASE_TIME;
+	lifetime = (lifetime / 2) + (lifetime / 8);
+	putULong(data.buffer->data + 16, lifetime);
+	lifetime = DEFAULT_DEFAULT_LEASE_TIME;
+	putULong(data.buffer->data + 20, lifetime);
+	if (!save_option_buffer(&dhcpv6_universe, opt_state,
+				NULL, (unsigned char *)data.data, data.len,
+				D6O_IAADDR, 0)) {
+		log_error("process_lq_by_address: error saving ia-addr.");
+		goto exit;
+	}
+	data_string_forget(&data, MDL);
+
+	lifetime = 0;
+	if (!save_option_buffer(&dhcpv6_universe, opt_state,
+				NULL, (unsigned char *)&lifetime, 4,
+				D6O_CLT_TIME, 0)) {
+		log_error("process_lq_by_address: error saving clt time.");
+		goto exit;
+	}
+
+	/*
+	 * Store the client-data option.
+	 */
+	opt_cursor = lq->cursor;
+	putUShort(lq->buf.data + lq->cursor, (unsigned)D6O_CLIENT_DATA);
+	lq->cursor += 2;
+	/* Skip option length. */
+	lq->cursor += 2;
+
+	lq->cursor += store_options6((char *)lq->buf.data + lq->cursor,
+				     sizeof(lq->buf) - lq->cursor,
+				     opt_state, lq->packet,
+				     required_opt_CLIENT_DATA, NULL);
+	/* Reset the length. */
+	putUShort(lq->buf.data + opt_cursor + 2,
+		  lq->cursor - (opt_cursor + 4));
+
+	/* Done. */
+	ret_val = 1;
+
+     exit:
+	if (data.data != NULL)
+		data_string_forget(&data, MDL);
+	if (pool != NULL)
+		ipv6_pool_dereference(&pool, MDL);
+	if (iaaddr != NULL)
+		iaaddr_dereference(&iaaddr, MDL);
+	if (opt_state != NULL)
+		option_state_dereference(&opt_state, MDL);
+	return ret_val;
+}
+
+
+/*
+ * Process a lease query.
+ */
+void
+dhcpv6_leasequery(struct data_string *reply_ret, struct packet *packet) {
+	static struct lq6_state lq;
+	struct data_string server_duid;
+	struct option_cache *oc;
+	int allow_lq;
+
+	/*
+	 * Initialize the lease query state.
+	 */
+	lq.packet = NULL;
+	memset(&lq.client_id, 0, sizeof(lq.client_id));
+	memset(&lq.server_id, 0, sizeof(lq.server_id));
+	memset(&lq.lq_query, 0, sizeof(lq.lq_query));
+	lq.query_opts = NULL;
+	lq.reply_opts = NULL;
+	packet_reference(&lq.packet, packet, MDL);
+
+	/*
+	 * Validate our input.
+	 */
+	if (!valid_query_msg(&lq)) {
+		goto exit;
+	}
+
+	/*
+	 * Prepare our reply.
+	 */
+	if (!option_state_allocate(&lq.reply_opts, MDL)) {
+		log_error("dhcpv6_leasequery: no memory for option state.");
+		goto exit;
+	}
+	execute_statements_in_scope(NULL, lq.packet, NULL, NULL,
+				    lq.packet->options, lq.reply_opts,
+				    &global_scope, root_group, NULL);
+
+	lq.buf.reply.msg_type = DHCPV6_LEASEQUERY_REPLY;
+
+	memcpy(lq.buf.reply.transaction_id,
+	       lq.packet->dhcpv6_transaction_id,
+	       sizeof(lq.buf.reply.transaction_id));
+
+	/* 
+	 * Because LEASEQUERY has some privacy concerns, default to deny.
+	 */
+	allow_lq = 0;
+
+	/*
+	 * See if we are authorized to do LEASEQUERY.
+	 */
+	oc = lookup_option(&server_universe, lq.reply_opts, SV_LEASEQUERY);
+	if (oc != NULL) {
+		allow_lq = evaluate_boolean_option_cache(NULL,
+							 lq.packet,
+							 NULL, NULL,
+							 lq.packet->options,
+							 lq.reply_opts,
+							 &global_scope,
+							 oc, MDL);
+	}
+
+	if (!allow_lq) {
+		log_info("dhcpv6_leasequery: not allowed, query ignored.");
+		goto exit;
+	}
+	    
+	/*
+	 * Same than transmission of REPLY message in RFC 3315:
+	 *  server-id
+	 *  client-id
+	 */
+
+	oc = lookup_option(&dhcpv6_universe, lq.reply_opts, D6O_SERVERID);
+	if (oc == NULL) {
+		/* If not already in options, get from query then global. */
+		if (lq.server_id.data == NULL)
+			copy_server_duid(&lq.server_id, MDL);
+		if (!save_option_buffer(&dhcpv6_universe,
+					lq.reply_opts,
+					NULL,
+					(unsigned char *)lq.server_id.data,
+					lq.server_id.len, 
+					D6O_SERVERID,
+					0)) {
+			log_error("dhcpv6_leasequery: "
+				  "error saving server identifier.");
+			goto exit;
+		}
+	}
+
+	if (!save_option_buffer(&dhcpv6_universe,
+				lq.reply_opts,
+				lq.client_id.buffer,
+				(unsigned char *)lq.client_id.data,
+				lq.client_id.len,
+				D6O_CLIENTID,
+				0)) {
+		log_error("dhcpv6_leasequery: "
+			  "error saving client identifier.");
+		goto exit;
+	}
+
+	lq.cursor = 4;
+
+	/*
+	 * Decode the lq-query option.
+	 */
+
+	if (lq.lq_query.len <= LQ_QUERY_OFFSET) {
+		if (!set_error(&lq, STATUS_MalformedQuery,
+			       "OPTION_LQ_QUERY too short.")) {
+			log_error("dhcpv6_leasequery: unable "
+				  "to set MalformedQuery status code.");
+			goto exit;
+		}
+		goto done;
+	}
+
+	lq.query_type = lq.lq_query.data [0];
+	memcpy(&lq.link_addr, lq.lq_query.data + 1, sizeof(lq.link_addr));
+	switch (lq.query_type) {
+		case LQ6QT_BY_ADDRESS:
+			break;
+		case LQ6QT_BY_CLIENTID:
+			if (!set_error(&lq, STATUS_UnknownQueryType,
+				       "QUERY_BY_CLIENTID not supported.")) {
+				log_error("dhcpv6_leasequery: unable to "
+					  "set UnknownQueryType status code.");
+				goto exit;
+			}
+			goto done;
+		default:
+			if (!set_error(&lq, STATUS_UnknownQueryType,
+				       "Unknown query-type.")) {
+				log_error("dhcpv6_leasequery: unable to "
+					  "set UnknownQueryType status code.");
+				goto exit;
+			}
+			goto done;
+	}
+
+	if (!option_state_allocate(&lq.query_opts, MDL)) {
+		log_error("dhcpv6_leasequery: no memory for option state.");
+		goto exit;
+	}
+	if (!parse_option_buffer(lq.query_opts,
+				 lq.lq_query.data + LQ_QUERY_OFFSET,
+				 lq.lq_query.len - LQ_QUERY_OFFSET,
+				 &dhcpv6_universe)) {
+		log_error("dhcpv6_leasequery: error parsing query-options.");
+		if (!set_error(&lq, STATUS_MalformedQuery,
+			       "Bad query-options.")) {
+			log_error("dhcpv6_leasequery: unable "
+				  "to set MalformedQuery status code.");
+			goto exit;
+		}
+		goto done;
+	}
+
+	/* Do it. */
+	if (!process_lq_by_address(&lq))
+		goto exit;
+
+      done:
+	/* Store the options. */
+	lq.cursor += store_options6((char *)lq.buf.data + lq.cursor,
+				    sizeof(lq.buf) - lq.cursor,
+				    lq.reply_opts,
+				    lq.packet,
+				    required_opts_lq,
+				    NULL);
+
+	/* Return our reply to the caller. */
+	reply_ret->len = lq.cursor;
+	reply_ret->buffer = NULL;
+	if (!buffer_allocate(&reply_ret->buffer, lq.cursor, MDL)) {
+		log_fatal("dhcpv6_leasequery: no memory to store Reply.");
+	}
+	memcpy(reply_ret->buffer->data, lq.buf.data, lq.cursor);
+	reply_ret->data = reply_ret->buffer->data;
+
+      exit:
+	/* Cleanup. */
+	if (lq.packet != NULL)
+		packet_dereference(&lq.packet, MDL);
+	if (lq.client_id.data != NULL)
+		data_string_forget(&lq.client_id, MDL);
+	if (lq.server_id.data != NULL)
+		data_string_forget(&lq.server_id, MDL);
+	if (lq.lq_query.data != NULL)
+		data_string_forget(&lq.lq_query, MDL);
+	if (lq.query_opts != NULL)
+		option_state_dereference(&lq.query_opts, MDL);
+	if (lq.reply_opts != NULL)
+		option_state_dereference(&lq.reply_opts, MDL);
+}
+
+#endif /* DHCPv6 */

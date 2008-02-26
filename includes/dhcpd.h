@@ -1946,7 +1946,6 @@ void dhcprequest PROTO ((struct packet *, int, struct lease *));
 void dhcprelease PROTO ((struct packet *, int));
 void dhcpdecline PROTO ((struct packet *, int));
 void dhcpinform PROTO ((struct packet *, int));
-void dhcpleasequery PROTO ((struct packet *, int));
 void nak_lease PROTO ((struct packet *, struct iaddr *cip));
 void ack_lease PROTO ((struct packet *, struct lease *,
 		       unsigned int, TIME, char *, int, struct host_decl *));
@@ -1974,6 +1973,10 @@ void get_server_source_address(struct in_addr *from,
 			       struct option_state *options,
 			       struct packet *packet);
 
+/* dhcpleasequery.c */
+void dhcpleasequery PROTO ((struct packet *, int));
+void dhcpv6_leasequery PROTO ((struct data_string *, struct packet *));
+
 /* dhcpv6.c */
 isc_boolean_t server_duid_isset(void);
 void copy_server_duid(struct data_string *ds, const char *file, int line);
@@ -1981,6 +1984,7 @@ void set_server_duid(struct data_string *new_duid);
 isc_result_t set_server_duid_from_option(void);
 void set_server_duid_type(int type);
 isc_result_t generate_new_server_duid(void);
+isc_result_t get_client_id(struct packet *, struct data_string *);
 void dhcpv6(struct packet *);
 
 /* bootp.c */
