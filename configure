@@ -1285,6 +1285,9 @@ Optional Features:
   --disable-dependency-tracking  speeds up one-time build
   --enable-dependency-tracking   do not reject slow dependency extractors
   --enable-dhcpv6         enable support for DHCPv6 (default is yes)
+  --enable-paranoia       enable support for chroot/setuid (default is no)
+  --eanble-early-chroot   enable chrooting prior to configuration (default is
+                          no)
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -4324,6 +4327,39 @@ if test "$enable_dhcpv6" != "no"; then
 
 cat >>confdefs.h <<\_ACEOF
 #define DHCPv6 1
+_ACEOF
+
+fi
+
+# PARANOIA is off by default (until we can test it with all features)
+# Check whether --enable-paranoia was given.
+if test "${enable_paranoia+set}" = set; then
+  enableval=$enable_paranoia;
+fi
+
+# Check whether --enable-early_chroot was given.
+if test "${enable_early_chroot+set}" = set; then
+  enableval=$enable_early_chroot;
+fi
+
+# If someone enables early chroot, but does not enable paranoia, do so for
+# them.
+if test "$enable_paranoia" != "yes" && \
+   test "$enable_early_chroot" = "yes" ; then
+	enable_paranoia="yes"
+fi
+
+if test "$enable_paranoia" = "yes" ; then
+
+cat >>confdefs.h <<\_ACEOF
+#define PARANOIA 1
+_ACEOF
+
+fi
+if test "$enable_early_chroot" = "yes" ; then
+
+cat >>confdefs.h <<\_ACEOF
+#define EARLY_CHROOT 1
 _ACEOF
 
 fi
