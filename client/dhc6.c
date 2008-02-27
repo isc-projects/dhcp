@@ -74,6 +74,7 @@ static isc_result_t dhc6_add_ia_na(struct client_state *client,
 				   struct data_string *packet,
 				   struct dhc6_lease *lease,
 				   u_int8_t message);
+static isc_boolean_t stopping_finished(void);
 static void dhc6_merge_lease(struct dhc6_lease *src, struct dhc6_lease *dst);
 void do_select6(void *input);
 void do_refresh6(void *input);
@@ -1683,16 +1684,15 @@ start_release6(struct client_state *client)
 	client->active_lease->released = ISC_TRUE;
 	write_client6_lease(client, client->active_lease, 0, 1);
 
-	/* Set timers per RFC3315 section 18.1.1. */
+	/* Set timers per RFC3315 section 18.1.6. */
 	client->IRT = REL_TIMEOUT * 100;
 	client->MRT = 0;
-	client->MRC = REL_MAX_RC * 100;
+	client->MRC = REL_MAX_RC;
 	client->MRD = 0;
 
 	dhc6_retrans_init(client);
 	client->v6_handler = reply_handler;
 
-	/* ("re")transmit the first packet. */
 	do_release6(client);
 }
 /*
@@ -1701,10 +1701,8 @@ start_release6(struct client_state *client)
 static void
 do_release6(void *input)
 {
-	struct sockaddr_in6 unicast, *dest_addr = &DHCPv6DestAddr;
 	struct client_state *client;
 	struct data_string ds;
-	struct option_cache *oc;
 	int send_ret;
 	struct timeval tv;
 
@@ -1715,7 +1713,7 @@ do_release6(void *input)
 
 	if ((client->MRC != 0) && (client->txcount > client->MRC))  {
 		log_info("Max retransmission count exceeded.");
-		return;
+		goto release_done;
 	}
 
 	/*
@@ -1727,31 +1725,14 @@ do_release6(void *input)
 	}
 
 	/*
-	 * Check whether the server has sent a unicast option; if so, we can
-	 * use the address it specified.
+	 * Don't use unicast as we don't know if we still have an
+	 * available address with enough scope.
 	 */
-	oc = lookup_option(&dhcpv6_universe, 
-			   client->active_lease->options, D6O_UNICAST);
-	if (oc && evaluate_option_cache(&ds, NULL, NULL, NULL,
-                                        client->active_lease->options, 
-					NULL, &global_scope, oc, MDL)) {
-		if (ds.len < 16) {
-			log_error("Invalid unicast option length %d.", ds.len);
-		} else {
-			memset(&unicast, 0, sizeof(DHCPv6DestAddr));
-			unicast.sin6_family = AF_INET6;
-			unicast.sin6_port = remote_port;
-			memcpy(&unicast.sin6_addr, ds.data, 16);
-			dest_addr = &unicast;
-		}
-
-		data_string_forget(&ds, MDL);
-	}
 
 	memset(&ds, 0, sizeof(ds));
 	if (!buffer_allocate(&ds.buffer, 4, MDL)) {
 		log_error("Unable to allocate memory for Release.");
-		return;
+		goto release_done;
 	}
 
 	ds.data = ds.buffer->data;
@@ -1770,7 +1751,7 @@ do_release6(void *input)
 	if (dhc6_add_ia_na(client, &ds, client->active_lease,
 			   DHCPV6_RELEASE) != ISC_R_SUCCESS) {
 		data_string_forget(&ds, MDL);
-		return;
+		goto release_done;
 	}
 
 	/* Transmit and wait. */
@@ -1796,6 +1777,13 @@ do_release6(void *input)
 	}
 	add_timeout(&tv, do_release6, client, NULL, NULL);
 	dhc6_retrans_advance(client);
+	return;
+
+      release_done:
+	dhc6_lease_destroy(&client->active_lease, MDL);
+	client->active_lease = NULL;
+	if (stopping_finished())
+		exit(0);
 }
 
 /* status_log() just puts a status code into displayable form and logs it
@@ -1814,6 +1802,7 @@ status_log(int code, const char *scope, const char *additional, int len)
 	      case STATUS_UnspecFail:
 		msg = "UnspecFail";
 		break;
+
 	      case STATUS_NoAddrsAvail:
 		msg = "NoAddrsAvail";
 		break;
@@ -1972,13 +1961,18 @@ dhc6_check_advertise(struct dhc6_lease *lease)
  * (rapid/commit).  Returns always false as no action is defined.
  */
 static isc_boolean_t
-dhc6_init_action(struct client_state *client, isc_result_t rval,
+dhc6_init_action(struct client_state *client, isc_result_t *rvalp,
 		 unsigned code)
 {
-	if (client == NULL)
-		return ISC_R_INVALIDARG;
+	if (rvalp == NULL)
+		log_fatal("Impossible condition at %s:%d.", MDL);
 
-	if (rval == ISC_R_SUCCESS)
+	if (client == NULL) {
+		*rvalp = ISC_R_INVALIDARG;
+		return ISC_FALSE;
+	}
+
+	if (*rvalp == ISC_R_SUCCESS)
 		return ISC_FALSE;
 
 	/* No possible action in any case... */
@@ -1990,13 +1984,20 @@ dhc6_init_action(struct client_state *client, isc_result_t rval,
  * packet should be ignored), or false if no action was taken.
  */
 static isc_boolean_t
-dhc6_select_action(struct client_state *client, isc_result_t rval,
+dhc6_select_action(struct client_state *client, isc_result_t *rvalp,
 		   unsigned code)
 {
 	struct dhc6_lease *lease;
+	isc_result_t rval;
 
-	if (client == NULL)
-		return ISC_R_INVALIDARG;
+	if (rvalp == NULL)
+		log_fatal("Impossible condition at %s:%d.", MDL);
+
+	if (client == NULL) {
+		*rvalp = ISC_R_INVALIDARG;
+		return ISC_FALSE;
+	}
+	rval = *rvalp;
 
 	if (rval == ISC_R_SUCCESS)
 		return ISC_FALSE;
@@ -2110,12 +2111,19 @@ dhc6_withdraw_lease(struct client_state *client)
  * packet should be ignored), or false if no action was taken.
  */
 static isc_boolean_t
-dhc6_reply_action(struct client_state *client, isc_result_t rval,
+dhc6_reply_action(struct client_state *client, isc_result_t *rvalp,
 		  unsigned code)
 {
+	isc_result_t rval;
 
-	if (client == NULL)
-		return ISC_R_INVALIDARG;
+	if (rvalp == NULL)
+		log_fatal("Impossible condition at %s:%d.", MDL);
+
+	if (client == NULL) {
+		*rvalp = ISC_R_INVALIDARG;
+		return ISC_FALSE;
+	}
+	rval = *rvalp;
 
 	if (rval == ISC_R_SUCCESS)
 		return ISC_FALSE;
@@ -2142,7 +2150,7 @@ dhc6_reply_action(struct client_state *client, isc_result_t rval,
 		 * sooner than the current interval, but for now we don't.)
 		 */
 	      case STATUS_UseMulticast:
-		if(client->active_lease != NULL)
+		if (client->active_lease != NULL)
 			delete_option(&dhcp_universe,
 				      client->active_lease->options,
 				      D6O_UNICAST);
@@ -2168,7 +2176,7 @@ dhc6_reply_action(struct client_state *client, isc_result_t rval,
 		 * to init, redo server selection and get new addresses.
 		 */
 		dhc6_withdraw_lease(client);
-		return ISC_TRUE;
+		break;
 
 		/* "If the status code is NoAddrsAvail, the client has
 		 *  received no usable addresses in the IA and may choose
@@ -2197,13 +2205,78 @@ dhc6_reply_action(struct client_state *client, isc_result_t rval,
 	return ISC_TRUE;
 }
 
+/* status code <-> action matrix for the client in STOPPED state
+ * (release/decline).  Returns true if action was taken (and the
+ * packet should be ignored), or false if no action was taken.
+ * NoBinding is translated into Success.
+ */
+static isc_boolean_t
+dhc6_stop_action(struct client_state *client, isc_result_t *rvalp,
+		  unsigned code)
+{
+	isc_result_t rval;
+
+	if (rvalp == NULL)
+		log_fatal("Impossible condition at %s:%d.", MDL);
+
+	if (client == NULL) {
+		*rvalp = ISC_R_INVALIDARG;
+		return ISC_FALSE;
+	}
+	rval = *rvalp;
+
+	if (rval == ISC_R_SUCCESS)
+		return ISC_FALSE;
+
+	switch (code) {
+		/* It's possible an earlier status code set rval to a failure
+		 * code, and we've encountered a later success.
+		 */
+	      case STATUS_Success:
+		/* For unknown codes...it's a soft (retryable) error. */
+	      case STATUS_UnspecFail:
+	      default:
+		return ISC_FALSE;
+
+		/* NoBinding is not an error */
+	      case STATUS_NoBinding:
+		if (rval == ISC_R_FAILURE)
+			*rvalp = ISC_R_SUCCESS;
+		return ISC_FALSE;
+
+		/* Should not happen */
+	      case STATUS_NoAddrsAvail:
+		break;
+
+		/* Give up on it */
+	      case STATUS_NotOnLink:
+		break;
+
+		/* The server is telling us to use a multicast address, so
+		 * we have to delete the unicast option from the active
+		 * lease, then allow retransmission to occur normally.
+		 * (XXX: It might be preferable in this case to retransmit
+		 * sooner than the current interval, but for now we don't.)
+		 */
+	      case STATUS_UseMulticast:
+		if (client->active_lease != NULL)
+			delete_option(&dhcp_universe,
+				      client->active_lease->options,
+				      D6O_UNICAST);
+		return ISC_FALSE;
+	}
+
+	return ISC_TRUE;
+}
+
 /* Look at a new and old lease, and make sure the new information is not
  * losing us any state.
  */
 static isc_result_t
 dhc6_check_reply(struct client_state *client, struct dhc6_lease *new)
 {
-	isc_boolean_t (*action)(struct client_state *, isc_result_t, unsigned);
+	isc_boolean_t (*action)(struct client_state *,
+				isc_result_t *, unsigned);
 	struct dhc6_ia *ia;
 	struct dhc6_addr *addr;
 	isc_result_t rval = ISC_R_SUCCESS;
@@ -2229,6 +2302,10 @@ dhc6_check_reply(struct client_state *client, struct dhc6_lease *new)
 		action = dhc6_reply_action;
 		break;
 
+	      case S_STOPPED:
+		action = dhc6_stop_action;
+		break;
+
 	      default:
 		log_fatal("Impossible condition at %s:%d.", MDL);
 		return ISC_R_CANCELED;
@@ -2239,7 +2316,7 @@ dhc6_check_reply(struct client_state *client, struct dhc6_lease *new)
 	 * and do not continue.
 	 */
 	rval = dhc6_check_status(rval, new->options, "message", &code);
-	if (action(client, rval, code))
+	if (action(client, &rval, code))
 		return ISC_R_CANCELED;
 
 	for (ia = new->bindings ; ia != NULL ; ia = ia->next) {
@@ -2257,7 +2334,7 @@ dhc6_check_reply(struct client_state *client, struct dhc6_lease *new)
 		}
 		rval = dhc6_check_status(rval, ia->options,
 					 scope, &code);
-		if (action(client, rval, code))
+		if (action(client, &rval, code))
 			return ISC_R_CANCELED;
 
 		for (addr = ia->addrs ; addr != NULL ;
@@ -2268,7 +2345,7 @@ dhc6_check_reply(struct client_state *client, struct dhc6_lease *new)
 				scope = "IAPREFIX";
 			rval = dhc6_check_status(rval, addr->options,
 						 scope, &code);
-			if (action(client, rval, code))
+			if (action(client, &rval, code))
 				return ISC_R_CANCELED;
 		}
 	}
@@ -2322,6 +2399,10 @@ dhc6_check_reply(struct client_state *client, struct dhc6_lease *new)
 		 * old times from the last successful binding.  So this is
 		 * implemented actually, just not explicitly.
 		 */
+		break;
+
+	      case S_STOPPED:
+		/* Nothing critical to do at this stage. */
 		break;
 
 	      default:
@@ -2824,6 +2905,7 @@ dhc6_add_ia_na(struct client_state *client, struct data_string *packet,
 
                       case DHCPV6_CONFIRM:
                       case DHCPV6_RELEASE:
+                      case DHCPV6_DECLINE:
 		        /* Set t1 and t2 to zero; server will ignore them */
                         memset(iads.buffer->data + 4, 0, 8);
                         log_debug("XMT:  X-- IA_NA %s",
@@ -2900,6 +2982,13 @@ dhc6_add_ia_na(struct client_state *client, struct data_string *packet,
                                           piaddr(addr->address));
                                 break;
 
+                              case DHCPV6_DECLINE:
+                                /* Preferred and max life are irrelevant */
+        			memset(addrds.buffer->data + 16, 0, 8);
+                                log_debug("XMT:  | X-- Decline Address %s",
+                                          piaddr(addr->address));
+                                break;
+
                               default:
                                 log_fatal("Impossible condition at %s:%d.",
                                           MDL);
@@ -2927,6 +3016,25 @@ dhc6_add_ia_na(struct client_state *client, struct data_string *packet,
 	}
 
         return rval;
+}
+
+/* stopping_finished() checks if there is a remaining work to do.
+ */
+static isc_boolean_t
+stopping_finished(void)
+{
+	struct interface_info *ip;
+	struct client_state *client;
+
+	for (ip = interfaces; ip; ip = ip -> next) {
+		for (client = ip -> client; client; client = client -> next) {
+			if (client->state != S_STOPPED)
+				return ISC_FALSE;
+			if (client->active_lease != NULL)
+				return ISC_FALSE;
+		}
+	}
+	return ISC_TRUE;
 }
 
 /* reply_handler() accepts a Reply while we're attempting Select or Renew or
@@ -2974,6 +3082,19 @@ reply_handler(struct packet *packet, struct client_state *client)
 	cancel_timeout(do_refresh6, client);
 	cancel_timeout(do_release6, client);
 
+        /* If this is in response to a Release/Decline, clean up and return. */
+	if (client->state == S_STOPPED) {
+		if (client->active_lease == NULL)
+			return;
+
+                dhc6_lease_destroy(&client->active_lease, MDL);
+                client->active_lease = NULL;
+		/* We should never wait for nothing!? */
+		if (stopping_finished())
+			exit(0);
+		return;
+        }
+
 	/* Action was taken, so now that we've torn down our scheduled
 	 * retransmissions, return.
 	 */
@@ -2984,16 +3105,6 @@ reply_handler(struct packet *packet, struct client_state *client)
 		dhc6_lease_destroy(&client->selected_lease, MDL);
 		client->selected_lease = NULL;
 	}
-
-        /* If this is in response to a Release, clean up and return. */
-	if (client->state == S_STOPPED) {
-		if (client->active_lease == NULL)
-			log_fatal("Impossible condition at %s:%d.", MDL);
-
-                dhc6_lease_destroy(&client->active_lease, MDL);
-                client->active_lease = NULL;
-                return;
-        }
 
 	/* If this is in response to a confirm, we use the lease we've
 	 * already got, not the reply we were sent.

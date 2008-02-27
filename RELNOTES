@@ -95,6 +95,9 @@ work on other platforms. Please report any problems and suggested fixes to
 
 - Basic and partial DHCPv6 leasequery support.
 
+- Reliable DHCPv6 release (previous behavior, send release and exit, is
+  still available with dhclient -6 -1 -r).
+
 			Changes since 4.0.0 (bug fixes)
 
 - DHCP now builds on AIX.

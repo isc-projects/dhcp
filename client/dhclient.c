@@ -506,8 +506,19 @@ main(int argc, char **argv) {
 		}
 	}
 
-	if (release_mode || exit_mode)
+	if (exit_mode)
 		return 0;
+	if (release_mode) {
+#ifndef DHCPv6
+		return 0;
+#else
+		if (local_family == AF_INET6) {
+			if (onetry)
+				return 0;
+		} else
+			return 0;
+#endif /* DHCPv6 */
+	}
 
 	/* Start up a listener for the object management API protocol. */
 	if (top_level_config.omapi_port != -1) {
