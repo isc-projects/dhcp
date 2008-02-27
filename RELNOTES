@@ -48,6 +48,12 @@ work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
 
+			Changes since 4.1.0a1
+
+- Ari Edelkind's PARANOIA patch has been included and may be compiled in
+  via two ./configure parameters, --enable-paranoia and
+  --enable-early-chroot.
+
 			Changes since 4.0.0 (new features)
 
 - Added DHCPv6 rapid commit support.

@@ -47,6 +47,16 @@ static char url [] = "For info, please visit http://www.isc.org/sw/dhcp/";
 #include <sys/time.h>
 #include <signal.h>
 
+#if defined (PARANOIA)
+#  include <sys/types.h>
+#  include <unistd.h>
+#  include <pwd.h>
+/* get around the ISC declaration of group */
+#  define group real_group 
+#    include <grp.h>
+#  undef group
+#endif /* PARANOIA */
+
 static void usage(void);
 
 struct iaddr server_identifier;
@@ -196,6 +206,22 @@ static void omapi_listener_start (void *foo)
 	omapi_object_dereference (&listener, MDL);
 }
 
+#if defined (PARANOIA)
+/* to be used in one of two possible scenarios */
+static void setup_chroot (char *chroot_dir) {
+  if (geteuid())
+    log_fatal ("you must be root to use chroot");
+
+  if (chroot(chroot_dir)) {
+    log_fatal ("chroot(\"%s\"): %m", chroot_dir);
+  }
+  if (chdir ("/")) {
+    /* probably permission denied */
+    log_fatal ("chdir(\"/\"): %m");
+  }
+}
+#endif /* PARANOIA */
+
 #ifndef UNIT_TEST
 int 
 main(int argc, char **argv) {
@@ -227,6 +253,15 @@ main(int argc, char **argv) {
 	char *traceinfile = (char *)0;
 	char *traceoutfile = (char *)0;
 #endif
+
+#if defined (PARANOIA)
+	char *set_user   = 0;
+	char *set_group  = 0;
+	char *set_chroot = 0;
+
+	uid_t set_uid = 0;
+	gid_t set_gid = 0;
+#endif /* PARANOIA */
 
         /* Make sure that file descriptors 0 (stdin), 1, (stdout), and
            2 (stderr) are open. To do this, we assume that when we
@@ -287,6 +322,20 @@ main(int argc, char **argv) {
 			if (++i == argc)
 				usage ();
 			server = argv [i];
+#if defined (PARANOIA)
+		} else if (!strcmp (argv [i], "-user")) {
+			if (++i == argc)
+				usage ();
+			set_user = argv [i];
+		} else if (!strcmp (argv [i], "-group")) {
+			if (++i == argc)
+				usage ();
+			set_group = argv [i];
+		} else if (!strcmp (argv [i], "-chroot")) {
+			if (++i == argc)
+				usage ();
+			set_chroot = argv [i];
+#endif /* PARANOIA */
 		} else if (!strcmp (argv [i], "-cf")) {
 			if (++i == argc)
 				usage ();
@@ -440,6 +489,44 @@ main(int argc, char **argv) {
 					     trace_seed_stop, MDL);
 #endif
 
+#if defined (PARANOIA)
+	/* get user and group info if those options were given */
+	if (set_user) {
+		struct passwd *tmp_pwd;
+
+		if (geteuid())
+			log_fatal ("you must be root to set user");
+
+		if (!(tmp_pwd = getpwnam(set_user)))
+			log_fatal ("no such user: %s", set_user);
+
+		set_uid = tmp_pwd->pw_uid;
+
+		/* use the user's group as the default gid */
+		if (!set_group)
+			set_gid = tmp_pwd->pw_gid;
+	}
+
+	if (set_group) {
+/* get around the ISC declaration of group */
+#define group real_group
+		struct group *tmp_grp;
+
+		if (geteuid())
+			log_fatal ("you must be root to set group");
+
+		if (!(tmp_grp = getgrnam(set_group)))
+			log_fatal ("no such group: %s", set_group);
+
+		set_gid = tmp_grp->gr_gid;
+#undef group
+	}
+
+#  if defined (EARLY_CHROOT)
+	if (set_chroot) setup_chroot (set_chroot);
+#  endif /* EARLY_CHROOT */
+#endif /* PARANOIA */
+
 	/* Default to the DHCP/BOOTP port. */
 	if (!local_port)
 	{
@@ -583,6 +670,10 @@ main(int argc, char **argv) {
 		log_fatal ("Configuration file errors encountered -- exiting");
 
 	postconf_initialization (quiet);
+ 
+#if defined (PARANOIA) && !defined (EARLY_CHROOT)
+	if (set_chroot) setup_chroot (set_chroot);
+#endif /* PARANOIA && !EARLY_CHROOT */
 
         /* test option should cause an early exit */
  	if (cftest && !lftest) 
@@ -661,6 +752,22 @@ main(int argc, char **argv) {
 		else if (pid)
 			exit (0);
 	}
+ 
+#if defined (PARANOIA)
+	/* change uid to the specified one */
+
+	if (set_gid) {
+		if (setgroups (0, (void *)0))
+			log_fatal ("setgroups: %m");
+		if (setgid (set_gid))
+			log_fatal ("setgid(%d): %m", (int) set_gid);
+	}	
+
+	if (set_uid) {
+		if (setuid (set_uid))
+			log_fatal ("setuid(%d): %m", (int) set_uid);
+	}
+#endif /* PARANOIA */
 
 	/* Read previous pid file. */
 	if ((i = open (path_dhcpd_pid, O_RDONLY)) >= 0) {
@@ -1056,6 +1163,10 @@ usage(void) {
 #else /* !DHCPv6 */
 		  "             [-cf config-file] [-lf lease-file]\n"
 #endif /* DHCPv6 */
+#if defined (PARANOIA)
+		   /* meld into the following string */
+		  "             [-user user] [-group group] [-chroot dir]\n"
+#endif /* PARANOIA */
 #if defined (TRACING)
 		  "             [-tf trace-output-file]\n"
 		  "             [-play trace-input-file]\n"

@@ -39,6 +39,29 @@ if test "$enable_dhcpv6" != "no"; then
 		  [Define to 1 to include DHCPv6 support.])
 fi
 
+# PARANOIA is off by default (until we can test it with all features)
+AC_ARG_ENABLE(paranoia,
+	AC_HELP_STRING([--enable-paranoia],
+		[enable support for chroot/setuid (default is no)]))
+AC_ARG_ENABLE(early_chroot,
+	AC_HELP_STRING([--eanble-early-chroot],
+		[enable chrooting prior to configuration (default is no)]))
+# If someone enables early chroot, but does not enable paranoia, do so for
+# them.
+if test "$enable_paranoia" != "yes" && \
+   test "$enable_early_chroot" = "yes" ; then
+	enable_paranoia="yes"
+fi
+
+if test "$enable_paranoia" = "yes" ; then
+	AC_DEFINE([PARANOIA], [1],
+		  [Define to any value to include Ari's PARANOIA patch.])
+fi
+if test "$enable_early_chroot" = "yes" ; then
+	AC_DEFINE([EARLY_CHROOT], [1],
+		  [Define to any value to chroot() prior to loading config.])
+fi
+
 ###
 ### Path fun.  Older versions of DHCP were installed in /usr/sbin, so we
 ### need to look there and potentially overwrite by default (but not if
