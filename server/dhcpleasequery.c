@@ -903,7 +903,7 @@ process_lq_by_address(struct lq6_state *lq) {
 	 * or the ia-aadr when it is :: but in any case the ia-addr has
 	 * to be on the link, so we ignore the link-address here.
 	 */
-	if (find_ipv6_pool(&pool, &addr) != ISC_R_SUCCESS) {
+	if (find_ipv6_pool(&pool, 0, &addr) != ISC_R_SUCCESS) {
 		if (!set_error(lq, STATUS_NotConfigured,
 			       "Address not in a pool.")) {
 			log_error("process_lq_by_address: unable "
@@ -1012,7 +1012,6 @@ process_lq_by_address(struct lq6_state *lq) {
 void
 dhcpv6_leasequery(struct data_string *reply_ret, struct packet *packet) {
 	static struct lq6_state lq;
-	struct data_string server_duid;
 	struct option_cache *oc;
 	int allow_lq;
 
