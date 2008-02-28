@@ -1,5 +1,8 @@
 /* includes/config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Define to compile debug-only DHCP software. */
+#undef DEBUG
+
 /* Define to BIG_ENDIAN for MSB (Motorola or SPARC CPUs) or LITTLE_ENDIAN for
    LSB (Intel CPUs). */
 #undef DHCP_BYTE_ORDER
@@ -9,6 +12,12 @@
 
 /* Define to any value to chroot() prior to loading config. */
 #undef EARLY_CHROOT
+
+/* Define to include execute() config language support. */
+#undef ENABLE_EXECUTE
+
+/* Define to include Failover Protocol support. */
+#undef FAILOVER_PROTOCOL
 
 /* Define to 1 if you have the /dev/random file. */
 #undef HAVE_DEV_RANDOM
@@ -99,6 +108,9 @@
 
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
+
+/* Define to include server activity tracing support. */
+#undef TRACING
 
 /* Define to 1 to use the Berkeley Packet Filter interface code. */
 #undef USE_BPF
