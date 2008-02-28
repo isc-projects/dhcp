@@ -76,7 +76,7 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static const char sccsid[] = "@(#)res_query.c	8.1 (Berkeley) 6/4/93";
-static const char rcsid[] = "$Id: res_query.c,v 1.8 2007/09/05 17:32:10 dhankins Exp $";
+static const char rcsid[] = "$Id: res_query.c,v 1.9 2008/02/28 21:21:56 dhankins Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 #include <sys/types.h>
@@ -95,8 +95,6 @@ static const char rcsid[] = "$Id: res_query.c,v 1.8 2007/09/05 17:32:10 dhankins
 #include "arpa/nameser.h"
 
 /* Options.  Leave them on. */
-#define DEBUG
-
 #if PACKETSZ > 1024
 #define MAXPACKET	PACKETSZ
 #else
@@ -128,37 +126,29 @@ res_nquery(res_state statp,
 
 	hp->rcode = NOERROR;	/* default */
 
-#ifdef DEBUG
 	if (statp->options & RES_DEBUG)
 		printf(";; res_query(%s, %d, %d)\n", name, class, type);
-#endif
 
 	rcode = res_nmkquery(statp, QUERY, name, class, type, NULL, 0, NULL,
 			     buf, sizeof(buf), &n);
 	if (rcode != ISC_R_SUCCESS) {
-#ifdef DEBUG
 		if (statp->options & RES_DEBUG)
 			printf(";; res_query: mkquery failed\n");
-#endif
 		RES_SET_H_ERRNO(statp, NO_RECOVERY);
 		return rcode;
 	}
 	rcode = res_nsend(statp, buf, n, answer, anslen, &n);
 	if (rcode != ISC_R_SUCCESS) {
-#ifdef DEBUG
 		if (statp->options & RES_DEBUG)
 			printf(";; res_query: send error\n");
-#endif
 		RES_SET_H_ERRNO(statp, TRY_AGAIN);
 		return rcode;
 	}
 
 	if (hp->rcode != NOERROR || ntohs(hp->ancount) == 0) {
-#ifdef DEBUG
 		if (statp->options & RES_DEBUG)
 			printf(";; rcode = %d, ancount=%d\n", hp->rcode,
 			    ntohs(hp->ancount));
-#endif
 		switch (hp->rcode) {
 		case NXDOMAIN:
 			RES_SET_H_ERRNO(statp, HOST_NOT_FOUND);
@@ -347,11 +337,9 @@ res_nquerydomain(res_state statp,
 	const char *longname = nbuf;
 	int n, d;
 
-#ifdef DEBUG
 	if (statp->options & RES_DEBUG)
 		printf(";; res_nquerydomain(%s, %s, %d, %d)\n",
 		       name, domain?domain:"<Nil>", class, type);
-#endif
 	if (domain == NULL) {
 		/*
 		 * Check for trailing '.';

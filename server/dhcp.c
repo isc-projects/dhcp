@@ -796,7 +796,9 @@ void dhcprelease (packet, ms_nulltp)
 		release_lease (lease, packet);
 	} 
 	log_info ("%s", msgbuf);
+#if defined(FAILOVER_PROTOCOL)
       out:
+#endif
 	if (lease)
 		lease_dereference (&lease, MDL);
 }
@@ -918,8 +920,10 @@ void dhcpdecline (packet, ms_nulltp)
 
 	if (!ignorep)
 		log_info ("%s: %s", msgbuf, status);
-		
+
+#if defined(FAILOVER_PROTOCOL)
       out:
+#endif
 	if (options)
 		option_state_dereference (&options, MDL);
 	if (lease)
@@ -3153,6 +3157,7 @@ int find_lease (struct lease **lp,
 	struct data_string client_identifier;
 	struct hardware h;
 
+#if defined(FAILOVER_PROTOCOL)
 	/* Quick check to see if the peer has leases. */
 	if (peer_has_leases) {
 		struct pool *pool;
@@ -3168,6 +3173,7 @@ int find_lease (struct lease **lp,
 			}
 		}
 	}
+#endif /* FAILOVER_PROTOCOL */
 
 	if (packet -> raw -> ciaddr.s_addr) {
 		cip.len = 4;
@@ -3487,7 +3493,9 @@ int find_lease (struct lease **lp,
 	   is not active, and is not ours to reallocate, forget about it. */
 	if (ip_lease && (uid_lease || hw_lease) &&
 	    ip_lease -> binding_state != FTS_ACTIVE &&
+#if defined(FAILOVER_PROTOCOL)
 	    !lease_mine_to_reallocate (ip_lease) &&
+#endif
 	    packet -> packet_type == DHCPDISCOVER) {
 #if defined (DEBUG_FIND_LEASE)
 		log_info ("ip lease not ours to offer.");

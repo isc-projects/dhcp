@@ -54,6 +54,9 @@ work on other platforms. Please report any problems and suggested fixes to
   via two ./configure parameters, --enable-paranoia and
   --enable-early-chroot.
 
+- ./configure was extended to cover many optional build features, such
+  as failover, server tracing, debugging, and the execute() command.
+
 			Changes since 4.0.0 (new features)
 
 - Added DHCPv6 rapid commit support.

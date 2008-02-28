@@ -2017,13 +2017,15 @@ int parse_executable_statement (result, cfile, lose, case_context)
 	int *lose;
 	enum expression_context case_context;
 {
+#if defined(ENABLE_EXECUTE)
+	unsigned len;
+	struct expression **ep;
+#endif
 	enum dhcp_token token;
 	const char *val;
-	unsigned len;
 	struct class *cta;
 	struct option *option=NULL;
 	struct option_cache *cache;
-	struct expression **ep;
 	int known;
 	int flag;
 	int i;

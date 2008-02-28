@@ -729,8 +729,10 @@ void write_statements (file, statements, indent)
 	struct executable_statement *statements;
 	int indent;
 {
-	struct executable_statement *r, *x;
+#if defined ENABLE_EXECUTE
 	struct expression *expr;
+#endif
+	struct executable_statement *r, *x;
 	const char *s, *t, *dot;
 	int col;
 

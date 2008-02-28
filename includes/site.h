@@ -94,7 +94,7 @@
 /* Define this if you want DHCP failover protocol support in the DHCP
    server. */
 
-#define FAILOVER_PROTOCOL
+/* #define FAILOVER_PROTOCOL */
 
 /* Define this if you want DNS update functionality to be available. */
 
@@ -171,7 +171,7 @@
 /* Define this if you want to be able to execute external commands
    during conditional evaluation. */
 
-#define ENABLE_EXECUTE
+/* #define ENABLE_EXECUTE */
 
 /* Define this if you aren't debugging and you want to save memory
    (potentially a _lot_ of memory) by allocating leases in chunks rather
@@ -182,4 +182,4 @@
 /* Define this if you want to be able to save and playback server operational
    traces. */
 
-#define TRACING
+/* #define TRACING */

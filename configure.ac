@@ -30,10 +30,72 @@ AC_DEFINE_UNQUOTED([DHCP_BYTE_ORDER], [$byte_order],
 		   [Define to BIG_ENDIAN for MSB (Motorola or SPARC CPUs)
 		    or LITTLE_ENDIAN for LSB (Intel CPUs).])
 
-# DHCPv6 is off by default
+# Optional compile-time DEBUGging.
+AC_ARG_ENABLE(debug,
+	AC_HELP_STRING([--enable-debug],
+		[create a debug-only version of the software (default is no).]))
+# This is very much off by default.
+if test "$enable_debug" = "yes" ; then
+	AC_DEFINE([DEBUG], [1],
+		[Define to compile debug-only DHCP software.])
+	# Just override CFLAGS to totally to remove optimization.
+	CFLAGS="-g"
+fi
+# XXX: there are actually quite a lot more DEBUG_ features we could enable,
+# but I don't want to pollute the --help space.
+#
+#/* #define DEBUG_TOKENS */
+#/* #define DEBUG_PACKET */
+#/* #define DEBUG_EXPRESSIONS */
+#/* #define DEBUG_FIND_LEASE */
+#/* #define DEBUG_EXPRESSION_PARSE */
+#/* #define DEBUG_CLASS_MATCHING */
+#/* #define DEBUG_MEMORY_LEAKAGE */
+#/* #define DEBUG_MALLOC_POOL */
+#/* #define DEBUG_LEASE_STATE_TRANSITIONS */
+#/* #define DEBUG_RC_HISTORY */
+#/* #define DEBUG_RC_HISTORY_EXHAUSTIVELY */
+#/* #define RC_HISTORY_MAX 10240 */
+#/* #define POINTER_DEBUG */
+#/* #define DEBUG_FAILOVER_MESSAGES */
+#/* #define DEBUG_FAILOVER_TIMING */
+#/* #define DEBUG_DUMP_ALL_LEASES */
+
+# Failover optional compile-time feature.
+AC_ARG_ENABLE(failover,
+	AC_HELP_STRING([--enable-failover],
+		[enable support for failover (default is yes)]))
+# Failover is on by default, so define if it is not explicitly disabled.
+if test "$enable_failover" != "no"; then
+	AC_DEFINE([FAILOVER_PROTOCOL], [1],
+		  [Define to include Failover Protocol support.])
+fi
+
+# execute() support.
+AC_ARG_ENABLE(execute,
+	AC_HELP_STRING([--enable-execute],
+		[enable support for execute() in config (default is yes)]))
+# execute() is on by default, so define if it is not explicitly disabled.
+if test "$enable_execute" != "no" ; then
+	AC_DEFINE([ENABLE_EXECUTE], [1],
+		  [Define to include execute() config language support.])
+fi
+
+# Server tracing support.
+AC_ARG_ENABLE(tracing,
+	AC_HELP_STRING([--enable-tracing],
+		[enable support for server activity tracing (default is yes)]))
+# tracing is on by default, so define if it is not explicitly disabled.
+if test "$enable_tracing" != "no" ; then
+	AC_DEFINE([TRACING], [1],
+		  [Define to include server activity tracing support.])
+fi
+
+# DHCPv6 optional compile-time feature.
 AC_ARG_ENABLE(dhcpv6,
 	AC_HELP_STRING([--enable-dhcpv6],
 		       [enable support for DHCPv6 (default is yes)]))
+# DHCPv6 is on by default, so define if it is not explicitly disabled.
 if test "$enable_dhcpv6" != "no"; then
 	AC_DEFINE([DHCPv6], [1], 
 		  [Define to 1 to include DHCPv6 support.])

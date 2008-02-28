@@ -437,7 +437,6 @@ isc_result_t omapi_disconnect (omapi_object_t *h,
 			       int force)
 {
 	omapi_connection_object_t *c;
-	isc_result_t status;
 
 #ifdef DEBUG_PROTOCOL
 	log_debug ("omapi_disconnect(%s)", force ? "force" : "");
@@ -449,6 +448,7 @@ isc_result_t omapi_disconnect (omapi_object_t *h,
 
 #if defined (TRACING)
 	if (trace_record ()) {
+		isc_result_t status;
 		int32_t index;
 
 		index = htonl (c -> index);

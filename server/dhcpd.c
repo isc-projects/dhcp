@@ -1342,8 +1342,8 @@ isc_result_t dhcp_io_shutdown (omapi_object_t *obj, void *foo)
 
 static isc_result_t dhcp_io_shutdown_countdown (void *vlp)
 {
-	dhcp_failover_state_t *state;
 #if defined (FAILOVER_PROTOCOL)
+	dhcp_failover_state_t *state;
 	int failover_connection_count = 0;
 #endif
 	struct timeval tv;

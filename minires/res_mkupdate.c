@@ -27,7 +27,7 @@
  */
 
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_mkupdate.c,v 1.11 2007/07/13 06:43:42 shane Exp $";
+static const char rcsid[] = "$Id: res_mkupdate.c,v 1.12 2008/02/28 21:21:56 dhankins Exp $";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -50,7 +50,6 @@ static const char rcsid[] = "$Id: res_mkupdate.c,v 1.11 2007/07/13 06:43:42 shan
 #include "arpa/nameser.h"
 
 /* Options.  Leave them on. */
-#define DEBUG
 #define MAXPORT 1024
 
 static int getnum_str(const u_char **, const u_char *);

@@ -442,7 +442,6 @@ isc_result_t omapi_connection_writer (omapi_object_t *h)
 	unsigned first_byte;
 	omapi_buffer_t *buffer;
 	omapi_connection_object_t *c;
-	isc_result_t status;
 
 	if (!h || h -> type != omapi_type_connection)
 		return ISC_R_INVALIDARG;
@@ -504,6 +503,7 @@ isc_result_t omapi_connection_writer (omapi_object_t *h)
 
 #if defined (TRACING)
 			if (trace_record ()) {
+				isc_result_t status;
 				trace_iov_t iov [2];
 				int32_t connect_index;
 				

@@ -38,6 +38,7 @@
 
 #include <errno.h>
 
+#if defined(TRACING)
 static void trace_mr_output_input (trace_type_t *, unsigned, char *);
 static void trace_mr_output_stop (trace_type_t *);
 static void trace_mr_input_input (trace_type_t *, unsigned, char *);
@@ -46,6 +47,7 @@ static void trace_mr_statp_input (trace_type_t *, unsigned, char *);
 static void trace_mr_statp_stop (trace_type_t *);
 static void trace_mr_randomid_input (trace_type_t *, unsigned, char *);
 static void trace_mr_randomid_stop (trace_type_t *);
+#endif /* TRACING */
 trace_type_t *trace_mr_output;
 trace_type_t *trace_mr_input;
 trace_type_t *trace_mr_statp;
@@ -404,9 +406,9 @@ int trace_mr_select (int s, fd_set *r, fd_set *w, fd_set *x, struct timeval *t)
 
 unsigned int trace_mr_res_randomid (unsigned int oldid)
 {
-	u_int32_t id;
 	int rid = oldid;
 #if defined (TRACING)
+	u_int32_t id;
 	unsigned buflen = 0;
 	char *buf = (char *)0;
 	isc_result_t status;

@@ -1515,6 +1515,7 @@ void make_binding_state_transition (struct lease *lease)
 	      case FTS_ABANDONED:
 	      case FTS_RESET:
 		lease -> next_binding_state = FTS_FREE;
+#if defined(FAILOVER_PROTOCOL)
 		/* If we are not in partner_down, leases don't go from
 		   EXPIRED to FREE on a timeout - only on an update.
 		   If we're in partner_down, they expire at mclt past
@@ -1524,6 +1525,7 @@ void make_binding_state_transition (struct lease *lease)
 			lease -> tsfp =
 			    (lease -> pool -> failover_peer -> me.stos +
 			     lease -> pool -> failover_peer -> mclt);
+#endif /* FAILOVER_PROTOCOL */
 		break;
 
 	      case FTS_FREE:
