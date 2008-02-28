@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.94 2008/02/20 12:45:53 fdupont Exp $
+.\" $Id: dhcpd.conf.5,v 1.95 2008/02/28 23:40:45 dhankins Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -2069,14 +2069,17 @@ as the "valid lifetime" in DHCPv6).
 .PP
 The
 .I delayed-ack
-statement
+and
+.I max-ack-delay
+statements
 .RS 0.25i
 .PP
-.B delayed-ack \fInumber\fR\fB;\fR
+.B delayed-ack \fIcount\fR\fB;\fR
+.B max-ack-delay \fImicroseconds\fR\fB;\fR
 .PP
-.I Number
+.I Count
 should be an integer value from zero to 2^16-1, and defaults to 28.  The
-number represents how many DHCPv4 replies maximum will be queued pending
+count represents how many DHCPv4 replies maximum will be queued pending
 transmission until after a database commit event.  If this number is
 reached, a database commit event (commonly resulting in fsync() and
 representing a performance penalty) will be made, and the reply packets
@@ -2084,6 +2087,11 @@ will be transmitted in a batch afterwards.  This preserves the RFC2131
 direction that "stable storage" be updated prior to replying to clients.
 Should the DHCPv4 sockets "go dry" (select() returns immediately with no
 read sockets), the commit is made and any queued packets are transmitted.
+.PP
+Similarly, \fImicroseconds\fR indicates how many microseconds are permitted
+to pass inbetween queuing a packet pending an fsync, and performing the
+fsync.  Valid values range from 0 to 2^32-1, and defaults to 250,000 (1/4 of
+a second).
 .RE
 .PP
 The

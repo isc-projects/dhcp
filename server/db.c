@@ -1059,8 +1059,8 @@ int commit_leases ()
 		log_info ("commit_leases: unable to commit: %m");
 		return 0;
 	}
-	
-	/* send out all deferred ACKs now*/
+
+	/* send out all deferred ACKs now */
 	flush_ackqueue(NULL);
 
 	/* If we haven't rewritten the lease database in over an

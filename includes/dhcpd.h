@@ -624,6 +624,7 @@ struct lease_state {
 #define SV_LIMIT_ADDRS_PER_IA		56
 #define SV_LIMIT_PREFS_PER_IA		57
 #define SV_DELAYED_ACK			58
+#define SV_MAX_ACK_DELAY		59
 
 #if !defined (DEFAULT_PING_TIMEOUT)
 # define DEFAULT_PING_TIMEOUT 1
@@ -631,6 +632,14 @@ struct lease_state {
 
 #if !defined (DEFAULT_DELAYED_ACK)
 # define DEFAULT_DELAYED_ACK 28  /* default SO_SNDBUF size / 576 bytes */
+#endif
+
+#if !defined (DEFAULT_ACK_DELAY_SECS)
+# define DEFAULT_ACK_DELAY_SECS 0
+#endif
+
+#if !defined (DEFAULT_ACK_DELAY_USECS)
+# define DEFAULT_ACK_DELAY_USECS 250000 /* 1/4 of a second */
 #endif
 
 #if !defined (DEFAULT_DEFAULT_LEASE_TIME)
@@ -1939,6 +1948,8 @@ int data_string_sprintfa(struct data_string *ds, const char *fmt, ...);
 /* dhcp.c */
 extern int outstanding_pings;
 extern int max_outstanding_acks;
+extern int max_ack_delay_secs;
+extern int max_ack_delay_usecs;
 
 void dhcp PROTO ((struct packet *));
 void dhcpdiscover PROTO ((struct packet *, int));

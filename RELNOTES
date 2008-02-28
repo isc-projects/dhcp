@@ -57,6 +57,10 @@ work on other platforms. Please report any problems and suggested fixes to
 - ./configure was extended to cover many optional build features, such
   as failover, server tracing, debugging, and the execute() command.
 
+- There is now a default 1/4 of a second scheduled delay between delayed
+  fsync()'s, it can be configured by the max-ack-delay configuration
+  parameter.
+
 			Changes since 4.0.0 (new features)
 
 - Added DHCPv6 rapid commit support.

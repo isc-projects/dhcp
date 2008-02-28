@@ -1086,6 +1086,22 @@ void postconf_initialization (int quiet)
 		data_string_forget(&db, MDL);
 	}
 
+	oc = lookup_option(&server_universe, options, SV_MAX_ACK_DELAY);
+	if (oc &&
+	    evaluate_option_cache(&db, NULL, NULL, NULL, options, NULL,
+				  &global_scope, oc, MDL)) {
+		u_int32_t timeval;
+
+		if (db.len != 4)
+			log_fatal("invalid max ack delay configuration");
+
+		timeval = getULong(db.data);
+		max_ack_delay_secs  = timeval / 1000000;
+		max_ack_delay_usecs = timeval % 1000000;
+
+		data_string_forget(&db, MDL);
+	}
+
 	/* Don't need the options anymore. */
 	option_state_dereference (&options, MDL);
 	
