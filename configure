@@ -1284,6 +1284,13 @@ Optional Features:
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --disable-dependency-tracking  speeds up one-time build
   --enable-dependency-tracking   do not reject slow dependency extractors
+  --enable-debug          create a debug-only version of the software (default
+                          is no).
+  --enable-failover       enable support for failover (default is yes)
+  --enable-execute        enable support for execute() in config (default is
+                          yes)
+  --enable-tracing        enable support for server activity tracing (default
+                          is yes)
   --enable-dhcpv6         enable support for DHCPv6 (default is yes)
   --enable-paranoia       enable support for chroot/setuid (default is no)
   --eanble-early-chroot   enable chrooting prior to configuration (default is
@@ -4317,12 +4324,94 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
 
-# DHCPv6 is off by default
+# Optional compile-time DEBUGging.
+# Check whether --enable-debug was given.
+if test "${enable_debug+set}" = set; then
+  enableval=$enable_debug;
+fi
+
+# This is very much off by default.
+if test "$enable_debug" = "yes" ; then
+
+cat >>confdefs.h <<\_ACEOF
+#define DEBUG 1
+_ACEOF
+
+	# Just override CFLAGS to totally to remove optimization.
+	CFLAGS="-g"
+fi
+# XXX: there are actually quite a lot more DEBUG_ features we could enable,
+# but I don't want to pollute the --help space.
+#
+#/* #define DEBUG_TOKENS */
+#/* #define DEBUG_PACKET */
+#/* #define DEBUG_EXPRESSIONS */
+#/* #define DEBUG_FIND_LEASE */
+#/* #define DEBUG_EXPRESSION_PARSE */
+#/* #define DEBUG_CLASS_MATCHING */
+#/* #define DEBUG_MEMORY_LEAKAGE */
+#/* #define DEBUG_MALLOC_POOL */
+#/* #define DEBUG_LEASE_STATE_TRANSITIONS */
+#/* #define DEBUG_RC_HISTORY */
+#/* #define DEBUG_RC_HISTORY_EXHAUSTIVELY */
+#/* #define RC_HISTORY_MAX 10240 */
+#/* #define POINTER_DEBUG */
+#/* #define DEBUG_FAILOVER_MESSAGES */
+#/* #define DEBUG_FAILOVER_TIMING */
+#/* #define DEBUG_DUMP_ALL_LEASES */
+
+# Failover optional compile-time feature.
+# Check whether --enable-failover was given.
+if test "${enable_failover+set}" = set; then
+  enableval=$enable_failover;
+fi
+
+# Failover is on by default, so define if it is not explicitly disabled.
+if test "$enable_failover" != "no"; then
+
+cat >>confdefs.h <<\_ACEOF
+#define FAILOVER_PROTOCOL 1
+_ACEOF
+
+fi
+
+# execute() support.
+# Check whether --enable-execute was given.
+if test "${enable_execute+set}" = set; then
+  enableval=$enable_execute;
+fi
+
+# execute() is on by default, so define if it is not explicitly disabled.
+if test "$enable_execute" != "no" ; then
+
+cat >>confdefs.h <<\_ACEOF
+#define ENABLE_EXECUTE 1
+_ACEOF
+
+fi
+
+# Server tracing support.
+# Check whether --enable-tracing was given.
+if test "${enable_tracing+set}" = set; then
+  enableval=$enable_tracing;
+fi
+
+# tracing is on by default, so define if it is not explicitly disabled.
+if test "$enable_tracing" != "no" ; then
+
+cat >>confdefs.h <<\_ACEOF
+#define TRACING 1
+_ACEOF
+
+fi
+
+# DHCPv6 optional compile-time feature.
 # Check whether --enable-dhcpv6 was given.
 if test "${enable_dhcpv6+set}" = set; then
   enableval=$enable_dhcpv6;
 fi
 
+# DHCPv6 is on by default, so define if it is not explicitly disabled.
 if test "$enable_dhcpv6" != "no"; then
 
 cat >>confdefs.h <<\_ACEOF
