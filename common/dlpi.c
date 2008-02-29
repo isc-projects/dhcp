@@ -628,7 +628,7 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 	int length = 0;
 	int offset = 0;
 	int bufix = 0;
-	int paylen;
+	unsigned paylen;
 	
 #ifdef USE_DLPI_RAW
 	length = read (interface -> rfdesc, dbuf, sizeof (dbuf));
