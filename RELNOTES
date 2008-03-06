@@ -61,6 +61,9 @@ work on other platforms. Please report any problems and suggested fixes to
   fsync()'s, it can be configured by the max-ack-delay configuration
   parameter.
 
+- A bug was fixed where the length of a hostname was miscalculated, so that
+  hosts were given odd-looking domain names ("foo.bar.ba.example.com").
+
 			Changes since 4.0.0 (new features)
 
 - Added DHCPv6 rapid commit support.
