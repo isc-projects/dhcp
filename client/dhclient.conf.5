@@ -1,4 +1,4 @@
-.\"	$Id: dhclient.conf.5,v 1.21 2007/08/23 16:06:08 dhankins Exp $
+.\"	$Id: dhclient.conf.5,v 1.22 2008/03/07 18:58:29 dhankins Exp $
 .\"
 .\" Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
@@ -267,6 +267,7 @@ configure the fqdn option on the client, as follows:
   send fqdn.fqdn "grosse.fugue.com.";
   send fqdn.encoded on;
   send fqdn.server-update off;
+  also request fqdn, dhcp6.fqdn;
 .fi
 .PP
 The \fIfqdn.fqdn\fR option \fBMUST\fR be a fully-qualified domain
