@@ -127,6 +127,9 @@ suggested fixes to <dhcp-users@isc.org>.
 - Fix startup error messages to report a missing "subnet6 declaration", rather
   than a missing "subnet declaration", when running as a DHCPv6 server.
 
+- A bug was fixed where the length of a hostname was miscalculated, so that
+  hosts were given odd-looking domain names ("foo.bar.ba.example.com").
+
                         Changes since 4.0.0rc1
 
 - None

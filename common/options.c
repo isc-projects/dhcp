@@ -3358,14 +3358,16 @@ fqdn6_universe_decode(struct option_state *options,
 
 	/* Save the domain name. */
 	if (len > 0) {
+		unsigned char *fqdn_start = bp->data + 3;
+
 		if (!save_option_buffer(&fqdn_universe, options, bp,
-					bp->data + 3, len, FQDN_FQDN, 1))
+					fqdn_start, len, FQDN_FQDN, 1))
 			goto error;
 
-		first_dot = (unsigned char *)strchr((char *)bp->data + 3, '.');
+		first_dot = (unsigned char *)strchr((char *)fqdn_start, '.');
 
 		if (first_dot != NULL) {
-			hlen = first_dot - bp->data + 3;
+			hlen = first_dot - fqdn_start;
 			dlen = len - hlen;
 		} else {
 			hlen = len;
@@ -3373,14 +3375,14 @@ fqdn6_universe_decode(struct option_state *options,
 		}
 
 		if (!save_option_buffer(&fqdn_universe, options, bp,
-					bp->data + 3, len, FQDN_FQDN, 1) ||
+					fqdn_start, len, FQDN_FQDN, 1) ||
 		    ((hlen > 0) &&
 		     !save_option_buffer(&fqdn_universe, options, bp,
-					 bp->data + 3, hlen,
+					 fqdn_start, hlen,
 					 FQDN_HOSTNAME, 0)) ||
 		    ((dlen > 0) &&
-		     !save_option_buffer(&fqdn_universe, options, bp, first_dot,
-					 dlen, FQDN_DOMAINNAME, 0)))
+		     !save_option_buffer(&fqdn_universe, options, bp,
+					 first_dot, dlen, FQDN_DOMAINNAME, 0)))
 				goto error;
 	}
 
