@@ -64,6 +64,9 @@ work on other platforms. Please report any problems and suggested fixes to
 - A bug was fixed where the length of a hostname was miscalculated, so that
   hosts were given odd-looking domain names ("foo.bar.ba.example.com").
 
+- Shared network selection should be done from the innermost relay
+  valid link-address field, rather than the outermost.
+
 			Changes since 4.0.0 (new features)
 
 - Added DHCPv6 rapid commit support.

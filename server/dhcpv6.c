@@ -3954,6 +3954,7 @@ shared_network_from_packet6(struct shared_network **shared,
 		if (!IN6_IS_ADDR_UNSPECIFIED(link_addr) &&
 		    !IN6_IS_ADDR_LINKLOCAL(link_addr)) {
 			first_link_addr = link_addr;
+			break;
 		}
 		chk_packet = chk_packet->dhcpv6_container_packet;
 	}
