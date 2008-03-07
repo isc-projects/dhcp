@@ -47,14 +47,17 @@ void read_resolv_conf (parse_time)
 	int token;
 	struct name_server *sp, *sl, *ns;
 	struct domain_search_list *dp, *dl, *nd;
+	isc_result_t status;
 
 	if ((file = open (path_resolv_conf, O_RDONLY)) < 0) {
 		log_error ("Can't open %s: %m", path_resolv_conf);
 		return;
 	}
 
-	cfile = (struct parse *)0;
-	new_parse (&cfile, file, (char *)0, 0, path_resolv_conf, 1);
+	cfile = NULL;
+	status = new_parse(&cfile, file, NULL, 0, path_resolv_conf, 1);
+	if (status != ISC_R_SUCCESS || cfile == NULL)
+		return;
 
 	do {
 		token = next_token (&val, (unsigned *)0, cfile);

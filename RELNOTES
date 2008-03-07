@@ -54,6 +54,8 @@ suggested fixes to <dhcp-users@isc.org>.
 
 			Changes since 4.0.1b1
 
+- Check whether files are zero length before trying to parse them.
+
 - Shared network selection should be done from the innermost relay
   valid link-address field, rather than the outermost.
 

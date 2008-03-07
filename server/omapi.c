@@ -1054,12 +1054,13 @@ isc_result_t dhcp_host_set_value  (omapi_object_t *h,
 			struct parse *parse;
 			int lose = 0;
 			parse = (struct parse *)0;
-			status = new_parse (&parse, -1,
-					    (char *)value -> u.buffer.value,
-					    value -> u.buffer.len,
+			status = new_parse(&parse, -1,
+					    (char *) value->u.buffer.value,
+					    value->u.buffer.len,
 					    "network client", 0);
-			if (status != ISC_R_SUCCESS)
+			if (status != ISC_R_SUCCESS || parse == NULL)
 				return status;
+
 			if (!(parse_executable_statements
 			      (&host -> group -> statements, parse, &lose,
 			       context_any))) {
