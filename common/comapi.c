@@ -174,12 +174,12 @@ isc_result_t dhcp_group_set_value  (omapi_object_t *h,
 		    value -> type == omapi_datatype_string) {
 			struct parse *parse;
 			int lose = 0;
-			parse = (struct parse *)0;
-			status = new_parse (&parse, -1,
-					    (char *)value -> u.buffer.value,
-					    value -> u.buffer.len,
+			parse = NULL;
+			status = new_parse(&parse, -1,
+					    (char *) value->u.buffer.value,
+					    value->u.buffer.len,
 					    "network client", 0);
-			if (status != ISC_R_SUCCESS)
+			if (status != ISC_R_SUCCESS || parse == NULL)
 				return status;
 			if (!(parse_executable_statements
 			      (&group -> group -> statements, parse, &lose,

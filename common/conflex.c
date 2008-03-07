@@ -52,21 +52,18 @@ isc_result_t new_parse (cfile, file, inbuf, buflen, name, eolp)
 	const char *name;
 	int eolp;
 {
+	isc_result_t status = ISC_R_SUCCESS;
 	struct parse *tmp;
 
 	tmp = dmalloc(sizeof(struct parse), MDL);
 	if (tmp == NULL) {
-		return ISC_R_NOMEMORY;
+		return (ISC_R_NOMEMORY);
 	}
 
 	/*
 	 * We don't need to initialize things to zero here, since 
 	 * dmalloc() returns memory that is set to zero.
 	 */
-	/* tmp->token = 0; */ 
-	/* tmp->warnings_occurred = 0; */
-	/* tmp->bufix = 0; */
-	/* tmp->saved_state = NULL; */
 	tmp->tlname = name;
 	tmp->lpos = tmp -> line = 1;
 	tmp->cur_line = tmp->line1;
@@ -83,20 +80,30 @@ isc_result_t new_parse (cfile, file, inbuf, buflen, name, eolp)
 	} else {
 		struct stat sb;
 
-		if (fstat(file, &sb) < 0)
-			return ISC_R_IOERROR;
+		if (fstat(file, &sb) < 0) {
+			status = ISC_R_IOERROR;
+			goto cleanup;
+		}
 
-		tmp->bufsiz = tmp->buflen = (size_t)sb.st_size;
+		if (sb.st_size == 0)
+			goto cleanup;
+
+		tmp->bufsiz = tmp->buflen = (size_t) sb.st_size;
 		tmp->inbuf = mmap(NULL, tmp->bufsiz, PROT_READ, MAP_SHARED,
 				  file, 0);
 
 		if (tmp->inbuf == MAP_FAILED) {
-			return ISC_R_IOERROR;
+			status = ISC_R_IOERROR;
+			goto cleanup;
 		}
 	}
 
 	*cfile = tmp;
-	return ISC_R_SUCCESS;
+	return (ISC_R_SUCCESS);
+
+cleanup:
+	dfree(tmp, MDL);
+	return (status);
 }
 
 isc_result_t end_parse (cfile)

@@ -157,10 +157,13 @@ isc_result_t read_conf_file (const char *filename, struct group *group,
 	/* If we're recording, write out the filename and file contents. */
 	if (trace_record ())
 		trace_write_packet (ttype, ulen + tflen + 1, dbuf, MDL);
-	new_parse (&cfile, -1, fbuf, ulen, filename, 0); /* XXX */
+	status = new_parse(&cfile, -1, fbuf, ulen, filename, 0); /* XXX */
 #else
-	new_parse (&cfile, file, (char *)0, 0, filename, 0);
+	status = new_parse(&cfile, file, NULL, 0, filename, 0);
 #endif
+	if (status != ISC_R_SUCCESS || cfile == NULL)
+		return status;
+
 	if (leasep)
 		status = lease_file_subparse (cfile);
 	else
@@ -181,6 +184,7 @@ void trace_conf_input (trace_type_t *ttype, unsigned len, char *data)
 	struct parse *cfile = (struct parse *)0;
 	static int postconf_initialized;
 	static int leaseconf_initialized;
+	isc_result_t status;
 	
 	/* Do what's done above, except that we don't have to read in the
 	   data, because it's already been read for us. */
@@ -191,12 +195,15 @@ void trace_conf_input (trace_type_t *ttype, unsigned len, char *data)
 	/* If we're recording, write out the filename and file contents. */
 	if (trace_record ())
 		trace_write_packet (ttype, len, data, MDL);
-	new_parse (&cfile, -1, fbuf, flen, data, 0);
-	if (ttype == trace_readleases_type)
-		lease_file_subparse (cfile);
-	else
-		conf_file_subparse (cfile, root_group, ROOT_GROUP);
-	end_parse (&cfile);
+
+	status = new_parse(&cfile, -1, fbuf, flen, data, 0);
+	if (status == ISC_R_SUCCESS || cfile != NULL) {
+		if (ttype == trace_readleases_type)
+			lease_file_subparse (cfile);
+		else
+			conf_file_subparse (cfile, root_group, ROOT_GROUP);
+		end_parse (&cfile);
+	}
 
 	/* Postconfiguration needs to be done after the config file
 	   has been loaded. */

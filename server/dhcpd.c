@@ -612,20 +612,21 @@ main(int argc, char **argv) {
 
 #if defined (NSUPDATE)
 	/* Set up the standard name service updater routine. */
-	parse = (struct parse *)0;
-	status = new_parse (&parse, -1,
-			    std_nsupdate, (sizeof std_nsupdate) - 1,
+	parse = NULL;
+	status = new_parse(&parse, -1, std_nsupdate, sizeof(std_nsupdate) - 1,
 			    "standard name service update routine", 0);
 	if (status != ISC_R_SUCCESS)
 		log_fatal ("can't begin parsing name service updater!");
 
-	lose = 0;
-	if (!(parse_executable_statements
-	      (&root_group -> statements, parse, &lose, context_any))) {
-		end_parse (&parse);
-		log_fatal ("can't parse standard name service updater!");
+	if (parse != NULL) {
+		lose = 0;
+		if (!(parse_executable_statements(&root_group->statements,
+						  parse, &lose, context_any))) {
+			end_parse(&parse);
+			log_fatal("can't parse standard name service updater!");
+		}
+		end_parse(&parse);
 	}
-	end_parse (&parse);
 #endif
 
 	/* Initialize icmp support... */
@@ -1129,20 +1130,22 @@ void postconf_initialization (int quiet)
 		}
 
 		/* Set up the standard name service updater routine. */
-		parse = (struct parse *)0;
-		result = new_parse (&parse, -1,
-				 old_nsupdate, (sizeof old_nsupdate) - 1,
-				 "old name service update routine", 0);
+		parse = NULL;
+		result = new_parse(&parse, -1, old_nsupdate,
+				   sizeof(old_nsupdate) - 1,
+				   "old name service update routine", 0);
 		if (result != ISC_R_SUCCESS)
 			log_fatal ("can't begin parsing old ddns updater!");
 
-		tmp = 0;
-		if (!(parse_executable_statements (e, parse,
-						   &tmp, context_any))) {
-			end_parse (&parse);
-			log_fatal ("can't parse standard ddns updater!");
+		if (parse != NULL) {
+			tmp = 0;
+			if (!(parse_executable_statements(e, parse, &tmp,
+							  context_any))) {
+				end_parse(&parse);
+				log_fatal("can't parse standard ddns updater!");
+			}
 		}
-		end_parse (&parse);
+		end_parse(&parse);
 	}
 #endif
 }

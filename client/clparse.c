@@ -59,6 +59,7 @@ isc_result_t read_client_conf ()
 {
 	struct client_config *config;
 	struct interface_info *ip;
+	struct parse *parse;
 	isc_result_t status;
 	unsigned code;
 
@@ -147,26 +148,27 @@ isc_result_t read_client_conf ()
 	status = read_client_conf_file (path_dhclient_conf,
 					(struct interface_info *)0,
 					&top_level_config);
+
+	parse = NULL;
 	if (status != ISC_R_SUCCESS) {
 		;
 #ifdef LATER
 		/* Set up the standard name service updater routine. */
-		parse = (struct parse *)0;
-		status = new_parse (&parse, -1, default_client_config,
-				    (sizeof default_client_config) - 1,
-				    "default client configuration", 0);
+		status = new_parse(&parse, -1, default_client_config,
+				   sizeof(default_client_config) - 1,
+				   "default client configuration", 0);
 		if (status != ISC_R_SUCCESS)
 			log_fatal ("can't begin default client config!");
+	}
 
+	if (parse != NULL) {
 		do {
-			token = peek_token (&val, (unsigned *)0, cfile);
+			token = peek_token(&val, NULL, cfile);
 			if (token == END_OF_FILE)
 				break;
-			parse_client_statement (cfile,
-						(struct interface_info *)0,
-						&top_level_config);
+			parse_client_statement(cfile, NULL, &top_level_config);
 		} while (1);
-		end_parse (&parse);
+		end_parse(&parse);
 #endif
 	}
 
@@ -211,8 +213,10 @@ int read_client_conf_file (const char *name, struct interface_info *ip,
 	if ((file = open (name, O_RDONLY)) < 0)
 		return uerr2isc (errno);
 
-	cfile = (struct parse *)0;
-	new_parse (&cfile, file, (char *)0, 0, path_dhclient_conf, 0);
+	cfile = NULL;
+	status = new_parse(&cfile, file, NULL, 0, path_dhclient_conf, 0);
+	if (status != ISC_R_SUCCESS || cfile == NULL)
+		return status;
 
 	do {
 		token = peek_token (&val, (unsigned *)0, cfile);
@@ -236,6 +240,7 @@ int read_client_conf_file (const char *name, struct interface_info *ip,
 void read_client_leases ()
 {
 	int file;
+	isc_result_t status;
 	struct parse *cfile;
 	const char *val;
 	int token;
@@ -244,10 +249,10 @@ void read_client_leases ()
 	   we can safely trust the server to remember our state. */
 	if ((file = open (path_dhclient_db, O_RDONLY)) < 0)
 		return;
-	cfile = (struct parse *)0;
-	/* new_parse() may fail if the file is of zero length. */
-	if (new_parse(&cfile, file, (char *)0, 0,
-		      path_dhclient_db, 0) != ISC_R_SUCCESS)
+
+	cfile = NULL;
+	status = new_parse(&cfile, file, NULL, 0, path_dhclient_db, 0);
+	if (status != ISC_R_SUCCESS || cfile == NULL)
 		return;
 
 	do {
