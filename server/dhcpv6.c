@@ -5214,11 +5214,12 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 	/* 
 	 * Initialize variables for early exit.
 	 */
-	memset(&enc_opt_data, 0, sizeof(enc_opt_data));
-	enc_packet = NULL;
-	memset(&enc_reply, 0, sizeof(enc_reply));
+	opt_state = NULL;
 	memset(&a_opt, 0, sizeof(a_opt));
 	memset(&packet_ero, 0, sizeof(packet_ero));
+	memset(&enc_reply, 0, sizeof(enc_reply));
+	memset(&enc_opt_data, 0, sizeof(enc_opt_data));
+	enc_packet = NULL;
 
 	/*
 	 * Get our encapsulated relay message.
