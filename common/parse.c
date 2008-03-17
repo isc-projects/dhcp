@@ -5337,6 +5337,8 @@ int parse_option_decl (oc, cfile)
 		for (fmt = option -> format; *fmt; fmt++) {
 			if (*fmt == 'A')
 				break;
+			if (*fmt == 'o' && fmt != option -> format)
+				continue;
 			switch (*fmt) {
 			      case 'E':
 				fmt = strchr (fmt, '.');
