@@ -175,6 +175,37 @@ if [[ "x$with_srv_lease_file" = "x" ]] ; then
 fi
 echo "$with_srv_lease_file"
 
+AC_ARG_WITH(srv6-lease-file,
+	AC_HELP_STRING([--with-srv6-lease-file=PATH],
+		       [File for dhcpd6 leases 
+		        (default is LOCALSTATEDIR/db/dhcpd6.leases)]),
+	AC_DEFINE_UNQUOTED([_PATH_DHCPD6_DB], ["$withval"],
+			   [File for dhcpd6 leases.]))
+
+echo -n "checking for dhcpd6.leases location..."
+if [[ "x$with_srv6_lease_file" = "x" ]] ; then
+	if [[ -d "${localstatedir}/db" ]] ; then
+		with_srv6_lease_file="${localstatedir}/db/dhcpd6.leases"
+	elif [[ -d "${localstatedir}/state" ]] ; then
+		if [[ -d "${localstatedir}/state/dhcp" ]] ; then
+			with_srv6_lease_file="${localstatedir}/state/dhcp/dhcpd6.leases"
+		else
+			with_srv6_lease_file="${localstatedir}/state/dhcpd6.leases"
+		fi
+	elif [[ -d "${localstatedir}/lib" ]] ; then
+		if [[ -d "${localstatedir}/lib/dhcp" ]] ; then
+			with_srv6_lease_file="${localstatedir}/lib/dhcp/dhcpd6.leases"
+		else
+			with_srv6_lease_file="${localstatedir}/lib/dhcpd6.leases"
+		fi
+	elif [[ -d "${localstatedir}/etc" ]] ; then
+		with_srv6_lease_file="${localstatedir}/etc/dhcpd6.leases"
+	else
+		with_srv6_lease_file="/etc/dhcpd6.leases"
+	fi
+fi
+echo "$with_srv6_lease_file"
+
 AC_ARG_WITH(cli-lease-file,
 	AC_HELP_STRING([--with-cli-lease-file=PATH],
 		       [File for dhclient leases 
@@ -206,18 +237,61 @@ if [[ "x$with_cli_lease_file" = "x" ]] ; then
 fi
 echo "$with_cli_lease_file"
 
+AC_ARG_WITH(cli6-lease-file,
+	AC_HELP_STRING([--with-cli6-lease-file=PATH],
+		       [File for dhclient6 leases 
+		        (default is LOCALSTATEDIR/db/dhclient6.leases)]),
+	AC_DEFINE_UNQUOTED([_PATH_DHCLIENT6_DB], ["$withval"],
+			   [File for dhclient6 leases.]))
+
+echo -n "checking for dhclient6.leases location..."
+if [[ "x$with_cli6_lease_file" = "x" ]] ; then
+	if [[ -d "${localstatedir}/db" ]] ; then
+		with_cli6_lease_file="${localstatedir}/db/dhclient6.leases"
+	elif [[ -d "${localstatedir}/state" ]] ; then
+		if [[ -d "${localstatedir}/state/dhcp" ]] ; then
+			with_cli6_lease_file="${localstatedir}/state/dhcp/dhclient6.leases"
+		else
+			with_cli6_lease_file="${localstatedir}/state/dhclient6.leases"
+		fi
+	elif [[ -d "${localstatedir}/lib" ]] ; then
+		if [[ -d "${localstatedir}/lib/dhcp" ]] ; then
+			with_cli6_lease_file="${localstatedir}/lib/dhcp/dhclient6.leases"
+		else
+			with_cli6_lease_file="${localstatedir}/lib/dhclient6.leases"
+		fi
+	elif [[ -d "${localstatedir}/etc" ]] ; then
+		with_cli6_lease_file="${localstatedir}/etc/dhclient6.leases"
+	else
+		with_cli6_lease_file="/etc/dhclient6.leases"
+	fi
+fi
+echo "$with_cli6_lease_file"
+
 AC_ARG_WITH(srv-pid-file,
 	AC_HELP_STRING([--with-srv-pid-file=PATH],
 		       [File for dhcpd process information
 		        (default is LOCALSTATEDIR/run/dhcpd.pid)]),
 	AC_DEFINE_UNQUOTED([_PATH_DHCPD_PID], ["$withval"],
 			   [File for dhcpd process information.]))
+AC_ARG_WITH(srv6-pid-file,
+	AC_HELP_STRING([--with-srv6-pid-file=PATH],
+		       [File for dhcpd6 process information
+		        (default is LOCALSTATEDIR/run/dhcpd6.pid)]),
+	AC_DEFINE_UNQUOTED([_PATH_DHCPD6_PID], ["$withval"],
+			   [File for dhcpd6 process information.]))
 AC_ARG_WITH(cli-pid-file,
 	AC_HELP_STRING([--with-cli-pid-file=PATH],
 		       [File for dhclient process information
 		        (default is LOCALSTATEDIR/run/dhclient.pid)]),
-	AC_DEFINE_UNQUOTED([_PATH_DHCLIENT], ["$withval"],
+	AC_DEFINE_UNQUOTED([_PATH_DHCLIENT_PID], ["$withval"],
 			   [File for dhclient process information.]))
+AC_ARG_WITH(cli6-pid-file,
+	AC_HELP_STRING([--with-cli6-pid-file=PATH],
+		       [File for dhclient6 process information
+		        (default is LOCALSTATEDIR/run/dhclient6.pid)]),
+	AC_DEFINE_UNQUOTED([_PATH_DHCLIENT6_PID], ["$withval"],
+			   [File for dhclient6 process information.]))
 AC_ARG_WITH(relay-pid-file,
 	AC_HELP_STRING([--with-relay-pid-file=PATH],
 		       [File for dhcrelay process information

@@ -73,6 +73,8 @@ work on other platforms. Please report any problems and suggested fixes to
 
 - Merged IA_XX related structures.
 
+- Add DHCPv6 files in configure.
+
 			Changes since 4.0.0 (new features)
 
 - Added DHCPv6 rapid commit support.
