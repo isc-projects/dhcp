@@ -656,10 +656,6 @@ dhcpleasequery(struct packet *packet, int ms_nulltp) {
  *
  * TODO: RFC5007 ORO in query-options.
  *
- * TODO: RFC5007 not default preferred and valid time.
- *
- * TODO: RFC5007 not zero Client Last Transaction Time (clt-time).
- *
  * TODO: RFC5007 lq-relay-data.
  *
  * TODO: RFC5007 lq-client-link.
@@ -952,10 +948,9 @@ process_lq_by_address(struct lq6_state *lq) {
 	}
 	data.data = data.buffer->data;
 	memcpy(data.buffer->data, &iaaddr->addr, 16);
-	lifetime = DEFAULT_DEFAULT_LEASE_TIME;
-	lifetime = (lifetime / 2) + (lifetime / 8);
+	lifetime = iaaddr->prefer;
 	putULong(data.buffer->data + 16, lifetime);
-	lifetime = DEFAULT_DEFAULT_LEASE_TIME;
+	lifetime = iaaddr->valid;
 	putULong(data.buffer->data + 20, lifetime);
 	if (!save_option_buffer(&dhcpv6_universe, opt_state,
 				NULL, (unsigned char *)data.data, data.len,
@@ -965,7 +960,7 @@ process_lq_by_address(struct lq6_state *lq) {
 	}
 	data_string_forget(&data, MDL);
 
-	lifetime = 0;
+	lifetime = htonl(iaaddr->ia->cltt);
 	if (!save_option_buffer(&dhcpv6_universe, opt_state,
 				NULL, (unsigned char *)&lifetime, 4,
 				D6O_CLT_TIME, 0)) {

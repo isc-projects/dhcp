@@ -1827,6 +1827,7 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 		}
 
 		/* Put new ia into the hash. */
+		reply->ia->cltt = cur_time;
 		ia_id = &reply->ia->iaid_duid;
 		ia_hash_add(ia_na_active, (unsigned char *)ia_id->data,
 			    ia_id->len, reply->ia, MDL);
@@ -2441,6 +2442,7 @@ reply_process_ia_ta(struct reply_state *reply, struct option_cache *ia) {
 		}
 
 		/* Put new ia into the hash. */
+		reply->ia->cltt = cur_time;
 		ia_id = &reply->ia->iaid_duid;
 		ia_hash_add(ia_ta_active, (unsigned char *)ia_id->data,
 			    ia_id->len, reply->ia, MDL);
@@ -2750,6 +2752,10 @@ reply_process_is_addressed(struct reply_state *reply,
 
 	/* Perform dynamic lease related update work. */
 	if (reply->lease != NULL) {
+		/* Cached lifetimes */
+		reply->lease->prefer = reply->send_prefer;
+		reply->lease->valid = reply->send_valid;
+
 		/* Advance (or rewind) the valid lifetime. */
 		if (reply->buf.reply.msg_type == DHCPV6_REPLY) {
 			reply->lease->soft_lifetime_end_time =
@@ -3186,6 +3192,7 @@ reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia) {
 		}
 
 		/* Put new ia into the hash. */
+		reply->ia->cltt = cur_time;
 		ia_id = &reply->ia->iaid_duid;
 		ia_hash_add(ia_pd_active, (unsigned char *)ia_id->data,
 			    ia_id->len, reply->ia, MDL);
@@ -3698,6 +3705,10 @@ reply_process_is_prefixed(struct reply_state *reply,
 
 	/* Perform dynamic prefix related update work. */
 	if (reply->lease != NULL) {
+		/* Cached lifetimes */
+		reply->lease->prefer = reply->send_prefer;
+		reply->lease->valid = reply->send_valid;
+
 		/* Advance (or rewind) the valid lifetime. */
 		if (reply->buf.reply.msg_type == DHCPV6_REPLY) {
 			reply->lease->soft_lifetime_end_time =
@@ -4276,6 +4287,7 @@ ia_na_match_decline(const struct data_string *client_id,
 		  	    tmp_addr, sizeof(tmp_addr)));
 	if (lease != NULL) {
 		decline_lease6(lease->ipv6_pool, lease);
+		lease->ia->cltt = cur_time;
 		write_ia(lease->ia);
 	}
 }
@@ -4692,6 +4704,7 @@ ia_na_match_release(const struct data_string *client_id,
 		 inet_ntop(AF_INET6, iaaddr->data, tmp_addr, sizeof(tmp_addr)));
 	if (lease != NULL) {
 		release_lease6(lease->ipv6_pool, lease);
+		lease->ia->cltt = cur_time;
 		write_ia(lease->ia);
 	}
 }
@@ -4784,6 +4797,7 @@ ia_pd_match_release(const struct data_string *client_id,
 		 (unsigned) getUChar(iapref->data + 8));
 	if (prefix != NULL) {
 		release_lease6(prefix->ipv6_pool, prefix);
+		prefix->ia->cltt = cur_time;
 		write_ia(prefix->ia);
 	}
 }

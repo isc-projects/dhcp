@@ -548,6 +548,15 @@ write_ia(const struct ia_xx *ia) {
 	if (fprintf_ret < 0) {
 		goto error_exit;
 	}
+	if (ia->cltt != MIN_TIME) {
+		tval = print_time(ia->cltt);
+		if (tval == NULL) {
+			goto error_exit;
+		}
+		if (fprintf(db_file, "  cltt %s\n", tval) < 0) {
+			goto error_exit;
+		}
+	}
 	for (i=0; i<ia->num_iaaddr; i++) {
 		iaaddr = ia->iaaddr[i];
 
@@ -568,6 +577,14 @@ write_ia(const struct ia_xx *ia) {
 		binding_state = binding_state_names[iaaddr->state-1];
 		if (fprintf(db_file, "    binding state %s;\n", 
 			    binding_state) < 0) {
+			goto error_exit;
+		}
+		if (fprintf(db_file, "    preferred-life %u\n",
+			    (unsigned)iaaddr->prefer) < 0) {
+			goto error_exit;
+		}
+		if (fprintf(db_file, "    max-life %u\n",
+			    (unsigned)iaaddr->valid) < 0) {
 			goto error_exit;
 		}
 

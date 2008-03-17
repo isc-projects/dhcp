@@ -4082,6 +4082,8 @@ parse_ia_na_declaration(struct parse *cfile) {
 	u_int32_t iaid;
 	struct iaddr iaddr;
 	binding_state_t state;
+	u_int32_t prefer;
+	u_int32_t valid;
 	TIME end_time;
 	struct iaaddr *iaaddr;
 	struct ipv6_pool *pool;
@@ -4129,6 +4131,11 @@ parse_ia_na_declaration(struct parse *cfile) {
 		token = next_token(&val, NULL, cfile);
 		if (token == RBRACE) break;
 
+		if (token == CLTT) {
+			ia->cltt = parse_date (cfile);
+			continue;
+		}
+
 		if (token != IAADDR) {
 			parse_warn(cfile, "corrupt lease file; "
 					  "expecting IAADDR or right brace");
@@ -4152,6 +4159,7 @@ parse_ia_na_declaration(struct parse *cfile) {
 		}
 
 		state = FTS_LAST+1;
+		prefer = valid = 0;
 		end_time = -1;
 		for (;;) {
 			token = next_token(&val, NULL, cfile);
@@ -4200,6 +4208,32 @@ parse_ia_na_declaration(struct parse *cfile) {
 							  "expecting "
 							  "semicolon.");
 				}
+				break;
+
+				/* Lease preferred lifetime. */
+			      case PREFERRED_LIFE:
+				token = next_token(&val, NULL, cfile);
+				if (token != NUMBER) {
+					parse_warn(cfile, "%s is not a valid "
+							  "preferred time",
+						   val);
+					skip_to_semi(cfile);
+					continue;
+				}
+				prefer = atoi (val);
+				break;
+
+				/* Lease valid lifetime. */
+			      case MAX_LIFE:
+				token = next_token(&val, NULL, cfile);
+				if (token != NUMBER) {
+					parse_warn(cfile, "%s is not a valid "
+							  "max time",
+						   val);
+					skip_to_semi(cfile);
+					continue;
+				}
+				valid = atoi (val);
 				break;
 
 				/* Lease expiration time. */
@@ -4315,6 +4349,8 @@ parse_ia_na_declaration(struct parse *cfile) {
 		memcpy(&iaaddr->addr, iaddr.iabuf, sizeof(iaaddr->addr));
 		iaaddr->plen = 0;
 		iaaddr->state = state;
+		iaaddr->prefer = prefer;
+		iaaddr->valid = valid;
 		if (iaaddr->state == FTS_RELEASED)
 			iaaddr->hard_lifetime_end_time = end_time;
 
@@ -4379,6 +4415,8 @@ parse_ia_ta_declaration(struct parse *cfile) {
 	u_int32_t iaid;
 	struct iaddr iaddr;
 	binding_state_t state;
+	u_int32_t prefer;
+	u_int32_t valid;
 	TIME end_time;
 	struct iaaddr *iaaddr;
 	struct ipv6_pool *pool;
@@ -4426,6 +4464,11 @@ parse_ia_ta_declaration(struct parse *cfile) {
 		token = next_token(&val, NULL, cfile);
 		if (token == RBRACE) break;
 
+		if (token == CLTT) {
+			ia->cltt = parse_date (cfile);
+			continue;
+		}
+
 		if (token != IAADDR) {
 			parse_warn(cfile, "corrupt lease file; "
 					  "expecting IAADDR or right brace");
@@ -4449,6 +4492,7 @@ parse_ia_ta_declaration(struct parse *cfile) {
 		}
 
 		state = FTS_LAST+1;
+		prefer = valid = 0;
 		end_time = -1;
 		for (;;) {
 			token = next_token(&val, NULL, cfile);
@@ -4497,6 +4541,32 @@ parse_ia_ta_declaration(struct parse *cfile) {
 							  "expecting "
 							  "semicolon.");
 				}
+				break;
+
+				/* Lease preferred lifetime. */
+			      case PREFERRED_LIFE:
+				token = next_token(&val, NULL, cfile);
+				if (token != NUMBER) {
+					parse_warn(cfile, "%s is not a valid "
+							  "preferred time",
+						   val);
+					skip_to_semi(cfile);
+					continue;
+				}
+				prefer = atoi (val);
+				break;
+
+				/* Lease valid lifetime. */
+			      case MAX_LIFE:
+				token = next_token(&val, NULL, cfile);
+				if (token != NUMBER) {
+					parse_warn(cfile, "%s is not a valid "
+							  "max time",
+						   val);
+					skip_to_semi(cfile);
+					continue;
+				}
+				valid = atoi (val);
 				break;
 
 				/* Lease expiration time. */
@@ -4612,6 +4682,8 @@ parse_ia_ta_declaration(struct parse *cfile) {
 		memcpy(&iaaddr->addr, iaddr.iabuf, sizeof(iaaddr->addr));
 		iaaddr->plen = 0;
 		iaaddr->state = state;
+		iaaddr->prefer = prefer;
+		iaaddr->valid = valid;
 		if (iaaddr->state == FTS_RELEASED)
 			iaaddr->hard_lifetime_end_time = end_time;
 
@@ -4677,6 +4749,8 @@ parse_ia_pd_declaration(struct parse *cfile) {
 	struct iaddr iaddr;
 	u_int8_t plen;
 	binding_state_t state;
+	u_int32_t prefer;
+	u_int32_t valid;
 	TIME end_time;
 	struct iaaddr *iapref;
 	struct ipv6_pool *pool;
@@ -4724,6 +4798,11 @@ parse_ia_pd_declaration(struct parse *cfile) {
 		token = next_token(&val, NULL, cfile);
 		if (token == RBRACE) break;
 
+		if (token == CLTT) {
+			ia->cltt = parse_date (cfile);
+			continue;
+		}
+
 		if (token != IAPREFIX) {
 			parse_warn(cfile, "corrupt lease file; expecting "
 				   "IAPREFIX or right brace");
@@ -4747,6 +4826,7 @@ parse_ia_pd_declaration(struct parse *cfile) {
 		}
 
 		state = FTS_LAST+1;
+		prefer = valid = 0;
 		end_time = -1;
 		for (;;) {
 			token = next_token(&val, NULL, cfile);
@@ -4795,6 +4875,32 @@ parse_ia_pd_declaration(struct parse *cfile) {
 							  "expecting "
 							  "semicolon.");
 				}
+				break;
+
+				/* Lease preferred lifetime. */
+			      case PREFERRED_LIFE:
+				token = next_token(&val, NULL, cfile);
+				if (token != NUMBER) {
+					parse_warn(cfile, "%s is not a valid "
+							  "preferred time",
+						   val);
+					skip_to_semi(cfile);
+					continue;
+				}
+				prefer = atoi (val);
+				break;
+
+				/* Lease valid lifetime. */
+			      case MAX_LIFE:
+				token = next_token(&val, NULL, cfile);
+				if (token != NUMBER) {
+					parse_warn(cfile, "%s is not a valid "
+							  "max time",
+						   val);
+					skip_to_semi(cfile);
+					continue;
+				}
+				valid = atoi (val);
 				break;
 
 				/* Prefix expiration time. */
@@ -4910,6 +5016,8 @@ parse_ia_pd_declaration(struct parse *cfile) {
 		memcpy(&iapref->addr, iaddr.iabuf, sizeof(iapref->addr));
 		iapref->plen = plen;
 		iapref->state = state;
+		iapref->prefer = prefer;
+		iapref->valid = valid;
 		if (iapref->state == FTS_RELEASED)
 			iapref->hard_lifetime_end_time = end_time;
 

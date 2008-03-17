@@ -1347,6 +1347,8 @@ struct iaaddr {
 	struct binding_scope *scope;		/* "set var = value;" */
 	time_t hard_lifetime_end_time;		/* time address expires */
 	time_t soft_lifetime_end_time;		/* time ephemeral expires */
+	u_int32_t prefer;			/* cached preferred lifetime */
+	u_int32_t valid;			/* cached valid lifetime */
 	struct ia_xx *ia;			/* IA for this lease */
 	struct ipv6_pool *ipv6_pool;		/* pool for this lease */
 /*
@@ -1365,6 +1367,7 @@ struct ia_xx {
 	u_int16_t ia_type;		/* IA_XX */
 	int num_iaaddr;			/* number of IAADDR for this IA */
 	int max_iaaddr;			/* space available for IAADDR */
+	time_t cltt;			/* client last transaction time */
 	struct iaaddr **iaaddr;		/* pointers to the various IAADDRs */
 };
 
