@@ -71,6 +71,8 @@ work on other platforms. Please report any problems and suggested fixes to
 
 - Prefix pools are attached to shared network scopes.
 
+- Merged IA_XX related structures.
+
 			Changes since 4.0.0 (new features)
 
 - Added DHCPv6 rapid commit support.

@@ -590,13 +590,13 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 
 	      case POOL:
 		next_token (&val, (unsigned *)0, cfile);
-		if (type != SUBNET_DECL && type != SHARED_NET_DECL) {
-			parse_warn (cfile, "pool declared outside of network");
-			skip_to_semi(cfile);
-		} else if (type == POOL_DECL) {
+		if (type == POOL_DECL) {
 			parse_warn (cfile, "pool declared within pool.");
 			skip_to_semi(cfile);
-		} else
+		} else if (type != SUBNET_DECL && type != SHARED_NET_DECL) {
+			parse_warn (cfile, "pool declared outside of network");
+			skip_to_semi(cfile);
+		} else 
 			parse_pool_statement (cfile, group, type);
 
 		return declaration;
@@ -629,7 +629,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		next_token(NULL, NULL, cfile);
 		if ((type != SUBNET_DECL) || (group->subnet == NULL)) {
 			parse_warn (cfile,
-				    "prefix6 definitions may not be scoped.");
+				    "prefix6 declaration not allowed here.");
 			skip_to_semi(cfile);
 			return declaration;
 		}
@@ -3636,9 +3636,11 @@ void parse_address_range (cfile, group, type, inpool, lpchain)
 
 #ifdef DHCPv6
 static void
-add_ipv6_pool_to_shared_network(struct shared_network *share, 
+add_ipv6_pool_to_shared_network(struct shared_network *share,
+				u_int16_t type,
 				struct iaddr *lo_addr,
-				int bits) {
+				int bits,
+				int units) {
 	struct ipv6_pool *pool;
 	struct in6_addr tmp_in6_addr;
 	int num_pools;
@@ -3653,8 +3655,8 @@ add_ipv6_pool_to_shared_network(struct shared_network *share,
 	}
 	memcpy(&tmp_in6_addr, lo_addr->iabuf, sizeof(tmp_in6_addr));
 	pool = NULL;
-	if (ipv6_pool_allocate(&pool, &tmp_in6_addr, 
-			       bits, MDL) != ISC_R_SUCCESS) {
+	if (ipv6_pool_allocate(&pool, type, &tmp_in6_addr,
+			       bits, units, MDL) != ISC_R_SUCCESS) {
 		log_fatal("Out of memory");
 	}
 
@@ -3765,7 +3767,8 @@ parse_address_range6(struct parse *cfile, struct group *group) {
 			return;
 		}
 
-		add_ipv6_pool_to_shared_network(share, &lo, bits);
+		add_ipv6_pool_to_shared_network(share, D6O_IA_NA, &lo,
+						bits, 128);
 
 	} else if (token == TEMPORARY) {
 		/*
@@ -3778,9 +3781,9 @@ parse_address_range6(struct parse *cfile, struct group *group) {
 			skip_to_semi(cfile);
 			return;
 		}
-		bits |= POOL_IS_FOR_TEMP;
 
-		add_ipv6_pool_to_shared_network(share, &lo, bits);
+		add_ipv6_pool_to_shared_network(share, D6O_IA_TA, &lo,
+						bits, 128);
 	} else {
 		/*
 		 * No '/', so we are looking for the end address of 
@@ -3799,9 +3802,9 @@ parse_address_range6(struct parse *cfile, struct group *group) {
 		}
 
 		for (p=nets; p != NULL; p=p->next) {
-			add_ipv6_pool_to_shared_network(share, 
+			add_ipv6_pool_to_shared_network(share, D6O_IA_NA,
 							&p->cidrnet.lo_addr, 
-							p->cidrnet.bits);
+							p->cidrnet.bits, 128);
 		}
 
 		free_iaddrcidrnetlist(&nets);
@@ -3814,75 +3817,6 @@ parse_address_range6(struct parse *cfile, struct group *group) {
 		skip_to_semi(cfile);
 		return;
 	}
-}
-
-static void
-add_ipv6_ppool_to_shared_network(struct shared_network *share, 
-				 struct iaddr *start_addr,
-				 int pool_bits,
-				 int alloc_bits) {
-	struct ipv6_ppool *ppool;
-	struct in6_addr tmp_in6_addr;
-	int num_ppools;
-	struct ipv6_ppool **tmp;
-
-	/*
-	 * Create our prefix pool.
-	 */
-	if (start_addr->len != sizeof(tmp_in6_addr)) {
-		log_fatal("Internal error: Attempt to add non-IPv6 prefix.");
-	}
-	memcpy(&tmp_in6_addr, start_addr->iabuf, sizeof(tmp_in6_addr));
-	ppool = NULL;
-	if (ipv6_ppool_allocate(&ppool, &tmp_in6_addr,
-				(u_int8_t) pool_bits, (u_int8_t) alloc_bits,
-				MDL) != ISC_R_SUCCESS) {
-		log_fatal("Out of memory");
-	}
-
-	/*
-	 * Add to our IPv6 prefix pool set.
-	 */
-	if (add_ipv6_ppool(ppool) != ISC_R_SUCCESS) {
-		log_fatal ("Out of memory");
-	}
-
-	/*
-	 * Link our prefix pool to our shared_network.
-	 */
-	ppool->shared_network = NULL;
-	shared_network_reference(&ppool->shared_network, share, MDL);
-
-	/* 
-	 * Increase our array size for ipv6_ppools in the shared_network.
-	 */
-	if (share->ipv6_ppools == NULL) {
-		num_ppools = 0;
-	} else {
-		num_ppools = 0;
-		while (share->ipv6_ppools[num_ppools] != NULL) {
-			num_ppools++;
-		}
-	}
-	tmp = dmalloc(sizeof(struct ipv6_ppool *) * (num_ppools + 2), MDL);
-	if (tmp == NULL) {
-		log_fatal("Out of memory");
-	}
-	if (num_ppools > 0) {
-		memcpy(tmp, share->ipv6_ppools,
-		       sizeof(struct ipv6_ppool *) * num_ppools);
-	}
-	if (share->ipv6_ppools != NULL) {
-		dfree(share->ipv6_ppools, MDL);
-	}
-	share->ipv6_ppools = tmp;
-
-	/* 
-	 * Record this prefix pool in our array of prefix pools
-	 * for this shared network.
-	 */
-	ipv6_ppool_reference(&share->ipv6_ppools[num_ppools], ppool, MDL);
-	share->ipv6_ppools[num_ppools+1] = NULL;
 }
 
 /* prefix6-declaration :== ip-address6 ip-address6 SLASH number SEMI */
@@ -3973,9 +3907,9 @@ parse_prefix6(struct parse *cfile, struct group *group) {
 			parse_warn(cfile, "impossible mask length");
 			continue;
 		}
-		add_ipv6_ppool_to_shared_network(share,
-						 &p->cidrnet.lo_addr,
-						 p->cidrnet.bits, bits);
+		add_ipv6_pool_to_shared_network(share, D6O_IA_PD,
+						&p->cidrnet.lo_addr,
+						p->cidrnet.bits, bits);
 	}
 
 	free_iaddrcidrnetlist(&nets);
@@ -4141,9 +4075,9 @@ parse_ia_na_declaration(struct parse *cfile) {
 	skip_to_semi(cfile);
 #else /* defined(DHCPv6) */
 	enum dhcp_token token;
-	struct ia_na *ia;
+	struct ia_xx *ia;
 	const char *val;
-	struct ia_na *old_ia;
+	struct ia_xx *old_ia;
 	unsigned int len;
 	u_int32_t iaid;
 	struct iaddr iaddr;
@@ -4179,7 +4113,7 @@ parse_ia_na_declaration(struct parse *cfile) {
 
 	memcpy(&iaid, val, 4);
 	ia = NULL;
-	if (ia_na_allocate(&ia, iaid, val+4, len-4, MDL) != ISC_R_SUCCESS) {
+	if (ia_allocate(&ia, iaid, val+4, len-4, MDL) != ISC_R_SUCCESS) {
 		log_fatal("Out of memory.");
 	}
 	ia->ia_type = D6O_IA_NA;
@@ -4379,6 +4313,7 @@ parse_ia_na_declaration(struct parse *cfile) {
 			log_fatal("Out of memory.");
 		}
 		memcpy(&iaaddr->addr, iaddr.iabuf, sizeof(iaaddr->addr));
+		iaaddr->plen = 0;
 		iaaddr->state = state;
 		if (iaaddr->state == FTS_RELEASED)
 			iaaddr->hard_lifetime_end_time = end_time;
@@ -4389,11 +4324,12 @@ parse_ia_na_declaration(struct parse *cfile) {
 		}
 
 		/* add to our various structures */
-		ia_na_add_iaaddr(ia, iaaddr, MDL);
-		ia_na_reference(&iaaddr->ia_na, ia, MDL);
+		ia_add_iaaddr(ia, iaaddr, MDL);
+		ia_reference(&iaaddr->ia, ia, MDL);
 		pool = NULL;
-		if (find_ipv6_pool(&pool, 0, &iaaddr->addr) != ISC_R_SUCCESS) {
-			inet_ntop(AF_INET6, &iaaddr->addr, 
+		if (find_ipv6_pool(&pool, D6O_IA_NA,
+				   &iaaddr->addr) != ISC_R_SUCCESS) {
+			inet_ntop(AF_INET6, &iaaddr->addr,
 				  addr_buf, sizeof(addr_buf));
 			parse_warn(cfile, "no pool found for address %s", 
 				   addr_buf);
@@ -4408,24 +4344,24 @@ parse_ia_na_declaration(struct parse *cfile) {
 	 * If we have an existing record for this IA_NA, remove it.
 	 */
 	old_ia = NULL;
-	if (ia_na_hash_lookup(&old_ia, ia_na_active,
-			      (unsigned char *)ia->iaid_duid.data,
-			      ia->iaid_duid.len, MDL)) {
-		ia_na_hash_delete(ia_na_active, 
-				  (unsigned char *)ia->iaid_duid.data,
-				  ia->iaid_duid.len, MDL);
-		ia_na_dereference(&old_ia, MDL);
+	if (ia_hash_lookup(&old_ia, ia_na_active,
+			   (unsigned char *)ia->iaid_duid.data,
+			   ia->iaid_duid.len, MDL)) {
+		ia_hash_delete(ia_na_active, 
+			       (unsigned char *)ia->iaid_duid.data,
+			       ia->iaid_duid.len, MDL);
+		ia_dereference(&old_ia, MDL);
 	}
 
 	/*
 	 * If we have addresses, add this, otherwise don't bother.
 	 */
 	if (ia->num_iaaddr > 0) {
-		ia_na_hash_add(ia_na_active, 
-			       (unsigned char *)ia->iaid_duid.data,
-			       ia->iaid_duid.len, ia, MDL);
+		ia_hash_add(ia_na_active, 
+			    (unsigned char *)ia->iaid_duid.data,
+			    ia->iaid_duid.len, ia, MDL);
 	}
-	ia_na_dereference(&ia, MDL);
+	ia_dereference(&ia, MDL);
 #endif /* defined(DHCPv6) */
 }
 
@@ -4436,9 +4372,9 @@ parse_ia_ta_declaration(struct parse *cfile) {
 	skip_to_semi(cfile);
 #else /* defined(DHCPv6) */
 	enum dhcp_token token;
-	struct ia_na *ia;
+	struct ia_xx *ia;
 	const char *val;
-	struct ia_na *old_ia;
+	struct ia_xx *old_ia;
 	unsigned int len;
 	u_int32_t iaid;
 	struct iaddr iaddr;
@@ -4474,7 +4410,7 @@ parse_ia_ta_declaration(struct parse *cfile) {
 
 	memcpy(&iaid, val, 4);
 	ia = NULL;
-	if (ia_na_allocate(&ia, iaid, val+4, len-4, MDL) != ISC_R_SUCCESS) {
+	if (ia_allocate(&ia, iaid, val+4, len-4, MDL) != ISC_R_SUCCESS) {
 		log_fatal("Out of memory.");
 	}
 	ia->ia_type = D6O_IA_TA;
@@ -4674,6 +4610,7 @@ parse_ia_ta_declaration(struct parse *cfile) {
 			log_fatal("Out of memory.");
 		}
 		memcpy(&iaaddr->addr, iaddr.iabuf, sizeof(iaaddr->addr));
+		iaaddr->plen = 0;
 		iaaddr->state = state;
 		if (iaaddr->state == FTS_RELEASED)
 			iaaddr->hard_lifetime_end_time = end_time;
@@ -4684,11 +4621,12 @@ parse_ia_ta_declaration(struct parse *cfile) {
 		}
 
 		/* add to our various structures */
-		ia_na_add_iaaddr(ia, iaaddr, MDL);
-		ia_na_reference(&iaaddr->ia_na, ia, MDL);
+		ia_add_iaaddr(ia, iaaddr, MDL);
+		ia_reference(&iaaddr->ia, ia, MDL);
 		pool = NULL;
-		if (find_ipv6_pool(&pool, 1, &iaaddr->addr) != ISC_R_SUCCESS) {
-			inet_ntop(AF_INET6, &iaaddr->addr, 
+		if (find_ipv6_pool(&pool, D6O_IA_TA,
+				   &iaaddr->addr) != ISC_R_SUCCESS) {
+			inet_ntop(AF_INET6, &iaaddr->addr,
 				  addr_buf, sizeof(addr_buf));
 			parse_warn(cfile, "no pool found for address %s", 
 				   addr_buf);
@@ -4703,24 +4641,24 @@ parse_ia_ta_declaration(struct parse *cfile) {
 	 * If we have an existing record for this IA_TA, remove it.
 	 */
 	old_ia = NULL;
-	if (ia_na_hash_lookup(&old_ia, ia_ta_active,
-			      (unsigned char *)ia->iaid_duid.data,
-			      ia->iaid_duid.len, MDL)) {
-		ia_na_hash_delete(ia_ta_active, 
-				  (unsigned char *)ia->iaid_duid.data,
-				  ia->iaid_duid.len, MDL);
-		ia_na_dereference(&old_ia, MDL);
+	if (ia_hash_lookup(&old_ia, ia_ta_active,
+			   (unsigned char *)ia->iaid_duid.data,
+			   ia->iaid_duid.len, MDL)) {
+		ia_hash_delete(ia_ta_active, 
+			       (unsigned char *)ia->iaid_duid.data,
+			       ia->iaid_duid.len, MDL);
+		ia_dereference(&old_ia, MDL);
 	}
 
 	/*
 	 * If we have addresses, add this, otherwise don't bother.
 	 */
 	if (ia->num_iaaddr > 0) {
-		ia_na_hash_add(ia_ta_active, 
-			       (unsigned char *)ia->iaid_duid.data,
-			       ia->iaid_duid.len, ia, MDL);
+		ia_hash_add(ia_ta_active, 
+			    (unsigned char *)ia->iaid_duid.data,
+			    ia->iaid_duid.len, ia, MDL);
 	}
-	ia_na_dereference(&ia, MDL);
+	ia_dereference(&ia, MDL);
 #endif /* defined(DHCPv6) */
 }
 
@@ -4731,17 +4669,17 @@ parse_ia_pd_declaration(struct parse *cfile) {
 	skip_to_semi(cfile);
 #else /* defined(DHCPv6) */
 	enum dhcp_token token;
-	struct ia_pd *ia_pd;
+	struct ia_xx *ia;
 	const char *val;
-	struct ia_pd *old_ia_pd;
+	struct ia_xx *old_ia;
 	unsigned int len;
 	u_int32_t iaid;
 	struct iaddr iaddr;
 	u_int8_t plen;
 	binding_state_t state;
 	TIME end_time;
-	struct iaprefix *iapref;
-	struct ipv6_ppool *ppool;
+	struct iaaddr *iapref;
+	struct ipv6_pool *pool;
 	char addr_buf[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
 	isc_boolean_t newbinding;
 	struct binding_scope *scope=NULL;
@@ -4769,10 +4707,11 @@ parse_ia_pd_declaration(struct parse *cfile) {
 	}
 
 	memcpy(&iaid, val, 4);
-	ia_pd = NULL;
-	if (ia_pd_allocate(&ia_pd, iaid, val+4, len-4, MDL) != ISC_R_SUCCESS) {
+	ia = NULL;
+	if (ia_allocate(&ia, iaid, val+4, len-4, MDL) != ISC_R_SUCCESS) {
 		log_fatal("Out of memory.");
 	}
+	ia->ia_type = D6O_IA_PD;
 
 	token = next_token(&val, NULL, cfile);
 	if (token != LBRACE) {
@@ -4965,10 +4904,10 @@ parse_ia_pd_declaration(struct parse *cfile) {
 		}
 
 		iapref = NULL;
-		if (iaprefix_allocate(&iapref, MDL) != ISC_R_SUCCESS) {
+		if (iaaddr_allocate(&iapref, MDL) != ISC_R_SUCCESS) {
 			log_fatal("Out of memory.");
 		}
-		memcpy(&iapref->pref, iaddr.iabuf, sizeof(iapref->pref));
+		memcpy(&iapref->addr, iaddr.iabuf, sizeof(iapref->addr));
 		iapref->plen = plen;
 		iapref->state = state;
 		if (iapref->state == FTS_RELEASED)
@@ -4980,43 +4919,44 @@ parse_ia_pd_declaration(struct parse *cfile) {
 		}
 
 		/* add to our various structures */
-		ia_pd_add_iaprefix(ia_pd, iapref, MDL);
-		ia_pd_reference(&iapref->ia_pd, ia_pd, MDL);
-		ppool = NULL;
-		if (find_ipv6_ppool(&ppool, &iapref->pref) != ISC_R_SUCCESS) {
-			inet_ntop(AF_INET6, &iapref->pref, 
+		ia_add_iaaddr(ia, iapref, MDL);
+		ia_reference(&iapref->ia, ia, MDL);
+		pool = NULL;
+		if (find_ipv6_pool(&pool, D6O_IA_PD,
+				   &iapref->addr) != ISC_R_SUCCESS) {
+			inet_ntop(AF_INET6, &iapref->addr,
 				  addr_buf, sizeof(addr_buf));
-			parse_warn(cfile, "no ppool found for address %s", 
+			parse_warn(cfile, "no pool found for address %s", 
 				   addr_buf);
 			return;
 		}
-		add_prefix6(ppool, iapref, end_time);
-		ipv6_ppool_dereference(&ppool, MDL);
-		iaprefix_dereference(&iapref, MDL);
+		add_lease6(pool, iapref, end_time);
+		ipv6_pool_dereference(&pool, MDL);
+		iaaddr_dereference(&iapref, MDL);
 	}
 
 	/*
 	 * If we have an existing record for this IA_PD, remove it.
 	 */
-	old_ia_pd = NULL;
-	if (ia_pd_hash_lookup(&old_ia_pd, ia_pd_active,
-			      (unsigned char *)ia_pd->iaid_duid.data,
-			      ia_pd->iaid_duid.len, MDL)) {
-		ia_pd_hash_delete(ia_pd_active,
-				  (unsigned char *)ia_pd->iaid_duid.data,
-				  ia_pd->iaid_duid.len, MDL);
-		ia_pd_dereference(&old_ia_pd, MDL);
+	old_ia = NULL;
+	if (ia_hash_lookup(&old_ia, ia_pd_active,
+			   (unsigned char *)ia->iaid_duid.data,
+			   ia->iaid_duid.len, MDL)) {
+		ia_hash_delete(ia_pd_active,
+			       (unsigned char *)ia->iaid_duid.data,
+			       ia->iaid_duid.len, MDL);
+		ia_dereference(&old_ia, MDL);
 	}
 
 	/*
 	 * If we have prefixes, add this, otherwise don't bother.
 	 */
-	if (ia_pd->num_iaprefix > 0) {
-		ia_pd_hash_add(ia_pd_active, 
-			       (unsigned char *)ia_pd->iaid_duid.data,
-			       ia_pd->iaid_duid.len, ia_pd, MDL);
+	if (ia->num_iaaddr > 0) {
+		ia_hash_add(ia_pd_active, 
+			    (unsigned char *)ia->iaid_duid.data,
+			    ia->iaid_duid.len, ia, MDL);
 	}
-	ia_pd_dereference(&ia_pd, MDL);
+	ia_dereference(&ia, MDL);
 #endif /* defined(DHCPv6) */
 }
 

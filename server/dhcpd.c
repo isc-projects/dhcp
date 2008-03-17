@@ -655,13 +655,13 @@ main(int argc, char **argv) {
 
 #ifdef DHCPv6
 	/* set up DHCPv6 hashes */
-	if (!ia_na_new_hash(&ia_na_active, DEFAULT_HASH_SIZE, MDL)) {
+	if (!ia_new_hash(&ia_na_active, DEFAULT_HASH_SIZE, MDL)) {
 		log_fatal("Out of memory creating hash for active IA_NA.");
 	}
-	if (!ia_na_new_hash(&ia_ta_active, DEFAULT_HASH_SIZE, MDL)) {
+	if (!ia_new_hash(&ia_ta_active, DEFAULT_HASH_SIZE, MDL)) {
 		log_fatal("Out of memory creating hash for active IA_TA.");
 	}
-	if (!ia_pd_new_hash(&ia_pd_active, DEFAULT_HASH_SIZE, MDL)) {
+	if (!ia_new_hash(&ia_pd_active, DEFAULT_HASH_SIZE, MDL)) {
 		log_fatal("Out of memory creating hash for active IA_PD.");
 	}
 #endif /* DHCPv6 */

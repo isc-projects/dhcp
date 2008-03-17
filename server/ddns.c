@@ -565,8 +565,8 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 		memset (&ddns_dhcid, 0, sizeof ddns_dhcid);
 		if (lease6 != NULL)
 			result = get_dhcid(&ddns_dhcid, 2,
-					   lease6->ia_na->iaid_duid.data,
-					   lease6->ia_na->iaid_duid.len);
+					   lease6->ia->iaid_duid.data,
+					   lease6->ia->iaid_duid.len);
 		else if ((lease != NULL) && (lease->uid != NULL) &&
 			 (lease->uid_len != 0))
 			result = get_dhcid (&ddns_dhcid,
