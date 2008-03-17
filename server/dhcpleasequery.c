@@ -899,7 +899,7 @@ process_lq_by_address(struct lq6_state *lq) {
 	 * or the ia-aadr when it is :: but in any case the ia-addr has
 	 * to be on the link, so we ignore the link-address here.
 	 */
-	if (find_ipv6_pool(&pool, 0, &addr) != ISC_R_SUCCESS) {
+	if (find_ipv6_pool(&pool, D6O_IA_NA, &addr) != ISC_R_SUCCESS) {
 		if (!set_error(lq, STATUS_NotConfigured,
 			       "Address not in a pool.")) {
 			log_error("process_lq_by_address: unable "
@@ -915,8 +915,7 @@ process_lq_by_address(struct lq6_state *lq) {
 		goto exit;
 	}
 	if ((iaaddr == NULL) || (iaaddr->state != FTS_ACTIVE) ||
-	    (iaaddr->ia_na == NULL) ||
-	    (iaaddr->ia_na->iaid_duid.len <= 4)) {
+	    (iaaddr->ia == NULL) || (iaaddr->ia->iaid_duid.len <= 4)) {
 		ret_val = 1;
 		goto exit;
 	}
@@ -930,7 +929,7 @@ process_lq_by_address(struct lq6_state *lq) {
 		goto exit;
 	}
 
-	data_string_copy(&data, &iaaddr->ia_na->iaid_duid, MDL);
+	data_string_copy(&data, &iaaddr->ia->iaid_duid, MDL);
 	data.data += 4;
 	data.len -= 4;
 	if (!save_option_buffer(&dhcpv6_universe, opt_state,
