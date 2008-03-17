@@ -813,6 +813,7 @@ struct shared_network {
 	struct ipv6_pool **ipv6_pools;		/* NULL-terminated array */
 	int last_ipv6_pool;			/* offset of last IPv6 pool
 						   used to issue a lease */
+	struct ipv6_ppool **ipv6_ppools;	/* NULL-terminated array */
 	struct group *group;
 #if defined (FAILOVER_PROTOCOL)
 	dhcp_failover_state_t *failover_peer;
@@ -1427,6 +1428,8 @@ struct ipv6_ppool {
 	int num_inactive;			/* count of inactive IAADDR */
 	isc_heap_t *inactive_timeouts;		/* timeouts for expired or 
 						   released leases */
+	struct shared_network *shared_network;	/* shared_network for 
+						   this pool */
 };
 
 extern struct ipv6_ppool **ppools;

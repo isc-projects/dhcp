@@ -627,7 +627,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 
 	      case PREFIX6:
 		next_token(NULL, NULL, cfile);
-		if (type != ROOT_GROUP) {
+		if ((type != SUBNET_DECL) || (group->subnet == NULL)) {
 			parse_warn (cfile,
 				    "prefix6 definitions may not be scoped.");
 			skip_to_semi(cfile);
@@ -3817,11 +3817,14 @@ parse_address_range6(struct parse *cfile, struct group *group) {
 }
 
 static void
-add_ipv6_ppool_to_global(struct iaddr *start_addr,
-			 int pool_bits,
-			 int alloc_bits) {
+add_ipv6_ppool_to_shared_network(struct shared_network *share, 
+				 struct iaddr *start_addr,
+				 int pool_bits,
+				 int alloc_bits) {
 	struct ipv6_ppool *ppool;
 	struct in6_addr tmp_in6_addr;
+	int num_ppools;
+	struct ipv6_ppool **tmp;
 
 	/*
 	 * Create our prefix pool.
@@ -3843,6 +3846,43 @@ add_ipv6_ppool_to_global(struct iaddr *start_addr,
 	if (add_ipv6_ppool(ppool) != ISC_R_SUCCESS) {
 		log_fatal ("Out of memory");
 	}
+
+	/*
+	 * Link our prefix pool to our shared_network.
+	 */
+	ppool->shared_network = NULL;
+	shared_network_reference(&ppool->shared_network, share, MDL);
+
+	/* 
+	 * Increase our array size for ipv6_ppools in the shared_network.
+	 */
+	if (share->ipv6_ppools == NULL) {
+		num_ppools = 0;
+	} else {
+		num_ppools = 0;
+		while (share->ipv6_ppools[num_ppools] != NULL) {
+			num_ppools++;
+		}
+	}
+	tmp = dmalloc(sizeof(struct ipv6_ppool *) * (num_ppools + 2), MDL);
+	if (tmp == NULL) {
+		log_fatal("Out of memory");
+	}
+	if (num_ppools > 0) {
+		memcpy(tmp, share->ipv6_ppools,
+		       sizeof(struct ipv6_ppool *) * num_ppools);
+	}
+	if (share->ipv6_ppools != NULL) {
+		dfree(share->ipv6_ppools, MDL);
+	}
+	share->ipv6_ppools = tmp;
+
+	/* 
+	 * Record this prefix pool in our array of prefix pools
+	 * for this shared network.
+	 */
+	ipv6_ppool_reference(&share->ipv6_ppools[num_ppools], ppool, MDL);
+	share->ipv6_ppools[num_ppools+1] = NULL;
 }
 
 /* prefix6-declaration :== ip-address6 ip-address6 SLASH number SEMI */
@@ -3853,9 +3893,25 @@ parse_prefix6(struct parse *cfile, struct group *group) {
 	int bits;
 	enum dhcp_token token;
 	const char *val;
+	struct shared_network *share;
 	struct iaddrcidrnetlist *nets;
 	struct iaddrcidrnetlist *p;
 
+	if (local_family != AF_INET6) {
+		parse_warn(cfile, "prefix6 statement is only supported "
+				  "in DHCPv6 mode.");
+		skip_to_semi(cfile);
+		return;
+	}
+
+	/*
+	 * We'll use the shared_network from our group.
+	 */
+	share = group->shared_network;
+	if (share == NULL) {
+		share = group->subnet->shared_network;
+	}
+	 
 	/*
 	 * Read starting and ending address.
 	 */
@@ -3900,7 +3956,6 @@ parse_prefix6(struct parse *cfile, struct group *group) {
 		return;
 	}
 
-
 	/*
 	 * Convert our range to a set of CIDR networks.
 	 */
@@ -3918,8 +3973,9 @@ parse_prefix6(struct parse *cfile, struct group *group) {
 			parse_warn(cfile, "impossible mask length");
 			continue;
 		}
-		add_ipv6_ppool_to_global(&p->cidrnet.lo_addr,
-					 p->cidrnet.bits, bits);
+		add_ipv6_ppool_to_shared_network(share,
+						 &p->cidrnet.lo_addr,
+						 p->cidrnet.bits, bits);
 	}
 
 	free_iaddrcidrnetlist(&nets);

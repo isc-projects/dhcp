@@ -69,6 +69,8 @@ work on other platforms. Please report any problems and suggested fixes to
 - Shared network selection should be done from the innermost relay
   valid link-address field, rather than the outermost.
 
+- Prefix pools are attached to shared network scopes.
+
 			Changes since 4.0.0 (new features)
 
 - Added DHCPv6 rapid commit support.

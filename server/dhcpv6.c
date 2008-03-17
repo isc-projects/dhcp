@@ -103,8 +103,8 @@ static int get_encapsulated_IA_state(struct option_state **enc_opt_state,
 				     struct option_cache *oc,
 				     int offset);
 static void build_dhcpv6_reply(struct data_string *, struct packet *);
-static void shared_network_from_packet6(struct shared_network **shared,
-					struct packet *packet);
+static isc_result_t shared_network_from_packet6(struct shared_network **shared,
+						struct packet *packet);
 static void seek_shared_host(struct host_decl **hp,
 			     struct shared_network *shared);
 static isc_boolean_t fixed_matches_shared(struct host_decl *host,
@@ -1143,6 +1143,7 @@ try_client_v6_prefix(struct iaprefix **pref,
  */
 static isc_result_t 
 pick_v6_prefix(struct iaprefix **pref, int plen,
+	       struct shared_network *shared_network,
 	       const struct data_string *client_id)
 {
 	struct ipv6_ppool *p;
@@ -1153,19 +1154,19 @@ pick_v6_prefix(struct iaprefix **pref, int plen,
 	/*
 	 * No prefix pools, we're done.
 	 */
-	if (!num_ppools) {
+	if (shared_network->ipv6_ppools == NULL) {
 		log_debug("Unable to pick client prefix: "
-			  "no IPv6 prefix pools");
+			  "no IPv6 prefix pools on this shared network");
 		return ISC_R_NORESOURCES;
 	}
 
 	/*
 	 * Otherwise try to get a prefix.
 	 */
-	for (i = 0; i < num_ppools; i++) {
-		p = ppools[i];
+	for (i = 0;; i++) {
+		p = shared_network->ipv6_ppools[i];
 		if (p == NULL) {
-			continue;
+			break;
 		}
 
 		/*
@@ -1229,7 +1230,9 @@ lease_to_client(struct data_string *reply_ret,
 	isc_boolean_t no_resources_avail;
 
 	/* Locate the client.  */
-	shared_network_from_packet6(&reply.shared, packet);
+	if (shared_network_from_packet6(&reply.shared,
+					packet) != ISC_R_SUCCESS)
+		goto exit;
 
 	/* 
 	 * Initialize the reply.
@@ -1264,17 +1267,13 @@ lease_to_client(struct data_string *reply_ret,
 	 * valid for the shared network the client is on.
 	 */
 	if (find_hosts_by_option(&reply.host, packet, packet->options, MDL)) {
-		if (reply.shared != NULL) {
-			seek_shared_host(&reply.host, reply.shared);
-		}
+		seek_shared_host(&reply.host, reply.shared);
 	}
 
 	if ((reply.host == NULL) &&
 	    find_hosts_by_uid(&reply.host, client_id->data, client_id->len,
 			      MDL)) {
-		if (reply.shared != NULL) {
-			seek_shared_host(&reply.host, reply.shared);
-		}
+		seek_shared_host(&reply.host, reply.shared);
 	}
 
 	/* Process the client supplied IA's onto the reply buffer. */
@@ -1283,10 +1282,6 @@ lease_to_client(struct data_string *reply_ret,
 	no_resources_avail = ISC_FALSE;
 	for (; oc != NULL ; oc = oc->next) {
 		isc_result_t status;
-
-		/* A shared network is required. */
-		if (reply.shared == NULL)
-			goto exit;
 
 		/* Start counting resources (addresses) offered. */
 		reply.client_resources = 0;
@@ -1312,10 +1307,6 @@ lease_to_client(struct data_string *reply_ret,
 	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_IA_TA);
 	for (; oc != NULL ; oc = oc->next) {
 		isc_result_t status;
-
-		/* A shared network is required. */
-		if (reply.shared == NULL)
-			goto exit;
 
 		/* Start counting resources (addresses) offered. */
 		reply.client_resources = 0;
@@ -3373,7 +3364,7 @@ reply_process_prefix(struct reply_state *reply, struct option_cache *pref) {
 			log_fatal("Impossible condition at %s:%d.", MDL);
 
 		scope = &reply->prefix->scope;
-		group = root_group;
+		group = reply->shared->group;
 	}
 
 	/*
@@ -3490,7 +3481,9 @@ reply_process_try_prefix(struct reply_state *reply,
 	int i;
 	struct data_string data_pref;
 
-	if ((reply == NULL) || (pref == NULL) || (reply->prefix != NULL))
+	if ((reply == NULL) || (reply->shared == NULL) ||
+	    (reply->shared->ipv6_ppools == NULL) || (pref == NULL) ||
+	    (reply->prefix != NULL))
 		return ISC_R_INVALIDARG;
 
 	memset(&data_pref, 0, sizeof(data_pref));
@@ -3503,10 +3496,10 @@ reply_process_try_prefix(struct reply_state *reply,
 	data_pref.buffer->data[0] = (u_int8_t) pref->bits;
 	memcpy(data_pref.buffer->data + 1, pref->lo_addr.iabuf, 16);
 
-	for (i = 0 ; i < num_ppools ; i++) {
-		ppool = ppools[i];
+	for (i = 0 ;; i++) {
+		ppool = reply->shared->ipv6_ppools[i];
 		if (ppool == NULL)
-			continue;
+			break;
 		status = try_client_v6_prefix(&reply->prefix, ppool,
 					      &data_pref);
 		if (status == ISC_R_SUCCESS)
@@ -3533,10 +3526,8 @@ find_client_prefix(struct reply_state *reply) {
 
 	if (reply->host != NULL)
 		group = reply->host->group;
-	else if (reply->shared != NULL)
-		group = reply->shared->group;
 	else
-		group = root_group;
+		group = reply->shared->group;
 
 	if (reply->static_prefixes > 0) {
 		struct iaddrcidrnetlist *l;
@@ -3576,7 +3567,7 @@ find_client_prefix(struct reply_state *reply) {
 	 */
 	if ((best_prefix == NULL) || (best_prefix->state == FTS_ABANDONED)) {
 		status = pick_v6_prefix(&reply->prefix, reply->preflen,
-					&reply->client_id);
+					reply->shared, &reply->client_id);
 	} else if (best_prefix != NULL) {
 		iaprefix_reference(&reply->prefix, best_prefix, MDL);
 		status = ISC_R_SUCCESS;
@@ -3599,11 +3590,7 @@ find_client_prefix(struct reply_state *reply) {
 		log_fatal("Impossible condition at %s:%d.", MDL);
 
 	scope = &reply->prefix->scope;
-	if (reply->shared != NULL) {
-		group = reply->shared->group;
-	} else {
-		group = root_group;
-	}
+	group = reply->shared->group;
 
 	send_pref.lo_addr.len = 16;
 	memcpy(send_pref.lo_addr.iabuf, &reply->prefix->pref, 16);
@@ -3929,7 +3916,7 @@ dhcpv6_request(struct data_string *reply_ret, struct packet *packet) {
 
 /* Find a DHCPv6 packet's shared network from hints in the packet.
  */
-static void
+static isc_result_t
 shared_network_from_packet6(struct shared_network **shared,
 			    struct packet *packet)
 {
@@ -3937,11 +3924,10 @@ shared_network_from_packet6(struct shared_network **shared,
 	const struct in6_addr *link_addr, *first_link_addr;
 	struct iaddr tmp_addr;
 	struct subnet *subnet;
+	isc_result_t status;
 
-	if ((shared == NULL) || (*shared != NULL) || (packet == NULL)) {
-		log_error("shared_network_from_packet6: invalid arg.");
-		return;
-	}
+	if ((shared == NULL) || (*shared != NULL) || (packet == NULL))
+		return ISC_R_INVALIDARG;
 
 	/*
 	 * First, find the link address where the packet from the client
@@ -3972,9 +3958,10 @@ shared_network_from_packet6(struct shared_network **shared,
 		if (!find_subnet(&subnet, tmp_addr, MDL)) {
 			log_debug("No subnet found for link-address %s.",
 				  piaddr(tmp_addr));
-			return;
+			return ISC_R_NOTFOUND;
 		}
-		shared_network_reference(shared, subnet->shared_network, MDL);
+		status = shared_network_reference(shared,
+						  subnet->shared_network, MDL);
 		subnet_dereference(&subnet, MDL);
 
 	/*
@@ -3982,10 +3969,12 @@ shared_network_from_packet6(struct shared_network **shared,
 	 * that this packet came in on to pick the shared_network.
 	 */
 	} else {
-		shared_network_reference(shared,
+		status = shared_network_reference(shared,
 					 packet->interface->shared_network,
 					 MDL);
 	}
+
+	return status;
 }
 
 /*
@@ -4054,8 +4043,8 @@ dhcpv6_confirm(struct data_string *reply_ret, struct packet *packet) {
 	 * network the client is on.
 	 */
 	shared = NULL;
-	shared_network_from_packet6(&shared, packet);
-	if (shared == NULL)
+	if ((shared_network_from_packet6(&shared, packet) != ISC_R_SUCCESS) ||
+	    (shared == NULL))
 		goto exit;
 
 	/* If there are no recorded subnets, then we have no
@@ -5651,8 +5640,9 @@ seek_shared_host(struct host_decl **hp, struct shared_network *shared) {
 	struct host_decl *seek, *hold = NULL;
 
 	/*
-	 * Seek forward through fixed addresses for the right broadcast
-	 * domain.
+	 * Seek forward through fixed addresses for the right link.
+	 *
+	 * Note: how to do this for fixed prefixes???
 	 */
 	host_reference(&hold, *hp, MDL);
 	host_dereference(hp, MDL);
