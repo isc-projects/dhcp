@@ -214,6 +214,8 @@ static void lpf_gen_filter_setup (info)
 {
 	struct sock_fprog p;
 
+	memset(&p, 0, sizeof(p));
+
 	/* Set up the bpf filter program structure.    This is defined in
 	   bpf.c */
 	p.len = dhcp_bpf_filter_len;

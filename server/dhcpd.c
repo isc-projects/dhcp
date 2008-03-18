@@ -831,10 +831,6 @@ main(int argc, char **argv) {
 	dmalloc_outstanding = 0;
 #endif
 
-#if defined (DEBUG_RC_HISTORY_EXHAUSTIVELY)
-	dump_rc_history ();
-#endif
-
 	omapi_set_int_value ((omapi_object_t *)dhcp_control_object,
 			     (omapi_object_t *)0, "state", server_running);
 

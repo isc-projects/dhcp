@@ -75,6 +75,8 @@ work on other platforms. Please report any problems and suggested fixes to
 
 - Add DHCPv6 files in configure.
 
+- A memory leak when using omapi has been fixed.
+
 			Changes since 4.0.0 (new features)
 
 - Added DHCPv6 rapid commit support.

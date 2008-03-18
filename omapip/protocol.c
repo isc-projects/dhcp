@@ -410,7 +410,7 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 	    dmalloc_dump_outstanding ();
 #endif
 #if defined (DEBUG_RC_HISTORY_EXHAUSTIVELY)
-	    dump_rc_history ();
+	    dump_rc_history (h);
 #endif
 	    for (m = omapi_registered_messages; m; m = m -> next) {
 		if (m -> protocol_object == p) {
@@ -418,6 +418,9 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 			omapi_signal (m -> object, "disconnect");
 		}
 	    }
+
+	    /* XXX */
+	    return ISC_R_SUCCESS;
 	}
 
 	/* Not a signal we recognize? */
@@ -492,7 +495,7 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 			dmalloc_dump_outstanding ();
 #endif
 #if defined (DEBUG_RC_HISTORY_EXHAUSTIVELY)
-			dump_rc_history ();
+			dump_rc_history (h);
 #endif
 #if defined (DEBUG_MEMORY_LEAKAGE)
 		}
@@ -750,7 +753,7 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 		dmalloc_dump_outstanding ();
 #endif
 #if defined (DEBUG_RC_HISTORY_EXHAUSTIVELY)
-		dump_rc_history ();
+		dump_rc_history (h);
 #endif
 #if defined (DEBUG_MEMORY_LEAKAGE)
 		previous_outstanding = 0xDEADBEEF;
