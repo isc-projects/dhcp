@@ -99,6 +99,8 @@ isc_result_t omapi_register_io_object (omapi_object_t *h,
 	obj -> reader = reader;
 	obj -> writer = writer;
 	obj -> reaper = reaper;
+
+	omapi_io_dereference(&obj, MDL);
 	return ISC_R_SUCCESS;
 }
 
@@ -210,7 +212,7 @@ isc_result_t omapi_one_dispatch (omapi_object_t *wo,
 	int count;
 	int desc;
 	struct timeval now, to;
-	omapi_io_object_t *io, *prev;
+	omapi_io_object_t *io, *prev, *next;
 	omapi_waiter_object_t *waiter;
 	omapi_object_t *tmp = (omapi_object_t *)0;
 
@@ -420,44 +422,71 @@ isc_result_t omapi_one_dispatch (omapi_object_t *wo,
 
 	/* Now check for I/O handles that are no longer valid,
 	   and remove them from the list. */
-	prev = (omapi_io_object_t *)0;
-	for (io = omapi_io_states.next; io; io = io -> next) {
-		if (io -> reaper) {
-			if (!io -> inner ||
-			    ((*(io -> reaper)) (io -> inner) !=
-							ISC_R_SUCCESS)) {
-				omapi_io_object_t *tmp =
-					(omapi_io_object_t *)0;
-				/* Save a reference to the next
-				   pointer, if there is one. */
-				if (io -> next)
-					omapi_io_reference (&tmp,
-							    io -> next, MDL);
-				if (prev) {
-					omapi_io_dereference (&prev -> next,
-							      MDL);
-					if (tmp)
-						omapi_io_reference
-							(&prev -> next,
-							 tmp, MDL);
-				} else {
-					omapi_io_dereference
-						(&omapi_io_states.next, MDL);
-					if (tmp)
-						omapi_io_reference
-						    (&omapi_io_states.next,
-						     tmp, MDL);
-					else
-						omapi_signal_in
-							((omapi_object_t *)
-							 &omapi_io_states,
-							 "ready");
-				}
-				if (tmp)
-					omapi_io_dereference (&tmp, MDL);
+	prev = NULL;
+	io = NULL;
+	if (omapi_io_states.next != NULL) {
+		omapi_io_reference(&io, omapi_io_states.next, MDL);
+	}
+	while (io != NULL) {
+		if ((io->inner == NULL) || 
+		    ((io->reaper != NULL) && 
+		     ((io->reaper)(io->inner) != ISC_R_SUCCESS))) 
+		{
+
+			omapi_io_object_t *tmp = NULL;
+			/* Save a reference to the next
+			   pointer, if there is one. */
+			if (io->next != NULL) {
+				omapi_io_reference(&tmp, io->next, MDL);
+				omapi_io_dereference(&io->next, MDL);
 			}
+			if (prev != NULL) {
+				omapi_io_dereference(&prev->next, MDL);
+				if (tmp != NULL)
+					omapi_io_reference(&prev->next,
+							   tmp, MDL);
+			} else {
+				omapi_io_dereference(&omapi_io_states.next, 
+						     MDL);
+				if (tmp != NULL)
+					omapi_io_reference
+					    (&omapi_io_states.next,
+					     tmp, MDL);
+				else
+					omapi_signal_in(
+							(omapi_object_t *)
+						 	&omapi_io_states,
+							"ready");
+			}
+			if (tmp != NULL)
+				omapi_io_dereference(&tmp, MDL);
+
+		} else {
+
+			if (prev != NULL) {
+				omapi_io_dereference(&prev, MDL);
+			}
+			omapi_io_reference(&prev, io, MDL);
+
 		}
-		prev = io;
+
+		/*
+		 * Equivalent to:
+		 *   io = io->next
+		 * But using our reference counting voodoo.
+		 */
+		next = NULL;
+		if (io->next != NULL) {
+			omapi_io_reference(&next, io->next, MDL);
+		}
+		omapi_io_dereference(&io, MDL);
+		if (next != NULL) {
+			omapi_io_reference(&io, next, MDL);
+			omapi_io_dereference(&next, MDL);
+		}
+	}
+	if (prev != NULL) {
+		omapi_io_dereference(&prev, MDL);
 	}
 
 	return ISC_R_SUCCESS;

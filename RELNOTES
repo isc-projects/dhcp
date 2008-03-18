@@ -136,6 +136,8 @@ and for prodding me into improving it.
 - The failover server no longer issues a floating point error if it encounters
   a previously undefined option code.
 
+- A memory leak when using omapi has been fixed.
+
 			Changes since 3.0.6rc1
 
 - supersede_lease() now requeues leases in their respective hardware

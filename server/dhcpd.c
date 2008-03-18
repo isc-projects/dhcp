@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.115.2.21 2008/01/22 17:28:24 dhankins Exp $ Copyright 2004-2008 Internet Systems Consortium.";
+"$Id: dhcpd.c,v 1.115.2.22 2008/03/18 18:34:14 dhankins Exp $ Copyright 2004-2008 Internet Systems Consortium.";
 #endif
 
   static char copyright[] =
@@ -584,10 +584,6 @@ int main (argc, argv, envp)
 	dmalloc_cutoff_generation = dmalloc_generation;
 	dmalloc_longterm = dmalloc_outstanding;
 	dmalloc_outstanding = 0;
-#endif
-
-#if defined (DEBUG_RC_HISTORY_EXHAUSTIVELY)
-	dump_rc_history ();
 #endif
 
 	omapi_set_int_value ((omapi_object_t *)dhcp_control_object,
