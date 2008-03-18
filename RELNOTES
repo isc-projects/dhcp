@@ -59,6 +59,8 @@ suggested fixes to <dhcp-users@isc.org>.
 - Shared network selection should be done from the innermost relay
   valid link-address field, rather than the outermost.
 
+- A memory leak when using omapi has been fixed.
+
 			Changes since 4.0.0
 
 - DHCP now builds on AIX.
