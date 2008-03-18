@@ -28,7 +28,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: lpf.c,v 1.30.140.2 2007/05/23 23:30:32 each Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: lpf.c,v 1.30.140.3 2008/03/18 18:30:20 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -216,6 +216,8 @@ static void lpf_gen_filter_setup (info)
 	struct interface_info *info;
 {
 	struct sock_fprog p;
+
+	memset(&p, 0, sizeof(p));
 
 	/* Set up the bpf filter program structure.    This is defined in
 	   bpf.c */

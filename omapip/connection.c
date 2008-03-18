@@ -501,6 +501,28 @@ isc_result_t omapi_disconnect (omapi_object_t *h,
 	/* If whatever created us registered a signal handler, send it
 	   a disconnect signal. */
 	omapi_signal (h, "disconnect", h);
+
+	/* Disconnect from protocol object, if any. */
+	if (h->inner != NULL) {
+		if (h->inner->outer != NULL) {
+			omapi_object_dereference(&h->inner->outer, MDL);
+		}
+		omapi_object_dereference(&h->inner, MDL);
+	}
+
+	/* XXX: the code to free buffers should be in the dereference
+		function, but there is no special-purpose function to
+		dereference connections, so these just get leaked */
+	/* Free any buffers */
+	if (c->inbufs != NULL) {
+		omapi_buffer_dereference(&c->inbufs, MDL);
+	}
+	c->in_bytes = 0;
+	if (c->outbufs != NULL) {
+		omapi_buffer_dereference(&c->outbufs, MDL);
+	}
+	c->out_bytes = 0;
+
 	return ISC_R_SUCCESS;
 }
 

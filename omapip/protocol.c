@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: protocol.c,v 1.30.116.2 2007/05/23 23:30:33 each Exp $ Copyright 2004-2006 Internet Systems Consortium.";
+"$Id: protocol.c,v 1.30.116.3 2008/03/18 18:30:20 dhankins Exp $ Copyright 2004-2006 Internet Systems Consortium.";
 #endif
 
 #include <omapip/omapip_p.h>
@@ -414,7 +414,7 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 	    dmalloc_dump_outstanding ();
 #endif
 #if defined (DEBUG_RC_HISTORY_EXHAUSTIVELY)
-	    dump_rc_history ();
+	    dump_rc_history (h);
 #endif
 	    for (m = omapi_registered_messages; m; m = m -> next) {
 		if (m -> protocol_object == p) {
@@ -422,6 +422,9 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 			omapi_signal (m -> object, "disconnect");
 		}
 	    }
+
+	    /* XXX */
+	    return ISC_R_SUCCESS;
 	}
 
 	/* Not a signal we recognize? */
@@ -496,7 +499,7 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 			dmalloc_dump_outstanding ();
 #endif
 #if defined (DEBUG_RC_HISTORY_EXHAUSTIVELY)
-			dump_rc_history ();
+			dump_rc_history (h);
 #endif
 #if defined (DEBUG_MEMORY_LEAKAGE)
 		}
@@ -754,7 +757,7 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 		dmalloc_dump_outstanding ();
 #endif
 #if defined (DEBUG_RC_HISTORY_EXHAUSTIVELY)
-		dump_rc_history ();
+		dump_rc_history (h);
 #endif
 #if defined (DEBUG_MEMORY_LEAKAGE)
 		previous_outstanding = 0xDEADBEEF;
