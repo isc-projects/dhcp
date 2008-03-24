@@ -4,7 +4,7 @@
    Support Services in Vancouver, B.C. */
 
 /*
- * Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004,2007-2008 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -28,7 +28,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: lpf.c,v 1.30.140.3 2008/03/18 18:30:20 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: lpf.c,v 1.30.140.4 2008/03/24 22:27:13 dhankins Exp $ Copyright (c) 2004,2007-2008 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"

@@ -3,7 +3,7 @@
    Functions supporting the object management protocol... */
 
 /*
- * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2008 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: protocol.c,v 1.30.116.3 2008/03/18 18:30:20 dhankins Exp $ Copyright 2004-2006 Internet Systems Consortium.";
+"$Id: protocol.c,v 1.30.116.4 2008/03/24 22:27:14 dhankins Exp $ Copyright 2004-2008 Internet Systems Consortium.";
 #endif
 
 #include <omapip/omapip_p.h>
