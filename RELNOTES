@@ -61,6 +61,10 @@ suggested fixes to <dhcp-users@isc.org>.
 
 - A memory leak when using omapi has been fixed.
 
+- DHCPv6 vendor-class options (VSIO) are now only sent when they appear
+  on the DHCPv6 ORO.  This resolves a bug where VSIO options were placed
+  in IA_NA encapsulated options fields.
+
 			Changes since 4.0.0
 
 - DHCP now builds on AIX.
