@@ -684,7 +684,6 @@ static const int required_opts_solicit[] = {
 	D6O_IA_PD,
 	D6O_RAPID_COMMIT,
 	D6O_STATUS_CODE,
-	D6O_VENDOR_OPTS,
 	D6O_RECONF_ACCEPT,
 	D6O_PREFERENCE,
 	0
@@ -697,13 +696,11 @@ static const int required_opts_agent[] = {
 static const int required_opts_IA[] = {
 	D6O_IAADDR,
 	D6O_STATUS_CODE,
-	D6O_VENDOR_OPTS,
 	0
 };
 static const int required_opts_IA_PD[] = {
 	D6O_IAPREFIX,
 	D6O_STATUS_CODE,
-	D6O_VENDOR_OPTS,
 	0
 };
 static const int required_opts_STATUS_CODE[] = {
