@@ -501,7 +501,7 @@ int write_group (group)
  */
 int
 write_ia(const struct ia_xx *ia) {
-	struct iaaddr *iaaddr;
+	struct iasubopt *iasubopt;
 	struct binding *bnd;
 	int i;
 	char addr_buf[sizeof("ffff:ffff:ffff:ffff:ffff:ffff.255.255.255.255")];
@@ -557,46 +557,47 @@ write_ia(const struct ia_xx *ia) {
 			goto error_exit;
 		}
 	}
-	for (i=0; i<ia->num_iaaddr; i++) {
-		iaaddr = ia->iaaddr[i];
+	for (i=0; i<ia->num_iasubopt; i++) {
+		iasubopt = ia->iasubopt[i];
 
-		inet_ntop(AF_INET6, &iaaddr->addr, addr_buf, sizeof(addr_buf));
+		inet_ntop(AF_INET6, &iasubopt->addr,
+			  addr_buf, sizeof(addr_buf));
 		if ((ia->ia_type != D6O_IA_PD) &&
 		    (fprintf(db_file, "  iaaddr %s {\n", addr_buf) < 0)) {
 			goto error_exit;
 		}
 		if ((ia->ia_type == D6O_IA_PD) &&
 		    (fprintf(db_file, "  iaprefix %s/%d {\n",
-			     addr_buf, (int)iaaddr->plen) < 0)) {
+			     addr_buf, (int)iasubopt->plen) < 0)) {
 			goto error_exit;
 		}
-		if ((iaaddr->state <= 0) || (iaaddr->state > FTS_LAST)) {
-			log_fatal("Unknown iaaddr state %d at %s:%d", 
-				  iaaddr->state, MDL);
+		if ((iasubopt->state <= 0) || (iasubopt->state > FTS_LAST)) {
+			log_fatal("Unknown iasubopt state %d at %s:%d", 
+				  iasubopt->state, MDL);
 		}
-		binding_state = binding_state_names[iaaddr->state-1];
+		binding_state = binding_state_names[iasubopt->state-1];
 		if (fprintf(db_file, "    binding state %s;\n", 
 			    binding_state) < 0) {
 			goto error_exit;
 		}
 		if (fprintf(db_file, "    preferred-life %u\n",
-			    (unsigned)iaaddr->prefer) < 0) {
+			    (unsigned)iasubopt->prefer) < 0) {
 			goto error_exit;
 		}
 		if (fprintf(db_file, "    max-life %u\n",
-			    (unsigned)iaaddr->valid) < 0) {
+			    (unsigned)iasubopt->valid) < 0) {
 			goto error_exit;
 		}
 
 		/* Note that from here on out, the \n is prepended to the
 		 * next write, rather than appended to the current write.
 		 */
-		if ((iaaddr->state == FTS_ACTIVE) ||
-		    (iaaddr->state == FTS_ABANDONED) ||
-		    (iaaddr->hard_lifetime_end_time != 0)) {
-			tval = print_time(iaaddr->hard_lifetime_end_time);
+		if ((iasubopt->state == FTS_ACTIVE) ||
+		    (iasubopt->state == FTS_ABANDONED) ||
+		    (iasubopt->hard_lifetime_end_time != 0)) {
+			tval = print_time(iasubopt->hard_lifetime_end_time);
 		} else {
-			tval = print_time(iaaddr->soft_lifetime_end_time);
+			tval = print_time(iasubopt->soft_lifetime_end_time);
 		}
 		if (tval == NULL) {
 			goto error_exit;
@@ -608,8 +609,8 @@ write_ia(const struct ia_xx *ia) {
 		/* Write out any binding scopes: note that 'ends' above does
 		 * not have \n on the end!  We want that.
 		 */
-		if (iaaddr->scope != NULL)
-			bnd = iaaddr->scope->bindings;
+		if (iasubopt->scope != NULL)
+			bnd = iasubopt->scope->bindings;
 		else
 			bnd = NULL;
 

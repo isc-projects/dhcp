@@ -4085,7 +4085,7 @@ parse_ia_na_declaration(struct parse *cfile) {
 	u_int32_t prefer;
 	u_int32_t valid;
 	TIME end_time;
-	struct iaaddr *iaaddr;
+	struct iasubopt *iaaddr;
 	struct ipv6_pool *pool;
 	char addr_buf[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
 	isc_boolean_t newbinding;
@@ -4343,7 +4343,7 @@ parse_ia_na_declaration(struct parse *cfile) {
 		}
 
 		iaaddr = NULL;
-		if (iaaddr_allocate(&iaaddr, MDL) != ISC_R_SUCCESS) {
+		if (iasubopt_allocate(&iaaddr, MDL) != ISC_R_SUCCESS) {
 			log_fatal("Out of memory.");
 		}
 		memcpy(&iaaddr->addr, iaddr.iabuf, sizeof(iaaddr->addr));
@@ -4360,7 +4360,7 @@ parse_ia_na_declaration(struct parse *cfile) {
 		}
 
 		/* add to our various structures */
-		ia_add_iaaddr(ia, iaaddr, MDL);
+		ia_add_iasubopt(ia, iaaddr, MDL);
 		ia_reference(&iaaddr->ia, ia, MDL);
 		pool = NULL;
 		if (find_ipv6_pool(&pool, D6O_IA_NA,
@@ -4373,7 +4373,7 @@ parse_ia_na_declaration(struct parse *cfile) {
 		}
 		add_lease6(pool, iaaddr, end_time);
 		ipv6_pool_dereference(&pool, MDL);
-		iaaddr_dereference(&iaaddr, MDL);
+		iasubopt_dereference(&iaaddr, MDL);
 	}
 
 	/*
@@ -4392,7 +4392,7 @@ parse_ia_na_declaration(struct parse *cfile) {
 	/*
 	 * If we have addresses, add this, otherwise don't bother.
 	 */
-	if (ia->num_iaaddr > 0) {
+	if (ia->num_iasubopt > 0) {
 		ia_hash_add(ia_na_active, 
 			    (unsigned char *)ia->iaid_duid.data,
 			    ia->iaid_duid.len, ia, MDL);
@@ -4418,7 +4418,7 @@ parse_ia_ta_declaration(struct parse *cfile) {
 	u_int32_t prefer;
 	u_int32_t valid;
 	TIME end_time;
-	struct iaaddr *iaaddr;
+	struct iasubopt *iaaddr;
 	struct ipv6_pool *pool;
 	char addr_buf[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
 	isc_boolean_t newbinding;
@@ -4676,7 +4676,7 @@ parse_ia_ta_declaration(struct parse *cfile) {
 		}
 
 		iaaddr = NULL;
-		if (iaaddr_allocate(&iaaddr, MDL) != ISC_R_SUCCESS) {
+		if (iasubopt_allocate(&iaaddr, MDL) != ISC_R_SUCCESS) {
 			log_fatal("Out of memory.");
 		}
 		memcpy(&iaaddr->addr, iaddr.iabuf, sizeof(iaaddr->addr));
@@ -4693,7 +4693,7 @@ parse_ia_ta_declaration(struct parse *cfile) {
 		}
 
 		/* add to our various structures */
-		ia_add_iaaddr(ia, iaaddr, MDL);
+		ia_add_iasubopt(ia, iaaddr, MDL);
 		ia_reference(&iaaddr->ia, ia, MDL);
 		pool = NULL;
 		if (find_ipv6_pool(&pool, D6O_IA_TA,
@@ -4706,7 +4706,7 @@ parse_ia_ta_declaration(struct parse *cfile) {
 		}
 		add_lease6(pool, iaaddr, end_time);
 		ipv6_pool_dereference(&pool, MDL);
-		iaaddr_dereference(&iaaddr, MDL);
+		iasubopt_dereference(&iaaddr, MDL);
 	}
 
 	/*
@@ -4725,7 +4725,7 @@ parse_ia_ta_declaration(struct parse *cfile) {
 	/*
 	 * If we have addresses, add this, otherwise don't bother.
 	 */
-	if (ia->num_iaaddr > 0) {
+	if (ia->num_iasubopt > 0) {
 		ia_hash_add(ia_ta_active, 
 			    (unsigned char *)ia->iaid_duid.data,
 			    ia->iaid_duid.len, ia, MDL);
@@ -4752,7 +4752,7 @@ parse_ia_pd_declaration(struct parse *cfile) {
 	u_int32_t prefer;
 	u_int32_t valid;
 	TIME end_time;
-	struct iaaddr *iapref;
+	struct iasubopt *iapref;
 	struct ipv6_pool *pool;
 	char addr_buf[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
 	isc_boolean_t newbinding;
@@ -5010,7 +5010,7 @@ parse_ia_pd_declaration(struct parse *cfile) {
 		}
 
 		iapref = NULL;
-		if (iaaddr_allocate(&iapref, MDL) != ISC_R_SUCCESS) {
+		if (iasubopt_allocate(&iapref, MDL) != ISC_R_SUCCESS) {
 			log_fatal("Out of memory.");
 		}
 		memcpy(&iapref->addr, iaddr.iabuf, sizeof(iapref->addr));
@@ -5027,7 +5027,7 @@ parse_ia_pd_declaration(struct parse *cfile) {
 		}
 
 		/* add to our various structures */
-		ia_add_iaaddr(ia, iapref, MDL);
+		ia_add_iasubopt(ia, iapref, MDL);
 		ia_reference(&iapref->ia, ia, MDL);
 		pool = NULL;
 		if (find_ipv6_pool(&pool, D6O_IA_PD,
@@ -5040,7 +5040,7 @@ parse_ia_pd_declaration(struct parse *cfile) {
 		}
 		add_lease6(pool, iapref, end_time);
 		ipv6_pool_dereference(&pool, MDL);
-		iaaddr_dereference(&iapref, MDL);
+		iasubopt_dereference(&iapref, MDL);
 	}
 
 	/*
@@ -5059,7 +5059,7 @@ parse_ia_pd_declaration(struct parse *cfile) {
 	/*
 	 * If we have prefixes, add this, otherwise don't bother.
 	 */
-	if (ia->num_iaaddr > 0) {
+	if (ia->num_iasubopt > 0) {
 		ia_hash_add(ia_pd_active, 
 			    (unsigned char *)ia->iaid_duid.data,
 			    ia->iaid_duid.len, ia, MDL);

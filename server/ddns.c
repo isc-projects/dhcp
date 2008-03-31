@@ -213,7 +213,7 @@ static isc_result_t ddns_remove_ptr (struct data_string *ddns_rev_name)
  */
 int
 ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
-	     struct iaaddr *lease6, struct iaaddr *old6,
+	     struct iasubopt *lease6, struct iasubopt *old6,
 	     struct option_state *options)
 {
 	unsigned long ddns_ttl = DEFAULT_DDNS_TTL;
@@ -801,7 +801,7 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 
 /* Remove relevant entries from DNS. */
 int
-ddns_removals(struct lease *lease, struct iaaddr *lease6)
+ddns_removals(struct lease *lease, struct iasubopt *lease6)
 {
 	struct data_string ddns_fwd_name;
 	struct data_string ddns_rev_name;

@@ -60,7 +60,7 @@ struct reply_state {
 	struct data_string fixed;
 
 	/* IAADDR/PREFIX level persistent state */
-	struct iaaddr *lease;
+	struct iasubopt *lease;
 
 	/*
 	 * "t1", "t2", preferred, and valid lifetimes records for calculating
@@ -118,7 +118,8 @@ static isc_result_t reply_process_is_addressed(struct reply_state *reply,
 					       struct group *group);
 static isc_result_t reply_process_send_addr(struct reply_state *reply,
 					    struct iaddr *addr);
-static struct iaaddr *lease_compare(struct iaaddr *alpha, struct iaaddr *beta);
+static struct iasubopt *lease_compare(struct iasubopt *alpha,
+				      struct iasubopt *beta);
 static isc_result_t reply_process_ia_pd(struct reply_state *reply,
 					struct option_cache *ia_pd);
 static isc_result_t reply_process_prefix(struct reply_state *reply,
@@ -133,9 +134,9 @@ static isc_result_t reply_process_is_prefixed(struct reply_state *reply,
 					      struct group *group);
 static isc_result_t reply_process_send_prefix(struct reply_state *reply,
 					      struct iaddrcidrnet *pref);
-static struct iaaddr *prefix_compare(struct reply_state *reply,
-				     struct iaaddr *alpha,
-				     struct iaaddr *beta);
+static struct iasubopt *prefix_compare(struct reply_state *reply,
+				       struct iasubopt *alpha,
+				       struct iasubopt *beta);
 
 /*
  * This function returns the time since DUID time start for the
@@ -937,7 +938,7 @@ start_reply(struct packet *packet,
  * requested_addr is the address the client wants
  */
 static isc_result_t
-try_client_v6_address(struct iaaddr **addr,
+try_client_v6_address(struct iasubopt **addr,
 		      struct ipv6_pool *pool,
 		      const struct data_string *requested_addr)
 {
@@ -960,7 +961,7 @@ try_client_v6_address(struct iaaddr **addr,
 		return ISC_R_ADDRINUSE;
 	}
 
-	result = iaaddr_allocate(addr, MDL);
+	result = iasubopt_allocate(addr, MDL);
 	if (result != ISC_R_SUCCESS) {
 		return result;
 	}
@@ -970,7 +971,7 @@ try_client_v6_address(struct iaaddr **addr,
 	/* Default is soft binding for 2 minutes. */
 	result = add_lease6(pool, *addr, cur_time + 120);
 	if (result != ISC_R_SUCCESS) {
-		iaaddr_dereference(addr, MDL);
+		iasubopt_dereference(addr, MDL);
 	}
 	return result;
 }
@@ -984,7 +985,7 @@ try_client_v6_address(struct iaaddr **addr,
  * client_id is the DUID for the client
  */
 static isc_result_t 
-pick_v6_address(struct iaaddr **addr, struct shared_network *shared_network,
+pick_v6_address(struct iasubopt **addr, struct shared_network *shared_network,
 		const struct data_string *client_id)
 {
 	struct ipv6_pool *p;
@@ -1070,7 +1071,7 @@ pick_v6_address(struct iaaddr **addr, struct shared_network *shared_network,
  * requested_pref is the address the client wants
  */
 static isc_result_t
-try_client_v6_prefix(struct iaaddr **pref,
+try_client_v6_prefix(struct iasubopt **pref,
 		     struct ipv6_pool *pool,
 		     const struct data_string *requested_pref)
 {
@@ -1105,7 +1106,7 @@ try_client_v6_prefix(struct iaaddr **pref,
 		return ISC_R_ADDRINUSE;
 	}
 
-	result = iaaddr_allocate(pref, MDL);
+	result = iasubopt_allocate(pref, MDL);
 	if (result != ISC_R_SUCCESS) {
 		return result;
 	}
@@ -1115,7 +1116,7 @@ try_client_v6_prefix(struct iaaddr **pref,
 	/* Default is soft binding for 2 minutes. */
 	result = add_lease6(pool, *pref, cur_time + 120);
 	if (result != ISC_R_SUCCESS) {
-		iaaddr_dereference(pref, MDL);
+		iasubopt_dereference(pref, MDL);
 	}
 	return result;
 }
@@ -1130,7 +1131,7 @@ try_client_v6_prefix(struct iaaddr **pref,
  * client_id is the DUID for the client
  */
 static isc_result_t 
-pick_v6_prefix(struct iaaddr **pref, int plen,
+pick_v6_prefix(struct iasubopt **pref, int plen,
 	       struct shared_network *shared_network,
 	       const struct data_string *client_id)
 {
@@ -1778,13 +1779,13 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 	 */
 	if ((status != ISC_R_CANCELED) && !reply->static_lease &&
 	    (reply->buf.reply.msg_type == DHCPV6_REPLY) &&
-	    (reply->ia->num_iaaddr != 0)) {
-		struct iaaddr *tmp;
+	    (reply->ia->num_iasubopt != 0)) {
+		struct iasubopt *tmp;
 		struct data_string *ia_id;
 		int i;
 
-		for (i = 0 ; i < reply->ia->num_iaaddr ; i++) {
-			tmp = reply->ia->iaaddr[i];
+		for (i = 0 ; i < reply->ia->num_iasubopt ; i++) {
+			tmp = reply->ia->iasubopt[i];
 
 			if (tmp->ia != NULL)
 				ia_dereference(&tmp->ia, MDL);
@@ -1846,7 +1847,7 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 	if (reply->old_ia != NULL)
 		ia_dereference(&reply->old_ia, MDL);
 	if (reply->lease != NULL)
-		iaaddr_dereference(&reply->lease, MDL);
+		iasubopt_dereference(&reply->lease, MDL);
 	if (reply->fixed.data != NULL)
 		data_string_forget(&reply->fixed, MDL);
 
@@ -2143,7 +2144,7 @@ reply_process_addr(struct reply_state *reply, struct option_cache *addr) {
 	if (data.data != NULL)
 		data_string_forget(&data, MDL);
 	if (reply->lease != NULL)
-		iaaddr_dereference(&reply->lease, MDL);
+		iasubopt_dereference(&reply->lease, MDL);
 
 	return status;
 }
@@ -2171,16 +2172,16 @@ address_is_owned(struct reply_state *reply, struct iaddr *addr) {
 		return ISC_FALSE;
 	}
 
-	if ((reply->old_ia == NULL) || (reply->old_ia->num_iaaddr == 0))
+	if ((reply->old_ia == NULL) || (reply->old_ia->num_iasubopt == 0))
 		return ISC_FALSE;
 
-	for (i = 0 ; i < reply->old_ia->num_iaaddr ; i++) {
-		struct iaaddr *tmp;
+	for (i = 0 ; i < reply->old_ia->num_iasubopt ; i++) {
+		struct iasubopt *tmp;
 
-		tmp = reply->old_ia->iaaddr[i];
+		tmp = reply->old_ia->iasubopt[i];
 
 		if (memcmp(addr->iabuf, &tmp->addr, 16) == 0) {
-			iaaddr_reference(&reply->lease, tmp, MDL);
+			iasubopt_reference(&reply->lease, tmp, MDL);
 			return ISC_TRUE;
 		}
 	}
@@ -2393,13 +2394,13 @@ reply_process_ia_ta(struct reply_state *reply, struct option_cache *ia) {
 	 */
 	if ((status != ISC_R_CANCELED) &&
 	    (reply->buf.reply.msg_type == DHCPV6_REPLY) &&
-	    (reply->ia->num_iaaddr != 0)) {
-		struct iaaddr *tmp;
+	    (reply->ia->num_iasubopt != 0)) {
+		struct iasubopt *tmp;
 		struct data_string *ia_id;
 		int i;
 
-		for (i = 0 ; i < reply->ia->num_iaaddr ; i++) {
-			tmp = reply->ia->iaaddr[i];
+		for (i = 0 ; i < reply->ia->num_iasubopt ; i++) {
+			tmp = reply->ia->iasubopt[i];
 
 			if (tmp->ia != NULL)
 				ia_dereference(&tmp->ia, MDL);
@@ -2463,7 +2464,7 @@ reply_process_ia_ta(struct reply_state *reply, struct option_cache *ia) {
 	if (reply->old_ia != NULL)
 		ia_dereference(&reply->old_ia, MDL);
 	if (reply->lease != NULL)
-		iaaddr_dereference(&reply->lease, MDL);
+		iasubopt_dereference(&reply->lease, MDL);
 
 	/*
 	 * ISC_R_CANCELED is a status code used by the addr processing to
@@ -2528,13 +2529,13 @@ find_client_temporaries(struct reply_state *reply) {
 			goto cleanup;
 		}
 		if (reply->lease != NULL) {
-			iaaddr_dereference(&reply->lease, MDL);
+			iasubopt_dereference(&reply->lease, MDL);
 		}
 	}
 
       cleanup:
 	if (reply->lease != NULL) {
-		iaaddr_dereference(&reply->lease, MDL);
+		iasubopt_dereference(&reply->lease, MDL);
 	}
 	return status;
 }
@@ -2582,7 +2583,7 @@ static isc_result_t
 find_client_address(struct reply_state *reply) {
 	struct iaddr send_addr;
 	isc_result_t status = ISC_R_NORESOURCES;
-	struct iaaddr *lease, *best_lease = NULL;
+	struct iasubopt *lease, *best_lease = NULL;
 	struct binding_scope **scope;
 	struct group *group;
 	int i;
@@ -2605,8 +2606,8 @@ find_client_address(struct reply_state *reply) {
 	}
 
 	if (reply->old_ia != NULL)  {
-		for (i = 0 ; i < reply->old_ia->num_iaaddr ; i++) {
-			lease = reply->old_ia->iaaddr[i];
+		for (i = 0 ; i < reply->old_ia->num_iasubopt ; i++) {
+			lease = reply->old_ia->iasubopt[i];
 
 			best_lease = lease_compare(lease, best_lease);
 		}
@@ -2619,7 +2620,7 @@ find_client_address(struct reply_state *reply) {
 		status = pick_v6_address(&reply->lease, reply->shared,
 					 &reply->client_id);
 	} else if (best_lease != NULL) {
-		iaaddr_reference(&reply->lease, best_lease, MDL);
+		iasubopt_reference(&reply->lease, best_lease, MDL);
 		status = ISC_R_SUCCESS;
 	}
 
@@ -2629,7 +2630,7 @@ find_client_address(struct reply_state *reply) {
 		log_error("Reclaiming abandoned addresses is not yet "
 			  "supported.  Treating this as an out of space "
 			  "condition.");
-		/* iaaddr_reference(&reply->lease, best_lease, MDL); */
+		/* iasubopt_reference(&reply->lease, best_lease, MDL); */
 	}
 
 	/* Give up now if we didn't find a lease. */
@@ -2760,7 +2761,7 @@ reply_process_is_addressed(struct reply_state *reply,
 			/* Wait before renew! */
 		}
 
-		status = ia_add_iaaddr(reply->ia, reply->lease, MDL);
+		status = ia_add_iasubopt(reply->ia, reply->lease, MDL);
 		if (status != ISC_R_SUCCESS) {
 			log_fatal("reply_process_is_addressed: Unable to "
 				  "attach lease to new IA: %s",
@@ -2831,8 +2832,8 @@ reply_process_send_addr(struct reply_state *reply, struct iaddr *addr) {
 }
 
 /* Choose the better of two leases. */
-static struct iaaddr *
-lease_compare(struct iaaddr *alpha, struct iaaddr *beta) {
+static struct iasubopt *
+lease_compare(struct iasubopt *alpha, struct iasubopt *beta) {
 	if (alpha == NULL)
 		return beta;
 	if (beta == NULL)
@@ -3159,13 +3160,13 @@ reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia) {
 	 */
 	if ((status != ISC_R_CANCELED) && (reply->static_prefixes == 0) &&
 	    (reply->buf.reply.msg_type == DHCPV6_REPLY) &&
-	    (reply->ia->num_iaaddr != 0)) {
-		struct iaaddr *tmp;
+	    (reply->ia->num_iasubopt != 0)) {
+		struct iasubopt *tmp;
 		struct data_string *ia_id;
 		int i;
 
-		for (i = 0 ; i < reply->ia->num_iaaddr ; i++) {
-			tmp = reply->ia->iaaddr[i];
+		for (i = 0 ; i < reply->ia->num_iasubopt ; i++) {
+			tmp = reply->ia->iasubopt[i];
 
 			if (tmp->ia != NULL)
 				ia_dereference(&tmp->ia, MDL);
@@ -3211,7 +3212,7 @@ reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia) {
 	if (reply->old_ia != NULL)
 		ia_dereference(&reply->old_ia, MDL);
 	if (reply->lease != NULL)
-		iaaddr_dereference(&reply->lease, MDL);
+		iasubopt_dereference(&reply->lease, MDL);
 
 	/*
 	 * ISC_R_CANCELED is a status code used by the prefix processing to
@@ -3439,7 +3440,7 @@ reply_process_prefix(struct reply_state *reply, struct option_cache *pref) {
 	if (data.data != NULL)
 		data_string_forget(&data, MDL);
 	if (reply->lease != NULL)
-		iaaddr_dereference(&reply->lease, MDL);
+		iasubopt_dereference(&reply->lease, MDL);
 
 	return status;
 }
@@ -3469,17 +3470,17 @@ prefix_is_owned(struct reply_state *reply, struct iaddrcidrnet *pref) {
 	}
 
 	if ((reply->old_ia == NULL) ||
-	    (reply->old_ia->num_iaaddr == 0))
+	    (reply->old_ia->num_iasubopt == 0))
 		return ISC_FALSE;
 
-	for (i = 0 ; i < reply->old_ia->num_iaaddr ; i++) {
-		struct iaaddr *tmp;
+	for (i = 0 ; i < reply->old_ia->num_iasubopt ; i++) {
+		struct iasubopt *tmp;
 
-		tmp = reply->old_ia->iaaddr[i];
+		tmp = reply->old_ia->iasubopt[i];
 
 		if ((pref->bits == (int) tmp->plen) &&
 		    memcmp(pref->lo_addr.iabuf, &tmp->addr, 16) == 0) {
-			iaaddr_reference(&reply->lease, tmp, MDL);
+			iasubopt_reference(&reply->lease, tmp, MDL);
 			return ISC_TRUE;
 		}
 	}
@@ -3536,7 +3537,7 @@ static isc_result_t
 find_client_prefix(struct reply_state *reply) {
 	struct iaddrcidrnet send_pref;
 	isc_result_t status = ISC_R_NORESOURCES;
-	struct iaaddr *prefix, *best_prefix = NULL;
+	struct iasubopt *prefix, *best_prefix = NULL;
 	struct binding_scope **scope;
 	struct group *group;
 	int i;
@@ -3571,8 +3572,8 @@ find_client_prefix(struct reply_state *reply) {
 	}
 
 	if (reply->old_ia != NULL)  {
-		for (i = 0 ; i < reply->old_ia->num_iaaddr ; i++) {
-			prefix = reply->old_ia->iaaddr[i];
+		for (i = 0 ; i < reply->old_ia->num_iasubopt ; i++) {
+			prefix = reply->old_ia->iasubopt[i];
 
 			best_prefix = prefix_compare(reply, prefix,
 						     best_prefix);
@@ -3586,7 +3587,7 @@ find_client_prefix(struct reply_state *reply) {
 		status = pick_v6_prefix(&reply->lease, reply->preflen,
 					reply->shared, &reply->client_id);
 	} else if (best_prefix != NULL) {
-		iaaddr_reference(&reply->lease, best_prefix, MDL);
+		iasubopt_reference(&reply->lease, best_prefix, MDL);
 		status = ISC_R_SUCCESS;
 	}
 
@@ -3596,7 +3597,7 @@ find_client_prefix(struct reply_state *reply) {
 		log_error("Reclaiming abandoned prefixes is not yet "
 			  "supported.  Treating this as an out of space "
 			  "condition.");
-		/* iaaddr_reference(&reply->lease, best_prefix, MDL); */
+		/* iasubopt_reference(&reply->lease, best_prefix, MDL); */
 	}
 
 	/* Give up now if we didn't find a prefix. */
@@ -3713,7 +3714,7 @@ reply_process_is_prefixed(struct reply_state *reply,
 			/* Wait before renew! */
 		}
 
-		status = ia_add_iaaddr(reply->ia, reply->lease, MDL);
+		status = ia_add_iasubopt(reply->ia, reply->lease, MDL);
 		if (status != ISC_R_SUCCESS) {
 			log_fatal("reply_process_is_prefixed: Unable to "
 				  "attach prefix to new IA_PD: %s",
@@ -3786,9 +3787,9 @@ reply_process_send_prefix(struct reply_state *reply,
 }
 
 /* Choose the better of two prefixes. */
-static struct iaaddr *
+static struct iasubopt *
 prefix_compare(struct reply_state *reply,
-	       struct iaaddr *alpha, struct iaaddr *beta) {
+	       struct iasubopt *alpha, struct iasubopt *beta) {
 	if (alpha == NULL)
 		return beta;
 	if (beta == NULL)
@@ -4273,7 +4274,7 @@ dhcpv6_rebind(struct data_string *reply, struct packet *packet) {
 static void
 ia_na_match_decline(const struct data_string *client_id,
 		    const struct data_string *iaaddr,
-		    struct iaaddr *lease)
+		    struct iasubopt *lease)
 {
 	char tmp_addr[INET6_ADDRSTRLEN];
 
@@ -4387,7 +4388,7 @@ iterate_over_ia_na(struct data_string *reply_ret,
 	struct dhcpv6_packet *reply = (struct dhcpv6_packet *)reply_data;
 	int reply_ofs = (int)((char *)reply->options - (char *)reply);
 	char status_msg[32];
-	struct iaaddr *lease;
+	struct iasubopt *lease;
 	struct ia_xx *existing_ia_na;
 	int i;
 	struct data_string key;
@@ -4576,16 +4577,16 @@ iterate_over_ia_na(struct data_string *reply_ret,
 				/* 
 				 * Make sure this address is in the IA_NA.
 				 */
-				for (i=0; i<existing_ia_na->num_iaaddr; i++) {
-					struct iaaddr *tmp;
+				for (i=0; i<existing_ia_na->num_iasubopt; i++) {
+					struct iasubopt *tmp;
 					struct in6_addr *in6_addr;
 
-					tmp = existing_ia_na->iaaddr[i];
+					tmp = existing_ia_na->iasubopt[i];
 					in6_addr = &tmp->addr;
 					if (memcmp(in6_addr, 
 						   iaaddr.data, 16) == 0) {
-						iaaddr_reference(&lease,
-								 tmp, MDL);
+						iasubopt_reference(&lease,
+								   tmp, MDL);
 						break;
 					}
 				}
@@ -4604,7 +4605,7 @@ iterate_over_ia_na(struct data_string *reply_ret,
 		}
 
 		if (lease != NULL) {
-			iaaddr_dereference(&lease, MDL);
+			iasubopt_dereference(&lease, MDL);
 		}
 
 		data_string_forget(&iaaddr, MDL);
@@ -4625,7 +4626,7 @@ iterate_over_ia_na(struct data_string *reply_ret,
 
 exit:
 	if (lease != NULL) {
-		iaaddr_dereference(&lease, MDL);
+		iasubopt_dereference(&lease, MDL);
 	}
 	if (host_opt_state != NULL) {
 		option_state_dereference(&host_opt_state, MDL);
@@ -4692,7 +4693,7 @@ dhcpv6_decline(struct data_string *reply, struct packet *packet) {
 static void
 ia_na_match_release(const struct data_string *client_id,
 		    const struct data_string *iaaddr,
-		    struct iaaddr *lease)
+		    struct iasubopt *lease)
 {
 	char tmp_addr[INET6_ADDRSTRLEN];
 
@@ -4783,7 +4784,7 @@ exit:
 static void
 ia_pd_match_release(const struct data_string *client_id,
 		    const struct data_string *iapref,
-		    struct iaaddr *prefix)
+		    struct iasubopt *prefix)
 {
 	char tmp_addr[INET6_ADDRSTRLEN];
 
@@ -4899,7 +4900,7 @@ iterate_over_ia_pd(struct data_string *reply_ret,
 	int iaprefix_is_found;
 	char reply_data[65536];
 	int reply_ofs;
-	struct iaaddr *prefix;
+	struct iasubopt *prefix;
 	struct ia_xx *existing_ia_pd;
 	int i;
 	struct data_string key;
@@ -5044,19 +5045,19 @@ iterate_over_ia_pd(struct data_string *reply_ret,
 				 * Make sure this prefix is in the IA_PD.
 				 */
 				for (i = 0;
-				     i < existing_ia_pd->num_iaaddr;
+				     i < existing_ia_pd->num_iasubopt;
 				     i++) {
-					struct iaaddr *tmp;
+					struct iasubopt *tmp;
 					u_int8_t plen;
 
 					plen = getUChar(iaprefix.data + 8);
-					tmp = existing_ia_pd->iaaddr[i];
+					tmp = existing_ia_pd->iasubopt[i];
 					if ((tmp->plen == plen) &&
 					    (memcmp(&tmp->addr,
 						    iaprefix.data + 9,
 						    16) == 0)) {
-						iaaddr_reference(&prefix,
-								 tmp, MDL);
+						iasubopt_reference(&prefix,
+								   tmp, MDL);
 						break;
 					}
 				}
@@ -5075,7 +5076,7 @@ iterate_over_ia_pd(struct data_string *reply_ret,
 		}
 
 		if (prefix != NULL) {
-			iaaddr_dereference(&prefix, MDL);
+			iasubopt_dereference(&prefix, MDL);
 		}
 
 		data_string_forget(&iaprefix, MDL);
@@ -5104,7 +5105,7 @@ iterate_over_ia_pd(struct data_string *reply_ret,
 
 exit:
 	if (prefix != NULL) {
-		iaaddr_dereference(&prefix, MDL);
+		iasubopt_dereference(&prefix, MDL);
 	}
 	if (host_opt_state != NULL) {
 		option_state_dereference(&host_opt_state, MDL);

@@ -862,7 +862,7 @@ process_lq_by_address(struct lq6_state *lq) {
 	struct ipv6_pool *pool = NULL;
 	struct data_string data;
 	struct in6_addr addr;
-	struct iaaddr *iaaddr = NULL;
+	struct iasubopt *iaaddr = NULL;
 	struct option_state *opt_state = NULL;
 	u_int32_t lifetime;
 	unsigned opt_cursor;
@@ -909,8 +909,8 @@ process_lq_by_address(struct lq6_state *lq) {
 		ret_val = 1;
 		goto exit;
 	}
-	if (iaaddr_hash_lookup(&iaaddr, pool->addrs, &addr,
-			       sizeof(addr), MDL) == 0) {
+	if (iasubopt_hash_lookup(&iaaddr, pool->leases, &addr,
+				 sizeof(addr), MDL) == 0) {
 		ret_val = 1;
 		goto exit;
 	}
@@ -993,7 +993,7 @@ process_lq_by_address(struct lq6_state *lq) {
 	if (pool != NULL)
 		ipv6_pool_dereference(&pool, MDL);
 	if (iaaddr != NULL)
-		iaaddr_dereference(&iaaddr, MDL);
+		iasubopt_dereference(&iaaddr, MDL);
 	if (opt_state != NULL)
 		option_state_dereference(&opt_state, MDL);
 	return ret_val;

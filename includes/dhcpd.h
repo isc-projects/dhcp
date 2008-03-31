@@ -1334,12 +1334,11 @@ typedef unsigned char option_mask [16];
 
 						/* these are referenced */
 typedef struct hash_table ia_hash_t;
-typedef struct hash_table iaaddr_hash_t;
+typedef struct hash_table iasubopt_hash_t;
 
-						/* should be lease6 */
-						/* shared with iaprefix */
+						/* IAADDR/IAPREFIX lease */
 
-struct iaaddr {
+struct iasubopt {
 	int refcnt;				/* reference count */
 	struct in6_addr addr;			/* IPv6 address/prefix */
 	u_int8_t plen;				/* iaprefix prefix length */
@@ -1365,10 +1364,10 @@ struct ia_xx {
 	int refcnt;			/* reference count */
 	struct data_string iaid_duid;	/* from the client */
 	u_int16_t ia_type;		/* IA_XX */
-	int num_iaaddr;			/* number of IAADDR for this IA */
-	int max_iaaddr;			/* space available for IAADDR */
+	int num_iasubopt;		/* number of IAADDR/PREFIX */
+	int max_iasubopt;		/* space available for IAADDR/PREFIX */
 	time_t cltt;			/* client last transaction time */
-	struct iaaddr **iaaddr;		/* pointers to the various IAADDRs */
+	struct iasubopt **iasubopt;	/* pointers to the IAADDR/IAPREFIXs */
 };
 
 extern ia_hash_t *ia_na_active;
@@ -1381,10 +1380,10 @@ struct ipv6_pool {
 	struct in6_addr start_addr;		/* first IPv6 address */
 	int bits;				/* number of bits, CIDR style */
 	int units;				/* allocation unit in bits */
-	iaaddr_hash_t *addrs;			/* non-free IAADDR */
-	int num_active;				/* count of active IAADDR */
+	iasubopt_hash_t *leases;		/* non-free leases */
+	int num_active;				/* count of active leases */
 	isc_heap_t *active_timeouts;		/* timeouts for active leases */
-	int num_inactive;			/* count of inactive IAADDR */
+	int num_inactive;			/* count of inactive leases */
 	isc_heap_t *inactive_timeouts;		/* timeouts for expired or 
 						   released leases */
 	struct shared_network *shared_network;	/* shared_network for 
@@ -1725,8 +1724,8 @@ void parse_server_duid_conf(struct parse *cfile);
 
 /* ddns.c */
 int ddns_updates(struct packet *, struct lease *, struct lease *,
-		 struct iaaddr *, struct iaaddr *, struct option_state *);
-int ddns_removals(struct lease *, struct iaaddr *);
+		 struct iasubopt *, struct iasubopt *, struct option_state *);
+int ddns_removals(struct lease *, struct iasubopt *);
 
 /* parse.c */
 void add_enumeration (struct enumeration *);
@@ -3198,7 +3197,7 @@ isc_result_t dhcp_failover_process_update_request_all (dhcp_failover_state_t *,
 						       failover_message_t *);
 isc_result_t dhcp_failover_process_update_done (dhcp_failover_state_t *,
 						failover_message_t *);
-void ia_remove_all_iaaddr(struct ia_xx *ia, const char *file, int line);
+void ia_remove_all_lease(struct ia_xx *ia, const char *file, int line);
 void dhcp_failover_recover_done (void *);
 void failover_print PROTO ((char *, unsigned *, unsigned, const char *));
 void update_partner PROTO ((struct lease *));
@@ -3227,14 +3226,16 @@ const char *binding_state_print (enum failover_state);
 
 /* mdb6.c */
 HASH_FUNCTIONS_DECL(ia, unsigned char *, struct ia_xx, ia_hash_t);
-HASH_FUNCTIONS_DECL(iaaddr, struct in6_addr *, struct iaaddr, iaaddr_hash_t);
+HASH_FUNCTIONS_DECL(iasubopt, struct in6_addr *, struct iasubopt,
+		    iasubopt_hash_t);
 
-isc_result_t iaaddr_allocate(struct iaaddr **iaaddr,
-			     const char *file, int line);
-isc_result_t iaaddr_reference(struct iaaddr **iaaddr, struct iaaddr *src,
-			      const char *file, int line);
-isc_result_t iaaddr_dereference(struct iaaddr **iaaddr,
+isc_result_t iasubopt_allocate(struct iasubopt **iasubopt,
+			       const char *file, int line);
+isc_result_t iasubopt_reference(struct iasubopt **iasubopt,
+				struct iasubopt *src,
 				const char *file, int line);
+isc_result_t iasubopt_dereference(struct iasubopt **iasubopt,
+				  const char *file, int line);
 
 isc_result_t ia_make_key(struct data_string *key, u_int32_t iaid,
 			 const char *duid, unsigned int duid_len,
@@ -3246,10 +3247,10 @@ isc_result_t ia_reference(struct ia_xx **ia, struct ia_xx *src,
 			  const char *file, int line);
 isc_result_t ia_dereference(struct ia_xx **ia,
 			    const char *file, int line);
-isc_result_t ia_add_iaaddr(struct ia_xx *ia, struct iaaddr *iaaddr,
-			   const char *file, int line);
-void ia_remove_iaaddr(struct ia_xx *ia, struct iaaddr *iaaddr,
-		      const char *file, int line);
+isc_result_t ia_add_iasubopt(struct ia_xx *ia, struct iasubopt *iasubopt,
+			     const char *file, int line);
+void ia_remove_iasubopt(struct ia_xx *ia, struct iasubopt *iasubopt,
+			const char *file, int line);
 isc_boolean_t ia_equal(const struct ia_xx *a, const struct ia_xx *b);
 
 isc_result_t ipv6_pool_allocate(struct ipv6_pool **pool, u_int16_t type,
@@ -3262,25 +3263,25 @@ isc_result_t ipv6_pool_reference(struct ipv6_pool **pool,
 isc_result_t ipv6_pool_dereference(struct ipv6_pool **pool,
 				   const char *file, int line);
 isc_result_t create_lease6(struct ipv6_pool *pool,
-			   struct iaaddr **addr,
+			   struct iasubopt **addr,
 			   unsigned int *attempts,
 			   const struct data_string *uid,
 			   time_t soft_lifetime_end_time);
 isc_result_t add_lease6(struct ipv6_pool *pool,
-			struct iaaddr *addr,
+			struct iasubopt *lease,
 			time_t valid_lifetime_end_time);
-isc_result_t renew_lease6(struct ipv6_pool *pool, struct iaaddr *addr);
-isc_result_t expire_lease6(struct iaaddr **addr, 
+isc_result_t renew_lease6(struct ipv6_pool *pool, struct iasubopt *lease);
+isc_result_t expire_lease6(struct iasubopt **leasep,
 			   struct ipv6_pool *pool, time_t now);
-isc_result_t release_lease6(struct ipv6_pool *pool, struct iaaddr *addr);
-isc_result_t decline_lease6(struct ipv6_pool *pool, struct iaaddr *addr);
+isc_result_t release_lease6(struct ipv6_pool *pool, struct iasubopt *lease);
+isc_result_t decline_lease6(struct ipv6_pool *pool, struct iasubopt *lease);
 isc_boolean_t lease6_exists(const struct ipv6_pool *pool, 
 			    const struct in6_addr *addr);
 isc_result_t mark_lease_unavailble(struct ipv6_pool *pool,
 				   const struct in6_addr *addr);
 
 isc_result_t create_prefix6(struct ipv6_pool *pool,
-			    struct iaaddr **pref,
+			    struct iasubopt **pref,
 			    unsigned int *attempts,
 			    const struct data_string *uid,
 			    time_t soft_lifetime_end_time);
