@@ -38,6 +38,13 @@ as well as how to find documentation and report bugs, please consult
 the README file.
 
 
+			Changes since 3.1.1rc1
+
+- Changes in 4.0.x to common/options.c "pretty_domain()" (which turns
+  wireformat rfc1035 into printable form for dhclient.leases) were pulled
+  down.  This addresses a bug where "option domain-search , ;" would appear
+  in dhclient.leases.
+
 			Changes since 3.1.1b1
 
 - A memory leak when using omapi has been fixed.
