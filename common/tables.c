@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.58.14.7 2008/01/22 19:02:50 dhankins Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.58.14.8 2008/04/11 18:59:11 dhankins Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -623,8 +623,10 @@ option_dereference(struct option **dest, const char *file, int line)
 		/* It's either a user-configured format (allocated), or the
 		 * default static format.
 		 */
-		if ((*dest)->format != default_option_format)
+		if (((*dest)->format != NULL) &&
+		    ((*dest)->format != default_option_format)) {
 			dfree((char *) (*dest)->format, file, line);
+		}
 
 	        dfree(*dest, file, line);
 	}
