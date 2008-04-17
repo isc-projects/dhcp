@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-		             Version 3.1.1rc1
-			      March 24, 2008
+		             Version 3.1.1rc2
+			      April 7, 2008
 
 			      Release Notes
 
@@ -44,6 +44,10 @@ the README file.
   wireformat rfc1035 into printable form for dhclient.leases) were pulled
   down.  This addresses a bug where "option domain-search , ;" would appear
   in dhclient.leases.
+
+- Changes in 4.0.x to common/tables.c "option_dereference()" were pulled
+  down.  This addresses a bug where overlapping option code definitions in
+  a config file may cause an attempt to free a NULL pointer.
 
 			Changes since 3.1.1b1
 
