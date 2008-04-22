@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-			     Version 3.0.7b1
-			    February 27, 2007
+			     Version 3.0.7rc1
+			      April 22, 2008
 
 			      Release Notes
 
@@ -78,6 +78,10 @@ Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
 
+
+			Changes since 3.0.7b1
+
+- None.
 
 			Changes since 3.0.6
 
