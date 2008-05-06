@@ -54,6 +54,8 @@ suggested fixes to <dhcp-users@isc.org>.
 
 			Changes since 4.0.1b1
 
+- Fixed a coredump when adding a class via OMAPI.
+
 - Check whether files are zero length before trying to parse them.
 
 - Shared network selection should be done from the innermost relay
