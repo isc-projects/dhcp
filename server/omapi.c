@@ -1869,11 +1869,10 @@ class_set_value (omapi_object_t *h,
 			if (!strncmp("hardware",
 				     (char *)value->u.buffer.value, minlen))
 			{
-				if (!expression_allocate(&class->submatch,
-							 MDL))
+				if (!expression_allocate(&class->submatch, MDL))
 					return ISC_R_NOMEMORY;
 
-				class->expr->op = expr_hardware;
+				class->submatch->op = expr_hardware;
 			} else
 				return ISC_R_INVALIDARG;
 		} else
