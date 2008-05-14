@@ -1,6 +1,6 @@
 	       Internet Systems Consortium DHCP Distribution
-	                     Version 3.0.7rc1
-		               April 22, 2008
+	                      Version 3.0.7
+		               May 14, 2008
 
 			       README FILE
 
@@ -92,13 +92,11 @@ directory, it may not have up-to-date information).
 
 			    RELEASE STATUS
 
-This is ISC DHCP 3.0.7rc1, the first RELEASE CANDIDATE of ISC DHCP 3.0.7.
-
-ISC DHCP 3.0.7 is a maintenance release which seeks only to fix bugs
-present in versions 3.0.6 and prior.  No new features have been added,
-although if you run failover and are upgrading from 3.0.3 or prior,
-you should take careful note of the RELNOTES discussion on the new
-'atsfp' failover value.
+This is ISC DHCP 3.0.7, a maintenance release which seeks only to fix
+bugs present in versions 3.0.6 and prior.  No new features have been
+added, although if you run failover and are upgrading from 3.0.3 or
+prior, you should take careful note of the RELNOTES discussion on the
+new 'atsfp' failover value.
 
 In this release, the server and relay agent are currently fully
 functional on NetBSD, Linux systems with kernel version 2.2 or later,
@@ -141,12 +139,12 @@ information.   On Digital Unix, type ``man pfilt''.
 To build the DHCP Distribution, unpack the compressed tar file using
 the tar utility and the gzip command - type something like:
 
-	gunzip dhcp-3.0.7rc1.tar.gz
-	tar xvf dhcp-3.0.7rc1.tar
+	gunzip dhcp-3.0.7.tar.gz
+	tar xvf dhcp-3.0.7.tar
 
 			    CONFIGURING IT
 
-Now, cd to the dhcp-3.0.7rc1 subdirectory that you've just created and
+Now, cd to the dhcp-3.0.7 subdirectory that you've just created and
 configure the source tree by typing:
 
 	./configure
