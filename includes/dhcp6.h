@@ -205,3 +205,9 @@ struct dhcpv6_relay_packet {
  * when the Unix epoch began.
  */
 #define DUID_TIME_EPOCH 946684800
+
+/* Information-Request Time option (RFC 4242) */
+
+#define IRT_DEFAULT	86400
+#define IRT_MINIMUM	600
+

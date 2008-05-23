@@ -1439,8 +1439,7 @@ parse_client6_lease_statement(struct parse *cfile)
 
 	if (iface == NULL)
 		parse_warn(cfile, "Lease has no interface designation.");
-
-	if (!has_name && (client == NULL)) {
+	else if (!has_name && (client == NULL)) {
 		for (client = iface->client ; client != NULL ;
 		     client = client->next) {
 			if (client->name == NULL)

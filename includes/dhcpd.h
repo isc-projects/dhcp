@@ -2525,6 +2525,7 @@ void dhcpv6_client_assignments(void);
 void form_duid(struct data_string *duid, const char *file, int line);
 void dhc6_lease_destroy(struct dhc6_lease **src, const char *file, int line);
 void start_init6(struct client_state *client);
+void start_info_request6(struct client_state *client);
 void start_confirm6(struct client_state *client);
 void start_release6(struct client_state *client);
 void start_selecting6(struct client_state *client);

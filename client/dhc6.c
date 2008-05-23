@@ -39,6 +39,7 @@ struct option *ia_pd_option = NULL;
 struct option *iaaddr_option = NULL;
 struct option *iaprefix_option = NULL;
 struct option *oro_option = NULL;
+struct option *irt_option = NULL;
 
 static struct dhc6_lease *dhc6_dup_lease(struct dhc6_lease *lease,
 					 const char *file, int line);
@@ -66,8 +67,10 @@ static struct dhc6_ia *find_ia_na(struct dhc6_ia *head, const char *id);
 static struct dhc6_addr *find_addr(struct dhc6_addr *head,
 				   struct iaddr *address);
 void init_handler(struct packet *packet, struct client_state *client);
+void info_request_handler(struct packet *packet, struct client_state *client);
 void rapid_commit_handler(struct packet *packet, struct client_state *client);
 void do_init6(void *input);
+void do_info_request6(void *input);
 void do_confirm6(void *input);
 void reply_handler(struct packet *packet, struct client_state *client);
 static isc_result_t dhc6_add_ia_na(struct client_state *client,
@@ -80,6 +83,8 @@ void do_select6(void *input);
 void do_refresh6(void *input);
 static void do_release6(void *input);
 static void start_bound(struct client_state *client);
+static void start_informed(struct client_state *client);
+void informed_handler(struct packet *packet, struct client_state *client);
 void bound_handler(struct packet *packet, struct client_state *client);
 void start_renew6(void *input);
 void start_rebind6(void *input);
@@ -92,10 +97,12 @@ static void script_write_params6(struct client_state *client,
 				 const char *prefix,
 				 struct option_state *options);
 
+extern int stateless;
+
 /* The "best" default DUID, since we cannot predict any information
  * about the system (such as whether or not the hardware addresses are
  * integrated into the motherboard or similar), is the "LLT", link local
- * plus time, DUID.
+ * plus time, DUID. For real stateless "LL" is better.
  *
  * Once generated, this duid is stored into the state database, and
  * retained across restarts.
@@ -123,22 +130,31 @@ form_duid(struct data_string *duid, const char *file, int line)
 
 	/* 2 bytes for the 'duid type' field.
 	 * 2 bytes for the 'htype' field.
-	 * 4 bytes for the 'current time'.
+	 * (not stateless) 4 bytes for the 'current time'.
 	 * enough bytes for the hardware address (note that hw_address has
 	 * the 'htype' on byte zero).
 	 */
-	len = 8 + (ip->hw_address.hlen - 1);
+	len = 4 + (ip->hw_address.hlen - 1);
+	if (!stateless)
+		len += 4;
 	if (!buffer_allocate(&duid->buffer, len, MDL))
 		log_fatal("no memory for default DUID!");
 	duid->data = duid->buffer->data;
 	duid->len = len;
 
 	/* Basic Link Local Address type of DUID. */
-	putUShort(duid->buffer->data, DUID_LLT);
-	putUShort(duid->buffer->data + 2, ip->hw_address.hbuf[0]);
-	putULong(duid->buffer->data + 4, cur_time - DUID_TIME_EPOCH);
-	memcpy(duid->buffer->data + 8, ip->hw_address.hbuf + 1,
-	       ip->hw_address.hlen - 1);
+	if (!stateless) {
+		putUShort(duid->buffer->data, DUID_LLT);
+		putUShort(duid->buffer->data + 2, ip->hw_address.hbuf[0]);
+		putULong(duid->buffer->data + 4, cur_time - DUID_TIME_EPOCH);
+		memcpy(duid->buffer->data + 8, ip->hw_address.hbuf + 1,
+		       ip->hw_address.hlen - 1);
+	} else {
+		putUShort(duid->buffer->data, DUID_LL);
+		putUShort(duid->buffer->data + 2, ip->hw_address.hbuf[0]);
+		memcpy(duid->buffer->data + 4, ip->hw_address.hbuf + 1,
+		       ip->hw_address.hlen - 1);
+	}
 }
 
 /* Assign DHCPv6 port numbers as a client.
@@ -216,6 +232,11 @@ dhcpv6_client_assignments(void)
 	if (!option_code_hash_lookup(&oro_option, dhcpv6_universe.code_hash,
 				     &code, 0, MDL))
 		log_fatal("Unable to find the ORO option definition.");
+
+	code = D6O_INFORMATION_REFRESH_TIME;
+	if (!option_code_hash_lookup(&irt_option, dhcpv6_universe.code_hash,
+				     &code, 0, MDL))
+		log_fatal("Unable to find the IRT option definition.");
 
 #ifndef __CYGWIN32__ /* XXX */
 	endservent();
@@ -1253,8 +1274,9 @@ start_init6(struct client_state *client)
 	client->MRD = 0;
 
 	dhc6_retrans_init(client);
-	/* RFC3315 section 17.1.2 goes out of its way:
-	 *
+
+	/*
+         * RFC3315 section 17.1.2 goes out of its way:
 	 * Also, the first RT MUST be selected to be strictly greater than IRT
 	 * by choosing RAND to be strictly greater than 0.
 	 */
@@ -1284,7 +1306,45 @@ start_init6(struct client_state *client)
 		go_daemon();
 }
 
-/* start_init6() kicks off an "init-reboot" version of the process, at
+/* start_info_request6() kicks off the process, transmitting an info
+ * request packet and scheduling a retransmission event.
+ */
+void
+start_info_request6(struct client_state *client)
+{
+	struct timeval tv;
+
+	log_debug("PRC: Requesting information (INIT).");
+	client->state = S_INIT;
+
+	/* Initialize timers, RFC3315 section 18.1.5. */
+	client->IRT = INF_TIMEOUT * 100;
+	client->MRT = INF_MAX_RT * 100;
+	client->MRC = 0;
+	client->MRD = 0;
+
+	dhc6_retrans_init(client);
+
+	client->v6_handler = info_request_handler;
+
+	/* RFC3315 section 18.1.5 says we MUST start the first packet
+	 * between 0 and INF_MAX_DELAY seconds.  The good news is
+	 * INF_MAX_DELAY is 1.
+	 */
+	tv.tv_sec = cur_tv.tv_sec;
+	tv.tv_usec = cur_tv.tv_usec;
+	tv.tv_usec += (random() % (INF_MAX_DELAY * 100)) * 10000;
+	if (tv.tv_usec >= 1000000) {
+		tv.tv_sec += 1;
+		tv.tv_usec -= 1000000;
+	}
+	add_timeout(&tv, do_info_request6, client, NULL, NULL);
+
+	if (nowait)
+		go_daemon();
+}
+
+/* start_confirm6() kicks off an "init-reboot" version of the process, at
  * startup to find out if old bindings are 'fair' and at runtime whenever
  * a link cycles state we'll eventually want to do this.
  */
@@ -1525,6 +1585,107 @@ do_init6(void *input)
 		tv.tv_usec -= 1000000;
 	}
 	add_timeout(&tv, do_init6, client, NULL, NULL);
+
+	dhc6_retrans_advance(client);
+}
+
+/* do_info_request6() marshals and transmits an information-request. */
+void
+do_info_request6(void *input)
+{
+	struct client_state *client;
+	struct data_string ds;
+	struct timeval elapsed, tv;
+	int send_ret;
+
+	client = input;
+
+	if ((client->MRC != 0) && (client->txcount > client->MRC)) {
+		log_info("Max retransmission count exceeded.");
+		return;
+	}
+
+	/*
+	 * Start_time starts at the first transmission.
+	 */
+	if (client->txcount == 0) {
+		client->start_time.tv_sec = cur_tv.tv_sec;
+		client->start_time.tv_usec = cur_tv.tv_usec;
+	}
+
+	/* elapsed = cur - start */
+	elapsed.tv_sec = cur_tv.tv_sec - client->start_time.tv_sec;
+	elapsed.tv_usec = cur_tv.tv_usec - client->start_time.tv_usec;
+	if (elapsed.tv_usec < 0) {
+		elapsed.tv_sec -= 1;
+		elapsed.tv_usec += 1000000;
+	}
+	if ((client->MRD != 0) && (elapsed.tv_sec > client->MRD)) {
+		log_info("Max retransmission duration exceeded.");
+		return;
+	}
+
+	memset(&ds, 0, sizeof(ds));
+	if (!buffer_allocate(&ds.buffer, 4, MDL)) {
+		log_error("Unable to allocate memory for INFO-REQUEST.");
+		return;
+	}
+	ds.data = ds.buffer->data;
+	ds.len = 4;
+
+	ds.buffer->data[0] = DHCPV6_INFORMATION_REQUEST;
+	memcpy(ds.buffer->data + 1, client->dhcpv6_transaction_id, 3);
+
+	/* Form an elapsed option. */
+	/* Maximum value is 65535 1/100s coded as 0xffff. */
+	if ((elapsed.tv_sec < 0) || (elapsed.tv_sec > 655) ||
+	    ((elapsed.tv_sec == 655) && (elapsed.tv_usec > 350000))) {
+		client->elapsed = 0xffff;
+	} else {
+		client->elapsed = elapsed.tv_sec * 100;
+		client->elapsed += elapsed.tv_usec / 10000;
+	}
+
+	if (client->elapsed == 0)
+		log_debug("XMT: Forming Info-Request, 0 ms elapsed.");
+	else
+		log_debug("XMT: Forming Info-Request, %u0 ms elapsed.",
+			  (unsigned)client->elapsed);
+
+	client->elapsed = htons(client->elapsed);
+
+	make_client6_options(client, &client->sent_options, NULL,
+			     DHCPV6_INFORMATION_REQUEST);
+
+	/* Fetch any configured 'sent' options (includes DUID) in wire format.
+	 */
+	dhcpv6_universe.encapsulate(&ds, NULL, NULL, client,
+				    NULL, client->sent_options, &global_scope,
+				    &dhcpv6_universe);
+
+	/* Transmit and wait. */
+
+	log_info("XMT: Info-Request on %s, interval %ld0ms.",
+		 client->name ? client->name : client->interface->name,
+		 (long int)client->RT);
+
+	send_ret = send_packet6(client->interface,
+				ds.data, ds.len, &DHCPv6DestAddr);
+	if (send_ret != ds.len) {
+		log_error("dhc6: send_packet6() sent %d of %d bytes",
+			  send_ret, ds.len);
+	}
+
+	data_string_forget(&ds, MDL);
+
+	/* Wait RT */
+	tv.tv_sec = cur_tv.tv_sec + client->RT / 100;
+	tv.tv_usec = cur_tv.tv_usec + (client->RT % 100) * 10000;
+	if (tv.tv_usec >= 1000000) {
+		tv.tv_sec += 1;
+		tv.tv_usec -= 1000000;
+	}
+	add_timeout(&tv, do_info_request6, client, NULL, NULL);
 
 	dhc6_retrans_advance(client);
 }
@@ -2465,6 +2626,62 @@ init_handler(struct packet *packet, struct client_state *client)
 		start_selecting6(client);
 	} else
 		log_debug("RCV:  Advertisement recorded.");
+}
+
+/* info_request_handler() accepts a Reply to an Info-request.
+ */
+void
+info_request_handler(struct packet *packet, struct client_state *client)
+{
+	isc_result_t check_status;
+	unsigned code;
+
+	if (packet->dhcpv6_msg_type != DHCPV6_REPLY)
+		return;
+
+	/* RFC3315 section 15.10 validation (same as 15.3 since we
+	 * always include a client id).
+	 */
+	if (!valid_reply(packet, client)) {
+		log_error("Invalid Reply - rejecting.");
+		return;
+	}
+
+	check_status = dhc6_check_status(ISC_R_SUCCESS, packet->options,
+					 "message", &code);
+	if (check_status != ISC_R_SUCCESS) {
+		/* If no action was taken, but there is an error, then
+		 * we wait for a retransmission.
+		 */
+		if (check_status != ISC_R_CANCELED)
+			return;
+	}
+
+	/* We're done retransmitting at this point. */
+	cancel_timeout(do_info_request6, client);
+
+	/* Action was taken, so now that we've torn down our scheduled
+	 * retransmissions, return.
+	 */
+	if (check_status == ISC_R_CANCELED)
+		return;
+
+	/* Cleanup if a previous attempt to go bound failed. */
+	if (client->old_lease != NULL) {
+		dhc6_lease_destroy(&client->old_lease, MDL);
+		client->old_lease = NULL;
+	}
+
+	/* Cache options in the active_lease. */
+	if (client->active_lease != NULL)
+		client->old_lease = client->active_lease;
+	client->active_lease = dmalloc(sizeof(struct dhc6_lease), MDL);
+	if (client->active_lease == NULL)
+		log_fatal("Out of memory for v6 lease structure.");
+	option_state_reference(&client->active_lease->options,
+			       packet->options, MDL);
+
+	start_informed(client);
 }
 
 /* Specific version of init_handler() for rapid-commit.
@@ -3499,7 +3716,7 @@ dhc6_merge_lease(struct dhc6_lease *src, struct dhc6_lease *dst)
  * to inform it about the new values, and then lay in wait for the next
  * event.
  */
-void
+static void
 start_bound(struct client_state *client)
 {
 	struct dhc6_ia *ia, *oldia;
@@ -3974,12 +4191,22 @@ do_expire(void *input)
  * Run client script to unconfigure interface.
  * Called with reason STOP6 when dhclient -x is run, or with reason
  * RELEASE6 when server has replied to a Release message.
+ * Stateless is a special case.
  */
 void
 unconfigure6(struct client_state *client, const char *reason)
 {
 	struct dhc6_ia *ia;
 	struct dhc6_addr *addr;
+
+	if (stateless) {
+		script_init(client, reason, NULL);
+		if (client->active_lease != NULL)
+			script_write_params6(client, "old_",
+					     client->active_lease->options);
+		script_go(client);
+		return;
+	}
 
 	if (client->active_lease == NULL)
 		return;
@@ -3998,6 +4225,109 @@ unconfigure6(struct client_state *client, const char *reason)
 				client_dns_update(client, 0, 0, &addr->address);
 		}
 	}
+}
+
+void
+refresh_info_request6(void *input)
+{
+	struct client_state *client;
+
+	client = (struct client_state *)input;
+	start_info_request6(client);
+}
+
+/* Timeout for Information-Request (using the IRT option).
+ */
+static void
+dhc6_check_irt(struct client_state *client)
+{
+	struct option **req;
+	struct option_cache *oc;
+	TIME expire = MAX_TIME;
+	struct timeval tv;
+	int i;
+	isc_boolean_t found = ISC_FALSE;
+
+	cancel_timeout(refresh_info_request6, client);
+
+	req = client->config->requested_options;
+	for (i = 0; req[i] != NULL; i++) {
+		if (req[i] == irt_option) {
+			found = ISC_TRUE;
+			break;
+		}
+	}
+	/* Simply return gives a endless loop waiting for nothing. */
+	if (!found)
+		exit(0);
+
+	oc = lookup_option(&dhcpv6_universe, client->active_lease->options,
+			   D6O_INFORMATION_REFRESH_TIME);
+	if (oc != NULL) {
+		struct data_string irt;
+
+		memset(&irt, 0, sizeof(irt));
+		if (!evaluate_option_cache(&irt, NULL, NULL, client,
+					   client->active_lease->options,
+					   NULL, &global_scope, oc, MDL) ||
+		    (irt.len < 4)) {
+			log_error("Can't evaluate IRT.");
+		} else {
+			expire = getULong(irt.data);
+			if (expire < IRT_MINIMUM)
+				expire = IRT_MINIMUM;
+			if (expire == 0xffffffff)
+				expire = MAX_TIME;
+		}
+		data_string_forget(&irt, MDL);
+	} else
+		expire = IRT_DEFAULT;
+
+	if (expire != MAX_TIME) {
+		log_debug("PRC: Refresh event scheduled in %u seconds.",
+			  (unsigned) expire);
+		tv.tv_sec = cur_time + expire;
+		tv.tv_usec = 0;
+		add_timeout(&tv, refresh_info_request6, client, NULL, NULL);
+	}
+}
+
+/* We got a Reply. Give dhclient-script a tickle to inform it about
+ * the new values, and then lay in wait for the next event.
+ */
+static void
+start_informed(struct client_state *client)
+{
+	client->v6_handler = informed_handler;
+
+	log_debug("PRC: Done.");
+
+	client->state = S_BOUND;
+
+	script_init(client, "RENEW6", NULL);
+	if (client->old_lease != NULL)
+		script_write_params6(client, "old_",
+				     client->old_lease->options);
+	script_write_params6(client, "new_", client->active_lease->options);
+	script_go(client);
+
+	go_daemon();
+
+	if (client->old_lease != NULL) {
+		dhc6_lease_destroy(&client->old_lease, MDL);
+		client->old_lease = NULL;
+	}
+
+	/* Schedule events. */
+	dhc6_check_irt(client);
+}
+
+/* While informed, ignore packets.
+ */
+void
+informed_handler(struct packet *packet, struct client_state *client)
+{
+	log_debug("RCV: Input packets are ignored once bound.");
 }
 
 /* make_client6_options() fetches option caches relevant to the client's

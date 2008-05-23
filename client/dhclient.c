@@ -75,13 +75,16 @@ int client_env_count=0;
 int onetry=0;
 int quiet=1;
 int nowait=0;
+int stateless=0;
 char *mockup_relay = NULL;
+
+void run_stateless(int exit_mode);
 
 static void usage PROTO ((void));
 
 static isc_result_t write_duid(struct data_string *duid);
 
-int 
+int
 main(int argc, char **argv) {
 	int fd;
 	int i;
@@ -90,8 +93,8 @@ main(int argc, char **argv) {
 	unsigned seed;
 	char *server = (char *)0;
 	isc_result_t status;
- 	int exit_mode = 0;
- 	int release_mode = 0;
+	int exit_mode = 0;
+	int release_mode = 0;
 	struct timeval tv;
 	omapi_object_t *listener;
 	isc_result_t result;
@@ -108,24 +111,24 @@ main(int argc, char **argv) {
 	/* Initialize client globals. */
 	memset(&default_duid, 0, sizeof(default_duid));
 
-        /* Make sure that file descriptors 0 (stdin), 1, (stdout), and
-           2 (stderr) are open. To do this, we assume that when we
-           open a file the lowest available file descriptor is used. */
-        fd = open("/dev/null", O_RDWR);
-        if (fd == 0)
-                fd = open("/dev/null", O_RDWR);
-        if (fd == 1)
-                fd = open("/dev/null", O_RDWR);
-        if (fd == 2)
-                log_perror = 0; /* No sense logging to /dev/null. */
-        else if (fd != -1)
-                close(fd);
+	/* Make sure that file descriptors 0 (stdin), 1, (stdout), and
+	   2 (stderr) are open. To do this, we assume that when we
+	   open a file the lowest available file descriptor is used. */
+	fd = open("/dev/null", O_RDWR);
+	if (fd == 0)
+		fd = open("/dev/null", O_RDWR);
+	if (fd == 1)
+		fd = open("/dev/null", O_RDWR);
+	if (fd == 2)
+		log_perror = 0; /* No sense logging to /dev/null. */
+	else if (fd != -1)
+		close(fd);
 
 	openlog ("dhclient", LOG_NDELAY, LOG_DAEMON);
 
 #if !(defined (DEBUG) || defined (__CYGWIN32__))
 	setlogmask (LOG_UPTO (LOG_INFO));
-#endif	
+#endif
 
 	/* Set up the OMAPI. */
 	status = omapi_init ();
@@ -142,7 +145,7 @@ main(int argc, char **argv) {
 	dhcp_interface_startup_hook = dhclient_interface_startup_hook;
 
 	for (i = 1; i < argc; i++) {
-                if (!strcmp(argv[i], "-r")) {
+		if (!strcmp(argv[i], "-r")) {
 			release_mode = 1;
 			no_daemon = 1;
 #ifdef DHCPv6
@@ -159,10 +162,10 @@ main(int argc, char **argv) {
 			local_family_set = 1;
 			local_family = AF_INET6;
 #endif /* DHCPv6 */
-                } else if (!strcmp (argv [i], "-x")) { /* eXit, no release */
-                        release_mode = 0;
-                        no_daemon = 0;
-                        exit_mode = 1;
+		} else if (!strcmp (argv [i], "-x")) { /* eXit, no release */
+			release_mode = 0;
+			no_daemon = 0;
+			exit_mode = 1;
 		} else if (!strcmp (argv [i], "-p")) {
 			if (++i == argc)
 				usage ();
@@ -172,25 +175,25 @@ main(int argc, char **argv) {
 		} else if (!strcmp (argv [i], "-d")) {
 			no_daemon = 1;
 			quiet = 0;
-                } else if (!strcmp (argv [i], "-pf")) {
-                        if (++i == argc)
-                                usage ();
-                        path_dhclient_pid = argv [i];
+		} else if (!strcmp (argv [i], "-pf")) {
+			if (++i == argc)
+				usage ();
+			path_dhclient_pid = argv [i];
 			no_dhclient_pid = 1;
-                } else if (!strcmp (argv [i], "-cf")) {
-                        if (++i == argc)
-                                usage ();
-                        path_dhclient_conf = argv [i];
+		} else if (!strcmp (argv [i], "-cf")) {
+			if (++i == argc)
+				usage ();
+			path_dhclient_conf = argv [i];
 			no_dhclient_conf = 1;
-                } else if (!strcmp (argv [i], "-lf")) {
-                        if (++i == argc)
-                                usage ();
-                        path_dhclient_db = argv [i];
+		} else if (!strcmp (argv [i], "-lf")) {
+			if (++i == argc)
+				usage ();
+			path_dhclient_db = argv [i];
 			no_dhclient_db = 1;
 		} else if (!strcmp (argv [i], "-sf")) {
 			if (++i == argc)
 				usage ();
-                        path_dhclient_script = argv [i];
+			path_dhclient_script = argv [i];
 			no_dhclient_script = 1;
 		} else if (!strcmp (argv [i], "-1")) {
 			onetry = 1;
@@ -208,7 +211,7 @@ main(int argc, char **argv) {
 			nowait = 1;
 		} else if (!strcmp (argv [i], "-n")) {
 			/* do not start up any interfaces */
-			interfaces_requested = 1;
+			interfaces_requested = -1;
 		} else if (!strcmp (argv [i], "-w")) {
 			/* do not exit if there are no broadcast interfaces. */
 			persist = 1;
@@ -223,18 +226,27 @@ main(int argc, char **argv) {
 			tmp -> next = client_env;
 			client_env = tmp;
 			client_env_count++;
+		} else if (!strcmp(argv[i], "-S")) {
+			if (local_family_set && (local_family == AF_INET)) {
+				usage ();
+			}
+			local_family_set = 1;
+			local_family = AF_INET6;
+			stateless = 1;
 		} else if (!strcmp(argv[i], "-v")) {
 			quiet = 0;
 		} else if (!strcmp (argv [i], "--version")) {
 			log_info ("isc-dhclient-%s", PACKAGE_VERSION);
 			exit (0);
- 		} else if (argv [i][0] == '-') {
- 		    usage ();
+		} else if (argv [i][0] == '-') {
+		    usage ();
+		} else if (interfaces_requested < 0) {
+		    usage ();
 		} else {
- 		    struct interface_info *tmp = (struct interface_info *)0;
+		    struct interface_info *tmp = (struct interface_info *)0;
 		    status = interface_allocate (&tmp, MDL);
- 		    if (status != ISC_R_SUCCESS)
- 			log_fatal ("Can't record interface %s:%s",
+		    if (status != ISC_R_SUCCESS)
+			log_fatal ("Can't record interface %s:%s",
 				   argv [i], isc_result_totext (status));
 		    if (strlen(argv[i]) >= sizeof(tmp->name))
 			    log_fatal("%s: interface name too long (is %ld)",
@@ -246,9 +258,9 @@ main(int argc, char **argv) {
 			    interface_dereference (&interfaces, MDL);
 		    }
 		    interface_reference (&interfaces, tmp, MDL);
- 		    tmp -> flags = INTERFACE_REQUESTED;
-		    interfaces_requested = 1;
- 		}
+		    tmp -> flags = INTERFACE_REQUESTED;
+		    interfaces_requested++;
+		}
 	}
 
 	if (!no_dhclient_conf && (s = getenv ("PATH_DHCLIENT_CONF"))) {
@@ -289,7 +301,7 @@ main(int argc, char **argv) {
 		if (path_dhclient_db == NULL)
 			log_fatal("%s: %s", path, strerror(errno));
 	}
- 
+
 	if (path_dhclient_script[0] != '/') {
 		char *path = dmalloc(PATH_MAX, MDL);
 		if (path == NULL)
@@ -298,7 +310,7 @@ main(int argc, char **argv) {
 		if (path_dhclient_script == NULL)
 			log_fatal("%s: %s", path, strerror(errno));
 	}
- 
+
 	/* first kill off any currently running client */
 	if (release_mode || exit_mode) {
 		FILE *pidfd;
@@ -368,6 +380,15 @@ main(int argc, char **argv) {
 
 	inaddr_any.s_addr = INADDR_ANY;
 
+	/* Stateless special case. */
+	if (stateless) {
+		if (release_mode || (interfaces_requested != 1)) {
+			usage ();
+		}
+		run_stateless (exit_mode);
+		return 0;
+	}
+
 	/* Discover all the network interfaces. */
 	discover_interfaces (DISCOVER_UNCONFIGURED);
 
@@ -404,7 +425,7 @@ main(int argc, char **argv) {
 		for (ip = interfaces; ip; ip = ip -> next) {
 			/* If interfaces were specified, don't configure
 			   interfaces that weren't specified! */
-			if (interfaces_requested &&
+			if ((interfaces_requested > 0) &&
 			    ((ip -> flags & (INTERFACE_REQUESTED |
 					     INTERFACE_AUTOMATIC)) !=
 			     INTERFACE_REQUESTED))
@@ -427,7 +448,7 @@ main(int argc, char **argv) {
 	   are relevant should be running, so now we once again call
 	   discover_interfaces(), and this time ask it to actually set
 	   up the interfaces. */
-	discover_interfaces (interfaces_requested
+	discover_interfaces (interfaces_requested != 0
 			     ? DISCOVER_REQUESTED
 			     : DISCOVER_RUNNING);
 
@@ -463,13 +484,13 @@ main(int argc, char **argv) {
 		for (ip = interfaces ; ip != NULL ; ip = ip->next) {
 			for (client = ip->client ; client != NULL ;
 			     client = client->next) {
-                                if (release_mode) {
-                                        start_release6(client);
-                                        continue;
-                                } else if (exit_mode) {
-                                        unconfigure6(client, "STOP6");
-                                        continue;
-                                }
+				if (release_mode) {
+					start_release6(client);
+					continue;
+				} else if (exit_mode) {
+					unconfigure6(client, "STOP6");
+					continue;
+				}
 
 				/* If we have a previous binding, Confirm
 				 * that we can (or can't) still use it.
@@ -481,16 +502,16 @@ main(int argc, char **argv) {
 					start_init6(client);
 			}
 		}
-	} else 
+	} else
 #endif /* DHCPv6 */
 	{
 		for (ip = interfaces ; ip ; ip = ip->next) {
 			ip->flags |= INTERFACE_RUNNING;
 			for (client = ip->client ; client ;
 			     client = client->next) {
-                                if (exit_mode)
-                                        state_stop(client);
-                                else if (release_mode)
+				if (exit_mode)
+					state_stop(client);
+				else if (release_mode)
 					do_release(client);
 				else {
 					client->state = S_INIT;
@@ -575,14 +596,96 @@ static void usage ()
 
 	log_error ("Usage: dhclient %s %s",
 #ifdef DHCPv6
-                   "[-4|-6] [-1dvrx] [-nw] [-p <port>]",
+		   "[-4|-6] [-S1dvrx] [-nw] [-p <port>]",
 #else /* DHCPv6 */
-                   "[-1dvrx] [-nw] [-p <port>]",
+		   "[-1dvrx] [-nw] [-p <port>]",
 #endif /* DHCPv6 */
 		   "[-s server]");
 	log_error ("                [-cf config-file] [-lf lease-file]%s",
 		   "[-pf pid-file] [-e VAR=val]");
 	log_fatal ("                [-sf script-file] [interface]");
+}
+
+void run_stateless(int exit_mode)
+{
+	struct client_state *client;
+	omapi_object_t *listener;
+	isc_result_t result;
+
+	/* Discover the network interface. */
+	discover_interfaces(DISCOVER_REQUESTED);
+
+	if (!interfaces)
+		usage();
+
+	/* Parse the dhclient.conf file. */
+	read_client_conf();
+
+	/* Parse the lease database. */
+	read_client_leases();
+
+	/* Establish a default DUID. */
+	if (default_duid.len == 0) {
+		if (default_duid.buffer != NULL)
+			data_string_forget(&default_duid, MDL);
+
+		form_duid(&default_duid, MDL);
+	}
+
+	/* Start a configuration state machine. */
+	for (client = interfaces->client ;
+	     client != NULL ;
+	     client = client->next) {
+		if (exit_mode) {
+			unconfigure6(client, "STOP6");
+			continue;
+		}
+		start_info_request6(client);
+	}
+	if (exit_mode)
+		return;
+
+	/* Start up a listener for the object management API protocol. */
+	if (top_level_config.omapi_port != -1) {
+		listener = (omapi_object_t *)0;
+		result = omapi_generic_new(&listener, MDL);
+		if (result != ISC_R_SUCCESS)
+			log_fatal("Can't allocate new generic object: %s\n",
+				  isc_result_totext(result));
+		result = omapi_protocol_listen(listener,
+					       (unsigned)
+					       top_level_config.omapi_port,
+					       1);
+		if (result != ISC_R_SUCCESS)
+			log_fatal("Can't start OMAPI protocol: %s",
+				  isc_result_totext(result));
+	}
+
+	/* Set up the packet handler... */
+	dhcpv6_packet_handler = do_packet6;
+
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
+	dmalloc_cutoff_generation = dmalloc_generation;
+	dmalloc_longterm = dmalloc_outstanding;
+	dmalloc_outstanding = 0;
+#endif
+
+	/* If we're not supposed to wait before getting the address,
+	   don't. */
+	if (nowait)
+		go_daemon();
+
+	/* If we're not going to daemonize, write the pid file
+	   now. */
+	if (no_daemon || nowait)
+		write_client_pid_file();
+
+	/* Start dispatching packets and timeouts... */
+	dispatch();
+
+	/*NOTREACHED*/
+	return;
 }
 
 isc_result_t find_class (struct class **c,
@@ -619,7 +722,7 @@ int find_subnet (struct subnet **sp,
 }
 
 /* Individual States:
- * 
+ *
  * Each routine is called from the dhclient_state_machine() in one of
  * these conditions:
  * -> entering INIT state
@@ -781,7 +884,7 @@ void state_selecting (cpp)
 
 	/* Add an immediate timeout to send the first DHCPREQUEST packet. */
 	send_request (client);
-}  
+}
 
 /* state_requesting is called when we receive a DHCPACK message after
    having sent out one or more DHCPREQUEST packets. */
@@ -794,7 +897,7 @@ void dhcpack (packet)
 	struct client_lease *lease;
 	struct option_cache *oc;
 	struct data_string ds;
-	
+
 	/* If we're not receptive to an offer right now, or if the offer
 	   has an unrecognizable transaction id, then just drop it. */
 	for (client = ip -> client; client; client = client -> next) {
@@ -854,7 +957,7 @@ void dhcpack (packet)
 	if (!client -> new -> expiry) {
 		log_error ("no expiry time on offered lease.");
 		/* XXX this is going to be bad - if this _does_
-		   XXX happen, we should probably dynamically 
+		   XXX happen, we should probably dynamically
 		   XXX disqualify the DHCP server that gave us the
 		   XXX bad packet from future selections and
 		   XXX then go back into the init state. */
@@ -999,7 +1102,7 @@ void bind_lease (client)
 	if (client->config->do_forward_update)
 		dhclient_schedule_updates(client, &client->active->address,
 					  1);
-}  
+}
 
 /* state_bound is called when we've successfully bound to a particular
    lease, but the renewal time on that lease has expired.   We are
@@ -1043,7 +1146,7 @@ void state_bound (cpp)
 
 	/* Send the first packet immediately. */
 	send_request (client);
-}  
+}
 
 /* state_stop is called when we've been told to shut down.   We unconfigure
    the interfaces, and then stop operating until told otherwise. */
@@ -1067,7 +1170,7 @@ void state_stop (cpp)
 			script_write_params(client, "alias_", client->alias);
 		script_go(client);
 	}
-}  
+}
 
 int commit_leases ()
 {
@@ -1119,7 +1222,7 @@ void bootp (packet)
 			return;
 		}
 	}
-	
+
 	dhcpoffer (packet);
 
 }
@@ -1175,7 +1278,7 @@ void dhcp (packet)
 }
 
 #ifdef DHCPv6
-void 
+void
 dhcpv6(struct packet *packet) {
 	struct iaddrmatchlist *ap;
 	struct client_state *client;
@@ -1201,8 +1304,11 @@ dhcpv6(struct packet *packet) {
 	/* Screen out nonsensical messages. */
 	switch(packet->dhcpv6_msg_type) {
 	      case DHCPV6_ADVERTISE:
-	      case DHCPV6_REPLY:
 	      case DHCPV6_RECONFIGURE:
+		if (stateless)
+		  return;
+	      /* Falls through */
+	      case DHCPV6_REPLY:
 		log_info("RCV: %s message on %s from %s.",
 			 dhcpv6_type_names[packet->dhcpv6_msg_type],
 			 packet->interface->name, piaddr(packet->client_addr));
@@ -1239,10 +1345,10 @@ void dhcpoffer (packet)
 	const char *name = packet -> packet_type ? "DHCPOFFER" : "BOOTREPLY";
 	char obuf [1024];
 	struct timeval tv;
-	
+
 #ifdef DEBUG_PACKET
 	dump_packet (packet);
-#endif	
+#endif
 
 	/* Find a client state that matches the xid... */
 	for (client = ip -> client; client; client = client -> next)
@@ -1482,7 +1588,7 @@ struct client_lease *packet_to_lease (packet, client)
 				     (struct group *)0);
 
 	return lease;
-}	
+}
 
 void dhcpnak (packet)
 	struct packet *packet;
@@ -1592,7 +1698,7 @@ void send_discover (cpp)
 		if (client -> medium) {
 			client -> medium = client -> medium -> next;
 			increase = 0;
-		} 
+		}
 		if (!client -> medium) {
 			if (fail)
 				log_fatal ("No valid media types for %s!",
@@ -1601,7 +1707,7 @@ void send_discover (cpp)
 				client -> config -> media;
 			increase = 1;
 		}
-			
+
 		log_info ("Trying medium \"%s\" %d",
 			  client -> medium -> string, increase);
 		script_init (client, "MEDIUM", client -> medium);
@@ -1628,7 +1734,7 @@ void send_discover (cpp)
 				 + (random() % client->config->backoff_cutoff);
 	} else if (!client->interval)
 		client->interval = client->config->initial_interval;
-		
+
 	/* If the backoff would take us to the panic timeout, just use that
 	   as the interval. */
 	if (cur_time + client -> interval >
@@ -1853,7 +1959,7 @@ void send_request (cpp)
 		client -> interval += ((random () >> 2) %
 				       (2 * client -> interval));
 	}
-	
+
 	/* Don't backoff past cutoff. */
 	if (client -> interval >
 	    client -> config -> backoff_cutoff)
@@ -2191,7 +2297,7 @@ void make_request (client, lease)
 			      (struct lease *)0, client,
 			      /* maximum packet size */1500,
 			      (struct option_state *)0,
-			      client -> sent_options, 
+			      client -> sent_options,
 			      /* scope */ &global_scope,
 			      /* overload */ 0,
 			      /* terminate */0,
@@ -2467,7 +2573,7 @@ write_options(struct client_state *client, struct option_state *options,
 
 	for (i = 0; i < options->universe_count; i++) {
 		option_space_foreach(NULL, NULL, client, NULL, options,
-				     &global_scope, universes[i], 
+				     &global_scope, universes[i],
 				     (char *)preamble, write_lease_option);
 	}
 }
@@ -2794,7 +2900,7 @@ void script_init (client, reason, medium)
 		}
 		client -> env = (struct string_list *)0;
 		client -> envc = 0;
-		
+
 		if (client -> interface) {
 			client_envadd (client, "", "interface", "%s",
 				       client -> interface -> name);
@@ -3048,7 +3154,7 @@ int dhcp_option_ev_name (buf, buflen, option)
 	if (option -> universe != &dhcp_universe) {
 		s = option -> universe -> name;
 		i = 0;
-	} else { 
+	} else {
 		s = option -> name;
 		i = 1;
 	}
@@ -3104,9 +3210,9 @@ void go_daemon ()
 	pid = setsid ();
 
 	/* Close standard I/O descriptors. */
-        close(0);
-        close(1);
-        close(2);
+	close(0);
+	close(1);
+	close(2);
 
 	/* Reopen them on /dev/null. */
 	open("/dev/null", O_RDWR);
@@ -3115,7 +3221,7 @@ void go_daemon ()
 
 	write_client_pid_file ();
 
-        chdir("/");
+	chdir("/");
 }
 
 void write_client_pid_file ()
@@ -3172,7 +3278,7 @@ void client_location_changed ()
 	}
 }
 
-void do_release(client) 
+void do_release(client)
 	struct client_state *client;
 {
 	struct data_string ds;
@@ -3209,10 +3315,10 @@ void do_release(client)
 			client -> destination = iaddr_broadcast;
 		client -> first_sending = cur_time;
 		client -> interval = client -> config -> initial_interval;
-	
+
 		/* Zap the medium list... */
 		client -> medium = (struct string_list *)0;
-	
+
 		/* Send out the first and only DHCPRELEASE packet. */
 		send_release (client);
 
@@ -3318,8 +3424,8 @@ isc_result_t dhclient_interface_startup_hook (struct interface_info *interface)
 					     ip -> client -> alias);
 		script_go (ip -> client);
 	}
-	
-	discover_interfaces (interfaces_requested
+
+	discover_interfaces (interfaces_requested != 0
 			     ? DISCOVER_REQUESTED
 			     : DISCOVER_RUNNING);
 
@@ -3501,7 +3607,7 @@ isc_result_t client_dns_update (struct client_state *client, int addp,
 					   (struct option_state *)0,
 					   &global_scope, oc, MDL))
 		return ISC_R_SUCCESS;
-	
+
 	/* If we set the "server, please update" flag, or didn't set it
 	   to false, don't do the update. */
 	if (!(oc = lookup_option (&fqdn_universe, client -> sent_options,
@@ -3512,12 +3618,12 @@ isc_result_t client_dns_update (struct client_state *client, int addp,
 					   (struct option_state *)0,
 					   &global_scope, oc, MDL))
 		return ISC_R_SUCCESS;
-	
+
 	/* If no FQDN option was supplied, don't do the update. */
 	memset (&ddns_fwd_name, 0, sizeof ddns_fwd_name);
 	if (!(oc = lookup_option (&fqdn_universe, client -> sent_options,
 				  FQDN_FQDN)) ||
-	    !evaluate_option_cache (&ddns_fwd_name, (struct packet *)0, 
+	    !evaluate_option_cache (&ddns_fwd_name, (struct packet *)0,
 				    (struct lease *)0, client,
 				    client -> sent_options,
 				    (struct option_state *)0,
@@ -3592,7 +3698,7 @@ isc_result_t client_dns_update (struct client_state *client, int addp,
 						&ddns_dhcid);
 	} else
 		rcode = ISC_R_FAILURE;
-	
+
 	data_string_forget (&ddns_fwd_name, MDL);
 	data_string_forget (&ddns_dhcid, MDL);
 	return rcode;
