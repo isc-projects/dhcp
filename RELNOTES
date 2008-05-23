@@ -83,6 +83,9 @@ work on other platforms. Please report any problems and suggested fixes to
   on the DHCPv6 ORO.  This resolves a bug where VSIO options were placed
   in IA_NA encapsulated options fields.
 
+- Integrated client with stateless, temporary address and prefix delegation
+  support.
+
 			Changes since 4.0.0 (new features)
 
 - Added DHCPv6 rapid commit support.

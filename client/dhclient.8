@@ -1,4 +1,4 @@
-.\"	$Id: dhclient.8,v 1.27 2008/01/24 02:43:04 each Exp $
+.\"	$Id: dhclient.8,v 1.28 2008/05/23 13:56:07 fdupont Exp $
 .\"
 .\" Copyright (c) 2004,2007-2008 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
@@ -35,6 +35,27 @@ dhclient - Dynamic Host Configuration Protocol Client
 .B -6
 ]
 [
+.B -S
+]
+[
+.B -N
+[
+.B -N...
+]
+]
+[
+.B -T
+[
+.B -T...
+]
+]
+[
+.B -P
+[
+.B -P...
+]
+]
+[
 .B -p
 .I port
 ]
@@ -53,8 +74,7 @@ dhclient - Dynamic Host Configuration Protocol Client
 ]
 [
 .B -r
-]
-[
+|
 .B -x
 ]
 [
@@ -123,7 +143,23 @@ DHCPv4 protocol to obtain an IPv4 address and configuration parameters.
 .PP
 If given the -6 command line argument, dhclient will use the DHCPv6
 protocol to obtain whatever IPv6 addresses are available along with
-configuration parameters.  Information-request is not yet supported.
+configuration parameters. But with
+.B -S
+it uses Information-request to get only (i.e., without address)
+stateless configuration parameters.
+.PP
+The default DHCPv6 behavior is modified too with
+.B -T
+which asks for IPv6 temporary addresses, one set per
+.B -T
+flag.
+.B -P
+enables the IPv6 prefix delegation.
+As temporary addresses or prefix delegation disables the normal
+address query,
+.B -N
+restores it. Note it is not recommended to mix queries of different types
+together, or even to share the lease file between them.
 .PP
 If given the --version command line argument, dhclient will print its
 version number and exit.
@@ -198,6 +234,7 @@ the server transmit these messages to some other address.   This can
 be specified with the 
 .B -s
 flag, followed by the IP address or domain name of the destination.
+This feature is not supported by DHCPv6.
 .PP
 For testing purposes, the giaddr field of all packets that the client
 sends can be set using the

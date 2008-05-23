@@ -242,6 +242,12 @@ if [ ${reason} = PREINIT6 ] ; then
   exit_with_hooks 0
 fi
 
+if [ x${old_ip6_prefix} != x ] || [ x${new_ip6_prefix} != x ] ; then
+    echo Prefix ${reason} old=${old_ip6_prefix} new=${new_ip6_prefix}
+
+    exit_with_hooks 0
+fi
+
 if [ ${reason} = BOUND6 ] ; then
   if [ x${new_ip6_address} = x ] || [ x${new_ip6_prefixlen} = x ] ; then
     exit_with_hooks 2;

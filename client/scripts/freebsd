@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: freebsd,v 1.21 2008/01/16 23:02:10 dhankins Exp $
+# $Id: freebsd,v 1.22 2008/05/23 13:56:07 fdupont Exp $
 #
 # $FreeBSD$
 
@@ -306,6 +306,12 @@ if [ ${reason} = PREINIT6 ] ; then
   exit_with_hooks 0
 fi
 
+if [ x${old_ip6_prefix} != x ] || [ x${new_ip6_prefix} != x ] ; then
+    echo Prefix ${reason} old=${old_ip6_prefix} new=${new_ip6_prefix}
+
+    exit_with_hooks 0
+fi
+
 if [ ${reason} = BOUND6 ] ; then
   if [ x${new_ip6_address} = x ] || [ x${new_ip6_prefixlen} = x ] ; then
     exit_with_hooks 2;
@@ -332,13 +338,11 @@ if [ ${reason} = RENEW6 ] || [ ${reason} = REBIND6 ] ; then
 fi
 
 if [ ${reason} = DEPREF6 ] ; then
-  if [ x${new_ip6_prefixlen} = x ] ; then
+  if [ x${new_ip6_address} = x ] ; then
     exit_with_hooks 2;
   fi
 
-  # XXX:
-  # There doesn't appear to be a way to update an addr to indicate
-  # preference.
+  ifconfig ${interface} inet6 ${new_ip6_address} deprecated
 
   exit_with_hooks 0
 fi
