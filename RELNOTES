@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-		            Version 4.1.0a1
-			    24 January 2008
+		            Version 4.1.0a2
+			      4 June 2008
 
 			     Release Notes
 
@@ -85,6 +85,9 @@ work on other platforms. Please report any problems and suggested fixes to
 
 - Integrated client with stateless, temporary address and prefix delegation
   support.
+
+- A double-dereference in dhclient transmission of DHCPDECLINEs was
+  repaired.
 
 			Changes since 4.0.0 (new features)
 
