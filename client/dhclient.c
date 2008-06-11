@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.143.2.9 2008/01/22 19:02:50 dhankins Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.143.2.10 2008/06/11 20:20:31 dhankins Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2099,12 +2099,13 @@ void make_decline (client, lease)
 
 	struct option_state *options = (struct option_state *)0;
 
+	/* Create the options cache. */
 	oc = lookup_option (&dhcp_universe, lease -> options,
 			    DHO_DHCP_SERVER_IDENTIFIER);
 	make_client_options (client, lease, &decline, oc,
 			     &lease -> address, (u_int32_t *)0, &options);
 
-	/* Set up the option buffer... */
+	/* Consume the options cache into the option buffer. */
 	memset (&client -> packet, 0, sizeof (client -> packet));
 	client -> packet_length =
 		cons_options ((struct packet *)0, &client -> packet,
@@ -2112,10 +2113,12 @@ void make_decline (client, lease)
 			      (struct option_state *)0, options,
 			      &global_scope, 0, 0, 0, (struct data_string *)0,
 			      client -> config -> vendor_space_name);
+
+	/* Destroy the options cache. */
 	option_state_dereference (&options, MDL);
+
 	if (client -> packet_length < BOOTP_MIN_LEN)
 		client -> packet_length = BOOTP_MIN_LEN;
-	option_state_dereference (&options, MDL);
 
 	client -> packet.op = BOOTREQUEST;
 	client -> packet.htype = client -> interface -> hw_address.hbuf [0];
