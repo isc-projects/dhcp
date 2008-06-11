@@ -103,7 +103,7 @@
 /* Define to any value to include Ari's PARANOIA patch. */
 #undef PARANOIA
 
-/* The size of `struct iaddr *', as computed by sizeof. */
+/* The size of a `struct iaddr *', as computed by sizeof. */
 #undef SIZEOF_STRUCT_IADDR_P
 
 /* Define to 1 if you have the ANSI C header files. */
