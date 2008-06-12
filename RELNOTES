@@ -91,6 +91,8 @@ work on other platforms. Please report any problems and suggested fixes to
 
 - Fix handling of format code 'Z'.
 
+- Support "-1" argument in DHCPv6.
+
 			Changes since 4.0.0 (new features)
 
 - Added DHCPv6 rapid commit support.

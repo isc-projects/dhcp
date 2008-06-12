@@ -110,6 +110,7 @@ static void script_write_params6(struct client_state *client,
 				 struct option_state *options);
 static isc_boolean_t active_prefix(struct client_state *client);
 
+extern int onetry;
 extern int stateless;
 
 /*
@@ -1316,7 +1317,11 @@ start_init6(struct client_state *client)
 	client->IRT = SOL_TIMEOUT * 100;
 	client->MRT = SOL_MAX_RT * 100;
 	client->MRC = 0;
-	client->MRD = 0;
+	/* Default is 0 (no max) but -1 changes this. */
+	if (!onetry)
+		client->MRD = 0;
+	else
+		client->MRD = client->config->timeout;
 
 	dhc6_retrans_init(client);
 
@@ -1368,7 +1373,11 @@ start_info_request6(struct client_state *client)
 	client->IRT = INF_TIMEOUT * 100;
 	client->MRT = INF_MAX_RT * 100;
 	client->MRC = 0;
-	client->MRD = 0;
+	/* Default is 0 (no max) but -1 changes this. */
+	if (!onetry)
+		client->MRD = 0;
+	else
+		client->MRD = client->config->timeout;
 
 	dhc6_retrans_init(client);
 
@@ -1490,8 +1499,17 @@ do_init6(void *input)
 		elapsed.tv_sec -= 1;
 		elapsed.tv_usec += 1000000;
 	}
+	/* Check if finished (-1 argument). */
 	if ((client->MRD != 0) && (elapsed.tv_sec > client->MRD)) {
 		log_info("Max retransmission duration exceeded.");
+		client->state = S_STOPPED;
+		if (client->active_lease != NULL) {
+			dhc6_lease_destroy(&client->active_lease, MDL);
+			client->active_lease = NULL;
+		}
+		/* Stop if and only if this is the last client. */
+		if (stopping_finished())
+			exit(2);
 		return;
 	}
 
@@ -1901,9 +1919,10 @@ do_info_request6(void *input)
 		elapsed.tv_sec -= 1;
 		elapsed.tv_usec += 1000000;
 	}
+	/* Check if finished (-1 argument). */
 	if ((client->MRD != 0) && (elapsed.tv_sec > client->MRD)) {
 		log_info("Max retransmission duration exceeded.");
-		return;
+		exit(2);
 	}
 
 	memset(&ds, 0, sizeof(ds));
