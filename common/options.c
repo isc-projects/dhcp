@@ -1631,6 +1631,7 @@ format_min_length(format, oc)
 		    case 'x': /* "Hex" */
 		    case 'A': /* Array of all that precedes. */
 		    case 'a': /* Array of preceding symbol. */
+		    case 'Z': /* nothing. */
 			return min_len;
 
 		    case 'c': /* Compress flag for D atom. */
@@ -1773,10 +1774,12 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 		      case 'b':
 		      case 'B':
 		      case 'f':
+		      case 'F':
 			hunksize++;
 			hunkinc = 1;
 			break;
 		      case 'e':
+		      case 'Z':
 			break;
 		      case 'o':
 			opthunk += hunkinc;
@@ -1989,11 +1992,19 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 			      case 'B':
 				sprintf (op, "%d", *dp++);
 				break;
+			      case 'X':
 			      case 'x':
 				sprintf (op, "%x", *dp++);
 				break;
 			      case 'f':
 				strcpy (op, *dp++ ? "true" : "false");
+				break;
+			      case 'F':
+				strcpy (op, "true");
+				break;
+			      case 'e':
+			      case 'Z':
+				*op = '\0';
 				break;
 			      default:
 				log_error ("Unexpected format code %c",

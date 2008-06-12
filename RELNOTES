@@ -89,6 +89,8 @@ work on other platforms. Please report any problems and suggested fixes to
 - A double-dereference in dhclient transmission of DHCPDECLINEs was
   repaired.
 
+- Fix handling of format code 'Z'.
+
 			Changes since 4.0.0 (new features)
 
 - Added DHCPv6 rapid commit support.
