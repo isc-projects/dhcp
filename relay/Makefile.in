@@ -50,7 +50,7 @@ PROGRAMS = $(sbin_PROGRAMS)
 am_dhcrelay_OBJECTS = dhcrelay.$(OBJEXT)
 dhcrelay_OBJECTS = $(am_dhcrelay_OBJECTS)
 dhcrelay_DEPENDENCIES = ../common/libdhcp.a ../omapip/libomapi.a \
-	../dst/libdst.a
+ 	../dst/libdst.a ../minires/libres.a
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)/includes
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -143,7 +143,7 @@ sysconfdir = @sysconfdir@
 target_alias = @target_alias@
 AM_CPPFLAGS = -DLOCALSTATEDIR='"@localstatedir@"'
 dhcrelay_SOURCES = dhcrelay.c
-dhcrelay_LDADD = ../common/libdhcp.a ../omapip/libomapi.a ../dst/libdst.a
+dhcrelay_LDADD = ../common/libdhcp.a ../omapip/libomapi.a ../dst/libdst.a ../minires/libres.a
 man_MANS = dhcrelay.8
 EXTRA_DIST = $(man_MANS)
 all: all-am

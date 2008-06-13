@@ -1141,6 +1141,9 @@ struct interface_info {
 #define INTERFACE_REQUESTED 1
 #define INTERFACE_AUTOMATIC 2
 #define INTERFACE_RUNNING 4
+#define INTERFACE_DOWNSTREAM 8
+#define INTERFACE_UPSTREAM 16
+#define INTERFACE_STREAMS (INTERFACE_DOWNSTREAM | INTERFACE_UPSTREAM)
 
 	/* Only used by DHCP client code. */
 	struct client_state *client;
@@ -1323,6 +1326,10 @@ typedef unsigned char option_mask [16];
 
 #ifndef _PATH_DHCRELAY_PID
 #define _PATH_DHCRELAY_PID	LOCALSTATEDIR"/run/dhcrelay.pid"
+#endif
+
+#ifndef _PATH_DHCRELAY6_PID
+#define _PATH_DHCRELAY6_PID	LOCALSTATEDIR"/run/dhcrelay6.pid"
 #endif
 
 #ifndef DHCPD_LOG_FACILITY
@@ -2645,19 +2652,6 @@ void parse_string_list PROTO ((struct parse *, struct string_list **, int));
 int parse_ip_addr PROTO ((struct parse *, struct iaddr *));
 int parse_ip_addr_with_subnet(struct parse *, struct iaddrmatch *);
 void parse_reject_statement PROTO ((struct parse *, struct client_config *));
-
-/* dhcrelay.c */
-void relay PROTO ((struct interface_info *, struct dhcp_packet *, unsigned,
-		   unsigned int, struct iaddr, struct hardware *));
-int strip_relay_agent_options PROTO ((struct interface_info *,
-				      struct interface_info **,
-				      struct dhcp_packet *, unsigned));
-int find_interface_by_agent_option PROTO ((struct dhcp_packet *,
-					   struct interface_info **,
-					   u_int8_t *, int));
-int add_relay_agent_options PROTO ((struct interface_info *,
-				    struct dhcp_packet *,
-				    unsigned, struct in_addr));
 
 /* icmp.c */
 OMAPI_OBJECT_ALLOC_DECL (icmp_state, struct icmp_state, dhcp_type_icmp)

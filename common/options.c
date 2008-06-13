@@ -3806,14 +3806,14 @@ do_packet6(struct interface_info *interface, const char *packet,
 	}
 
 	/* IPv4 information, already set to 0 */
-	/* decoded_packet->raw = NULL; */
-	/* decoded_packet->packet_length = 0; */
 	/* decoded_packet->packet_type = 0; */
 	/* memset(&decoded_packet->haddr, 0, sizeof(decoded_packet->haddr)); */
 	/* decoded_packet->circuit_id = NULL; */
 	/* decoded_packet->circuit_id_len = 0; */
 	/* decoded_packet->remote_id = NULL; */
 	/* decoded_packet->remote_id_len = 0; */
+	decoded_packet->raw = (struct dhcp_packet *) packet;
+	decoded_packet->packet_length = (unsigned) len;
 	decoded_packet->client_port = from_port;
 	decoded_packet->client_addr = *from;
 	interface_reference(&decoded_packet->interface, interface, MDL);

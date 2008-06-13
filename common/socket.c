@@ -95,6 +95,40 @@ void if_reinitialize_receive (info)
 #if defined (USE_SOCKET_SEND) || \
 	defined (USE_SOCKET_RECEIVE) || \
 		defined (USE_SOCKET_FALLBACK)
+#ifdef DHCPv6
+/* Get the best (i.e., global or at least site-local) address
+   of the interface. */
+static isc_result_t
+get_ifaddr6(struct interface_info *info, struct in6_addr *ifaddr6) {
+	int i;
+	struct in6_addr *a, *ba = NULL;
+
+	for (i = 0; i < info->v6address_count; i++) {
+		a = &info->v6addresses[i];
+		if (IN6_IS_ADDR_UNSPECIFIED(a) ||
+		    IN6_IS_ADDR_LOOPBACK(a) ||
+		    IN6_IS_ADDR_MULTICAST(a) ||
+		    IN6_IS_ADDR_LINKLOCAL(a) ||
+		    IN6_IS_ADDR_V4MAPPED(a))
+			continue;
+
+		if (ba == NULL)
+			ba = a;
+
+		if (!IN6_IS_ADDR_SITELOCAL(a)) {
+                        ba = a;
+			break;
+                }
+	}
+
+	if (ba == NULL)
+		return ISC_R_NOTFOUND;
+
+	*ifaddr6 = *ba;
+	return ISC_R_SUCCESS;
+}
+#endif /* DHCPv6 */
+
 /* Generic interface registration routine... */
 int
 if_register_socket(struct interface_info *info, int family, int do_multicast) {
@@ -128,8 +162,21 @@ if_register_socket(struct interface_info *info, int family, int do_multicast) {
 		memcpy(&addr->sin6_addr,
 		       &local_address6, 
 		       sizeof(addr->sin6_addr));
+#ifdef HAVE_SA_LEN
+		addr->sin6_len = sizeof(*addr);
+#endif
 		name_len = sizeof(*addr);
 		domain = PF_INET6;
+		if ((info->flags & INTERFACE_STREAMS) == INTERFACE_UPSTREAM) {
+			struct in6_addr ifaddr6;
+
+			do_multicast = 0;
+			if (get_ifaddr6(info, &ifaddr6) == ISC_R_SUCCESS) {
+				memcpy(&addr->sin6_addr,
+				       &ifaddr6,
+				       sizeof(addr->sin6_addr));
+			}
+		}
 	} else { 
 #else 
 	{
@@ -140,6 +187,9 @@ if_register_socket(struct interface_info *info, int family, int do_multicast) {
 		memcpy(&addr->sin_addr,
 		       &local_address,
 		       sizeof(addr->sin_addr));
+#ifdef HAVE_SA_LEN
+		addr->sin_len = sizeof(*addr);
+#endif
 		name_len = sizeof(*addr);
 		domain = PF_INET;
 	}
@@ -246,9 +296,19 @@ if_register_socket(struct interface_info *info, int family, int do_multicast) {
 				  All_DHCP_Servers);
 		}
 		mreq.ipv6mr_interface = if_nametoindex(info->name);
-		if (setsockopt(sock, IPPROTO_IPV6, IPV6_JOIN_GROUP, 
-			       &mreq, sizeof(mreq)) < 0) {
+		if (((info->flags & INTERFACE_DOWNSTREAM) == 0) &&
+		    (setsockopt(sock, IPPROTO_IPV6, IPV6_JOIN_GROUP,
+			       &mreq, sizeof(mreq)) < 0)) {
 			log_fatal("setsockopt: IPV6_JOIN_GROUP: %m");
+		}
+	}
+
+	if ((family == AF_INET6) &&
+	    ((info->flags & INTERFACE_UPSTREAM) != 0)) {
+		int hop_limit = 32;
+		if (setsockopt(sock, IPPROTO_IPV6, IPV6_MULTICAST_HOPS,
+			       &hop_limit, sizeof(int)) < 0) {
+			log_fatal("setsockopt: IPV6_MULTICAST_HOPS: %m");
 		}
 	}
 #endif /* DHCPv6 */

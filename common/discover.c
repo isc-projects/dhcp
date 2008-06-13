@@ -1215,7 +1215,8 @@ discover_interfaces(int state) {
 			if_register_send(tmp);
 #ifdef DHCPv6
 		} else {
-			if (state == DISCOVER_SERVER) { 
+			if ((state == DISCOVER_SERVER) ||
+			    (state == DISCOVER_RELAY)) {
 				if_register6(tmp, 1);
 			} else {
 				if_register6(tmp, 0);

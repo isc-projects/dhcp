@@ -27,7 +27,7 @@
 .\" see ``http://www.isc.org/isc''.  To learn more about Vixie
 .\" Enterprises, see ``http://www.vix.com''.
 .\"
-.\" $Id: dhcrelay.8,v 1.14 2007/05/19 19:16:26 dhankins Exp $
+.\" $Id: dhcrelay.8,v 1.15 2008/06/13 00:55:53 each Exp $
 .\"
 .TH dhcrelay 8
 .SH NAME
@@ -35,26 +35,14 @@ dhcrelay - Dynamic Host Configuration Protocol Relay Agent
 .SH SYNOPSIS
 .B dhcrelay
 [
+.B -4
+]
+[
+.B -dqaD
+]
+[
 .B -p
 .I port
-]
-[
-.B -d
-]
-[
-.B -q
-]
-[
-.B -i
-.I if0
-[
-.B ...
-.B -i
-.I ifN
-]
-]
-[
-.B -a
 ]
 [
 .B -c
@@ -65,9 +53,6 @@ dhcrelay - Dynamic Host Configuration Protocol Relay Agent
 .I length
 ]
 [
-.B -D
-]
-[
 .B -m
 .I append
 |
@@ -76,170 +61,172 @@ dhcrelay - Dynamic Host Configuration Protocol Relay Agent
 .I forward
 |
 .I discard
+]
+[
+.B -i
+.I interface0
+[
+.B ...
+.B -i
+.I interfaceN 
+]
 ]
 .I server0
 [
 .I ...serverN
 ]
+.PP
+.B dhcrelay -6
+[
+.B -dqI
+]
+[
+.B -p
+.I port
+]
+[
+.B -c
+.I count
+]
+.B -l
+.I lower0
+[
+.B ...
+.B -l
+.I lowerN
+]
+.B -u
+.I upper0 
+[
+.B ...
+.B -u
+.I upperN
+]
 .SH DESCRIPTION
 The Internet Systems Consortium DHCP Relay Agent, dhcrelay, provides a
 means for relaying DHCP and BOOTP requests from a subnet to which
-no DHCP server is directly connected to one or more DHCP servers on other
-subnets.
+no DHCP server is directly connected to one or more DHCP servers on
+other subnets.  It supports both DHCPv4/BOOTP and DHCPv6 protocols.
 .SH OPERATION
 .PP
-The DHCP Relay Agent listens for DHCP and BOOTP queries and responses.
-When a query is received from a client, dhcrelay forwards it to the
-list of DHCP servers specified on the command line.  When a reply is
-received from a server, it is broadcast or unicast (according to the
-relay agent's ability or the client's request) on the network from
-which the original request came.
+The DHCP Relay Agent listens for DHCPv4 or DHCPv6 queries from clients or
+other relay agents on one or more interfaces, passing them along to
+``upstream'' servers or relay agents as specified on the command line.
+When a reply is received from upstream, it is multicast or unicast back
+downstream to the source of the original request.
 .SH COMMAND LINE
 .PP
-The names of the network interfaces that dhcrelay should attempt to
-configure may be specified on the command line using the
-.B -i
-option.  If no interface names
-are specified on the command line dhcrelay will identify all network
-interfaces, elimininating non-broadcast interfaces if possible, and
-attempt to configure each interface.
-.PP
-The
-.B -i
-flag can be used to specify the network interfaces on which the relay
-agent should listen.   In general, it must listen not only on those
-network interfaces to which clients are attached, but also on those
-network interfaces to which the server (or the router that reaches the
-server) is attached.   However, in some cases it may be necessary to
-exclude some networks; in this case, you must list all those network
-interfaces that should \fInot\fR be excluded using the \fB-i\fR flag.
-.PP
-In some cases it
-.I is
-helpful for the relay agent to forward requests from networks on which
-a DHCP server is running to other DHCP servers.   This would be the
-case if two DHCP servers on different networks were being used to
-provide backup service for each other's networks.
-.PP
-If dhcrelay should listen and transmit on a port other than the
-standard (port 67), the
-.B -p
-flag may used.  It should be followed by the udp port number that
-dhcrelay should use.  This is mostly useful for debugging purposes.
-.PP
-Dhcrelay will normally run in the foreground until it has configured
-an interface, and then will revert to running in the background.
-To force dhcrelay to always run as a foreground process, the
-.B -d
-flag should be specified.  This is useful when running dhcrelay under
-a debugger, or when running it out of inittab on System V systems.
-.PP
-Dhcrelay will normally print its network configuration on startup.
-This can be unhelpful in a system startup script - to disable this
-behaviour, specify the
-.B -q
-flag.
-.SH RELAY AGENT INFORMATION OPTIONS
-If the
-.B -a
-flag is set the relay agent will append an agent option field to each
-request before forwarding it to the server.   Agent option fields in
-responses sent from servers to clients will be stripped before
-forwarding such responses back to the client.
-.PP
-The agent option field will contain two agent options: the Circuit ID
-suboption and the Remote ID suboption.  Currently, the Circuit ID will
-be the printable name of the interface on which the client request was
-received.  The client supports inclusion of a Remote ID suboption as
-well, but this is not used by default.
-.PP
-When forwarding packets, dhcrelay discards packets which have reached a hop
-count of 10.  If a lower or higher threshold (up to 255) is desired, depending
-on your environment, you can specify the max hop count threshold as a number
-following the
-.B -c
+\fIProtocol selection options:\fR
+.TP
+-6
+Run dhcrelay as a DHCPv6 relay agent.  Incompatible with the \fB-4\fR
 option.
+.TP
+-4
+Run dhcrelay as a DHCPv4/BOOTP relay agent.  This is the default mode of
+operation, so the argument is not necessary, but may be specified for
+clarity.  Incompatible with \fB-6\fR.
 .PP
-Relay Agent options are added to a DHCP packet without the knowledge
-of the DHCP client.   The client may have filled the DHCP packet
-option buffer completely, in which case there theoretically isn't any
-space to add Agent options.   However, the DHCP server may be able to
-handle a much larger packet than most DHCP clients would send.   The
-current Agent Options draft requires that the relay agent use a
-maximum packet size of 576 bytes.   
+\fISpecifying DHCPv4/BOOTP servers\fR
 .PP
-It is recommended that with the Internet Systems Consortium DHCP
-server, the maximum packet size be set to about 1400, allowing plenty
-of extra space in which the relay agent can put the agent option
-field, while still fitting into the Ethernet MTU size.  This can be
-done by specifying the
-.B -A
-flag, followed by the desired maximum packet size (e.g., 1400).
+In DHCPv4 mode, a list of one or more server addresses must be specified on
+the command line, to which DHCP/BOOTP queries should be relayed.
 .PP
-Note that this is reasonably safe to do even if the MTU between the
-server and the client is less than 1500, as long as the hosts on which
-the server and client are running support IP fragmentation (and they
-should).  With some knowledge as to how large the agent options might
-get in a particular configuration, this parameter can be tuned as
-finely as necessary.
+\fIOptions available for both DHCPv4 and DHCPv6:\fR
+.TP
+-c COUNT
+Maximum hop count.  When forwarding packets, dhcrelay discards packets
+which have reached a hop count of COUNT.  Default is 10.  Maximum is 255.
+.TP
+-d
+Force dhcrelay to run as a foreground process.  Useful when running
+dhcrelay under a debugger, or running out of inittab on System V systems.
+.TP
+-p PORT
+Listen and transmit on port PORT.  This is mostly useful for debugging
+purposes.  Default is port 67 for DHCPv4/BOOTP, or port 547 for DHCPv6.
+.TP
+-q
+Quiet mode.  Prevents dhcrelay6 from printing its network configuration
+on startup.
 .PP
-It is possible for a relay agent to receive a packet which already
-contains an agent option field.  If this packet does not have a giaddr
-set, the standard requires that the packet be discarded.
+\fIOptions available in DHCPv4 mode only:\fR
+.TP
+-a
+Append an agent option field to each request before forwarding it to
+the server.   Agent option fields in responses sent from servers to
+clients will be stripped before forwarding such responses back to the
+client.  The agent option field will contain two agent options: the Circuit
+ID suboption and the Remote ID suboption.  Currently, the Circuit ID will
+be the printable name of the interface on which the client request was
+received.  The client supports inclusion of a Remote ID suboption as well,
+but this is not used by default.
+.TP
+-A LENGTH
+Specify the maximum packet size to send to a DHCPv4/BOOTP server.  This
+might be done to allow sufficient space for addition of relay agent
+options while still fitting into the Ethernet MTU size.
+.TP
+-D
+Drop packets from upstream servers if they contain Relay Agent
+Information options that indicate they were generated in response to
+a query that came via a different relay agent.  If this option is not
+specified, such packets will be relayed anyway.
+.TP
+-i \fIifname\fR
+Listen for DHCPv4/BOOTP queries on interface \fIifname\fR.  Multiple
+interfaces may be specified by using more than one \fB-i\fR option.  If
+no interfaces are specified on the command line, dhcrelay will identify
+all network interfaces, eliminating non-broadcast interfaces if possible,
+and attempt to listen on all of them.
+.TP
+-m \fIappend\fR|\fIreplace\fR|\fIforward\fR|\fIdiscard\fR
+Control the handling of incoming DHCPv4 packets which already contain
+relay agent options.  If such a packet does not have \fIgiaddr\fR set in
+its header, the DHCP standard requires that the packet be discarded.
+However, if \fIgiaddr\fR is set, the relay agent may handle the situation
+in four ways:  It may \fIappend\fR its own set of relay options to the
+packet, leaving the supplied option field intact; it may \fIreplace\fR the
+existing agent option field; it may \fIforward\fR the packet unchanged; or,
+it may \fIdiscard\fR it.
 .PP
-If giaddr is set, the server may handle the situation in one of four
-ways: it may
-.I append
-its own set of relay options to the packet, leaving the
-supplied option field intact.   It may
-.I replace
-the existing agent option field.
-It may
-.I forward
-the packet unchanged.   Or, it may
-.I discard
-it.
+\fIOptions available in DHCPv6 mode only:\fR
+.TP
+-I
+Force use of the DHCPv6 Interface-ID option.  This option is
+automatically sent when there are two or more downstream interfaces
+in use, to disambiguate between them.  The \fB-I\fR option causes
+dhcrelay to send the option even if there is only one downstream
+interface.
+.TP
+-l [\fIaddress%\fR]\fIifname\fR[\fI#index\fR]
+Specifies the ``lower'' network interface for DHCPv6 relay mode: the
+interface on which queries will be received from clients or from other
+relay agents.  At least one \fB-l\fR option must be included in the command
+line when running in DHCPv6 mode.  The interface name \fIifname\fR is a
+mandatory parameter.  The link address can be specified by \fIaddress%\fR;
+if it isn't, dhcrelay will use the first non-link-local address configured
+on the interface.  The optional \fI#index\fR parameter specifies the
+interface index.
+.TP
+-u [\fIaddress%\fR]\fIifname\fR
+Specifies the ``upper'' network interface for DHCPv6 relay mode: the
+interface to which queries from clients and other relay agents should be
+forwarded.  At least one \fB-u\fR option must be included in the command
+line when running in DHCPv6 mode.  The interface name \fIifname\fR is a
+mandatory parameter. The destination unicast or multicast address can be
+specified by \fIaddress%\fR; if not specified, the relay agent will forward
+to the DHCPv6 \fIAll_DHCP_Relay_Agents_and_Servers\fR multicast address.
 .PP
-Which of these behaviours is followed by the Internet Systems
-Consortium DHCP Relay Agent may be configured with the
-.B -m
-flag, followed by one of the four keywords specified in
-.I italics
-above.
-.PP
-When the relay agent receives a reply from a server that it's supposed
-to forward to a client, and Relay Agent Information option processing
-is enabled, the relay agent scans the packet for Relay Agent
-Information options and removes them.   As it's scanning, if it finds
-a Relay Agent Information option field containing an Agent ID
-suboption that matches one of its IP addresses, that option is
-recognized as its own.   If no such option is found, the relay agent
-can either drop the packet, or relay it anyway.   If the
-.B -D
-option is specified, all packets that don't contain a match will be
-dropped.
-.SH SPECIFYING DHCP SERVERS
-The name or IP address of at least one DHCP server to which DHCP and
-BOOTP requests should be relayed must be specified on the command
-line.
+It is possible to specify the same interface with different addresses
+more than once, and even, when the system supports it, to use the same
+interface as both upper and lower interfaces.
 .SH SEE ALSO
-dhclient(8), dhcpd(8), RFC2132, RFC2131, draft-ietf-dhc-agent-options-03.txt.
+dhclient(8), dhcpd(8), RFC3315, RFC2132, RFC2131.
 .SH BUGS
-It should be possible for the user to define the Circuit ID and Remote
-ID values on a per-interface basis.
 .PP
-The relay agent should not relay packets received on a physical
-network to DHCP servers on the same physical network - if they do, the
-server will receive duplicate packets.   In order to fix this,
-however, the relay agent needs to be able to learn about the network
-topology, which requires that it have a configuration file.
-.SH AUTHOR
-.B dhcrelay(8)
-has been written for Internet Systems Consortium
-by Ted Lemon in cooperation with Vixie
-Enterprises.  To learn more about Internet Systems Consortium,
-see
-.B http://www.isc.org/isc.
-To learn more about Vixie
-Enterprises, see
-.B http://www.vix.com.
+Using the same interface on both upper and lower sides may cause
+loops, so when running this way, the maximum hop count should be set
+to a low value.
+.PP
+The loopback interface is not (yet) recognized as a valid interface.

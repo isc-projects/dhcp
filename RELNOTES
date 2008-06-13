@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
 		            Version 4.1.0a2
-			      4 June 2008
+			      12 June 2008
 
 			     Release Notes
 
@@ -15,7 +15,7 @@ in DHCP 4.0.x.  These include:
 
 - IA_TA address support
 
-- A basic DHCPv6 relay agent, dhcrelay6
+- A basic DHCPv6 relay agent
 
 - Basic and partial DHCPv6 leasequery support
 
@@ -92,6 +92,9 @@ work on other platforms. Please report any problems and suggested fixes to
 - Fix handling of format code 'Z'.
 
 - Support "-1" argument in DHCPv6.
+
+- Merge DHCPv6-only "dhcrelay6" into general-purpose "dhcrelay" (use
+  "-6" option to select DHCPv6 mode).
 
 			Changes since 4.0.0 (new features)
 
