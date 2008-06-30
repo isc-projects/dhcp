@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.95 2008/02/28 23:40:45 dhankins Exp $
+.\" $Id: dhcpd.conf.5,v 1.96 2008/06/30 17:37:47 jreed Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -831,7 +831,7 @@ Smaller values will cause more leases to transition states to balance
 the pools over time, higher values will decrease the amount of change
 (but may lead to pool starvation if there's a run on leases).
 .PP
-The \fBmax-lease-ownership\fR value permits a small (percenatge) skew
+The \fBmax-lease-ownership\fR value permits a small (percentage) skew
 in the lease balance of a percentage of the total number of free state
 leases.
 .PP
@@ -1489,7 +1489,7 @@ on that subnet.
 .PP
 The
 .I subnet6-number
-should be an IPv6 network identifer, specified as ip6-address/bits.
+should be an IPv6 network identifier, specified as ip6-address/bits.
 .PP
 .B The
 .I range
@@ -1525,7 +1525,7 @@ use CIDR notation, specified as ip6-address/bits. All IP addresses
 in the \fIrange6\fR should be in the subnet6 in which the
 \fIrange6\fR statement is declared.
 .PP
-The \fItemporay\fR variant makes the 64 bit prefix \fIaddress\fR available
+The \fItemporary\fR variant makes the 64 bit prefix \fIaddress\fR available
 for temporary (RFC 4941) addresses. A new address per prefix in the shared
 network is computed at each request with an IA_TA option. Release and Confirm
 ignores temporary addresses, Renew and Rebind are not defined and raise an
@@ -1617,7 +1617,7 @@ to identify hosts.
 Please be aware that
 .B only
 the \fIdhcp-client-identifier\fR option and the hardware address can be
-used to match a host declaration, or the \fIhost-identifer option\fR
+used to match a host declaration, or the \fIhost-identifier option\fR
 parameter for DHCPv6 servers.   For example, it is not possible to
 match a host declaration to a \fIhost-name\fR option.   This is
 because the host-name option cannot be guaranteed to be unique for any
@@ -1677,7 +1677,7 @@ An unknown client is simply a client that has no host declaration.
 The use of this option is now \fIdeprecated\fR.  If you are trying to
 restrict access on your network to known clients, you should use \fBdeny
 unknown-clients;\fR inside of your address pool, as described under the
-heading ALLOW AND DENY WITHIN POOL DECLARAIONS.
+heading ALLOW AND DENY WITHIN POOL DECLARATIONS.
 .PP
 .B The
 .I bootp
