@@ -410,10 +410,10 @@ main(int argc, char **argv) {
 
 	/* Set default port */
 	if (local_family == AF_INET) {
-		service_local = "dhcps";
-		service_remote = "dhcps";
+ 		service_local = "bootps";
+ 		service_remote = "bootpc";
 		port_local = htons(67);
-		port_remote = htons(67);
+ 		port_remote = htons(68);
 	}
 #ifdef DHCPv6
 	else {
