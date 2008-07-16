@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
 		            Version 4.0.1b1
-			   February 8, 2008
+			     July 16, 2008
 
 			     Release Notes
 
@@ -51,24 +51,6 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and
 may not work on other platforms. Please report any problems and 
 suggested fixes to <dhcp-users@isc.org>.
 
-
-			Changes since 4.0.1b1
-
-- Fixed a coredump when adding a class via OMAPI.
-
-- Check whether files are zero length before trying to parse them.
-
-- Shared network selection should be done from the innermost relay
-  valid link-address field, rather than the outermost.
-
-- A memory leak when using omapi has been fixed.
-
-- DHCPv6 vendor-class options (VSIO) are now only sent when they appear
-  on the DHCPv6 ORO.  This resolves a bug where VSIO options were placed
-  in IA_NA encapsulated options fields.
-
-- Fix handling of -A and -a flags in dhcrelay; it was failing to expand
-  packet size as needed to add relay agent options.
 
 			Changes since 4.0.0
 
@@ -147,6 +129,22 @@ suggested fixes to <dhcp-users@isc.org>.
 
 - A bug was fixed where the length of a hostname was miscalculated, so that
   hosts were given odd-looking domain names ("foo.bar.ba.example.com").
+
+- Fixed a coredump when adding a class via OMAPI.
+
+- Check whether files are zero length before trying to parse them.
+
+- Shared network selection should be done from the innermost relay
+  valid link-address field, rather than the outermost.
+
+- A memory leak when using omapi has been fixed.
+
+- DHCPv6 vendor-class options (VSIO) are now only sent when they appear
+  on the DHCPv6 ORO.  This resolves a bug where VSIO options were placed
+  in IA_NA encapsulated options fields.
+
+- Fix handling of -A and -a flags in dhcrelay; it was failing to expand
+  packet size as needed to add relay agent options.
 
                         Changes since 4.0.0rc1
 
