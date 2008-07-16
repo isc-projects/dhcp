@@ -96,6 +96,9 @@ work on other platforms. Please report any problems and suggested fixes to
 - Merge DHCPv6-only "dhcrelay6" into general-purpose "dhcrelay" (use
   "-6" option to select DHCPv6 mode).
 
+- Fix handling of -A and -a flags in dhcrelay; it was failing to expand
+  packet size as needed to add relay agent options.
+
 			Changes since 4.0.0 (new features)
 
 - Added DHCPv6 rapid commit support.

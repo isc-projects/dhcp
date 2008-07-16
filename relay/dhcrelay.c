@@ -62,6 +62,9 @@ int server_packets_relayed = 0;	/* Packets relayed from server to client. */
 int client_packet_errors = 0;	/* Errors sending packets to clients. */
 
 int add_agent_options = 0;	/* If nonzero, add relay agent options. */
+
+int agent_option_errors = 0;    /* Number of packets forwarded without
+				   agent options because there was no room. */
 int drop_agent_mismatches = 0;	/* If nonzero, drop server replies that
 				   don't have matching circuit-id's. */
 int corrupt_agent_options = 0;	/* Number of packets dropped because
@@ -80,7 +83,7 @@ isc_boolean_t use_if_id = ISC_FALSE;
 #endif
 
 	/* Maximum size of a packet with agent options added. */
-int dhcp_max_agent_option_packet_length = 576;
+int dhcp_max_agent_option_packet_length = DHCP_MTU_MIN;
 
 	/* What to do about packets we're asked to relay that
 	   already have a relay option: */
@@ -113,15 +116,15 @@ static void setup_streams(void);
 
 static void do_relay4(struct interface_info *, struct dhcp_packet *,
 	              unsigned int, unsigned int, struct iaddr,
-                      struct hardware *);
+		      struct hardware *);
 static int add_relay_agent_options(struct interface_info *,
-                                   struct dhcp_packet *, unsigned,
-                                   struct in_addr);
+				   struct dhcp_packet *, unsigned,
+				   struct in_addr);
 static int find_interface_by_agent_option(struct dhcp_packet *,
-                               struct interface_info **, u_int8_t *, int);
+			       struct interface_info **, u_int8_t *, int);
 static int strip_relay_agent_options(struct interface_info *,
-                                     struct interface_info **,
-                                     struct dhcp_packet *, unsigned);
+				     struct interface_info **,
+				     struct dhcp_packet *, unsigned);
 
 static char copyright[] = "Copyright 2004-2008 Internet Systems Consortium.";
 static char arr[] = "All rights reserved.";
@@ -157,29 +160,29 @@ main(int argc, char **argv) {
 	isc_result_t status;
 	struct servent *ent;
 	struct server_list *sp = NULL;
-        struct interface_info *tmp = NULL;
-        char *service_local, *service_remote;
-        u_int16_t port_local, port_remote;
+	struct interface_info *tmp = NULL;
+	char *service_local, *service_remote;
+	u_int16_t port_local, port_remote;
 	int no_daemon = 0, quiet = 0;
 	int fd;
 	int i;
 #ifdef DHCPv6
-        struct stream_list *sl = NULL;
+	struct stream_list *sl = NULL;
 	int local_family_set = 0;
 #endif
 
-        /* Make sure that file descriptors 0(stdin), 1,(stdout), and
-           2(stderr) are open. To do this, we assume that when we
-           open a file the lowest available file descriptor is used. */
-        fd = open("/dev/null", O_RDWR);
-        if (fd == 0)
-                fd = open("/dev/null", O_RDWR);
-        if (fd == 1)
-                fd = open("/dev/null", O_RDWR);
-        if (fd == 2)
-                log_perror = 0; /* No sense logging to /dev/null. */
-        else if (fd != -1)
-                close(fd);
+	/* Make sure that file descriptors 0(stdin), 1,(stdout), and
+	   2(stderr) are open. To do this, we assume that when we
+	   open a file the lowest available file descriptor is used. */
+	fd = open("/dev/null", O_RDWR);
+	if (fd == 0)
+		fd = open("/dev/null", O_RDWR);
+	if (fd == 1)
+		fd = open("/dev/null", O_RDWR);
+	if (fd == 2)
+		log_perror = 0; /* No sense logging to /dev/null. */
+	else if (fd != -1)
+		close(fd);
 
 	openlog("dhcrelay", LOG_NDELAY, LOG_DAEMON);
 
@@ -269,7 +272,13 @@ main(int argc, char **argv) {
 #endif
 			if (++i == argc)
 				usage();
+
 			dhcp_max_agent_option_packet_length = atoi(argv[i]);
+
+			if (dhcp_max_agent_option_packet_length > DHCP_MTU_MAX)
+				log_fatal("%s: packet length exceeds "
+					  "longest possible MTU\n",
+					  argv[i]);
 		} else if (!strcmp(argv[i], "-m")) {
 #ifdef DHCPv6
 			if (local_family_set && (local_family == AF_INET6)) {
@@ -313,13 +322,13 @@ main(int argc, char **argv) {
 			}
 			local_family_set = 1;
 			local_family = AF_INET6;
-                        if (downstreams != NULL)
-                                use_if_id = ISC_TRUE;
+			if (downstreams != NULL)
+				use_if_id = ISC_TRUE;
 			if (++i == argc)
 				usage();
-                        sl = parse_downstream(argv[i]);
-                        sl->next = downstreams;
-                        downstreams = sl;
+			sl = parse_downstream(argv[i]);
+			sl->next = downstreams;
+			downstreams = sl;
 		} else if (!strcmp(argv[i], "-u")) {
 			if (local_family_set && (local_family == AF_INET)) {
 				usage();
@@ -328,9 +337,9 @@ main(int argc, char **argv) {
 			local_family = AF_INET6;
 			if (++i == argc)
 				usage();
-                        sl = parse_upstream(argv[i]);
-                        sl->next = upstreams;
-                        upstreams = sl;
+			sl = parse_upstream(argv[i]);
+			sl->next = upstreams;
+			upstreams = sl;
 #endif
 		} else if (!strcmp(argv[i], "--version")) {
 			log_info("isc-dhcrelay-%s", PACKAGE_VERSION);
@@ -376,17 +385,17 @@ main(int argc, char **argv) {
  		}
 	}
 
-        if (local_family == AF_INET) {
-                path_dhcrelay_pid = getenv("PATH_DHCRELAY_PID");
-                if (path_dhcrelay_pid == NULL)
-                        path_dhcrelay_pid = _PATH_DHCRELAY_PID;
-        }
+	if (local_family == AF_INET) {
+		path_dhcrelay_pid = getenv("PATH_DHCRELAY_PID");
+		if (path_dhcrelay_pid == NULL)
+			path_dhcrelay_pid = _PATH_DHCRELAY_PID;
+	}
 #ifdef DHCPv6
-        else {
-                path_dhcrelay_pid = getenv("PATH_DHCRELAY6_PID");
-                if (path_dhcrelay_pid == NULL)
-                        path_dhcrelay_pid = _PATH_DHCRELAY6_PID;
-        }
+	else {
+		path_dhcrelay_pid = getenv("PATH_DHCRELAY6_PID");
+		if (path_dhcrelay_pid == NULL)
+			path_dhcrelay_pid = _PATH_DHCRELAY6_PID;
+	}
 #endif
 
 	if (!quiet) {
@@ -400,63 +409,63 @@ main(int argc, char **argv) {
 	}
 
 	/* Set default port */
-        if (local_family == AF_INET) {
-                service_local = "dhcps";
-                service_remote = "dhcps";
-                port_local = htons(67);
-                port_remote = htons(67);
-        }
+	if (local_family == AF_INET) {
+		service_local = "dhcps";
+		service_remote = "dhcps";
+		port_local = htons(67);
+		port_remote = htons(67);
+	}
 #ifdef DHCPv6
-        else {
-                service_local = "dhcpv6-server";
-                service_remote = "dhcpv6-client";
-                port_local = htons(547);
-                port_remote = htons(546);
-        }
+	else {
+		service_local = "dhcpv6-server";
+		service_remote = "dhcpv6-client";
+		port_local = htons(547);
+		port_remote = htons(546);
+	}
 #endif
 
 	if (!local_port) {
-                ent = getservbyname(service_local, "udp");
-                if (ent)
-                        local_port = ent->s_port;
-                else
-                        local_port = port_local;
+		ent = getservbyname(service_local, "udp");
+		if (ent)
+			local_port = ent->s_port;
+		else
+			local_port = port_local;
 
-                ent = getservbyname(service_remote, "udp");
-                if (ent)
-                        remote_port = ent->s_port;
-                else
-                        remote_port = port_remote;
+		ent = getservbyname(service_remote, "udp");
+		if (ent)
+			remote_port = ent->s_port;
+		else
+			remote_port = port_remote;
 
-                endservent();
-        }
+		endservent();
+	}
 
-        if (local_family == AF_INET) {
-                /* We need at least one server */
-                if (servers == NULL) {
-                        log_fatal("No servers specified.");
-                }
+	if (local_family == AF_INET) {
+		/* We need at least one server */
+		if (servers == NULL) {
+			log_fatal("No servers specified.");
+		}
 
 
-                /* Set up the server sockaddrs. */
-                for (sp = servers; sp; sp = sp->next) {
-                        sp->to.sin_port = local_port;
-                        sp->to.sin_family = AF_INET;
+		/* Set up the server sockaddrs. */
+		for (sp = servers; sp; sp = sp->next) {
+			sp->to.sin_port = local_port;
+			sp->to.sin_family = AF_INET;
 #ifdef HAVE_SA_LEN
-                        sp->to.sin_len = sizeof sp->to;
+			sp->to.sin_len = sizeof sp->to;
 #endif
-                }
-        }
+		}
+	}
 #ifdef DHCPv6
-        else {
+	else {
 		unsigned code;
 
-                /* We need at least one upstream and one downstream interface */
-                if (upstreams == NULL || downstreams == NULL) {
-                        log_info("Must specify at least one lower "
-                                 "and one upper interface.\n");
-                        usage();
-                }
+		/* We need at least one upstream and one downstream interface */
+		if (upstreams == NULL || downstreams == NULL) {
+			log_info("Must specify at least one lower "
+				 "and one upper interface.\n");
+			usage();
+		}
 
 		/* Set up the initial dhcp option universe. */
 		initialize_common_option_spaces();
@@ -474,7 +483,7 @@ main(int argc, char **argv) {
 					     &code, 0, MDL))
 			log_fatal("Unable to find the INTERFACE_ID "
 				  "option definition.");
-        }
+	}
 #endif
 
 	/* Get the current time... */
@@ -485,7 +494,7 @@ main(int argc, char **argv) {
 
 #ifdef DHCPv6
 	if (local_family == AF_INET6)
-                setup_streams();
+		setup_streams();
 #endif
 
 	/* Become a daemon... */
@@ -522,21 +531,21 @@ main(int argc, char **argv) {
 		close(2);
 		pid = setsid();
 
-                chdir("/");
+		chdir("/");
 	}
 
 	/* Set up the packet handler... */
-        if (local_family == AF_INET)
-                bootp_packet_handler = do_relay4;
+	if (local_family == AF_INET)
+		bootp_packet_handler = do_relay4;
 #ifdef DHCPv6
-        else
-                dhcpv6_packet_handler = do_packet6;
+	else
+		dhcpv6_packet_handler = do_packet6;
 #endif
 
 	/* Start dispatching packets and timeouts... */
 	dispatch();
 
-        /* Not reached */
+	/* Not reached */
 	return (0);
 }
 
@@ -676,9 +685,9 @@ do_relay4(struct interface_info *ip, struct dhcp_packet *packet,
 
 static int
 strip_relay_agent_options(struct interface_info *in,
-                          struct interface_info **out,
-                          struct dhcp_packet *packet,
-                          unsigned length) {
+			  struct interface_info **out,
+			  struct dhcp_packet *packet,
+			  unsigned length) {
 	int is_dhcp = 0;
 	u_int8_t *op, *nextop, *sp, *max;
 	int good_agent_option = 0;
@@ -785,7 +794,7 @@ strip_relay_agent_options(struct interface_info *in,
 		length = sp -((u_int8_t *)packet);
 
 		/* Make sure the packet isn't short(this is unlikely,
-                   but WTH) */
+		   but WTH) */
 		if (length < BOOTP_MIN_LEN) {
 			memset(sp, DHO_PAD, BOOTP_MIN_LEN - length);
 			length = BOOTP_MIN_LEN;
@@ -808,8 +817,8 @@ strip_relay_agent_options(struct interface_info *in,
 
 static int
 find_interface_by_agent_option(struct dhcp_packet *packet,
-                               struct interface_info **out,
-                               u_int8_t *buf, int len) {
+			       struct interface_info **out,
+			       u_int8_t *buf, int len) {
 	int i = 0;
 	u_int8_t *circuit_id = 0;
 	unsigned circuit_id_len = 0;
@@ -872,8 +881,8 @@ find_interface_by_agent_option(struct dhcp_packet *packet,
  */
 static int
 add_relay_agent_options(struct interface_info *ip, struct dhcp_packet *packet,
-                        unsigned length, struct in_addr giaddr) {
-	int is_dhcp = 0;
+			unsigned length, struct in_addr giaddr) {
+	int is_dhcp = 0, mms;
 	unsigned optlen;
 	u_int8_t *op, *nextop, *sp, *max, *end_pad = NULL;
 
@@ -887,7 +896,7 @@ add_relay_agent_options(struct interface_info *ip, struct dhcp_packet *packet,
 	if (memcmp(packet->options, DHCP_OPTIONS_COOKIE, 4))
 		return (length);
 
-	max = ((u_int8_t *)packet) + length;
+	max = ((u_int8_t *)packet) + dhcp_max_agent_option_packet_length;
 
 	/* Commence processing after the cookie. */
 	sp = op = &packet->options[4];
@@ -919,7 +928,17 @@ add_relay_agent_options(struct interface_info *ip, struct dhcp_packet *packet,
 		      case DHO_DHCP_MESSAGE_TYPE:
 			is_dhcp = 1;
 			goto skip;
-			break;
+
+			/*
+			 * If there's a maximum message size option, we
+			 * should pay attention to it
+			 */
+		      case DHO_DHCP_MAX_MESSAGE_SIZE:
+			mms = ntohs(*(op + 2));
+			if (mms < dhcp_max_agent_option_packet_length &&
+			    mms >= DHCP_MTU_MIN)
+				max = ((u_int8_t *)packet) + mms;
+			goto skip;
 
 			/* Quit immediately if we hit an End option. */
 		      case DHO_END:
@@ -1013,30 +1032,45 @@ add_relay_agent_options(struct interface_info *ip, struct dhcp_packet *packet,
 		log_fatal("Total agent option length(%u) out of range "
 			   "[3 - 255] on %s\n", optlen, ip->name);
 
-	/* Is there room for the option, its code+len, and DHO_END? */
-	if ((sp > max) ||(max - sp < optlen + 3))
-		return (0);
+	/*
+	 * Is there room for the option, its code+len, and DHO_END?
+	 * If not, forward without adding the option.
+	 */
+	if (max - sp >= optlen + 3) {
+		log_debug("Adding %d-byte relay agent option", optlen + 3);
 
-	/* Okay, cons up *our* Relay Agent Information option. */
-	*sp++ = DHO_DHCP_AGENT_OPTIONS;
-	*sp++ = optlen;
+		/* Okay, cons up *our* Relay Agent Information option. */
+		*sp++ = DHO_DHCP_AGENT_OPTIONS;
+		*sp++ = optlen;
 
-	/* Copy in the circuit id... */
-	*sp++ = RAI_CIRCUIT_ID;
-	*sp++ = ip->circuit_id_len;
-	memcpy(sp, ip->circuit_id, ip->circuit_id_len);
-	sp += ip->circuit_id_len;
+		/* Copy in the circuit id... */
+		*sp++ = RAI_CIRCUIT_ID;
+		*sp++ = ip->circuit_id_len;
+		memcpy(sp, ip->circuit_id, ip->circuit_id_len);
+		sp += ip->circuit_id_len;
 
-	/* Copy in remote ID... */
-	if (ip->remote_id) {
-		*sp++ = RAI_REMOTE_ID;
-		*sp++ = ip->remote_id_len;
-		memcpy(sp, ip->remote_id, ip->remote_id_len);
-		sp += ip->remote_id_len;
+		/* Copy in remote ID... */
+		if (ip->remote_id) {
+			*sp++ = RAI_REMOTE_ID;
+			*sp++ = ip->remote_id_len;
+			memcpy(sp, ip->remote_id, ip->remote_id_len);
+			sp += ip->remote_id_len;
+		}
+	} else {
+		++agent_option_errors;
+		log_error("No room in packet (used %d of %d) "
+			  "for %d-byte relay agent option: omitted",
+			   (int) (sp - ((u_int8_t *) packet)),
+			   (int) (max - ((u_int8_t *) packet)),
+			   optlen + 3);
 	}
 
-	/* Deposit an END option. */
-	*sp++ = DHO_END;
+	/*
+	 * Deposit an END option unless the packet is full (shouldn't
+	 * be possible).
+	 */
+	if (sp < max)
+		*sp++ = DHO_END;
 
 	/* Recalculate total packet length. */
 	length = sp -((u_int8_t *)packet);
@@ -1209,8 +1243,8 @@ setup_streams(void) {
 	for (dp = downstreams; dp; dp = dp->next) {
 		/* Check interface */
 		if (dp->ifp->v6address_count == 0)
-                        log_fatal("Interface '%s' has no IPv6 addresses.",
-                                  dp->ifp->name);
+			log_fatal("Interface '%s' has no IPv6 addresses.",
+				  dp->ifp->name);
 
 		/* Check/set link. */
 		if (IN6_IS_ADDR_UNSPECIFIED(&dp->link.sin6_addr))
@@ -1223,8 +1257,8 @@ setup_streams(void) {
 			if (!link_is_set)
 				break;
 			if (!memcmp(&dp->ifp->v6addresses[i],
-                                    &dp->link.sin6_addr,
-                                    sizeof(dp->link.sin6_addr)))
+				    &dp->link.sin6_addr,
+				    sizeof(dp->link.sin6_addr)))
 				break;
 		}
 		if (i == dp->ifp->v6address_count)
@@ -1473,7 +1507,7 @@ process_down6(struct packet *packet) {
 		for (dp = downstreams; dp; dp = dp->next) {
 			/* Get the first matching one. */
 			if (!memcmp(&dp->link.sin6_addr,
-                                    &packet->dhcpv6_link_address,
+				    &packet->dhcpv6_link_address,
 				    sizeof(struct in6_addr)))
 				break;
 		}
@@ -1566,24 +1600,24 @@ dhcpv6(struct packet *packet) {
 	}
 
 	log_info("Can't process packet from interface '%s'.",
-                 packet->interface->name);
+		 packet->interface->name);
 }
 #endif
 
 /* Stub routines needed for linking with DHCP libraries. */
 void
 bootp(struct packet *packet) {
-        return;
+	return;
 }
 
 void
 dhcp(struct packet *packet) {
-        return;
+	return;
 }
 
 void
 classify(struct packet *p, struct class *c) {
-        return;
+	return;
 }
 
 int
