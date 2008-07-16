@@ -67,6 +67,9 @@ suggested fixes to <dhcp-users@isc.org>.
   on the DHCPv6 ORO.  This resolves a bug where VSIO options were placed
   in IA_NA encapsulated options fields.
 
+- Fix handling of -A and -a flags in dhcrelay; it was failing to expand
+  packet size as needed to add relay agent options.
+
 			Changes since 4.0.0
 
 - DHCP now builds on AIX.

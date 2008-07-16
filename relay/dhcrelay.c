@@ -61,6 +61,9 @@ int server_packets_relayed = 0;	/* Packets relayed from server to client. */
 int client_packet_errors = 0;	/* Errors sending packets to clients. */
 
 int add_agent_options = 0;	/* If nonzero, add relay agent options. */
+
+int agent_option_errors = 0;    /* Number of packets forwarded without
+				   agent options because there was no room. */
 int drop_agent_mismatches = 0;	/* If nonzero, drop server replies that
 				   don't have matching circuit-id's. */
 int corrupt_agent_options = 0;	/* Number of packets dropped because
@@ -75,7 +78,7 @@ int max_hop_count = 10;		/* Maximum hop count */
 
 
 	/* Maximum size of a packet with agent options added. */
-int dhcp_max_agent_option_packet_length = 576;
+int dhcp_max_agent_option_packet_length = DHCP_MTU_MIN;
 
 	/* What to do about packets we're asked to relay that
 	   already have a relay option: */
@@ -109,18 +112,18 @@ main(int argc, char **argv) {
 	isc_result_t status;
 	char *s;
 
-        /* Make sure that file descriptors 0 (stdin), 1, (stdout), and
-           2 (stderr) are open. To do this, we assume that when we
-           open a file the lowest available file descriptor is used. */
-        fd = open("/dev/null", O_RDWR);
-        if (fd == 0)
-                fd = open("/dev/null", O_RDWR);
-        if (fd == 1)
-                fd = open("/dev/null", O_RDWR);
-        if (fd == 2)
-                log_perror = 0; /* No sense logging to /dev/null. */
-        else if (fd != -1)
-                close(fd);
+	/* Make sure that file descriptors 0 (stdin), 1, (stdout), and
+	   2 (stderr) are open. To do this, we assume that when we
+	   open a file the lowest available file descriptor is used. */
+	fd = open("/dev/null", O_RDWR);
+	if (fd == 0)
+		fd = open("/dev/null", O_RDWR);
+	if (fd == 1)
+		fd = open("/dev/null", O_RDWR);
+	if (fd == 2)
+		log_perror = 0; /* No sense logging to /dev/null. */
+	else if (fd != -1)
+		close(fd);
 
 	openlog ("dhcrelay", LOG_NDELAY, LOG_DAEMON);
 
@@ -178,6 +181,10 @@ main(int argc, char **argv) {
 			if (++i == argc)
 				usage ();
 			dhcp_max_agent_option_packet_length = atoi (argv [i]);
+			if (dhcp_max_agent_option_packet_length > DHCP_MTU_MAX)
+				log_fatal("%s: packet length exceeds "
+					  "longest possible MTU\n",
+					  argv[i]);
 		} else if (!strcmp (argv [i], "-m")) {
 			if (++i == argc)
 				usage ();
@@ -308,7 +315,7 @@ main(int argc, char **argv) {
 		close (2);
 		pid = setsid ();
 
-                chdir("/");
+		chdir("/");
 	}
 
 	/* Start dispatching packets and timeouts... */
@@ -648,7 +655,7 @@ int strip_relay_agent_options (in, out, packet, length)
 		length = sp - ((u_int8_t *)packet);
 
 		/* Make sure the packet isn't short (this is unlikely,
-                   but WTH) */
+		   but WTH) */
 		if (length < BOOTP_MIN_LEN) {
 			memset (sp, DHO_PAD, BOOTP_MIN_LEN - length);
 			length = BOOTP_MIN_LEN;
@@ -730,17 +737,15 @@ int find_interface_by_agent_option (packet, out, buf, len)
 	return -1;
 }
 
-/* Examine a packet to see if it's a candidate to have a Relay
-   Agent Information option tacked onto its tail.   If it is, tack
-   the option on.  */
-
-int add_relay_agent_options (ip, packet, length, giaddr)
-	struct interface_info *ip;
-	struct dhcp_packet *packet;
-	unsigned length;
-	struct in_addr giaddr;
-{
-	int is_dhcp = 0;
+/*
+ * Examine a packet to see if it's a candidate to have a Relay
+ * Agent Information option tacked onto its tail.   If it is, tack
+ * the option on.
+ */
+int
+add_relay_agent_options(struct interface_info *ip, struct dhcp_packet *packet,
+			unsigned length, struct in_addr giaddr) {
+	int is_dhcp = 0, mms;
 	unsigned optlen;
 	u_int8_t *op, *nextop, *sp, *max, *end_pad = NULL;
 
@@ -754,7 +759,7 @@ int add_relay_agent_options (ip, packet, length, giaddr)
 	if (memcmp(packet->options, DHCP_OPTIONS_COOKIE, 4))
 		return length;
 
-	max = ((u_int8_t *)packet) + length;
+	max = ((u_int8_t *)packet) + dhcp_max_agent_option_packet_length;
 
 	/* Commence processing after the cookie. */
 	sp = op = &packet->options[4];
@@ -786,7 +791,17 @@ int add_relay_agent_options (ip, packet, length, giaddr)
 		      case DHO_DHCP_MESSAGE_TYPE:
 			is_dhcp = 1;
 			goto skip;
-			break;
+
+			/*
+			 * If there's a maximum message size option, we
+			 * should pay attention to it
+			 */
+		      case DHO_DHCP_MAX_MESSAGE_SIZE:
+			mms = ntohs(*(op + 2));
+			if (mms < dhcp_max_agent_option_packet_length &&
+			    mms >= DHCP_MTU_MIN)
+				max = ((u_int8_t *)packet) + mms;
+			goto skip;
 
 			/* Quit immediately if we hit an End option. */
 		      case DHO_END:
@@ -880,30 +895,45 @@ int add_relay_agent_options (ip, packet, length, giaddr)
 		log_fatal ("total agent option length (%u) out of range "
 			   "[3 - 255] on %s\n", optlen, ip->name);
 
-	/* Is there room for the option, its code+len, and DHO_END? */
-	if ((sp > max) || (max - sp < optlen + 3))
-		return 0;
-
-	/* Okay, cons up *our* Relay Agent Information option. */
-	*sp++ = DHO_DHCP_AGENT_OPTIONS;
-	*sp++ = optlen;
-
-	/* Copy in the circuit id... */
-	*sp++ = RAI_CIRCUIT_ID;
-	*sp++ = ip->circuit_id_len;
-	memcpy(sp, ip->circuit_id, ip->circuit_id_len);
-	sp += ip->circuit_id_len;
-
-	/* Copy in remote ID... */
-	if (ip->remote_id) {
-		*sp++ = RAI_REMOTE_ID;
-		*sp++ = ip->remote_id_len;
-		memcpy(sp, ip->remote_id, ip->remote_id_len);
-		sp += ip->remote_id_len;
-	}
-
-	/* Deposit an END option. */
-	*sp++ = DHO_END;
+	/*
+ 	 * Is there room for the option, its code+len, and DHO_END?
+ 	 * If not, forward without adding the option.
+ 	 */
+ 	if (max - sp >= optlen + 3) {
+ 		log_debug("Adding %d-byte relay agent option", optlen + 3);
+ 
+ 		/* Okay, cons up *our* Relay Agent Information option. */
+ 		*sp++ = DHO_DHCP_AGENT_OPTIONS;
+ 		*sp++ = optlen;
+ 
+ 		/* Copy in the circuit id... */
+ 		*sp++ = RAI_CIRCUIT_ID;
+ 		*sp++ = ip->circuit_id_len;
+ 		memcpy(sp, ip->circuit_id, ip->circuit_id_len);
+ 		sp += ip->circuit_id_len;
+ 
+ 		/* Copy in remote ID... */
+ 		if (ip->remote_id) {
+ 			*sp++ = RAI_REMOTE_ID;
+ 			*sp++ = ip->remote_id_len;
+ 			memcpy(sp, ip->remote_id, ip->remote_id_len);
+ 			sp += ip->remote_id_len;
+ 		}
+ 	} else {
+		 ++agent_option_errors;
+ 		log_error("No room in packet (used %d of %d) "
+ 			  "for %d-byte relay agent option: omitted",
+ 			   (int) (sp - ((u_int8_t *) packet)),
+ 			   (int) (max - ((u_int8_t *) packet)),
+ 			   optlen + 3);
+ 	}
+ 
+ 	/*
+ 	 * Deposit an END option unless the packet is full (shouldn't
+ 	 * be possible).
+ 	 */
+ 	if (sp < max)
+ 		*sp++ = DHO_END;
 
 	/* Recalculate total packet length. */
 	length = sp - ((u_int8_t *)packet);
