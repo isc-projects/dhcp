@@ -43,6 +43,9 @@ the README file.
 - A double-dereference in dhclient transmission of DHCPDECLINEs was
   repaired.
 
+- Fix handling of -A and -a flags in dhcrelay; it was failing to expand
+  packet size as needed to add relay agent options.
+
 			Changes since 3.1.1rc2
 
 - None.
