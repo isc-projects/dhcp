@@ -48,6 +48,10 @@ work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
 
+			Changes since 4.1.0a2
+
+- Corrected list of failover state values in dhcpd man page.
+
 			Changes since 4.1.0a1
 
 - Fixed a coredump when adding a class via OMAPI.
