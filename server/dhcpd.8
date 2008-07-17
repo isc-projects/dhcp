@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.8,v 1.24.42.2 2007/05/23 23:30:33 each Exp $
+.\" $Id: dhcpd.8,v 1.24.42.3 2008/07/17 06:14:24 each Exp $
 .\"
 .TH dhcpd 8
 .SH NAME
@@ -652,18 +652,23 @@ relationship.   Possible values for state are:
 .RS 1i
 .PP
 .nf
-1  - partner down
-2  - normal
-3  - communications interrupted
-4  - resolution interrupted
-5  - potential conflict
-6  - recover
-7  - recover done
-8  - shutdown
-9  - paused
-10 - startup
-11 - recover wait
+1   - startup
+2   - normal
+3   - communications interrupted
+4   - partner down
+5   - potential conflict
+6   - recover
+7   - paused
+8   - shutdown
+9   - recover done
+10  - resolution interrupted
+11  - conflict done
+254 - recover wait
 .fi
+.RE
+.PP
+.RS 0.5i
+(Note that some of the above values have changed since DHCP 3.0.x.)
 .RE
 .PP
 .RS 0.5i

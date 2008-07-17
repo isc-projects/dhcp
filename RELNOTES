@@ -46,6 +46,8 @@ the README file.
 - Fix handling of -A and -a flags in dhcrelay; it was failing to expand
   packet size as needed to add relay agent options.
 
+- Corrected list of failover state values in dhcpd man page.
+
 			Changes since 3.1.1rc2
 
 - None.
