@@ -64,7 +64,7 @@ static const char *dhcp_type_names [] = {
 	"DHCPNAK",
 	"DHCPRELEASE",
 	"DHCPINFORM",
-	"(unknown)",
+	"type 9",
 	"DHCPLEASEQUERY",
 	"DHCPLEASEUNASSIGNED",
 	"DHCPLEASEUNKNOWN",
@@ -76,42 +76,41 @@ const int dhcp_type_name_max = ((sizeof dhcp_type_names) / sizeof (char *));
 # define send_packet trace_packet_send
 #endif
 
-void dhcp (packet)
-	struct packet *packet;
-{
+void
+dhcp (struct packet *packet) {
 	int ms_nulltp = 0;
 	struct option_cache *oc;
-	struct lease *lease = (struct lease *)0;
+	struct lease *lease = NULL;
 	const char *errmsg;
 	struct data_string data;
 
-	if (!locate_network (packet) &&
-	    packet -> packet_type != DHCPREQUEST &&
-	    packet -> packet_type != DHCPINFORM && 
-	    packet -> packet_type != DHCPLEASEQUERY) {
+	if (!locate_network(packet) &&
+	    packet->packet_type != DHCPREQUEST &&
+	    packet->packet_type != DHCPINFORM && 
+	    packet->packet_type != DHCPLEASEQUERY) {
 		const char *s;
-		char typebuf [32];
+		char typebuf[32];
 		errmsg = "unknown network segment";
 	      bad_packet:
 		
-		if (packet -> packet_type > 0 &&
-		    packet -> packet_type < dhcp_type_name_max - 1) {
-			s = dhcp_type_names [packet -> packet_type - 1];
+		if (packet->packet_type > 0 &&
+		    packet->packet_type <= dhcp_type_name_max) {
+			s = dhcp_type_names[packet->packet_type - 1];
 		} else {
 			/* %Audit% Cannot exceed 28 bytes. %2004.06.17,Safe% */
-			sprintf (typebuf, "type %d", packet -> packet_type);
+			sprintf(typebuf, "type %d", packet->packet_type);
 			s = typebuf;
 		}
 		
-		log_info ("%s from %s via %s: %s", s,
-			  (packet -> raw -> htype
-			   ? print_hw_addr (packet -> raw -> htype,
-					    packet -> raw -> hlen,
-					    packet -> raw -> chaddr)
-			   : "<no identifier>"),
-			  packet -> raw -> giaddr.s_addr
-			  ? inet_ntoa (packet -> raw -> giaddr)
-			  : packet -> interface -> name, errmsg);
+		log_info("%s from %s via %s: %s", s,
+			 (packet->raw->htype
+			  ? print_hw_addr(packet->raw->htype,
+					  packet->raw->hlen,
+					  packet->raw->chaddr)
+			  : "<no identifier>"),
+			 packet->raw->giaddr.s_addr
+			 ? inet_ntoa(packet->raw->giaddr)
+			 : packet->interface->name, errmsg);
 		goto out;
 	}
 
