@@ -50,6 +50,8 @@ the README file.
 
 - Fixed a bug that caused some request types to be logged incorrectly.
 
+- Fixed a coredump when adding a class via OMAPI.
+
 			Changes since 3.1.1rc2
 
 - None.

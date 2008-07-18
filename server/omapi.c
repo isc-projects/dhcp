@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.58.76.3 2007/05/23 23:30:33 each Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.58.76.4 2008/07/18 23:35:35 each Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1869,8 +1869,7 @@ class_set_value (omapi_object_t *h,
 			if (!strncmp("hardware",
 				     (char *)value->u.buffer.value, minlen))
 			{
-				if (!expression_allocate(&class->submatch,
-							 MDL))
+				if (!expression_allocate(&class->expr, MDL))
 					return ISC_R_NOMEMORY;
 
 				class->expr->op = expr_hardware;
