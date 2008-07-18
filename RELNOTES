@@ -48,6 +48,8 @@ the README file.
 
 - Corrected list of failover state values in dhcpd man page.
 
+- Fixed a bug that caused some request types to be logged incorrectly.
+
 			Changes since 3.1.1rc2
 
 - None.
