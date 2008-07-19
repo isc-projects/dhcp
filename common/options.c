@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.98.2.15 2008/04/04 21:36:29 dhankins Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.98.2.16 2008/07/19 01:09:47 each Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -880,15 +880,10 @@ store_options(int *ocount,
 		 */
 		if (priority_list[i] == DHO_SUBNET_MASK) {
 			for (ix = i - 1 ; ix >= 0 ; ix--) {
-				/* We know that anything before 'i' can only
-				 * appear once.  So shovel the options to make
-				 * room to bubble the subnet mask ahead, and
-				 * then break out of the loop, we're done.
-				 */
 				if (priority_list[ix] == DHO_ROUTERS) {
-					memmove(priority_list + ix + 1,
-					        priority_list + ix, i - ix);
+                                        /* swap */
 					priority_list[ix] = DHO_SUBNET_MASK;
+					priority_list[i] = DHO_ROUTERS;
 					break;
 				}
 			}

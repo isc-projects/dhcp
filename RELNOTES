@@ -52,6 +52,10 @@ the README file.
 
 - Fixed a coredump when adding a class via OMAPI.
 
+- Clients that sent a parameter request list containing the
+  routers option before the subnet mask option were receiving
+  only the latter.  Fixed.
+
 			Changes since 3.1.1rc2
 
 - None.
