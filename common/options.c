@@ -668,8 +668,8 @@ cons_options(struct packet *inpacket, struct dhcp_packet *outpacket,
 		 * may only be included if the client supplied one.
 		 */
 		if ((priority_len < PRIORITY_COUNT) &&
-		    (lookup_option(&dhcp_universe, inpacket->options,
-				   DHO_FQDN) != NULL))
+		    (lookup_option(&fqdn_universe, inpacket->options,
+				   FQDN_ENCODED) != NULL))
 			priority_list[priority_len++] = DHO_FQDN;
 
 		/*

@@ -62,6 +62,8 @@ suggested fixes to <dhcp-users@isc.org>.
   routers option before the subnet mask option were receiving
   only the latter.  Fixed.
 
+- The server wasn't always sending the FQDN option when it should.
+
 			Changes since 4.0.0
 
 - DHCP now builds on AIX.
