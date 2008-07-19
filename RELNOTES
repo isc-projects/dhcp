@@ -58,6 +58,10 @@ suggested fixes to <dhcp-users@isc.org>.
 
 - Fixed a bug that caused some request types to be logged incorrectly.
 
+- Clients that sent a parameter request list containing the
+  routers option before the subnet mask option were receiving
+  only the latter.  Fixed.
+
 			Changes since 4.0.0
 
 - DHCP now builds on AIX.
