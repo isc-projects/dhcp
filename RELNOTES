@@ -58,6 +58,8 @@ work on other platforms. Please report any problems and suggested fixes to
   routers option before the subnet mask option were receiving
   only the latter.  Fixed.
 
+- The server wasn't always sending the FQDN option when it should.
+
 			Changes since 4.1.0a1
 
 - Fixed a coredump when adding a class via OMAPI.
