@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.98.2.16 2008/07/19 01:09:47 each Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.98.2.17 2008/07/19 03:56:45 each Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -633,8 +633,8 @@ cons_options(struct packet *inpacket, struct dhcp_packet *outpacket,
 		 * may only be included if the client supplied one.
 		 */
 		if ((priority_len < PRIORITY_COUNT) &&
-		    (lookup_option(&dhcp_universe, inpacket->options,
-				   DHO_FQDN) != NULL))
+		    (lookup_option(&fqdn_universe, inpacket->options,
+				   FQDN_ENCODED) != NULL))
 			priority_list[priority_len++] = DHO_FQDN;
 
 		/*

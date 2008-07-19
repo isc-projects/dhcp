@@ -56,6 +56,8 @@ the README file.
   routers option before the subnet mask option were receiving
   only the latter.  Fixed.
 
+- The server wasn't always sending the FQDN option when it should.
+
 			Changes since 3.1.1rc2
 
 - None.
