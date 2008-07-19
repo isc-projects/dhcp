@@ -1180,15 +1180,10 @@ store_options(int *ocount,
 		 */
 		if (priority_list[i] == DHO_SUBNET_MASK) {
 			for (ix = i - 1 ; ix >= 0 ; ix--) {
-				/* We know that anything before 'i' can only
-				 * appear once.  So shovel the options to make
-				 * room to bubble the subnet mask ahead, and
-				 * then break out of the loop, we're done.
-				 */
 				if (priority_list[ix] == DHO_ROUTERS) {
-					memmove(priority_list + ix + 1,
-					        priority_list + ix, i - ix);
+                                        /* swap */
 					priority_list[ix] = DHO_SUBNET_MASK;
+					priority_list[i] = DHO_ROUTERS;
 					break;
 				}
 			}
