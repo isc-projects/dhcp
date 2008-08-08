@@ -48,7 +48,7 @@ work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
 
-			Changes since 4.1.0a1
+			Changes since 4.1.0a2
 
 - Corrected list of failover state values in dhcpd man page.
 
@@ -59,6 +59,8 @@ work on other platforms. Please report any problems and suggested fixes to
   only the latter.  Fixed.
 
 - The server wasn't always sending the FQDN option when it should.
+
+			Changes since 4.1.0a1
 
 - Fixed a coredump when adding a class via OMAPI.
 
@@ -108,9 +110,6 @@ work on other platforms. Please report any problems and suggested fixes to
 
 - Fix handling of -A and -a flags in dhcrelay; it was failing to expand
   packet size as needed to add relay agent options.
-
-- The BSD socket code will now permit multiple DHCPv6 server instances to
-  operate on different interfaces.
 
 			Changes since 4.0.0 (new features)
 

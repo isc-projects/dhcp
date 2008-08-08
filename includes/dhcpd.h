@@ -1124,7 +1124,7 @@ struct interface_info {
 	unsigned remote_id_len;		/* Length of Remote ID. */
 
 	char name [IFNAMSIZ];		/* Its name... */
-	int index;			/* Its index in the registry. */
+	int index;			/* Its index. */
 	int rfdesc;			/* Its read file descriptor. */
 	int wfdesc;			/* Its write file descriptor, if
 					   different. */
@@ -2135,7 +2135,7 @@ void get_hw_addr(const char *name, struct hardware *hw);
 /* socket.c */
 #if defined (USE_SOCKET_SEND) || defined (USE_SOCKET_RECEIVE) \
 	|| defined (USE_SOCKET_FALLBACK)
-int if_register_socket(struct interface_info *, int);
+int if_register_socket(struct interface_info *, int, int);
 #endif
 
 #if defined (USE_SOCKET_FALLBACK) && !defined (USE_SOCKET_SEND)
@@ -2184,8 +2184,7 @@ void maybe_setup_fallback PROTO ((void));
 void if_register6(struct interface_info *info, int do_multicast);
 ssize_t receive_packet6(struct interface_info *interface,
 			unsigned char *buf, size_t len,
-			struct sockaddr_in6 *from, struct in6_addr *to_addr,
-			unsigned int *if_index);
+			struct sockaddr_in6 *from, struct in6_addr *to_addr);
 void if_deregister6(struct interface_info *info);
 
 
