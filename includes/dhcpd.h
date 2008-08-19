@@ -807,6 +807,10 @@ struct shared_network {
 	OMAPI_OBJECT_PREAMBLE;
 	struct shared_network *next;
 	char *name;
+
+#define SHARED_IMPLICIT	  1 /* This network was synthesized. */
+	int flags;
+
 	struct subnet *subnets;
 	struct interface_info *interface;
 	struct pool *pools;
@@ -1395,6 +1399,7 @@ struct ipv6_pool {
 						   released leases */
 	struct shared_network *shared_network;	/* shared_network for 
 						   this pool */
+	struct subnet *subnet;			/* subnet for this pool */
 };
 
 extern struct ipv6_pool **pools;

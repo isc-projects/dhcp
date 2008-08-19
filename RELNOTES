@@ -48,7 +48,7 @@ work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
 
-			Changes since 4.1.0a2
+			Changes since 4.1.0a1
 
 - Corrected list of failover state values in dhcpd man page.
 
@@ -59,8 +59,6 @@ work on other platforms. Please report any problems and suggested fixes to
   only the latter.  Fixed.
 
 - The server wasn't always sending the FQDN option when it should.
-
-			Changes since 4.1.0a1
 
 - Fixed a coredump when adding a class via OMAPI.
 
@@ -110,6 +108,27 @@ work on other platforms. Please report any problems and suggested fixes to
 
 - Fix handling of -A and -a flags in dhcrelay; it was failing to expand
   packet size as needed to add relay agent options.
+
+- A bug in subnet6 parsing where options contained in subnet6 clauses would
+  not be applied to clients addressed within that network was repaired.
+
+- When configuring a "subnet {}" or "subnet6 {}" without an explicit
+  shared-network enclosing it, the DHCP software would synthesize a
+  shared-network to contain the subnet.  However, all configuration
+  parameters within the subnet more intuitively belong "to any client
+  on that interface", or rather the synthesized shared-network.  So,
+  when a shared-network is synthesized, it is used to contain the
+  configuration present inside the subnet {} clause.  This means that
+  the configuration will be valid for all clients on that network, not
+  just those addressed out of the stated subnet.  If you intended the
+  opposite, the workaround is to explicitly configure an empty
+  shared-network.
+
+- A bug was fixed where Information-Request processing was not sourcing
+  configured option values.
+
+- A warning was added since the DHCPv6 processing software does not yet
+  support class statements.
 
 			Changes since 4.0.0 (new features)
 

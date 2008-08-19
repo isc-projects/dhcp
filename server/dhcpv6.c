@@ -1366,9 +1366,21 @@ lease_to_client(struct data_string *reply_ret,
 	 * Make no reply if we gave no resources and is not
 	 * for Information-Request.
 	 */
-	if ((reply.ia_count == 0) && (reply.pd_count == 0) &&
-	    (reply.packet->dhcpv6_msg_type != DHCPV6_INFORMATION_REQUEST))
-	        goto exit;
+	if ((reply.ia_count == 0) && (reply.pd_count == 0)) {
+		if (reply.packet->dhcpv6_msg_type !=
+					    DHCPV6_INFORMATION_REQUEST)
+			goto exit;
+
+		/*
+		 * Because we only execute statements on a per-IA basis,
+		 * we need to execute statements in any non-IA reply to
+		 * source configuration.
+		 */
+		execute_statements_in_scope(NULL, reply.packet, NULL, NULL,
+					    reply.packet->options,
+					    reply.opt_state, &global_scope,
+					    reply.shared->group, root_group);
+	}
 
 	/*
 	 * RFC3315 section 17.2.2 (Solicit):
@@ -2087,7 +2099,7 @@ reply_process_addr(struct reply_state *reply, struct option_cache *addr) {
 			log_fatal("Impossible condition at %s:%d.", MDL);
 
 		scope = &reply->lease->scope;
-		group = reply->shared->group;
+		group = reply->lease->ipv6_pool->subnet->group;
 	}
 
 	/*
@@ -2518,7 +2530,7 @@ find_client_temporaries(struct reply_state *reply) {
 
 		status = reply_process_is_addressed(reply,
 						    &reply->lease->scope,
-						    reply->shared->group);
+				      reply->lease->ipv6_pool->subnet->group);
 		if (status != ISC_R_SUCCESS) {
 			goto cleanup;
 		}
@@ -2588,11 +2600,6 @@ find_client_address(struct reply_state *reply) {
 	struct group *group;
 	int i;
 
-	if (reply->host != NULL)
-		group = reply->host->group;
-	else
-		group = reply->shared->group;
-
 	if (reply->static_lease) {
 		if (reply->host == NULL)
 			return ISC_R_INVALIDARG;
@@ -2602,6 +2609,7 @@ find_client_address(struct reply_state *reply) {
 
 		status = ISC_R_SUCCESS;
 		scope = &global_scope;
+		group = reply->host->group;
 		goto send_addr;
 	}
 
@@ -2640,8 +2648,12 @@ find_client_address(struct reply_state *reply) {
 	if (reply->lease == NULL)
 		log_fatal("Impossible condition at %s:%d.", MDL);
 
+	/* Draw binding scopes from the lease's binding scope, and config
+	 * from the lease's containing subnet and higher.  Note that it may
+	 * be desirable to place the group attachment directly in the pool.
+	 */
 	scope = &reply->lease->scope;
-	group = reply->shared->group;
+	group = reply->lease->ipv6_pool->subnet->group;
 
 	send_addr.len = 16;
 	memcpy(send_addr.iabuf, &reply->lease->addr, 16);

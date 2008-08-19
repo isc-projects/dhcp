@@ -35,6 +35,7 @@
 #include "dhcpd.h"
 
 static unsigned char global_host_once = 1;
+static unsigned char dhcpv6_class_once = 1;
 
 static int parse_binding_value(struct parse *cfile,
 				struct binding_value *value);
@@ -432,7 +433,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		}
 
 		/* If we're in a subnet declaration, just do the parse. */
-		if (group->shared_network) {
+		if (group->shared_network != NULL) {
 			if (token == SUBNET) {
 				parse_subnet_declaration(cfile,
 							 group->shared_network);
@@ -443,10 +444,15 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 			break;
 		}
 
-		/* Otherwise, cons up a fake shared network structure
-		   and populate it with the lone subnet... */
+		/*
+		 * Otherwise, cons up a fake shared network structure
+		 * and populate it with the lone subnet...because the
+		 * intention most likely is to refer to the entire link
+		 * by shorthand, any configuration inside the subnet is
+		 * actually placed in the shared-network's group.
+		 */
 
-		share = (struct shared_network *)0;
+		share = NULL;
 		status = shared_network_allocate (&share, MDL);
 		if (status != ISC_R_SUCCESS)
 			log_fatal ("Can't allocate shared subnet: %s",
@@ -455,6 +461,12 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 			log_fatal ("Can't allocate group for shared net");
 		shared_network_reference (&share -> group -> shared_network,
 					  share, MDL);
+
+		/*
+		 * This is an implicit shared network, not explicit in
+		 * the config.
+		 */
+		share->flags |= SHARED_IMPLICIT;
 
 		if (token == SUBNET) {
 			parse_subnet_declaration(cfile, share);
@@ -2022,6 +2034,12 @@ int parse_class_declaration (cp, cfile, group, type)
 	int submatchedonce = 0;
 	unsigned code;
 
+	if (dhcpv6_class_once && local_family == AF_INET6) {
+		dhcpv6_class_once = 0;
+		log_error("WARNING: class declarations are not supported "
+			  "for DHCPv6.");
+	}
+
 	token = next_token (&val, (unsigned *)0, cfile);
 	if (token != STRING) {
 		parse_warn (cfile, "Expecting class name");
@@ -2547,8 +2565,22 @@ void parse_subnet_declaration (cfile, share)
 		log_fatal ("Allocation of new subnet failed: %s",
 			   isc_result_totext (status));
 	shared_network_reference (&subnet -> shared_network, share, MDL);
-	if (!clone_group (&subnet -> group, share -> group, MDL))
-		log_fatal ("allocation of group for new subnet failed.");
+
+	/*
+	 * If our parent shared network was implicitly created by the software,
+	 * and not explicitly configured by the user, then we actually put all
+	 * configuration scope in the parent (the shared network and subnet
+	 * share the same {}-level scope).
+	 *
+	 * Otherwise, we clone the parent group and continue as normal.
+	 */
+	if (share->flags & SHARED_IMPLICIT) {
+		group_reference(&subnet->group, share->group, MDL);
+	} else {
+		if (!clone_group(&subnet->group, share->group, MDL)) {
+			log_fatal("Allocation of group for new subnet failed.");
+		}
+	}
 	subnet_reference (&subnet -> group -> subnet, subnet, MDL);
 
 	/* Get the network number... */
@@ -2626,8 +2658,21 @@ parse_subnet6_declaration(struct parse *cfile, struct shared_network *share) {
 			  isc_result_totext(status));
 	}
 	shared_network_reference(&subnet->shared_network, share, MDL);
-	if (!clone_group(&subnet->group, share->group, MDL)) {
-		log_fatal("Allocation of group for new subnet failed.");
+
+	/*
+	 * If our parent shared network was implicitly created by the software,
+	 * and not explicitly configured by the user, then we actually put all
+	 * configuration scope in the parent (the shared network and subnet
+	 * share the same {}-level scope).
+	 *
+	 * Otherwise, we clone the parent group and continue as normal.
+	 */
+	if (share->flags & SHARED_IMPLICIT) {
+		group_reference(&subnet->group, share->group, MDL);
+	} else {
+		if (!clone_group(&subnet->group, share->group, MDL)) {
+			log_fatal("Allocation of group for new subnet failed.");
+		}
 	}
 	subnet_reference(&subnet->group->subnet, subnet, MDL);
 
@@ -3636,15 +3681,15 @@ void parse_address_range (cfile, group, type, inpool, lpchain)
 
 #ifdef DHCPv6
 static void
-add_ipv6_pool_to_shared_network(struct shared_network *share,
-				u_int16_t type,
-				struct iaddr *lo_addr,
-				int bits,
-				int units) {
+add_ipv6_pool_to_subnet(struct subnet *subnet, u_int16_t type,
+			struct iaddr *lo_addr, int bits, int units) {
 	struct ipv6_pool *pool;
+	struct shared_network *share;
 	struct in6_addr tmp_in6_addr;
 	int num_pools;
 	struct ipv6_pool **tmp;
+
+	share = subnet->shared_network;
 
 	/*
 	 * Create our pool.
@@ -3668,8 +3713,10 @@ add_ipv6_pool_to_shared_network(struct shared_network *share,
 	}
 
 	/*
-	 * Link our pool to our shared_network.
+	 * Link the pool to its network.
 	 */
+	pool->subnet = NULL;
+	subnet_reference(&pool->subnet, subnet, MDL);
 	pool->shared_network = NULL;
 	shared_network_reference(&pool->shared_network, share, MDL);
 
@@ -3714,7 +3761,6 @@ parse_address_range6(struct parse *cfile, struct group *group) {
 	int bits;
 	enum dhcp_token token;
 	const char *val;
-	struct shared_network *share;
 	struct iaddrcidrnetlist *nets;
 	struct iaddrcidrnetlist *p;
 
@@ -3725,13 +3771,9 @@ parse_address_range6(struct parse *cfile, struct group *group) {
                 return;
         }
 
-	/*
-	 * We'll use the shared_network from our group.
-	 */
-	share = group->shared_network;
-	if (share == NULL) {
-		share = group->subnet->shared_network;
-	}
+	/* This is enforced by the caller, this is just a sanity check. */
+	if (group->subnet == NULL)
+		log_fatal("Impossible condition at %s:%d.", MDL);
 
 	/*
 	 * Read starting address.
@@ -3767,8 +3809,8 @@ parse_address_range6(struct parse *cfile, struct group *group) {
 			return;
 		}
 
-		add_ipv6_pool_to_shared_network(share, D6O_IA_NA, &lo,
-						bits, 128);
+		add_ipv6_pool_to_subnet(group->subnet, D6O_IA_NA, &lo, bits,
+					128);
 
 	} else if (token == TEMPORARY) {
 		/*
@@ -3782,8 +3824,8 @@ parse_address_range6(struct parse *cfile, struct group *group) {
 			return;
 		}
 
-		add_ipv6_pool_to_shared_network(share, D6O_IA_TA, &lo,
-						bits, 128);
+		add_ipv6_pool_to_subnet(group->subnet, D6O_IA_TA, &lo, bits,
+					128);
 	} else {
 		/*
 		 * No '/', so we are looking for the end address of 
@@ -3802,13 +3844,12 @@ parse_address_range6(struct parse *cfile, struct group *group) {
 		}
 
 		for (p=nets; p != NULL; p=p->next) {
-			add_ipv6_pool_to_shared_network(share, D6O_IA_NA,
-							&p->cidrnet.lo_addr, 
-							p->cidrnet.bits, 128);
+			add_ipv6_pool_to_subnet(group->subnet, D6O_IA_NA,
+						&p->cidrnet.lo_addr, 
+						p->cidrnet.bits, 128);
 		}
 
 		free_iaddrcidrnetlist(&nets);
-
 	}
 
 	token = next_token(NULL, NULL, cfile);
@@ -3827,7 +3868,6 @@ parse_prefix6(struct parse *cfile, struct group *group) {
 	int bits;
 	enum dhcp_token token;
 	const char *val;
-	struct shared_network *share;
 	struct iaddrcidrnetlist *nets;
 	struct iaddrcidrnetlist *p;
 
@@ -3838,14 +3878,10 @@ parse_prefix6(struct parse *cfile, struct group *group) {
 		return;
 	}
 
-	/*
-	 * We'll use the shared_network from our group.
-	 */
-	share = group->shared_network;
-	if (share == NULL) {
-		share = group->subnet->shared_network;
-	}
-	 
+	/* This is enforced by the caller, so it's just a sanity check. */
+	if (group->subnet == NULL)
+		log_fatal("Impossible condition at %s:%d.", MDL);
+
 	/*
 	 * Read starting and ending address.
 	 */
@@ -3907,9 +3943,9 @@ parse_prefix6(struct parse *cfile, struct group *group) {
 			parse_warn(cfile, "impossible mask length");
 			continue;
 		}
-		add_ipv6_pool_to_shared_network(share, D6O_IA_PD,
-						&p->cidrnet.lo_addr,
-						p->cidrnet.bits, bits);
+		add_ipv6_pool_to_subnet(group->subnet, D6O_IA_PD,
+					&p->cidrnet.lo_addr,
+					p->cidrnet.bits, bits);
 	}
 
 	free_iaddrcidrnetlist(&nets);

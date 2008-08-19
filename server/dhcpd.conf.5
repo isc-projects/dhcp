@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.96 2008/06/30 17:37:47 jreed Exp $
+.\" $Id: dhcpd.conf.5,v 1.97 2008/08/19 17:55:57 dhankins Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -85,6 +85,12 @@ physical ethernet network expands to the point where it has more than
 ethernet until such time as a new physical network can be added.   In
 this case, the \fIsubnet\fR declarations for these two networks must be
 enclosed in a \fIshared-network\fR declaration.
+.PP
+Note that even when the \fIshared-network\fR declaration is absent, an
+empty one is created by the server to contain the \fIsubnet\fR (and any scoped
+parameters included in the \fIsubnet\fR).  For practical purposes, this means
+that "stateless" DHCP clients, which are not tied to addresses (and therefore
+subnets) will receive the same configuration as stateful ones.
 .PP
 Some sites may have departments which have clients on more than one
 subnet, but it may be desirable to offer those clients a uniform set
