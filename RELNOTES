@@ -52,7 +52,7 @@ may not work on other platforms. Please report any problems and
 suggested fixes to <dhcp-users@isc.org>.
 
 
-			Changes since 4.0.1b1
+			Changes since 4.0.0
 
 - Corrected list of failover state values in dhcpd man page.
 
@@ -64,7 +64,8 @@ suggested fixes to <dhcp-users@isc.org>.
 
 - The server wasn't always sending the FQDN option when it should.
 
-			Changes since 4.0.0
+- A partner-down failover server no longer emits 'peer holds all free leases'
+  if it is able to newly-allocate one of the peer's leases.
 
 - DHCP now builds on AIX.
 

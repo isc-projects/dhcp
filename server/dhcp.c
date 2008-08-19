@@ -3777,18 +3777,47 @@ int allocate_lease (struct lease **lp, struct packet *packet,
 		 * XXX result in its being allocated. */
 		/* Skip to the most expired lease in the pool that is not
 		 * owned by a failover peer. */
-		if (pool -> failover_peer) {
-			if (pool -> failover_peer -> i_am == primary) {
-				if (pool -> backup)
-					*peer_has_leases = 1;
-				candl = pool -> free;
-				if (!candl)
-					candl = pool -> abandoned;
+		if (pool->failover_peer != NULL) {
+			if (pool->failover_peer->i_am == primary) {
+				candl = pool->free;
+
+				/*
+				 * In normal operation, we never want to touch
+				 * the peer's leases.  In partner-down 
+				 * operation, we need to be able to pick up
+				 * the peer's leases after STOS+MCLT.
+				 */
+				if (pool->backup != NULL) {
+					if (((candl == NULL) ||
+					     (candl->ends >
+					      pool->backup->ends)) &&
+					    lease_mine_to_reallocate(
+							    pool->backup)) {
+						candl = pool->backup;
+					} else {
+						*peer_has_leases = 1;
+					}
+				}
 			} else {
-				if (pool -> free)
-					*peer_has_leases = 1;
-				candl = pool -> backup;
+				candl = pool->backup;
+
+				if (pool->free != NULL) {
+					if (((candl == NULL) ||
+					     (candl->ends >
+					      pool->free->ends)) &&
+					    lease_mine_to_reallocate(
+							    pool->free)) {
+						candl = pool->free;
+					} else {
+						*peer_has_leases = 1;
+					}
+				}
 			}
+
+			if ((candl == NULL) &&
+			    (pool->abandoned != NULL) &&
+			    lease_mine_to_reallocate(pool->abandoned))
+				candl = pool->abandoned;
 		} else
 #endif
 		{
@@ -3798,6 +3827,15 @@ int allocate_lease (struct lease **lp, struct packet *packet,
 				candl = pool -> abandoned;
 		}
 
+		/*
+		 * XXX: This may not match with documented expectation.
+		 * It's expected that when we OFFER a lease, we set its
+		 * ends time forward 2 minutes so that it gets sorted to
+		 * the end of its free list (avoiding a similar allocation
+		 * to another client).  It is not expected that we issue a
+		 * "no free leases" error when the last lease has been
+		 * offered, but it's not exactly broken either.
+		 */
 		if (!candl || (candl -> ends > cur_time))
 			continue;
 
