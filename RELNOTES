@@ -58,6 +58,9 @@ the README file.
 
 - The server wasn't always sending the FQDN option when it should.
 
+- A partner-down failover server no longer emits 'peer holds all free leases'
+  if it is able to newly-allocate one of the peer's leases.
+
 			Changes since 3.1.1rc2
 
 - None.
