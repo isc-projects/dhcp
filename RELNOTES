@@ -159,6 +159,9 @@ suggested fixes to <dhcp-users@isc.org>.
 - Fix handling of -A and -a flags in dhcrelay; it was failing to expand
   packet size as needed to add relay agent options.
 
+- Compliation warnings on GCC 4.3 relating to bootp source address
+  selection were repaired.
+
                         Changes since 4.0.0rc1
 
 - None
