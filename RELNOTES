@@ -133,6 +133,9 @@ work on other platforms. Please report any problems and suggested fixes to
 - A warning was added since the DHCPv6 processing software does not yet
   support class statements.
 
+- Compliation warnings on GCC 4.3 relating to bootp source address
+  selection were repaired.
+
 			Changes since 4.0.0 (new features)
 
 - Added DHCPv6 rapid commit support.

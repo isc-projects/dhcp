@@ -351,8 +351,14 @@ void bootp (packet)
 	hto.hlen = packet -> raw -> hlen + 1;
 	memcpy (&hto.hbuf [1], packet -> raw -> chaddr, packet -> raw -> hlen);
 
-	if (packet->interface->address_count)
+	if (packet->interface->address_count) {
 		from = packet->interface->addresses[0];
+	} else {
+		log_error("%s: Interface %s appears to have no IPv4 "
+			  "addresses, and so dhcpd cannot select a source "
+			  "address.", msgbuf, packet->interface->name);
+		goto out;
+	}
 
 	/* Report what we're doing... */
 	log_info ("%s", msgbuf);
