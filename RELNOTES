@@ -162,6 +162,9 @@ suggested fixes to <dhcp-users@isc.org>.
 - Compliation warnings on GCC 4.3 relating to bootp source address
   selection were repaired.
 
+- A bug was fixed in data_string_sprintfa() where va_start was only called
+  once for two invocations of vsprintf() variants.
+
                         Changes since 4.0.0rc1
 
 - None
