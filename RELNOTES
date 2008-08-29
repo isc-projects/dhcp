@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
 		            Version 4.1.0a2
-			      16 July 2008
+			     29 August 2008
 
 			     Release Notes
 
@@ -147,6 +147,13 @@ work on other platforms. Please report any problems and suggested fixes to
 - A bug was fixed in data_string_sprintfa() where va_start was only called
   once for two invocations of vsprintf() variants.
 
+- ERO (RFC 4994) server support.
+
+- Basic and partial DHCPv6 leasequery support.
+
+- Reliable DHCPv6 release (previous behavior, send release and exit, is
+  still available with dhclient -6 -1 -r).
+
 			Changes since 4.0.0 (new features)
 
 - Added DHCPv6 rapid commit support.
@@ -189,13 +196,6 @@ work on other platforms. Please report any problems and suggested fixes to
   that fsync-coupled server performance is now multiplicitively increased.
   The default delayed ack limit is 28.  Thanks entirely to a patch from
   Christof Chen.
-
-- ERO (RFC 4994) server support.
-
-- Basic and partial DHCPv6 leasequery support.
-
-- Reliable DHCPv6 release (previous behavior, send release and exit, is
-  still available with dhclient -6 -1 -r).
 
 			Changes since 4.0.0 (bug fixes)
 
