@@ -54,6 +54,17 @@
 # endif
 #endif
 
+#if defined(DHCPv6)
+/*
+ * XXX: this is gross.  we need to go back and overhaul the API for socket
+ * handling.
+ */
+static unsigned int global_v6_socket_references = 0;
+static int global_v6_socket = -1;
+
+static void if_register_multicast(struct interface_info *info);
+#endif
+
 /*
  * If we can't bind() to a specific interface, then we can only have
  * a single socket. This variable insures that we don't try to listen
@@ -95,43 +106,11 @@ void if_reinitialize_receive (info)
 #if defined (USE_SOCKET_SEND) || \
 	defined (USE_SOCKET_RECEIVE) || \
 		defined (USE_SOCKET_FALLBACK)
-#ifdef DHCPv6
-/* Get the best (i.e., global or at least site-local) address
-   of the interface. */
-static isc_result_t
-get_ifaddr6(struct interface_info *info, struct in6_addr *ifaddr6) {
-	int i;
-	struct in6_addr *a, *ba = NULL;
-
-	for (i = 0; i < info->v6address_count; i++) {
-		a = &info->v6addresses[i];
-		if (IN6_IS_ADDR_UNSPECIFIED(a) ||
-		    IN6_IS_ADDR_LOOPBACK(a) ||
-		    IN6_IS_ADDR_MULTICAST(a) ||
-		    IN6_IS_ADDR_LINKLOCAL(a) ||
-		    IN6_IS_ADDR_V4MAPPED(a))
-			continue;
-
-		if (ba == NULL)
-			ba = a;
-
-		if (!IN6_IS_ADDR_SITELOCAL(a)) {
-                        ba = a;
-			break;
-                }
-	}
-
-	if (ba == NULL)
-		return ISC_R_NOTFOUND;
-
-	*ifaddr6 = *ba;
-	return ISC_R_SUCCESS;
-}
-#endif /* DHCPv6 */
-
 /* Generic interface registration routine... */
 int
-if_register_socket(struct interface_info *info, int family, int do_multicast) {
+if_register_socket(struct interface_info *info, int family,
+		   int *do_multicast)
+{
 	struct sockaddr_storage name;
 	int name_len;
 	int sock;
@@ -159,6 +138,7 @@ if_register_socket(struct interface_info *info, int family, int do_multicast) {
 		struct sockaddr_in6 *addr = (struct sockaddr_in6 *)&name; 
 		addr->sin6_family = AF_INET6;
 		addr->sin6_port = local_port;
+		/* XXX: What will happen to multicasts if this is nonzero? */
 		memcpy(&addr->sin6_addr,
 		       &local_address6, 
 		       sizeof(addr->sin6_addr));
@@ -168,14 +148,7 @@ if_register_socket(struct interface_info *info, int family, int do_multicast) {
 		name_len = sizeof(*addr);
 		domain = PF_INET6;
 		if ((info->flags & INTERFACE_STREAMS) == INTERFACE_UPSTREAM) {
-			struct in6_addr ifaddr6;
-
-			do_multicast = 0;
-			if (get_ifaddr6(info, &ifaddr6) == ISC_R_SUCCESS) {
-				memcpy(&addr->sin6_addr,
-				       &ifaddr6,
-				       sizeof(addr->sin6_addr));
-			}
+			*do_multicast = 0;
 		}
 	} else { 
 #else 
@@ -217,6 +190,24 @@ if_register_socket(struct interface_info *info, int family, int do_multicast) {
 		log_fatal("Can't set SO_BROADCAST option on dhcp socket: %m");
 	}
 
+#if defined(DHCPv6) && defined(SO_REUSEPORT)
+	/*
+	 * We only set SO_REUSEPORT on AF_INET6 sockets, so that multiple
+	 * daemons can bind to their own sockets and get data for their
+	 * respective interfaces.  This does not (and should not) affect
+	 * DHCPv4 sockets; we can't yet support BSD sockets well, much
+	 * less multiple sockets.
+	 */
+	if (local_family == AF_INET6) {
+		flag = 1;
+		if (setsockopt(sock, SOL_SOCKET, SO_REUSEPORT,
+			       (char *)&flag, sizeof(flag)) < 0) {
+			log_fatal("Can't set SO_REUSEPORT option on dhcp "
+				  "socket: %m");
+		}
+	}
+#endif
+
 	/* Bind the socket to this interface's IP address. */
 	if (bind(sock, (struct sockaddr *)&name, name_len) < 0) {
 		log_error("Can't bind to dhcp address: %m");
@@ -229,7 +220,7 @@ if_register_socket(struct interface_info *info, int family, int do_multicast) {
 
 #if defined(SO_BINDTODEVICE)
 	/* Bind this socket to this interface. */
-	if (info->ifp &&
+	if ((local_family != AF_INET6) && (info->ifp != NULL) &&
 	    setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE,
 			(char *)(info -> ifp), sizeof(*(info -> ifp))) < 0) {
 		log_fatal("setsockopt: SO_BINDTODEVICE: %m");
@@ -272,36 +263,6 @@ if_register_socket(struct interface_info *info, int family, int do_multicast) {
 		}
 #endif
 	}
-	
-	if ((family == AF_INET6) && do_multicast) {
-		struct ipv6_mreq mreq;
-
-		/*
-		 * Join the DHCPv6 multicast groups so we will receive
-		 * multicast messages.
-		 */
-		if (inet_pton(AF_INET6, All_DHCP_Relay_Agents_and_Servers,
-			      &mreq.ipv6mr_multiaddr) <= 0) {
-			log_fatal("inet_pton: unable to convert '%s'", 
-				  All_DHCP_Relay_Agents_and_Servers);
-		}
-		mreq.ipv6mr_interface = if_nametoindex(info->name);
-		if (setsockopt(sock, IPPROTO_IPV6, IPV6_JOIN_GROUP, 
-			       &mreq, sizeof(mreq)) < 0) {
-			log_fatal("setsockopt: IPV6_JOIN_GROUP: %m");
-		}
-		if (inet_pton(AF_INET6, All_DHCP_Servers,
-			      &mreq.ipv6mr_multiaddr) <= 0) {
-			log_fatal("inet_pton: unable to convert '%s'", 
-				  All_DHCP_Servers);
-		}
-		mreq.ipv6mr_interface = if_nametoindex(info->name);
-		if (((info->flags & INTERFACE_DOWNSTREAM) == 0) &&
-		    (setsockopt(sock, IPPROTO_IPV6, IPV6_JOIN_GROUP,
-			       &mreq, sizeof(mreq)) < 0)) {
-			log_fatal("setsockopt: IPV6_JOIN_GROUP: %m");
-		}
-	}
 
 	if ((family == AF_INET6) &&
 	    ((info->flags & INTERFACE_UPSTREAM) != 0)) {
@@ -313,7 +274,8 @@ if_register_socket(struct interface_info *info, int family, int do_multicast) {
 	}
 #endif /* DHCPv6 */
 
-	if (strcmp(info->name, "fallback") != 0)
+	/* If this is a normal IPv4 address, get the hardware address. */
+	if ((local_family == AF_INET) && (strcmp(info->name, "fallback") != 0))
 		get_hw_addr(info->name, &info->hw_address);
 
 	return sock;
@@ -393,15 +355,82 @@ void if_deregister_receive (info)
 
 
 #ifdef DHCPv6 
+/*
+ * This function joins the interface to DHCPv6 multicast groups so we will
+ * receive multicast messages.
+ */
+static void
+if_register_multicast(struct interface_info *info) {
+	int sock = info->rfdesc;
+	struct ipv6_mreq mreq;
+
+	if (inet_pton(AF_INET6, All_DHCP_Relay_Agents_and_Servers,
+		      &mreq.ipv6mr_multiaddr) <= 0) {
+		log_fatal("inet_pton: unable to convert '%s'", 
+			  All_DHCP_Relay_Agents_and_Servers);
+	}
+	mreq.ipv6mr_interface = if_nametoindex(info->name);
+	if (setsockopt(sock, IPPROTO_IPV6, IPV6_JOIN_GROUP, 
+		       &mreq, sizeof(mreq)) < 0) {
+		log_fatal("setsockopt: IPV6_JOIN_GROUP: %m");
+	}
+
+	/*
+	 * The relay agent code sets the streams so you know which way
+	 * is up and down.  But a relay agent shouldn't join to the
+	 * Server address, or else you get fun loops.  So up or down
+	 * doesn't matter, we're just using that config to sense this is
+	 * a relay agent.
+	 */
+	if ((info->flags & INTERFACE_STREAMS) == 0) {
+		if (inet_pton(AF_INET6, All_DHCP_Servers,
+			      &mreq.ipv6mr_multiaddr) <= 0) {
+			log_fatal("inet_pton: unable to convert '%s'", 
+				  All_DHCP_Servers);
+		}
+		mreq.ipv6mr_interface = if_nametoindex(info->name);
+		if (setsockopt(sock, IPPROTO_IPV6, IPV6_JOIN_GROUP, 
+			       &mreq, sizeof(mreq)) < 0) {
+			log_fatal("setsockopt: IPV6_JOIN_GROUP: %m");
+		}
+	}
+}
+
 void
 if_register6(struct interface_info *info, int do_multicast) {
-	info->rfdesc = if_register_socket(info, AF_INET6, do_multicast);
-	info->wfdesc = info->rfdesc;
+	/* Bounce do_multicast to a stack variable because we may change it. */
+	int req_multi = do_multicast;
+
+	if (global_v6_socket_references == 0) {
+		global_v6_socket = if_register_socket(info, AF_INET6,
+						      &req_multi);
+		if (global_v6_socket < 0) {
+			/*
+			 * if_register_socket() fatally logs if it fails to
+			 * create a socket, this is just a sanity check.
+			 */
+			log_fatal("Impossible condition at %s:%d", MDL);
+		} else {
+			log_info("Bound to *:%d", ntohs(local_port));
+		}
+	}
+		
+	info->rfdesc = global_v6_socket;
+	info->wfdesc = global_v6_socket;
+	global_v6_socket_references++;
+
+	if (req_multi)
+		if_register_multicast(info);
+
+	get_hw_addr(info->name, &info->hw_address);
+
 	if (!quiet_interface_discovery) {
 		if (info->shared_network != NULL) {
-			log_info("Listening on Socket/%s/%s", info->name, 
+			log_info("Listening on Socket/%d/%s/%s",
+				 global_v6_socket, info->name, 
 				 info->shared_network->name);
-			log_info("Sending on   Socket/%s/%s", info->name,
+			log_info("Sending on   Socket/%d/%s/%s",
+				 global_v6_socket, info->name,
 				 info->shared_network->name);
 		} else {
 			log_info("Listening on Socket/%s", info->name);
@@ -412,14 +441,16 @@ if_register6(struct interface_info *info, int do_multicast) {
 
 void 
 if_deregister6(struct interface_info *info) {
-	/* 
-	 * XXX: it would be nice to check for >= 0, but we need to change 
-	 *      interface_allocate() to set the file descriptors for that.
-	 */
-	close(info->rfdesc);	
-	info->rfdesc = -1;
-	close(info->wfdesc);	
-	info->wfdesc = -1;
+	/* Dereference the global v6 socket. */
+	if ((info->rfdesc == global_v6_socket) &&
+	    (info->wfdesc == global_v6_socket) &&
+	    (global_v6_socket_references > 0)) {
+		global_v6_socket_references--;
+		info->rfdesc = -1;
+		info->wfdesc = -1;
+	} else {
+		log_fatal("Impossible condition at %s:%d", MDL);
+	}
 
 	if (!quiet_interface_discovery) {
 		if (info->shared_network != NULL) {
@@ -431,6 +462,13 @@ if_deregister6(struct interface_info *info) {
 			log_info("Disabling input on  Socket/%s", info->name);
 			log_info("Disabling output on Socket/%s", info->name);
 		}
+	}
+
+	if (global_v6_socket_references == 0) {
+		close(global_v6_socket);
+		global_v6_socket = -1;
+
+		log_info("Unbound from *:%d", ntohs(local_port));
 	}
 }
 #endif /* DHCPv6 */
@@ -640,13 +678,15 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 ssize_t 
 receive_packet6(struct interface_info *interface, 
 		unsigned char *buf, size_t len, 
-		struct sockaddr_in6 *from, struct in6_addr *to_addr) {
+		struct sockaddr_in6 *from, struct in6_addr *to_addr,
+		unsigned int *if_idx)
+{
 	struct msghdr m;
 	struct iovec v;
 	int result;
 	struct cmsghdr *cmsg;
 	struct in6_pktinfo *pktinfo;
-	int found_to_addr;
+	int found_pktinfo;
 	union {
 	        struct cmsghdr cmsg_sizer;
 	        u_int8_t pktinfo_sizer[CMSG_SPACE(sizeof(struct in6_pktinfo))];
@@ -695,18 +735,19 @@ receive_packet6(struct interface_info *interface,
 		 * We also keep a flag to see if we found it. If we 
 		 * didn't, then we consider this to be an error.
 		 */
-		found_to_addr = 0;
+		found_pktinfo = 0;
 		cmsg = CMSG_FIRSTHDR(&m);
 		while (cmsg != NULL) {
 			if ((cmsg->cmsg_level == IPPROTO_IPV6) && 
 			    (cmsg->cmsg_type == IPV6_PKTINFO)) {
 				pktinfo = (struct in6_pktinfo *)CMSG_DATA(cmsg);
 				*to_addr = pktinfo->ipi6_addr;
-				found_to_addr = 1;
+				*if_idx = pktinfo->ipi6_ifindex;
+				found_pktinfo = 1;
 			}
 			cmsg = CMSG_NXTHDR(&m, cmsg);
 		}
-		if (!found_to_addr) {
+		if (!found_pktinfo) {
 			result = -1;
 			errno = EIO;
 		}

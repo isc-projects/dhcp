@@ -99,6 +99,7 @@ data_string_sprintfa(struct data_string *ds, const char *fmt, ...) {
 	 */
 	va_start(args, fmt);
 	vsnprintf_ret = vsnprintf((char *)ds->data+cur_strlen, max, fmt, args);
+	va_end(args);
 	/* INSIST(vsnprintf_ret >= 0); */
 
 	/*
@@ -127,7 +128,11 @@ data_string_sprintfa(struct data_string *ds, const char *fmt, ...) {
 			return 0;
 		}
 		memcpy(tmp_buffer->data, ds->data, cur_strlen);
+
+		/* Rerun the vsprintf. */
+		va_start(args, fmt);
 		vsprintf((char *)tmp_buffer->data + cur_strlen, fmt, args);
+		va_end(args);
 
 		/*
 		 * Replace our old buffer with the new buffer.
@@ -138,7 +143,6 @@ data_string_sprintfa(struct data_string *ds, const char *fmt, ...) {
 		ds->data = ds->buffer->data;
 		ds->len = new_len;
 	}
-	va_end(args);
 	return 1;
 }
 

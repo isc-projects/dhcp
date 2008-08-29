@@ -136,6 +136,17 @@ work on other platforms. Please report any problems and suggested fixes to
 - Compliation warnings on GCC 4.3 relating to bootp source address
   selection were repaired.
 
+- The v6 BSD socket method was updated to use a single UDP BSD socket
+  no matter how many interfaces are involved, differentiating the
+  interfaces the packets were received on by the interface index supplied
+  by the OS.
+
+- The relay agent no longer listens to the All DHCP Servers Multicast
+  address.
+
+- A bug was fixed in data_string_sprintfa() where va_start was only called
+  once for two invocations of vsprintf() variants.
+
 			Changes since 4.0.0 (new features)
 
 - Added DHCPv6 rapid commit support.

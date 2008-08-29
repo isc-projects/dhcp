@@ -1265,6 +1265,17 @@ discover_interfaces(int state) {
 		if (status != ISC_R_SUCCESS)
 			log_fatal ("Can't register I/O handle for %s: %s",
 				   tmp -> name, isc_result_totext (status));
+
+#if defined(DHCPv6)
+		/* Only register the first interface for V6, since they all
+		 * use the same socket.  XXX: This has some messy side
+		 * effects if we start dynamically adding and removing
+		 * interfaces, but we're well beyond that point in terms of
+		 * mess.
+		 */
+		if (local_family == AF_INET6)
+			break;
+#endif
 	}
 
 	if (state == DISCOVER_SERVER && wifcount == 0) {
@@ -1395,6 +1406,7 @@ got_one_v6(omapi_object_t *h) {
 	char buf[65536];	/* maximum size for a UDP packet is 65536 */
 	struct interface_info *ip;
 	int is_unicast;
+	unsigned int if_idx = 0;
 
 	if (h->type != dhcp_type_interface) {
 		return ISC_R_INVALIDARG;
@@ -1402,11 +1414,15 @@ got_one_v6(omapi_object_t *h) {
 	ip = (struct interface_info *)h;
 
 	result = receive_packet6(ip, (unsigned char *)buf, sizeof(buf),
-				 &from, &to);
+				 &from, &to, &if_idx);
 	if (result < 0) {
 		log_error("receive_packet6() failed on %s: %m", ip->name);
 		return ISC_R_UNEXPECTED;
 	}
+
+	/* 0 is 'any' interface. */
+	if (if_idx == 0)
+		return ISC_R_NOTFOUND;
 
 	if (dhcpv6_packet_handler != NULL) {
 		/*
@@ -1420,6 +1436,13 @@ got_one_v6(omapi_object_t *h) {
 
 		ifrom.len = 16;
 		memcpy(ifrom.iabuf, &from.sin6_addr, ifrom.len);
+
+		/* Seek forward to find the matching source interface. */
+		while ((ip != NULL) && (if_nametoindex(ip->name) != if_idx))
+			ip = ip->next;
+
+		if (ip == NULL)
+			return ISC_R_NOTFOUND;
 
 		(*dhcpv6_packet_handler)(ip, buf, 
 					 result, from.sin6_port, 
