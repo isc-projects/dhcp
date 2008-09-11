@@ -48,6 +48,12 @@ work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
 
+			Changes since 4.1.0a2
+
+- A cosmetic bug in DHCPDECLINE processing was fixed which caused all
+  successful DHCPDECLINEs to be logged as "not found" rather than
+  "abandoned".
+
 			Changes since 4.1.0a1
 
 - Corrected list of failover state values in dhcpd man page.
