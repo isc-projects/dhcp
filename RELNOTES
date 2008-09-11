@@ -64,6 +64,13 @@ suggested fixes to <dhcp-users@isc.org>.
 
 - The server wasn't always sending the FQDN option when it should.
 
+- A double-dereference in dhclient transmission of DHCPDECLINEs was
+  repaired.
+
+- A cosmetic bug in DHCPDECLINE processing was fixed which caused all
+  successful DHCPDECLINEs to be logged as "not found" rather than
+  "abandoned".
+
 - A partner-down failover server no longer emits 'peer holds all free leases'
   if it is able to newly-allocate one of the peer's leases.
 

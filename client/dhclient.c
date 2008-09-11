@@ -2226,12 +2226,13 @@ void make_decline (client, lease)
 
 	struct option_state *options = (struct option_state *)0;
 
+	/* Create the options cache. */
 	oc = lookup_option (&dhcp_universe, lease -> options,
 			    DHO_DHCP_SERVER_IDENTIFIER);
 	make_client_options(client, lease, &decline, oc, &lease->address,
 			    NULL, &options);
 
-	/* Set up the option buffer... */
+	/* Consume the options cache into the option buffer. */
 	memset (&client -> packet, 0, sizeof (client -> packet));
 	client -> packet_length =
 		cons_options ((struct packet *)0, &client -> packet,
@@ -2239,10 +2240,12 @@ void make_decline (client, lease)
 			      (struct option_state *)0, options,
 			      &global_scope, 0, 0, 0, (struct data_string *)0,
 			      client -> config -> vendor_space_name);
+
+	/* Destroy the options cache. */
 	option_state_dereference (&options, MDL);
+
 	if (client -> packet_length < BOOTP_MIN_LEN)
 		client -> packet_length = BOOTP_MIN_LEN;
-	option_state_dereference (&options, MDL);
 
 	client -> packet.op = BOOTREQUEST;
 	client -> packet.htype = client -> interface -> hw_address.hbuf [0];

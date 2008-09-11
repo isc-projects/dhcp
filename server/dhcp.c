@@ -904,8 +904,9 @@ void dhcpdecline (packet, ms_nulltp)
 
 		abandon_lease (lease, "declined.");
 		status = "abandoned";
+	    } else {
+		status = "not found";
 	    }
-	    status = "not found";
 	} else
 	    status = "ignored";
 
