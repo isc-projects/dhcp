@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.211.2.14 2008/08/19 18:04:26 dhankins Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.211.2.15 2008/09/11 16:16:29 dhankins Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -908,8 +908,9 @@ void dhcpdecline (packet, ms_nulltp)
 
 		abandon_lease (lease, "declined.");
 		status = "abandoned";
+	    } else {
+		status = "not found";
 	    }
-	    status = "not found";
 	} else
 	    status = "ignored";
 

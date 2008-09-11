@@ -61,6 +61,10 @@ the README file.
 - A partner-down failover server no longer emits 'peer holds all free leases'
   if it is able to newly-allocate one of the peer's leases.
 
+- A cosmetic bug in DHCPDECLINE processing was fixed which caused all
+  successful DHCPDECLINEs to be logged as "not found" rather than
+  "abandoned".
+
 			Changes since 3.1.1rc2
 
 - None.
