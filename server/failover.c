@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.63.56.18 2008/01/22 19:02:51 dhankins Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.63.56.19 2008/09/24 16:20:26 dhankins Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -463,11 +463,18 @@ isc_result_t dhcp_failover_link_signal (omapi_object_t *h,
 		link -> imsg_count += 4;
 
 #if defined (DEBUG_FAILOVER_MESSAGES)
+# if !defined(DEBUG_FAILOVER_CONTACT_MESSAGES)
+		if (link->imsg->type == FTM_CONTACT)
+			goto skip_contact;
+# endif
 		log_info ("link: message %s  payoff %d  time %ld  xid %ld",
 			  dhcp_failover_message_name (link -> imsg -> type),
 			  link -> imsg_payoff,
 			  (unsigned long)link -> imsg -> time,
 			  (unsigned long)link -> imsg -> xid);
+# if !defined(DEBUG_FAILOVER_CONTACT_MESSAGES)
+	      skip_contact:
+# endif
 #endif
 		/* Skip over any portions of the message header that we
 		   don't understand. */
@@ -1402,7 +1409,7 @@ isc_result_t dhcp_failover_state_signal (omapi_object_t *o,
 		    if (link -> imsg -> options_present & FTB_RECEIVE_TIMER)
 			    state -> partner.max_response_delay =
 				    link -> imsg -> receive_timer;
-#if defined (DEBUG_FAILOVER_TIMING)
+#if defined (DEBUG_FAILOVER_CONTACT_TIMING)
 		    log_info ("add_timeout +%d %s",
 			      (int)state -> partner.max_response_delay / 3,
 			      "dhcp_failover_send_contact");
@@ -1412,7 +1419,7 @@ isc_result_t dhcp_failover_state_signal (omapi_object_t *o,
 				 dhcp_failover_send_contact, state,
 				 (tvref_t)dhcp_failover_state_reference,
 				 (tvunref_t)dhcp_failover_state_dereference);
-#if defined (DEBUG_FAILOVER_TIMING)
+#if defined (DEBUG_FAILOVER_CONTACT_TIMING)
 		    log_info ("add_timeout +%d %s",
 			      (int)state -> me.max_response_delay,
 			      "dhcp_failover_timeout");
@@ -1463,7 +1470,7 @@ isc_result_t dhcp_failover_state_signal (omapi_object_t *o,
 		    state -> link_to_peer == link &&
 		    state -> link_to_peer -> state != dhcp_flink_disconnected)
 		{
-#if defined (DEBUG_FAILOVER_TIMING)
+#if defined (DEBUG_FAILOVER_CONTACT_TIMING)
 		    log_info ("add_timeout +%d %s",
 			      (int)state -> me.max_response_delay,
 			      "dhcp_failover_timeout");
@@ -2622,7 +2629,7 @@ dhcp_failover_pool_check(struct pool *pool)
 
 #if defined(DEBUG_FAILOVER_TIMING)
 	log_info("add_timeout +%d dhcp_failover_pool_rebalance",
-		 est1 - cur_time);
+		 (int)(est1 - cur_time));
 #endif
 	add_timeout(est1, dhcp_failover_pool_rebalance, peer,
 			(tvref_t)dhcp_failover_state_reference,
@@ -4154,7 +4161,7 @@ isc_result_t dhcp_failover_put_message (dhcp_failover_link_t *link,
 	}
 	if (link -> state_object &&
 	    link -> state_object -> link_to_peer == link) {
-#if defined (DEBUG_FAILOVER_TIMING)
+#if defined (DEBUG_FAILOVER_CONTACT_TIMING)
 		log_info ("add_timeout +%d %s",
 			  (int)(link -> state_object ->
 				partner.max_response_delay) / 3,
@@ -4208,17 +4215,15 @@ void dhcp_failover_send_contact (void *vstate)
 	dhcp_failover_link_t *link;
 	isc_result_t status;
 
-#if defined (DEBUG_FAILOVER_MESSAGES)	
+#if defined(DEBUG_FAILOVER_MESSAGES) && \
+    defined(DEBUG_FAILOVER_CONTACT_MESSAGES)
 	char obuf [64];
 	unsigned obufix = 0;
-	
-# define FMA obuf, &obufix, sizeof obuf
-	failover_print (FMA, "(contact");
-#else
-# define FMA (char *)0, (unsigned *)0, 0
+
+	failover_print(obuf, &obufix, sizeof(obuf), "(contact");
 #endif
 
-#if defined (DEBUG_FAILOVER_TIMING)
+#if defined (DEBUG_FAILOVER_CONTACT_TIMING)
 	log_info ("dhcp_failover_send_contact");
 #endif
 
@@ -4235,10 +4240,11 @@ void dhcp_failover_send_contact (void *vstate)
 		   FTM_CONTACT, link->xid++,
 		   (failover_option_t *)0));
 
-#if defined (DEBUG_FAILOVER_MESSAGES)
+#if defined(DEBUG_FAILOVER_MESSAGES) && \
+    defined(DEBUG_FAILOVER_CONTACT_MESSAGES)
 	if (status != ISC_R_SUCCESS)
-		failover_print (FMA, " (failed)");
-	failover_print (FMA, ")");
+		failover_print(obuf, &obufix, sizeof(obuf), " (failed)");
+	failover_print(obuf, &obufix, sizeof(obuf), ")");
 	if (obufix) {
 		log_debug ("%s", obuf);
 	}
@@ -4547,8 +4553,9 @@ isc_result_t dhcp_failover_send_bind_update (dhcp_failover_state_t *state,
 					      lease -> tstp),
 		   dhcp_failover_make_option (FTO_STOS, FMA,
 					      lease -> starts),
-		   dhcp_failover_make_option (FTO_CLTT, FMA,
-					      lease -> cltt),
+		   (lease->cltt != 0) ? 
+			dhcp_failover_make_option(FTO_CLTT, FMA, lease->cltt) :
+			&skip_failover_option, /* No CLTT */
 		   flags ? dhcp_failover_make_option(FTO_IP_FLAGS, FMA,
 						     flags) :
 			   &skip_failover_option, /* No IP_FLAGS */
@@ -4623,8 +4630,9 @@ isc_result_t dhcp_failover_send_bind_ack (dhcp_failover_state_t *state,
 					      msg -> potential_expiry),
 		   dhcp_failover_make_option (FTO_STOS, FMA,
 					      msg -> stos),
-		   dhcp_failover_make_option (FTO_CLTT, FMA,
-					      msg -> cltt),
+		   (msg->options_present & FTB_CLTT) ?
+			dhcp_failover_make_option(FTO_CLTT, FMA, msg->cltt) :
+			&skip_failover_option, /* No CLTT in the msg to ack. */
 		   ((msg->options_present & FTB_IP_FLAGS) && msg->ip_flags) ? 
 			dhcp_failover_make_option(FTO_IP_FLAGS, FMA,
 						  msg->ip_flags)
@@ -4874,6 +4882,74 @@ isc_result_t dhcp_failover_send_update_done (dhcp_failover_state_t *state)
 	return status;
 }
 
+/*
+ * failover_lease_is_better() compares the binding update in 'msg' with
+ * the current lease in 'lease'.  If the determination is that the binding
+ * update shouldn't be allowed to update/crush more critical binding info
+ * on the lease, the lease is preferred.  A value of true is returned if the
+ * local lease is preferred, or false if the remote binding update is
+ * preferred.
+ *
+ * For now this function is hopefully simplistic and trivial.  It may be that
+ * a more detailed system of preferences is required, so this is something we
+ * should monitor as we gain experience with these dueling events.
+ */
+static isc_boolean_t
+failover_lease_is_better(dhcp_failover_state_t *state, struct lease *lease,
+			 failover_message_t *msg)
+{
+	binding_state_t local_state;
+	TIME msg_cltt;
+
+	if (lease->binding_state != lease->desired_binding_state)
+		local_state = lease->desired_binding_state;
+	else
+		local_state = lease->binding_state;
+
+	if ((msg->options_present & FTB_CLTT) != 0)
+		msg_cltt = msg->cltt;
+	else
+		msg_cltt = 0;
+
+	switch(local_state) {
+	      case FTS_ACTIVE:
+		if (msg->binding_status == FTS_ACTIVE) {
+			if (msg_cltt < lease->cltt)
+				return ISC_TRUE;
+			else if (msg_cltt > lease->cltt)
+				return ISC_FALSE;
+			else if (state->i_am == primary)
+				return ISC_TRUE;
+			else
+				return ISC_FALSE;
+		} else if (msg->binding_status == FTS_EXPIRED) {
+			return ISC_FALSE;
+		}
+		/* FALL THROUGH */
+
+	      case FTS_FREE:
+	      case FTS_BACKUP:
+	      case FTS_EXPIRED:
+	      case FTS_RELEASED:
+	      case FTS_ABANDONED:
+	      case FTS_RESET:
+		if (msg->binding_status == FTS_ACTIVE)
+			return ISC_FALSE;
+		else if (state->i_am == primary)
+			return ISC_TRUE;
+		else
+			return ISC_FALSE;
+		/* FALL THROUGH to impossible condition */
+
+	      default:
+		log_fatal("Impossible condition at %s:%d.", MDL);
+	}
+
+	log_fatal("Impossible condition at %s:%d.", MDL);
+	/* Silence compiler warning. */
+	return ISC_FALSE;
+}
+
 isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 					       failover_message_t *msg)
 {
@@ -4883,6 +4959,15 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 	const char *message;
 	int new_binding_state;
 	int send_to_backup = 0;
+	int required_options;
+
+	/* Validate the binding update. */
+	required_options = FTB_ASSIGNED_IP_ADDRESS | FTB_BINDING_STATUS;
+	if ((msg->options_present & required_options) != required_options) {
+		message = "binding update lacks required options";
+		reason = FTR_MISSING_BINDINFO;
+		goto bad;
+	}
 
 	ia.len = sizeof msg -> assigned_addr;
 	memcpy (ia.iabuf, &msg -> assigned_addr, ia.len);
@@ -4895,9 +4980,41 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 		goto bad;
 	}
 
-	/* XXX check for conflicts. */
+	/*
+	 * If this lease is covered by a different failover peering
+	 * relationship, assert an error.
+	 */
+	if ((lease->pool == NULL) || (lease->pool->failover_peer == NULL) ||
+	    (lease->pool->failover_peer != state)) {
+		message = "IP address is covered by a different failover "
+			  "relationship state";
+		reason = FTR_ILLEGAL_IP_ADDR;
+		goto bad;
+	}
 
-	/* Install the new info. */
+	/*
+	 * Dueling updates:  This happens when both servers send a BNDUPD
+	 * at the same time.  We want the best update to win, which means
+	 * we reject if we think ours is better, or cancel if we think the
+	 * peer's is better.  We only assert a problem if the lease is on
+	 * the ACK queue, not on the UPDATE queue.  This means that after
+	 * accepting this server's BNDUPD, we will send our own BNDUPD
+	 * /after/ sending the BNDACK (this order was recently enforced in
+	 * queue processing).
+	 */
+	if ((lease->flags & ON_ACK_QUEUE) != 0) {
+		if (failover_lease_is_better(state, lease, msg)) {
+			message = "incoming update is less critical than "
+				  "outgoing update";
+			reason = FTR_LESS_CRIT_BIND_INFO;
+			goto bad;
+		} else {
+			/* This makes it so we ignore any spurious ACKs. */
+			dhcp_failover_ack_queue_remove(state, lease);
+		}
+	}
+
+	/* Install the new info.  Start by taking a copy to markup. */
 	if (!lease_copy (&lt, lease, MDL)) {
 		message = "no memory";
 		goto bad;
@@ -4919,6 +5036,7 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 		   msg->binding_status == FTS_EXPIRED ||
 		   msg->binding_status == FTS_RELEASED) {
 		message = "BNDUPD without CHADDR";
+		reason = FTR_MISSING_BINDINFO;
 		goto bad;
 	} else if (msg->binding_status == FTS_ABANDONED) {
 		lt->hardware_addr.hlen = 0;
@@ -4981,9 +5099,6 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 	if (msg -> options_present & FTB_LEASE_EXPIRY) {
 		lt -> ends = msg -> expiry;
 	}
-	if (msg -> options_present & FTB_CLTT) {
-		lt -> cltt = msg -> cltt;
-	}
 	if (msg->options_present & FTB_POTENTIAL_EXPIRY) {
 		lt->atsfp = lt->tsfp = msg->potential_expiry;
 	}
@@ -5022,65 +5137,63 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 	} else /* Flags may only not appear if the values are zero. */
 		lt->flags &= ~(RESERVED_LEASE | BOOTP_LEASE);
 
-	if (msg -> options_present & FTB_BINDING_STATUS) {
 #if defined (DEBUG_LEASE_STATE_TRANSITIONS)
-		log_info ("processing state transition for %s: %s to %s",
-			  piaddr (lease -> ip_addr),
-			  binding_state_print (lease -> binding_state),
-			  binding_state_print (msg -> binding_status));
+	log_info ("processing state transition for %s: %s to %s",
+		  piaddr (lease -> ip_addr),
+		  binding_state_print (lease -> binding_state),
+		  binding_state_print (msg -> binding_status));
 #endif
 
-		/* If we're in normal state, make sure the state transition
-		   we got is valid. */
-		if (state -> me.state == normal) {
-			new_binding_state =
-				(normal_binding_state_transition_check
-				 (lease, state, msg -> binding_status,
-				  msg -> potential_expiry));
-			/* XXX if the transition the peer asked for isn't
-			   XXX allowed, maybe we should make the transition
-			   XXX into potential-conflict at this point. */
-		} else {
-			new_binding_state =
-				(conflict_binding_state_transition_check
-				 (lease, state, msg -> binding_status,
-				  msg -> potential_expiry));
-		}
-		if (new_binding_state != msg -> binding_status) {
-			char outbuf [100];
-
-			if (snprintf (outbuf, sizeof outbuf,
-				  "%s: invalid state transition: %s to %s",
-				  piaddr (lease -> ip_addr),
-				  binding_state_print (lease -> binding_state),
-				  binding_state_print (msg -> binding_status))
-						>= sizeof outbuf)
-				log_fatal ("%s: impossible outbuf overflow",
-					"dhcp_failover_process_bind_update");
-
-			dhcp_failover_send_bind_ack (state, msg,
-						     FTR_FATAL_CONFLICT,
-						     outbuf);
-			goto out;
-		}
-		if (new_binding_state == FTS_EXPIRED ||
-		    new_binding_state == FTS_RELEASED ||
-		    new_binding_state == FTS_RESET) {
-			lt -> next_binding_state = FTS_FREE;
-
-			/* Mac address affinity.  Assign the lease to
-			 * BACKUP state if we are the primary and the
-			 * peer is more likely to reallocate this lease
-			 * to a returning client.
-			 */
-			if ((state->i_am == primary) &&
-			    !(lt->flags & (RESERVED_LEASE | BOOTP_LEASE)))
-				send_to_backup = peer_wants_lease(lt);
-		} else {
-			lt -> next_binding_state = new_binding_state;
-		}
-		msg -> binding_status = lt -> next_binding_state;
+	/* If we're in normal state, make sure the state transition
+	   we got is valid. */
+	if (state -> me.state == normal) {
+		new_binding_state =
+			(normal_binding_state_transition_check
+			 (lease, state, msg -> binding_status,
+			  msg -> potential_expiry));
+		/* XXX if the transition the peer asked for isn't
+		   XXX allowed, maybe we should make the transition
+		   XXX into potential-conflict at this point. */
+	} else {
+		new_binding_state =
+			(conflict_binding_state_transition_check
+			 (lease, state, msg -> binding_status,
+			  msg -> potential_expiry));
 	}
+	if (new_binding_state != msg -> binding_status) {
+		char outbuf [100];
+
+		if (snprintf (outbuf, sizeof outbuf,
+			  "%s: invalid state transition: %s to %s",
+			  piaddr (lease -> ip_addr),
+			  binding_state_print (lease -> binding_state),
+			  binding_state_print (msg -> binding_status))
+					>= sizeof outbuf)
+			log_fatal ("%s: impossible outbuf overflow",
+				"dhcp_failover_process_bind_update");
+
+		dhcp_failover_send_bind_ack (state, msg,
+					     FTR_FATAL_CONFLICT,
+					     outbuf);
+		goto out;
+	}
+	if (new_binding_state == FTS_EXPIRED ||
+	    new_binding_state == FTS_RELEASED ||
+	    new_binding_state == FTS_RESET) {
+		lt -> next_binding_state = FTS_FREE;
+
+		/* Mac address affinity.  Assign the lease to
+		 * BACKUP state if we are the primary and the
+		 * peer is more likely to reallocate this lease
+		 * to a returning client.
+		 */
+		if ((state->i_am == primary) &&
+		    !(lt->flags & (RESERVED_LEASE | BOOTP_LEASE)))
+			send_to_backup = peer_wants_lease(lt);
+	} else {
+		lt -> next_binding_state = new_binding_state;
+	}
+	msg -> binding_status = lt -> next_binding_state;
 
 	/* Try to install the new information. */
 	if (!supersede_lease (lease, lt, 0, 0, 0) ||

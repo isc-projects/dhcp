@@ -65,6 +65,15 @@ the README file.
   successful DHCPDECLINEs to be logged as "not found" rather than
   "abandoned".
 
+- Some failover debugging #defines have been better defined and some
+  high frequency messages moved to a deeper debugging symbol.
+
+- The CLTT parameter in failover is now only updated by client activity,
+  and not by failover binding updates (taking on the peer's CLTT).
+
+- Failover BNDUPD messages are now discarded if they conflict with an
+  update that has been trasnmitted, but not acknowledged.
+
 			Changes since 3.1.1rc2
 
 - None.
