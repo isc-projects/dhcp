@@ -56,6 +56,15 @@ work on other platforms. Please report any problems and suggested fixes to
 
 - Added configuration file examples for DHCPv6.
 
+- Some failover debugging #defines have been better defined and some
+  high frequency messages moved to a deeper debugging symbol.
+
+- The CLTT parameter in failover is now only updated by client activity,
+  and not by failover binding updates (taking on the peer's CLTT).
+
+- Failover BNDUPD messages are now discarded if they conflict with an
+  update that has been trasnmitted, but not acknowledged.
+
 			Changes since 4.1.0a1
 
 - Corrected list of failover state values in dhcpd man page.

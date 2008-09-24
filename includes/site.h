@@ -81,10 +81,21 @@
 
 /* #define DEBUG_FAILOVER_MESSAGES */
 
+/* Define this to include contact messages in failover message debugging.
+   The contact messages are sent once per second, so this can generate a
+   lot of log entries. */
+
+/* #define DEBUG_FAILOVER_CONTACT_MESSAGES */
+
 /* Define this if you want debugging output for DHCP failover protocol
-   lease assignment timing. */
+   event timeout timing. */
 
 /* #define DEBUG_FAILOVER_TIMING */
+
+/* Define this if you want to include contact message timing, which is
+   performed once per second and can generate a lot of log entries. */
+
+/* #define DEBUG_FAILOVER_CONTACT_TIMING */
 
 /* Define this if you want all leases written to the lease file, even if
    they are free leases that have never been used. */
