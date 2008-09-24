@@ -172,6 +172,15 @@ suggested fixes to <dhcp-users@isc.org>.
 - A bug was fixed in data_string_sprintfa() where va_start was only called
   once for two invocations of vsprintf() variants.
 
+- Some failover debugging #defines have been better defined and some
+  high frequency messages moved to a deeper debugging symbol.
+
+- The CLTT parameter in failover is now only updated by client activity,
+  and not by failover binding updates (taking on the peer's CLTT).
+
+- Failover BNDUPD messages are now discarded if they conflict with an
+  update that has been trasnmitted, but not acknowledged.
+
                         Changes since 4.0.0rc1
 
 - None
