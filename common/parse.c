@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.117.8.7 2008/01/22 19:02:50 dhankins Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.117.8.8 2008/10/08 16:30:54 dhankins Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1041,7 +1041,7 @@ parse_option_name (cfile, allocate, known, opt)
 			option = new_option(val, MDL);
 			option->universe = universe;
 			option->code = code;
-			option->format = "X";
+			option->format = default_option_format;
 			option_reference(opt, option, MDL);
 		} else
 			log_info("option %s has been redefined as option %s.  "
