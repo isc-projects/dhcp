@@ -181,6 +181,8 @@ suggested fixes to <dhcp-users@isc.org>.
 - Failover BNDUPD messages are now discarded if they conflict with an
   update that has been trasnmitted, but not acknowledged.
 
+- A bug cleaning up unknown-xxx temporary option definitions was fixed.
+
                         Changes since 4.0.0rc1
 
 - None
