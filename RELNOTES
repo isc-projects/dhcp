@@ -65,6 +65,8 @@ work on other platforms. Please report any problems and suggested fixes to
 - Failover BNDUPD messages are now discarded if they conflict with an
   update that has been trasnmitted, but not acknowledged.
 
+- A bug cleaning up unknown-xxx temporary option definitions was fixed.
+
 			Changes since 4.1.0a1
 
 - Corrected list of failover state values in dhcpd man page.

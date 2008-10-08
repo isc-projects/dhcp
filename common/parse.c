@@ -1215,7 +1215,7 @@ parse_option_name (cfile, allocate, known, opt)
 			option = new_option(val, MDL);
 			option->universe = universe;
 			option->code = code;
-			option->format = "X";
+			option->format = default_option_format;
 			option_reference(opt, option, MDL);
 		} else
 			log_info("option %s has been redefined as option %s.  "
