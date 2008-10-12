@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-		             Version 3.1.1
-			      May 8, 2008
+			    Version 3.1.2b1
+			    October 11, 2008
 
 			      README FILE
 
@@ -101,7 +101,7 @@ are not in wide use, with all that implies.   We are not aware of an
 easy way to get this software running on HP-UX.
 
 The DHCP client currently only knows how to configure the network on
-NetBSD, FreeBSD, OpenBSD, BSD/os, Linux, Solaris and NextStep.  The
+NetBSD, FreeBSD, OpenBSD, BSD/OS, Linux, Solaris and NextStep.  The
 client depends on a system-dependent shell script to do network
 configuration - support for other operating systems is simply a matter
 of porting this shell script to the new platform.
@@ -122,7 +122,7 @@ you are running NeXTSTEP, please see the notes on NeXTSTEP below.
 
 If you start dhcpd and get a message, "no free bpf", that means you
 need to configure the Berkeley Packet Filter into your operating
-system kernel.   On NetBSD, FreeBSD and BSD/os, type ``man bpf'' for
+system kernel.   On NetBSD, FreeBSD and BSD/OS, type ``man bpf'' for
 information.   On Digital Unix, type ``man pfilt''.
 
 
@@ -133,12 +133,12 @@ information.   On Digital Unix, type ``man pfilt''.
 To build the DHCP Distribution, unpack the compressed tar file using
 the tar utility and the gzip command - type something like:
 
-	gunzip dhcp-3.1.1.tar.gz
-	tar xvf dhcp-3.1.1.tar
+	gunzip dhcp-3.1.2b1.tar.gz
+	tar xvf dhcp-3.1.2b1.tar
 
 			    CONFIGURING IT
 
-Now, cd to the dhcp-3.1.1 subdirectory that you've just created and
+Now, cd to the dhcp-3.1.2b1 subdirectory that you've just created and
 configure the source tree by typing:
 
 	./configure
