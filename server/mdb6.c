@@ -619,12 +619,12 @@ build_address6(struct in6_addr *addr,
 	MD5_Final((unsigned char *)addr, &ctx);
 
 	/*
-	 * Copy the network bits over.
+	 * Copy the [0..128] network bits over.
 	 */
 	str = (char *)addr;
 	net_str = (const char *)net_start_addr;
 	net_bytes = net_bits / 8;
-	for (i=0; i<net_bytes; i++) {
+	for (i = 0; i < net_bytes; i++) {
 		str[i] = net_str[i];
 	}
 	switch (net_bits % 8) {
@@ -643,10 +643,11 @@ build_address6(struct in6_addr *addr,
 
 /* 
  * Create a temporary address by a variant of RFC 4941 algo.
+ * Note: this should not be used for prefixes shorter than 64 bits.
  */
 static void
 build_temporary6(struct in6_addr *addr, 
-		 const struct in6_addr *net_start_addr, 
+		 const struct in6_addr *net_start_addr, int net_bits,
 		 const struct data_string *input) {
 	static u_int8_t history[8];
 	static u_int32_t counter = 0;
@@ -674,9 +675,37 @@ build_temporary6(struct in6_addr *addr,
 	/*
 	 * Build the address.
 	 */
-	memcpy(&addr->s6_addr[0], &net_start_addr->s6_addr[0], 8);
-	memcpy(&addr->s6_addr[8], md, 8);
-	addr->s6_addr[8] &= ~0x02;
+	if (net_bits == 64) {
+		memcpy(&addr->s6_addr[0], &net_start_addr->s6_addr[0], 8);
+		memcpy(&addr->s6_addr[8], md, 8);
+		addr->s6_addr[8] &= ~0x02;
+	} else {
+		int net_bytes;
+		int i;
+		char *str;
+		const char *net_str;
+
+		/*
+		 * Copy the [0..128] network bits over.
+		 */
+		str = (char *)addr;
+		net_str = (const char *)net_start_addr;
+		net_bytes = net_bits / 8;
+		for (i = 0; i < net_bytes; i++) {
+			str[i] = net_str[i];
+		}
+		memcpy(str + net_bytes, md, 16 - net_bytes);
+		switch (net_bits % 8) {
+		case 1: str[i] = (str[i] & 0x7F) | (net_str[i] & 0x80); break;
+		case 2: str[i] = (str[i] & 0x3F) | (net_str[i] & 0xC0); break;
+		case 3: str[i] = (str[i] & 0x1F) | (net_str[i] & 0xE0); break;
+		case 4: str[i] = (str[i] & 0x0F) | (net_str[i] & 0xF0); break;
+		case 5: str[i] = (str[i] & 0x07) | (net_str[i] & 0xF8); break;
+		case 6: str[i] = (str[i] & 0x03) | (net_str[i] & 0xFC); break;
+		case 7: str[i] = (str[i] & 0x01) | (net_str[i] & 0xFE); break;
+		}
+	}
+
 
 	/*
 	 * Save history for the next call.
@@ -762,7 +791,8 @@ create_lease6(struct ipv6_pool *pool, struct iasubopt **addr,
 			break;
 		case D6O_IA_TA:
 			/* temporary address */
-			build_temporary6(&tmp, &pool->start_addr, &ds);
+			build_temporary6(&tmp, &pool->start_addr,
+					 pool->bits, &ds);
 			break;
 		case D6O_IA_PD:
 			/* prefix */
@@ -1133,7 +1163,7 @@ build_prefix6(struct in6_addr *pref,
 	str = (char *)pref;
 	net_str = (const char *)net_start_pref;
 	net_bytes = pool_bits / 8;
-	for (i=0; i<net_bytes; i++) {
+	for (i = 0; i < net_bytes; i++) {
 		str[i] = net_str[i];
 	}
 	i = net_bytes;

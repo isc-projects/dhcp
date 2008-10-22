@@ -109,6 +109,8 @@ static isc_result_t reply_process_addr(struct reply_state *reply,
 				       struct option_cache *addr);
 static isc_boolean_t address_is_owned(struct reply_state *reply,
 				      struct iaddr *addr);
+static isc_boolean_t temporary_is_available(struct reply_state *reply,
+					    struct iaddr *addr);
 static isc_result_t find_client_temporaries(struct reply_state *reply);
 static isc_result_t reply_process_try_addr(struct reply_state *reply,
 					   struct iaddr *addr);
@@ -178,7 +180,7 @@ static struct data_string server_duid;
 /*
  * Check if the server_duid has been set.
  */
-isc_boolean_t 
+isc_boolean_t
 server_duid_isset(void) {
 	return (server_duid.data != NULL);
 }
@@ -233,8 +235,8 @@ set_server_duid_from_option(void) {
 		ret_val = ISC_R_NOTFOUND;
 	} else {
 		memset(&option_duid, 0, sizeof(option_duid));
-		if (!evaluate_option_cache(&option_duid, NULL, NULL, NULL, 
-					   opt_state, NULL, &global_scope, 
+		if (!evaluate_option_cache(&option_duid, NULL, NULL, NULL,
+					   opt_state, NULL, &global_scope,
 					   oc, MDL)) {
 			ret_val = ISC_R_UNEXPECTED;
 		} else {
@@ -308,32 +310,32 @@ generate_new_server_duid(void) {
 	if (server_duid_type == DUID_LLT) {
 		time_val = duid_time(time(NULL));
 		generated_duid.len = 8 + p->hw_address.hlen - 1;
-		if (!buffer_allocate(&generated_duid.buffer, 
+		if (!buffer_allocate(&generated_duid.buffer,
 				     generated_duid.len, MDL)) {
 			log_fatal("No memory for server DUID.");
 		}
 		generated_duid.data = generated_duid.buffer->data;
 		putUShort(generated_duid.buffer->data, DUID_LLT);
-		putUShort(generated_duid.buffer->data + 2, 
+		putUShort(generated_duid.buffer->data + 2,
 			  p->hw_address.hbuf[0]);
 		putULong(generated_duid.buffer->data + 4, time_val);
-		memcpy(generated_duid.buffer->data + 8, 
+		memcpy(generated_duid.buffer->data + 8,
 		       p->hw_address.hbuf+1, p->hw_address.hlen-1);
 	} else if (server_duid_type == DUID_LL) {
 		generated_duid.len = 4 + p->hw_address.hlen - 1;
-		if (!buffer_allocate(&generated_duid.buffer, 
+		if (!buffer_allocate(&generated_duid.buffer,
 				     generated_duid.len, MDL)) {
 			log_fatal("No memory for server DUID.");
 		}
 		generated_duid.data = generated_duid.buffer->data;
 		putUShort(generated_duid.buffer->data, DUID_LL);
-		putUShort(generated_duid.buffer->data + 2, 
+		putUShort(generated_duid.buffer->data + 2,
 			  p->hw_address.hbuf[0]);
-		memcpy(generated_duid.buffer->data +4, 
+		memcpy(generated_duid.buffer->data + 4,
 		       p->hw_address.hbuf+1, p->hw_address.hlen-1);
 	} else {
 		log_fatal("Unsupported server DUID type %d.", server_duid_type);
-	} 
+	}
 
 	set_server_duid(&generated_duid);
 	data_string_forget(&generated_duid, MDL);
@@ -360,7 +362,7 @@ get_client_id(struct packet *packet, struct data_string *client_id) {
 		return ISC_R_NOTFOUND;
 	}
 
-	if (!evaluate_option_cache(client_id, packet, NULL, NULL, 
+	if (!evaluate_option_cache(client_id, packet, NULL, NULL,
 				   packet->options, NULL,
 				   &global_scope, oc, MDL)) {
 		return ISC_R_FAILURE;
@@ -391,7 +393,7 @@ valid_client_msg(struct packet *packet, struct data_string *client_id) {
 			break;
 		case ISC_R_NOTFOUND:
 			log_debug("Discarding %s from %s; "
-				  "client identifier missing", 
+				  "client identifier missing",
 				  dhcpv6_type_names[packet->dhcpv6_msg_type],
 				  piaddr(packet->client_addr));
 			goto exit;
@@ -408,7 +410,7 @@ valid_client_msg(struct packet *packet, struct data_string *client_id) {
 	 */
 	if (packet->unicast) {
 		log_debug("Discarding %s from %s; packet sent unicast "
-			  "(CLIENTID %s)", 
+			  "(CLIENTID %s)",
 			  dhcpv6_type_names[packet->dhcpv6_msg_type],
 			  piaddr(packet->client_addr),
 			  print_hex_1(client_id->len, client_id->data, 60));
@@ -419,23 +421,23 @@ valid_client_msg(struct packet *packet, struct data_string *client_id) {
 	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_SERVERID);
 	if (oc != NULL) {
 		if (evaluate_option_cache(&data, packet, NULL, NULL,
-					  packet->options, NULL, 
+					  packet->options, NULL,
 					  &global_scope, oc, MDL)) {
-			log_debug("Discarding %s from %s; " 
+			log_debug("Discarding %s from %s; "
 				  "server identifier found "
-				  "(CLIENTID %s, SERVERID %s)", 
+				  "(CLIENTID %s, SERVERID %s)",
 				  dhcpv6_type_names[packet->dhcpv6_msg_type],
 				  piaddr(packet->client_addr),
-				  print_hex_1(client_id->len, 
+				  print_hex_1(client_id->len,
 				  	      client_id->data, 60),
 				  print_hex_2(data.len,
 				  	      data.data, 60));
 		} else {
-			log_debug("Discarding %s from %s; " 
+			log_debug("Discarding %s from %s; "
 				  "server identifier found "
-				  "(CLIENTID %s)", 
+				  "(CLIENTID %s)",
 				  dhcpv6_type_names[packet->dhcpv6_msg_type],
-				  print_hex_1(client_id->len, 
+				  print_hex_1(client_id->len,
 				  	      client_id->data, 60),
 				  piaddr(packet->client_addr));
 		}
@@ -488,7 +490,7 @@ valid_client_resp(struct packet *packet,
 			break;
 		case ISC_R_NOTFOUND:
 			log_debug("Discarding %s from %s; "
-				  "client identifier missing", 
+				  "client identifier missing",
 				  dhcpv6_type_names[packet->dhcpv6_msg_type],
 				  piaddr(packet->client_addr));
 			goto exit;
@@ -503,13 +505,13 @@ valid_client_resp(struct packet *packet,
 	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_SERVERID);
 	if (oc == NULL) {
 		log_debug("Discarding %s from %s: "
-			  "server identifier missing (CLIENTID %s)", 
+			  "server identifier missing (CLIENTID %s)",
 			  dhcpv6_type_names[packet->dhcpv6_msg_type],
 			  piaddr(packet->client_addr),
 			  print_hex_1(client_id->len, client_id->data, 60));
 		goto exit;
 	}
-	if (!evaluate_option_cache(server_id, packet, NULL, NULL, 
+	if (!evaluate_option_cache(server_id, packet, NULL, NULL,
 				   packet->options, NULL,
 				   &global_scope, oc, MDL)) {
 		log_error("Error processing %s from %s; "
@@ -519,11 +521,11 @@ valid_client_resp(struct packet *packet,
 			  print_hex_1(client_id->len, client_id->data, 60));
 		goto exit;
 	}
-	if ((server_duid.len != server_id->len) || 
+	if ((server_duid.len != server_id->len) ||
 	    (memcmp(server_duid.data, server_id->data, server_duid.len) != 0)) {
-		log_debug("Discarding %s from %s; " 
+		log_debug("Discarding %s from %s; "
 			  "not our server identifier "
-			  "(CLIENTID %s, SERVERID %s, server DUID %s)", 
+			  "(CLIENTID %s, SERVERID %s, server DUID %s)",
 			  dhcpv6_type_names[packet->dhcpv6_msg_type],
 			  piaddr(packet->client_addr),
 			  print_hex_1(client_id->len, client_id->data, 60),
@@ -598,7 +600,7 @@ valid_client_info_req(struct packet *packet, struct data_string *server_id) {
 	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_IA_NA);
 	if (oc != NULL) {
 		log_debug("Discarding %s from %s; "
-			  "IA_NA option present%s", 
+			  "IA_NA option present%s",
 			  dhcpv6_type_names[packet->dhcpv6_msg_type],
 			  piaddr(packet->client_addr), client_id_str);
 		goto exit;
@@ -606,7 +608,7 @@ valid_client_info_req(struct packet *packet, struct data_string *server_id) {
 	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_IA_TA);
 	if (oc != NULL) {
 		log_debug("Discarding %s from %s; "
-			  "IA_TA option present%s", 
+			  "IA_TA option present%s",
 			  dhcpv6_type_names[packet->dhcpv6_msg_type],
 			  piaddr(packet->client_addr), client_id_str);
 		goto exit;
@@ -614,7 +616,7 @@ valid_client_info_req(struct packet *packet, struct data_string *server_id) {
 	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_IA_PD);
 	if (oc != NULL) {
 		log_debug("Discarding %s from %s; "
-			  "IA_PD option present%s", 
+			  "IA_PD option present%s",
 			  dhcpv6_type_names[packet->dhcpv6_msg_type],
 			  piaddr(packet->client_addr), client_id_str);
 		goto exit;
@@ -622,7 +624,7 @@ valid_client_info_req(struct packet *packet, struct data_string *server_id) {
 
 	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_SERVERID);
 	if (oc != NULL) {
-		if (!evaluate_option_cache(server_id, packet, NULL, NULL, 
+		if (!evaluate_option_cache(server_id, packet, NULL, NULL,
 					   packet->options, NULL,
 					   &global_scope, oc, MDL)) {
 			log_error("Error processing %s from %s; "
@@ -631,17 +633,17 @@ valid_client_info_req(struct packet *packet, struct data_string *server_id) {
 				  piaddr(packet->client_addr), client_id_str);
 			goto exit;
 		}
-		if ((server_duid.len != server_id->len) || 
-		    (memcmp(server_duid.data, server_id->data, 
+		if ((server_duid.len != server_id->len) ||
+		    (memcmp(server_duid.data, server_id->data,
 		    	    server_duid.len) != 0)) {
-			log_debug("Discarding %s from %s; " 
+			log_debug("Discarding %s from %s; "
 				  "not our server identifier "
-				  "(SERVERID %s, server DUID %s)%s", 
+				  "(SERVERID %s, server DUID %s)%s",
 				  dhcpv6_type_names[packet->dhcpv6_msg_type],
 				  piaddr(packet->client_addr),
-				  print_hex_1(server_id->len, 
+				  print_hex_1(server_id->len,
 				  	      server_id->data, 60),
-				  print_hex_2(server_duid.len, 
+				  print_hex_2(server_duid.len,
 				  	      server_duid.data, 60),
 				  client_id_str);
 			goto exit;
@@ -716,7 +718,7 @@ static const int required_opts_STATUS_CODE[] = {
  * where in the IA_* the DHCPv6 options commence.
  */
 static int
-get_encapsulated_IA_state(struct option_state **enc_opt_state, 
+get_encapsulated_IA_state(struct option_state **enc_opt_state,
 			  struct data_string *enc_opt_data,
 			  struct packet *packet,
 			  struct option_cache *oc,
@@ -749,7 +751,7 @@ get_encapsulated_IA_state(struct option_state **enc_opt_state,
 		data_string_forget(enc_opt_data, MDL);
 		return 0;
 	}
-	if (!parse_option_buffer(*enc_opt_state, 
+	if (!parse_option_buffer(*enc_opt_state,
 				 enc_opt_data->data + offset, 
 				 enc_opt_data->len - offset,
 				 &dhcpv6_universe)) {
@@ -2214,6 +2216,7 @@ reply_process_ia_ta(struct reply_state *reply, struct option_cache *ia) {
 	struct data_string ia_data, data;
 	struct data_string iaaddr;
 	u_int32_t pref_life, valid_life;
+	struct iaddr tmp_addr;
 
 	/* Initialize values that will get cleaned up on return. */
 	packet_ia = NULL;
@@ -2240,7 +2243,7 @@ reply_process_ia_ta(struct reply_state *reply, struct option_cache *ia) {
 	iaid = getULong(ia_data.data);
 
 	/* Create an IA_TA structure. */
-	if (ia_allocate(&reply->ia, iaid, (char *)reply->client_id.data, 
+	if (ia_allocate(&reply->ia, iaid, (char *)reply->client_id.data,
 			reply->client_id.len, MDL) != ISC_R_SUCCESS) {
 		log_error("reply_process_ia_ta: no memory for ia.");
 		status = ISC_R_NOMEMORY;
@@ -2289,11 +2292,13 @@ reply_process_ia_ta(struct reply_state *reply, struct option_cache *ia) {
 
 	/* 
 	 * Deal with an IAADDR for lifetimes.
+	 * For all or none, process IAADDRs as hints.
 	 */
 	reply->valid = reply->prefer = 0xffffffff;
 	reply->client_valid = reply->client_prefer = 0;
 	oc = lookup_option(&dhcpv6_universe, packet_ia, D6O_IAADDR);
-	if (oc != NULL) {
+	for (; oc != NULL; oc = oc->next) {
+		memset(&iaaddr, 0, sizeof(iaaddr));
 		if (!evaluate_option_cache(&iaaddr, reply->packet,
 					   NULL, NULL,
 					   reply->packet->options, NULL,
@@ -2315,29 +2320,47 @@ reply_process_ia_ta(struct reply_state *reply, struct option_cache *ia) {
 		if ((reply->client_prefer == 0) ||
 		    (reply->client_prefer > pref_life))
 			reply->client_prefer = pref_life;
+
+		/* Nothing more if something has failed. */
+		if (status == ISC_R_CANCELED)
+			continue;
+
+		tmp_addr.len = 16;
+		memcpy(tmp_addr.iabuf, iaaddr.data, 16);
+		if (!temporary_is_available(reply, &tmp_addr))
+			goto bad_temp;
+		status = reply_process_is_addressed(reply,
+						    &reply->lease->scope,
+						    reply->shared->group);
+		if (status != ISC_R_SUCCESS)
+			goto bad_temp;
+		status = reply_process_send_addr(reply, &tmp_addr);
+		if (status != ISC_R_SUCCESS)
+			goto bad_temp;
+		if (reply->lease != NULL)
+			iasubopt_dereference(&reply->lease, MDL);
+		continue;
+
+	bad_temp:
+		/* Rewind the IA_TA to empty. */
+		option_state_dereference(&reply->reply_ia, MDL);
+		if (!option_state_allocate(&reply->reply_ia, MDL)) {
+			status = ISC_R_NOMEMORY;
+			goto cleanup;
+		}
+		status = ISC_R_CANCELED;
+		reply->client_resources = 0;
+		reply->resources_included = ISC_FALSE;
+		if (reply->lease != NULL)
+			iasubopt_dereference(&reply->lease, MDL);
 	}
 	reply->ia_count++;
 
 	/*
-	 * Cancel if not Solicit or Request.
-	 */
-	if ((reply->packet->dhcpv6_msg_type != DHCPV6_SOLICIT) &&
-	    (reply->packet->dhcpv6_msg_type != DHCPV6_REQUEST)) {
-		if (!set_status_code(STATUS_UnspecFail,
-				     "Unsupported message for temporary.",
-				     reply->reply_ia)) {
-			log_error("reply_process_ia_ta: Unable to set "
-				  "UnspecFail status code.");
-			status = ISC_R_FAILURE;
-			goto cleanup;
-		}
-		status = ISC_R_CANCELED;
-		goto store;
-	}
-
-	/*
 	 * Give the client temporary addresses.
 	 */
+	if (reply->client_resources != 0)
+		goto store;
 	status = find_client_temporaries(reply);
 	if (status == ISC_R_NORESOURCES) {
 		switch (reply->packet->dhcpv6_msg_type) {
@@ -2380,8 +2403,16 @@ reply_process_ia_ta(struct reply_state *reply, struct option_cache *ia) {
 			break;
 
 		      default:
-			/* Should not happen! */
-			goto cleanup;
+			/*
+			 * We don't want to include the IA if we
+			 * provide zero addresses including zeroed
+			 * lifetimes.
+			 */
+			if (reply->resources_included)
+				status = ISC_R_SUCCESS;
+			else
+				goto cleanup;
+			break;
 		}
 	} else if (status != ISC_R_SUCCESS)
 		goto cleanup;
@@ -2480,10 +2511,75 @@ reply_process_ia_ta(struct reply_state *reply, struct option_cache *ia) {
 
 	/*
 	 * ISC_R_CANCELED is a status code used by the addr processing to
-	 * indicate we're replying with a status code.  This is still a
+	 * indicate we're replying with other addresses.  This is still a
 	 * success at higher layers.
 	 */
 	return((status == ISC_R_CANCELED) ? ISC_R_SUCCESS : status);
+}
+
+/*
+ * Verify the temporary address is available.
+ */
+static isc_boolean_t
+temporary_is_available(struct reply_state *reply, struct iaddr *addr) {
+	struct in6_addr tmp_addr;
+	struct subnet *subnet;
+	struct ipv6_pool *pool;
+	int i;
+
+	memcpy(&tmp_addr, addr->iabuf, sizeof(tmp_addr));
+	/*
+	 * Clients may choose to send :: as an address, with the idea to give
+	 * hints about preferred-lifetime or valid-lifetime.
+	 * So this is not a request for this address.
+	 */
+	if (IN6_IS_ADDR_UNSPECIFIED(&tmp_addr))
+		return ISC_FALSE;
+
+	/*
+	 * Verify that this address is on the client's network.
+	 */
+	for (subnet = reply->shared->subnets ; subnet != NULL ;
+	     subnet = subnet->next_sibling) {
+		if (addr_eq(subnet_number(*addr, subnet->netmask),
+			    subnet->net))
+			break;
+	}
+
+	/* Address not found on shared network. */
+	if (subnet == NULL)
+		return ISC_FALSE;
+
+	/*
+	 * Check if this address is owned (must be before next step).
+	 */
+	if (address_is_owned(reply, addr))
+		return ISC_TRUE;
+
+	/*
+	 * Verify that this address is in a temporary pool and try to get it.
+	 */
+	if (reply->shared->ipv6_pools == NULL)
+		return ISC_FALSE;
+	for (i = 0 ; (pool = reply->shared->ipv6_pools[i]) != NULL ; i++) {
+		if (pool->pool_type != D6O_IA_TA)
+			continue;
+		if (ipv6_in_pool(&tmp_addr, pool))
+			break;
+	}
+	if (pool == NULL)
+		return ISC_FALSE;
+	if (lease6_exists(pool, &tmp_addr))
+		return ISC_FALSE;
+	if (iasubopt_allocate(&reply->lease, MDL) != ISC_R_SUCCESS)
+		return ISC_FALSE;
+	reply->lease->addr = tmp_addr;
+	reply->lease->plen = 0;
+	/* Default is soft binding for 2 minutes. */
+	if (add_lease6(pool, reply->lease, cur_time + 120) != ISC_R_SUCCESS)
+		return ISC_FALSE;
+
+	return ISC_TRUE;
 }
 
 /*

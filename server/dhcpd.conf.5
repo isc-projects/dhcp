@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.97 2008/08/19 17:55:57 dhankins Exp $
+.\" $Id: dhcpd.conf.5,v 1.98 2008/10/22 11:41:58 fdupont Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -1521,6 +1521,7 @@ single address, \fIhigh-address\fR can be omitted.
 .nf
 .B range6\fR \fIlow-address\fR \fIhigh-address\fR\fB;\fR
 .B range6\fR \fIsubnet6-number\fR\fB;\fR
+.B range6\fR \fIsubnet6-number\fR \fBtemporary\fR\fB;\fR
 .B range6\fR \fIaddress\fR \fBtemporary\fR\fB;\fR
 .fi
 .PP
@@ -1531,11 +1532,10 @@ use CIDR notation, specified as ip6-address/bits. All IP addresses
 in the \fIrange6\fR should be in the subnet6 in which the
 \fIrange6\fR statement is declared.
 .PP
-The \fItemporary\fR variant makes the 64 bit prefix \fIaddress\fR available
+The \fItemporay\fR variant makes the prefix (by default on 64 bits) available
 for temporary (RFC 4941) addresses. A new address per prefix in the shared
 network is computed at each request with an IA_TA option. Release and Confirm
-ignores temporary addresses, Renew and Rebind are not defined and raise an
-error.
+ignores temporary addresses.
 .PP
 Any IPv6 addresses given to hosts with \fIfixed-address6\fR are excluded 
 from the \fIrange6\fR, as are IPv6 addresses on the server itself.

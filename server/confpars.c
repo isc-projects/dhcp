@@ -3753,7 +3753,7 @@ add_ipv6_pool_to_subnet(struct subnet *subnet, u_int16_t type,
 
 /* address-range6-declaration :== ip-address6 ip-address6 SEMI
 			       | ip-address6 SLASH number SEMI
-			       | ip-address6 TEMPORARY SEMI */
+			       | ip-address6 [SLASH number] TEMPORARY SEMI */
 
 void 
 parse_address_range6(struct parse *cfile, struct group *group) {
@@ -3763,6 +3763,7 @@ parse_address_range6(struct parse *cfile, struct group *group) {
 	const char *val;
 	struct iaddrcidrnetlist *nets;
 	struct iaddrcidrnetlist *p;
+	u_int16_t type = D6O_IA_NA;
 
         if (local_family != AF_INET6) {
                 parse_warn(cfile, "range6 statement is only supported "
@@ -3809,13 +3810,27 @@ parse_address_range6(struct parse *cfile, struct group *group) {
 			return;
 		}
 
-		add_ipv6_pool_to_subnet(group->subnet, D6O_IA_NA, &lo, bits,
-					128);
+		/*
+		 * can be temporary (RFC 4941 like)
+		 */
+		token = peek_token(&val, NULL, cfile);
+		if (token == TEMPORARY) {
+			if (bits < 64)
+				parse_warn(cfile, "temporary mask too short");
+			if (bits == 128)
+				parse_warn(cfile, "temporary singleton?");
+			token = next_token(NULL, NULL, cfile);
+			type = D6O_IA_TA;
+		}
+
+		add_ipv6_pool_to_subnet(group->subnet, type, &lo,
+					bits, 128);
 
 	} else if (token == TEMPORARY) {
 		/*
 		 * temporary (RFC 4941)
 		 */
+		type = D6O_IA_TA;
 		next_token(NULL, NULL, cfile);
 		bits = 64;
 		if (!is_cidr_mask_valid(&lo, bits)) {
@@ -3824,8 +3839,8 @@ parse_address_range6(struct parse *cfile, struct group *group) {
 			return;
 		}
 
-		add_ipv6_pool_to_subnet(group->subnet, D6O_IA_TA, &lo, bits,
-					128);
+		add_ipv6_pool_to_subnet(group->subnet, type, &lo,
+					bits, 128);
 	} else {
 		/*
 		 * No '/', so we are looking for the end address of 
@@ -3844,7 +3859,7 @@ parse_address_range6(struct parse *cfile, struct group *group) {
 		}
 
 		for (p=nets; p != NULL; p=p->next) {
-			add_ipv6_pool_to_subnet(group->subnet, D6O_IA_NA,
+			add_ipv6_pool_to_subnet(group->subnet, type,
 						&p->cidrnet.lo_addr, 
 						p->cidrnet.bits, 128);
 		}
