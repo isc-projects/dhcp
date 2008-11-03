@@ -52,6 +52,11 @@ may not work on other platforms. Please report any problems and
 suggested fixes to <dhcp-users@isc.org>.
 
 
+			Changes since 4.0.1b1
+
+- The !inet_pton() call in res_mkupdrec was adjusted to '<= 0' as
+  inet_pton returns either 1, 0, or -1.
+
 			Changes since 4.0.0
 
 - Corrected list of failover state values in dhcpd man page.

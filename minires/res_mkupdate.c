@@ -27,7 +27,7 @@
  */
 
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_mkupdate.c,v 1.11 2007/07/13 06:43:42 shane Exp $";
+static const char rcsid[] = "$Id: res_mkupdate.c,v 1.11.140.1 2008/11/03 21:42:48 dhankins Exp $";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -240,7 +240,7 @@ res_nmkupdate(res_state statp,
 		case T_AAAA:
 			if (!getword_str(buf2, sizeof buf2, &startp, endp))
 				return (-1);
-			if (!inet_pton(AF_INET6, buf2, &in6a))
+			if (inet_pton(AF_INET6, buf2, &in6a) <= 0)
 				return (-1);
 			n = sizeof(struct in6_addr);
 			memcpy(cp, &in6a, n);
