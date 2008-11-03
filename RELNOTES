@@ -75,6 +75,9 @@ work on other platforms. Please report any problems and suggested fixes to
 - The !inet_pton() call in res_mkupdrec was adjusted to '<= 0' as
   inet_pton returns either 1, 0, or -1.
 
+- A dhclient-script for MacOS X has been included, which enables
+  'dhclient -6' support.
+
 			Changes since 4.1.0a1
 
 - Corrected list of failover state values in dhcpd man page.

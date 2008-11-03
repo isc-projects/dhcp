@@ -33,6 +33,8 @@ the ISC DHCP Distribution.
 	 5.6	 FreeBSD
 	 5.7	 NeXTSTEP
 	 5.8	 SOLARIS
+	 5.9	 AIX
+	 5.10	 MacOS X
 	6	SUPPORT
 	 6.1	 HOW TO REPORT BUGS
 
@@ -442,6 +444,30 @@ interfaces.)
 The ISC DHCP distribution does not include a dhclient-script for AIX--
 AIX comes with a DHCP client.  Contribution of a working dhclient-script
 for AIX would be welcome.
+
+			       MacOS X
+
+The MacOS X system uses a TCP/IP stack derived from FreeBSD with a
+user-friendly interface named the System Configuration Framework.
+As it includes a builtin DHCPv4 client (you are better just using that),
+this text is only about the DHCPv6 client (``dhclient -6 ...'').  The DNS
+configuration (domain search list and name servers' addresses) is managed
+by a System Configuration agent, not by /etc/resolv.conf (which is a link
+to /var/run/resolv.conf, which itself only reflects the internal state;
+the System Configuration agent's Dynamic Store).
+
+This means that modifying resolv.conf directly doesn't have the intended
+effect, so the macos script sample uses its own resolv.conf.dhclient6 in
+/var/run, and inserts the contents of this file into the System
+Configuration agent.  Because the System Configuration agent expects the
+prefix along with the configured address, and a default router, this is
+not usable (the DHCPv6 protocol does not today deliver this information).
+Instead, ifconfig is directly used for address configuration.
+
+Note the Dynamic Store (from which /var/run/resolv.conf is built) is
+recomputed from scratch when the current location/set is changed, for
+instance when a laptop is resumed from sleep. In this case running the
+dhclient-script could reinstall the resolv.conf.dhclient6 configuration.
 
 			       SUPPORT
 
