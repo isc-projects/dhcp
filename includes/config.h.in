@@ -3,6 +3,9 @@
 /* Define to compile debug-only DHCP software. */
 #undef DEBUG
 
+/* Define to queue multiple DHCPACK replies per fsync. */
+#undef DELAYED_ACK
+
 /* Define to BIG_ENDIAN for MSB (Motorola or SPARC CPUs) or LITTLE_ENDIAN for
    LSB (Intel CPUs). */
 #undef DHCP_BYTE_ORDER
@@ -103,7 +106,7 @@
 /* Define to any value to include Ari's PARANOIA patch. */
 #undef PARANOIA
 
-/* The size of `struct iaddr *', as computed by sizeof. */
+/* The size of a `struct iaddr *', as computed by sizeof. */
 #undef SIZEOF_STRUCT_IADDR_P
 
 /* Define to 1 if you have the ANSI C header files. */

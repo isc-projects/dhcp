@@ -50,7 +50,7 @@ PROGRAMS = $(sbin_PROGRAMS)
 am_dhcrelay_OBJECTS = dhcrelay.$(OBJEXT)
 dhcrelay_OBJECTS = $(am_dhcrelay_OBJECTS)
 dhcrelay_DEPENDENCIES = ../common/libdhcp.a ../omapip/libomapi.a \
- 	../dst/libdst.a ../minires/libres.a
+	../dst/libdst.a ../minires/libres.a
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)/includes
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
