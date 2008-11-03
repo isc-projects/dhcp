@@ -72,6 +72,9 @@ work on other platforms. Please report any problems and suggested fixes to
   some problems to some failover installations.  We will revisit this
   in future releases.
 
+- The !inet_pton() call in res_mkupdrec was adjusted to '<= 0' as
+  inet_pton returns either 1, 0, or -1.
+
 			Changes since 4.1.0a1
 
 - Corrected list of failover state values in dhcpd man page.
