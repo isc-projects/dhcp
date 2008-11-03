@@ -67,6 +67,11 @@ work on other platforms. Please report any problems and suggested fixes to
 
 - A bug cleaning up unknown-xxx temporary option definitions was fixed.
 
+- Delayed-ack is now a compile-time option, compiled out by default.
+  This feature is simply too experimental for right now, and causes
+  some problems to some failover installations.  We will revisit this
+  in future releases.
+
 			Changes since 4.1.0a1
 
 - Corrected list of failover state values in dhcpd man page.

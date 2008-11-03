@@ -91,6 +91,15 @@ if test "$enable_tracing" != "no" ; then
 		  [Define to include server activity tracing support.])
 fi
 
+# Delayed-ack feature support (experimental).
+AC_ARG_ENABLE(delayed_ack,
+	AC_HELP_STRING([--enable-delayed-ack],
+		       [queues multiple DHCPACK replies (default is no)]))
+if test "$enable_delayed_ack" = "yes"; then
+	AC_DEFINE([DELAYED_ACK], [1],
+		  [Define to queue multiple DHCPACK replies per fsync.])
+fi
+
 # DHCPv6 optional compile-time feature.
 AC_ARG_ENABLE(dhcpv6,
 	AC_HELP_STRING([--enable-dhcpv6],

@@ -2424,15 +2424,30 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 			packet -> raw -> chaddr,
 			sizeof packet -> raw -> chaddr); /* XXX */
 	} else {
+#if !defined(DELAYED_ACK)
 		/* Install the new information on 'lt' onto the lease at
-		* 'lease'.  We will not 'commit' this information to disk
-		* yet (fsync()), we will 'propogate' the information if
-		* this is BOOTP or a DHCPACK, but we will not 'pimmediate'ly
-		* transmit failover binding updates (this is delayed until
-		* after the fsync()).
-		*/
+		 * 'lease'.  If this is a DHCPOFFER, it is a 'soft' promise,
+		 * if it is a DHCPACK, it is a 'hard' binding, so it needs
+		 * to be recorded and propogated immediately.  If the update
+		 * fails, don't ACK it (or BOOTREPLY) either; we may give
+		 * the same lease to another client later, and that would be
+		 * a conflict.
+		 */
+		if (!supersede_lease(lease, lt, !offer || (offer == DHCPACK),
+				     offer == DHCPACK, offer == DHCPACK)) {
+#else /* defined(DELAYED_ACK) */
+		/* Install the new information on 'lt' onto the lease at
+		 * 'lease'.  We will not 'commit' this information to disk
+		 * yet (fsync()), we will 'propogate' the information if
+		 * this is BOOTP or a DHCPACK, but we will not 'pimmediate'ly
+		 * transmit failover binding updates (this is delayed until
+		 * after the fsync()).  If the update fails, don't ACK it (or
+		 * BOOTREPLY either); we may give the same lease out to a
+		 * different client, and that would be a conflict.
+		 */
 		if (!supersede_lease(lease, lt, 0, !offer || offer == DHCPACK,
 				     0)) {
+#endif
 			log_info ("%s: database update failed", msg);
 			free_lease_state (state, MDL);
 			lease_dereference (&lt, MDL);
@@ -2822,10 +2837,12 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		++outstanding_pings;
 	} else {
   		lease->cltt = cur_time;
+#if defined(DELAYED_ACK)
 		if (!(lease->flags & STATIC_LEASE) &&
 		    (!offer || (offer == DHCPACK)))
 			delayed_ack_enqueue(lease);
 		else 
+#endif
 			dhcp_reply(lease);
 	}
 }

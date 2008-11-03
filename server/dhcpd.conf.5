@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.98 2008/10/22 11:41:58 fdupont Exp $
+.\" $Id: dhcpd.conf.5,v 1.99 2008/11/03 18:13:58 dhankins Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -2098,6 +2098,10 @@ Similarly, \fImicroseconds\fR indicates how many microseconds are permitted
 to pass inbetween queuing a packet pending an fsync, and performing the
 fsync.  Valid values range from 0 to 2^32-1, and defaults to 250,000 (1/4 of
 a second).
+.PP
+Please note that as delayed-ack is currently experimental, the delayed-ack
+feature is not compiled in by default, but must be enabled at compile time
+with './configure --enable-delayed-ack'.
 .RE
 .PP
 The
