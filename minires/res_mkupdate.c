@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004,2007-2008 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -27,7 +27,7 @@
  */
 
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_mkupdate.c,v 1.13 2008/11/03 21:39:31 dhankins Exp $";
+static const char rcsid[] = "$Id: res_mkupdate.c,v 1.14 2008/11/03 21:51:44 dhankins Exp $";
 #endif /* not lint */
 
 #include <sys/types.h>
