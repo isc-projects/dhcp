@@ -63,7 +63,7 @@ work on other platforms. Please report any problems and suggested fixes to
   and not by failover binding updates (taking on the peer's CLTT).
 
 - Failover BNDUPD messages are now discarded if they conflict with an
-  update that has been trasnmitted, but not acknowledged.
+  update that has been transmitted, but not acknowledged.
 
 - A bug cleaning up unknown-xxx temporary option definitions was fixed.
 
