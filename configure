@@ -860,7 +860,7 @@ Optional Features:
   --enable-delayed-ack    queues multiple DHCPACK replies (default is no)
   --enable-dhcpv6         enable support for DHCPv6 (default is yes)
   --enable-paranoia       enable support for chroot/setuid (default is no)
-  --eanble-early-chroot   enable chrooting prior to configuration (default is
+  --enable-early-chroot   enable chrooting prior to configuration (default is
                           no)
 
 Optional Packages:

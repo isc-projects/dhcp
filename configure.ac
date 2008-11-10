@@ -115,7 +115,7 @@ AC_ARG_ENABLE(paranoia,
 	AC_HELP_STRING([--enable-paranoia],
 		[enable support for chroot/setuid (default is no)]))
 AC_ARG_ENABLE(early_chroot,
-	AC_HELP_STRING([--eanble-early-chroot],
+	AC_HELP_STRING([--enable-early-chroot],
 		[enable chrooting prior to configuration (default is no)]))
 # If someone enables early chroot, but does not enable paranoia, do so for
 # them.
