@@ -1384,7 +1384,7 @@ process_up6(struct packet *packet, struct stream_list *dp) {
 
 		if (dp) {
 			if_id = dp->id;
-		} if (!downstreams->next) {
+		} else if (!downstreams->next) {
 			if_id = downstreams->id;
 		} else {
 			log_info("Don't know the interface.");

@@ -47,6 +47,10 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and may not
 work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
+                        Changes since 4.1.0b1
+
+- A missing "else" in dhcrelay.c could have caused an interface not to
+  be recognized.
 
 			Changes since 4.1.0a2
 
