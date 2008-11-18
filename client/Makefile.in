@@ -158,7 +158,7 @@ dist_sysconf_DATA = dhclient.conf
 dhclient_SOURCES = clparse.c dhclient.c dhc6.c \
 		   scripts/bsdos scripts/freebsd scripts/linux scripts/macos \
 		   scripts/netbsd scripts/nextstep scripts/openbsd \
-		   scripts/solaris
+		   scripts/solaris scripts/openwrt
 
 dhclient_LDADD = ../common/libdhcp.a ../minires/libres.a \
 		 ../omapip/libomapi.a ../dst/libdst.a
