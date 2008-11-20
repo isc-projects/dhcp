@@ -1,4 +1,4 @@
-.\"	$Id: dhclient.8,v 1.29 2008/06/12 13:38:41 fdupont Exp $
+.\"	$Id: dhclient.8,v 1.30 2008/11/20 14:55:14 jreed Exp $
 .\"
 .\" Copyright (c) 2004,2007-2008 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
@@ -279,6 +279,11 @@ The
 .B -r
 flag explicitly releases the current lease, and once the lease has been
 released, the client exits.
+.PP
+The
+.B -x
+flag tells any currently running client to exit gracefully without
+releasing leases first.
 .PP
 If the client is killed by a signal (for example at shutdown or reboot)
 it won't execute the
