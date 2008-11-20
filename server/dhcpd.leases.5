@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.leases.5,v 1.11 2006/06/15 17:49:49 dhankins Exp $
+.\" $Id: dhcpd.leases.5,v 1.12 2008/11/20 15:18:28 jreed Exp $
 .\"
 .TH dhcpd.leases 5
 .SH NAME
@@ -94,6 +94,8 @@ duration of the lease and to whom it is assigned.
 .B ends \fIdate\fB;\fR
 .B tstp \fIdate\fB;\fR
 .B tsfp \fIdate\fB;\fR
+.B atsfp \fIdate\fB;\fR
+.B cltt \fIdate\fB;\fR
 .fi
 .PP
 The start and end time of a lease are recorded using the \fBstarts\fR
@@ -101,8 +103,11 @@ and \fBends\fR statements.   The \fBtstp\fR statement is specified if
 the failover protocol is being used, and indicates what time the peer
 has been told the lease expires.   The \fBtsfp\fR statement is
 also specified if the failover protocol is being used, and indicates
-the lease expiry time that the peer has acknowledged.   The \fIdate\fR
-is specified as follows:
+the lease expiry time that the peer has acknowledged.
+The \fBatsfp\fR statement is the actual time sent from the failover
+partner.
+The \fBcltt\fR statement is the client's last transaction time.
+The \fIdate\fR is specified as follows:
 .PP
 .I weekday year\fB/\fImonth\fB/\fIday hour\fB:\fIminute\fB:\fIsecond\fR
 .PP
