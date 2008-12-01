@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-		            Version 4.0.1b1
-			    October 28, 2008
+		            Version 4.0.1rc1
+			    December 1, 2008
 
 			      README FILE
 
@@ -92,7 +92,7 @@ directory, it may not have up-to-date information).
 
 			    RELEASE STATUS
 
-This is the FIRST BETA RELEASE of ISC DHCP 4.0.1, a maintenance
+This is the FIRST RELEASE CANDIDATE of ISC DHCP 4.0.1, a maintenance
 release that addresses bugs in ISC DHCP versions 4.0.0 and prior.
 
 In this release, the DHCPv6 server should be fully functional on Linux,
@@ -129,8 +129,8 @@ information.   On Digital Unix, type ``man pfilt''.
 To build the DHCP Distribution, unpack the compressed tar file using
 the tar utility and the gzip command - type something like:
 
-	gunzip dhcp-4.0.1b1.tar.gz
-	tar xvf dhcp-4.0.1b1.tar
+	gunzip dhcp-4.0.1rc1.tar.gz
+	tar xvf dhcp-4.0.1rc1.tar
 
 			    CONFIGURING IT
 
