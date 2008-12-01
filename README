@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-			    Version 3.1.2b1
-			    October 11, 2008
+			    Version 3.1.2rc1
+			    December 1, 2008
 
 			      README FILE
 
@@ -133,8 +133,8 @@ information.   On Digital Unix, type ``man pfilt''.
 To build the DHCP Distribution, unpack the compressed tar file using
 the tar utility and the gzip command - type something like:
 
-	gunzip dhcp-3.1.2b1.tar.gz
-	tar xvf dhcp-3.1.2b1.tar
+	gunzip dhcp-3.1.2rc1.tar.gz
+	tar xvf dhcp-3.1.2rc1.tar
 
 			    CONFIGURING IT
 
