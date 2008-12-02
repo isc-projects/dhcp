@@ -40,7 +40,7 @@ the README file.
 
 			Changes since 3.1.2b1
 
-- None.
+- Fix handling of domain-search option to append "." as already done with 4.x.
 
 			Changes since 3.1.1
 
