@@ -138,7 +138,7 @@ the tar utility and the gzip command - type something like:
 
 			    CONFIGURING IT
 
-Now, cd to the dhcp-3.1.2b1 subdirectory that you've just created and
+Now, cd to the dhcp-3.1.2rc1 subdirectory that you've just created and
 configure the source tree by typing:
 
 	./configure
