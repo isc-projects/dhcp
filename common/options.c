@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.98.2.17 2008/07/19 03:56:45 each Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.98.2.18 2008/12/02 19:49:09 sar Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -1562,17 +1562,31 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 						pretty_domain(&op, endbuf-1,
 							      &nbp, nend);
 					} else {
+						/* ns_name_ntop() includes
+						 * a trailing NUL in its
+						 * count.
+						 */
 						count = MRns_name_ntop(
 								nbuff, op, 
 								(endbuf-op)-1);
 
-						if (count == -1) {
+						if (count <= 0) {
 							log_error("Invalid "
 								"domain name.");
 							break;
 						}
 
-						op += count;
+						/* Consume all but the trailing
+						 * NUL.
+						 */
+						op += count - 1;
+
+						/* Replace the trailing NUL
+						 * with the implicit root
+						 * (in the unlikely event the
+						 * domain name /is/ the root).
+						 */
+						*op++ = '.';
 					}
 				}
 				*op = '\0';
