@@ -1,10 +1,10 @@
 	      Internet Systems Consortium DHCP Distribution
-		            Version 4.1.0rc1
-			    19 November 2008
+		              Version 4.1.0
+			     5 December 2008
 
-			     Release Notes
+			      Release Notes
 
-			     NEW FEATURES
+			      NEW FEATURES
 
 ISC DHCP 4.1.x includes several new DHCPv6 features that were not included
 in DHCP 4.0.x.  These include:
