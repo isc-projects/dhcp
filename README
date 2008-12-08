@@ -320,14 +320,11 @@ Linux Packet Filter.
 
 			     LINUX: OpenWrt
 
-DHCP 4.1 has been tested on OpenWrt 7.09.  In keeping with standard
-practice, client/scripts now includes a dhclient-script file for OpenWrt.
-However, this is not sufficient by itself to run dhcp on OpenWrt; a full
-package of OpenWrt-specific port files is available at 
-ftp://ftp.isc.org/isc/dhcp/dhcp-4.1.0rc1-openwrt.tar.gz
-
-This section will self-destruct when the dhcp-4.1 package is accepted by
-the OpenWrt project.
+DHCP 4.1 has been tested on OpenWrt 7.09 and 8.09.  In keeping with
+standard practice, client/scripts now includes a dhclient-script file
+for OpenWrt.  However, this is not sufficient by itself to run dhcp on
+OpenWrt; a full OpenWrt package for DHCP is available at
+ftp://ftp.isc.org/isc/dhcp/dhcp-4.1.0-openwrt.tar.gz
 
 		    LINUX: 802.1q VLAN INTERFACES
 
