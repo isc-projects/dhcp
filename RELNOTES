@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-		             Version 3.1.2rc1
-			     December 1, 2008
+			      Version 3.1.2
+			    December 23, 2008
 
 			      Release Notes
 
@@ -37,6 +37,10 @@ For information on how to install, configure and run this software,
 as well as how to find documentation and report bugs, please consult
 the README file.
 
+
+			Changes since 3.1.2rc1
+
+- None.
 
 			Changes since 3.1.2b1
 
