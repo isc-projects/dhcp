@@ -172,7 +172,7 @@ main(int argc, char **argv) {
 		} else if (!strcmp(argv[i], "-p")) {
 			if (++i == argc)
 				usage();
-			local_port = htons(atoi(argv[i]));
+			local_port = validate_port(argv[i]);
 			log_debug("binding to user-specified port %d",
 				  ntohs(local_port));
 		} else if (!strcmp(argv[i], "-d")) {
