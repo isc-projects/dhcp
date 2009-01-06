@@ -40,6 +40,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <arpa/inet.h>
+#include <errno.h>
 
 #include <netdb.h>
 #else
@@ -2378,6 +2379,7 @@ isc_result_t free_iaddrcidrnetlist(struct iaddrcidrnetlist **result);
 const char *piaddr PROTO ((struct iaddr));
 char *piaddrmask(struct iaddr *, struct iaddr *);
 char *piaddrcidr(const struct iaddr *, unsigned int);
+u_int16_t validate_port(char *);
 
 /* dhclient.c */
 extern int nowait;

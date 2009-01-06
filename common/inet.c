@@ -1,10 +1,10 @@
 /* inet.c
 
-   Subroutines to manipulate internet addresses in a safely portable
+   Subroutines to manipulate internet addresses and ports in a safely portable
    way... */
 
 /*
- * Copyright (c) 2004,2005,2007 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004,2005,2007,2008 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -604,3 +604,26 @@ piaddrcidr(const struct iaddr *addr, unsigned int bits) {
 	return ret;
 }
 
+/* Validate that the string represents a valid port number and
+ * return it in network byte order
+ */
+
+u_int16_t
+validate_port(char *port) {
+	int local_port = 0;
+	int lower = 1;
+	int upper = 65535;
+	char *endptr;
+
+	errno = 0;
+	local_port = strtol(port, &endptr, 10);
+	
+	if ((*endptr != '\0') || (errno == ERANGE) || (errno == EINVAL))
+		log_fatal ("Invalid port number specification: %s", port);
+
+	if (local_port < lower || local_port > upper)
+		log_fatal("Port number specified is out of range (%d-%d).",
+			  lower, upper);
+
+	return htons(local_port);
+}

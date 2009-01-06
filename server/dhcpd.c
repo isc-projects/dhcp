@@ -259,15 +259,7 @@ main(int argc, char **argv) {
 		if (!strcmp (argv [i], "-p")) {
 			if (++i == argc)
 				usage ();
-			for (s = argv [i]; *s; s++)
-				if (!isdigit ((unsigned char)*s))
-					log_fatal ("%s: not a valid UDP port",
-					       argv [i]);
-			status = atoi (argv [i]);
-			if (status < 1 || status > 65535)
-				log_fatal ("%s: not a valid UDP port",
-				       argv [i]);
-			local_port = htons (status);
+			local_port = validate_port (argv [i]);
 			log_debug ("binding to user-specified port %d",
 			       ntohs (local_port));
 		} else if (!strcmp (argv [i], "-f")) {
@@ -440,7 +432,7 @@ main(int argc, char **argv) {
 	if (!local_port)
 	{
 		if ((s = getenv ("DHCPD_PORT"))) {
-			local_port = htons (atoi (s));
+			local_port = validate_port (s);
 			log_debug ("binding to environment-specified port %d",
 				   ntohs (local_port));
 		} else {
