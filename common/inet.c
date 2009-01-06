@@ -1,10 +1,10 @@
 /* inet.c
 
-   Subroutines to manipulate internet addresses in a safely portable
+   Subroutines to manipulate internet addresses and ports in a safely portable
    way... */
 
 /*
- * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2005,2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -35,7 +35,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: inet.c,v 1.11 2006/05/15 15:07:49 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: inet.c,v 1.11.84.1 2009/01/06 00:51:24 sar Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -270,3 +270,26 @@ char *piaddrmask (struct iaddr addr, struct iaddr mask,
 	return s;
 }
 
+/* Validate that the string represents a valid port number and
+ * return it in network byte order
+ */
+
+u_int16_t
+validate_port(char *port) {
+	int local_port = 0;
+	int lower = 1;
+	int upper = 65535;
+	char *endptr;
+
+	errno = 0;
+	local_port = strtol(port, &endptr, 10);
+	
+	if ((*endptr != '\0') || (errno == ERANGE) || (errno == EINVAL))
+		log_fatal ("Invalid port number specification: %s", port);
+
+	if (local_port < lower || local_port > upper)
+		log_fatal("Port number specified is out of range (%d-%d).",
+			  lower, upper);
+
+	return htons(local_port);
+}

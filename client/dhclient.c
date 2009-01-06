@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.143.2.10 2008/06/11 20:20:31 dhankins Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.143.2.11 2009/01/06 00:51:24 sar Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -151,7 +151,7 @@ int main (argc, argv, envp)
 		} else if (!strcmp (argv [i], "-p")) {
 			if (++i == argc)
 				usage ();
-			local_port = htons (atoi (argv [i]));
+			local_port = validate_port (argv [i]);
 			log_debug ("binding to user-specified port %d",
 			       ntohs (local_port));
 		} else if (!strcmp (argv [i], "-d")) {

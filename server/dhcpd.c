@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.121.42.5 2008/03/18 18:30:20 dhankins Exp $ Copyright 2004-2008 Internet Systems Consortium.";
+"$Id: dhcpd.c,v 1.121.42.6 2009/01/06 00:51:24 sar Exp $ Copyright 2004-2008 Internet Systems Consortium.";
 #endif
 
   static char copyright[] =
@@ -266,15 +266,7 @@ int main (argc, argv, envp)
 		if (!strcmp (argv [i], "-p")) {
 			if (++i == argc)
 				usage ();
-			for (s = argv [i]; *s; s++)
-				if (!isdigit (*s))
-					log_fatal ("%s: not a valid UDP port",
-					       argv [i]);
-			status = atoi (argv [i]);
-			if (status < 1 || status > 65535)
-				log_fatal ("%s: not a valid UDP port",
-				       argv [i]);
-			local_port = htons (status);
+			local_port = validate_port (argv [i]);
 			log_debug ("binding to user-specified port %d",
 			       ntohs (local_port));
 		} else if (!strcmp (argv [i], "-f")) {
@@ -397,7 +389,7 @@ int main (argc, argv, envp)
 	if (!local_port)
 	{
 		if ((s = getenv ("DHCPD_PORT"))) {
-			local_port = htons (atoi (s));
+			local_port = validate_port (s);
 			log_debug ("binding to environment-specified port %d",
 				   ntohs (local_port));
 		} else {

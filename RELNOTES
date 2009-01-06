@@ -38,6 +38,10 @@ as well as how to find documentation and report bugs, please consult
 the README file.
 
 
+			Changes since 3.1.2 (bug fixes)
+
+- Validate the argument to the -p option.
+
 			Changes since 3.1.2rc1
 
 - None.

@@ -38,6 +38,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <arpa/inet.h>
+#include <errno.h>
 
 #include <netdb.h>
 #else
@@ -2013,6 +2014,7 @@ int addr_eq PROTO ((struct iaddr, struct iaddr));
 int addr_match(struct iaddr *, struct iaddrmatch *);
 char *piaddr PROTO ((struct iaddr));
 char *piaddrmask (struct iaddr, struct iaddr, const char *, int);
+u_int16_t validate_port(char *);
 
 /* dhclient.c */
 extern const char *path_dhclient_conf;
