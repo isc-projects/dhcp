@@ -64,6 +64,10 @@ suggested fixes to <dhcp-users@isc.org>.
 
 - Suppress spurious warnings from configure about --datarootdir
 
+- A bug was fixed that caused the server not to answer some valid Solicit
+  and Request packets, if the dynamic range covering any requested addresses
+  had been deleted from configuration.
+
 			Changes since 4.0.1rc1
 
 - None.
