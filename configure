@@ -3335,6 +3335,9 @@ fi
 
 
 
+# Suppress warnings about --datarootdir
+
+
 # If we have gcc, and AC_PROG_CC changed the flags, then we know the
 # user did not specify any flags. Add warnings in this case.
 if test "$GCC" = "yes"; then
@@ -8098,36 +8101,6 @@ ac_abs_srcdir=$ac_abs_top_srcdir$ac_dir_suffix
   esac
 _ACEOF
 
-cat >>$CONFIG_STATUS <<\_ACEOF
-# If the template does not know about datarootdir, expand it.
-# FIXME: This hack should be removed a few years after 2.60.
-ac_datarootdir_hack=; ac_datarootdir_seen=
-
-case `sed -n '/datarootdir/ {
-  p
-  q
-}
-/@datadir@/p
-/@docdir@/p
-/@infodir@/p
-/@localedir@/p
-/@mandir@/p
-' $ac_file_inputs` in
-*datarootdir*) ac_datarootdir_seen=yes;;
-*@datadir@*|*@docdir@*|*@infodir@*|*@localedir@*|*@mandir@*)
-  { echo "$as_me:$LINENO: WARNING: $ac_file_inputs seems to ignore the --datarootdir setting" >&5
-echo "$as_me: WARNING: $ac_file_inputs seems to ignore the --datarootdir setting" >&2;}
-_ACEOF
-cat >>$CONFIG_STATUS <<_ACEOF
-  ac_datarootdir_hack='
-  s&@datadir@&$datadir&g
-  s&@docdir@&$docdir&g
-  s&@infodir@&$infodir&g
-  s&@localedir@&$localedir&g
-  s&@mandir@&$mandir&g
-    s&\\\${datarootdir}&$datarootdir&g' ;;
-esac
-_ACEOF
 
 # Neutralize VPATH when `$srcdir' = `.'.
 # Shell code in configure.ac might set extrasub.
@@ -8149,16 +8122,8 @@ s&@builddir@&$ac_builddir&;t t
 s&@abs_builddir@&$ac_abs_builddir&;t t
 s&@abs_top_builddir@&$ac_abs_top_builddir&;t t
 s&@INSTALL@&$ac_INSTALL&;t t
-$ac_datarootdir_hack
 " $ac_file_inputs | sed -f "$tmp/subs-1.sed" >$tmp/out
 
-test -z "$ac_datarootdir_hack$ac_datarootdir_seen" &&
-  { ac_out=`sed -n '/\${datarootdir}/p' "$tmp/out"`; test -n "$ac_out"; } &&
-  { ac_out=`sed -n '/^[	 ]*datarootdir[	 ]*:*=/p' "$tmp/out"`; test -z "$ac_out"; } &&
-  { echo "$as_me:$LINENO: WARNING: $ac_file contains a reference to the variable \`datarootdir'
-which seems to be undefined.  Please make sure it is defined." >&5
-echo "$as_me: WARNING: $ac_file contains a reference to the variable \`datarootdir'
-which seems to be undefined.  Please make sure it is defined." >&2;}
 
   rm -f "$tmp/stdin"
   case $ac_file in
