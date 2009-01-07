@@ -955,8 +955,12 @@ try_client_v6_address(struct iasubopt **addr,
 		return ISC_R_FAILURE;
 	}
 
+	/*
+	 * The address is not covered by this (or possibly any) dynamic
+	 * range.
+	 */
 	if (!ipv6_in_pool(&tmp_addr, pool)) {
-		return ISC_R_FAILURE;
+		return ISC_R_ADDRNOTAVAIL;
 	}
 
 	if (lease6_exists(pool, &tmp_addr)) {
@@ -1643,7 +1647,9 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 		if (status == ISC_R_CANCELED)
 			break;
 
-		if ((status != ISC_R_SUCCESS) && (status != ISC_R_ADDRINUSE))
+		if ((status != ISC_R_SUCCESS) &&
+		    (status != ISC_R_ADDRINUSE) &&
+		    (status != ISC_R_ADDRNOTAVAIL))
 			goto cleanup;
 	}
 
@@ -2032,11 +2038,21 @@ reply_process_addr(struct reply_state *reply, struct option_cache *addr) {
 		    (reply->packet->dhcpv6_msg_type == DHCPV6_REBIND)) {
 			status = reply_process_try_addr(reply, &tmp_addr);
 
-			/* Either error out or skip this address. */
+			/*
+			 * If the address is in use, or isn't in any dynamic
+			 * range, continue as normal.  If any other error was
+			 * found, error out.
+			 */
 			if ((status != ISC_R_SUCCESS) && 
-			    (status != ISC_R_ADDRINUSE)) 
+			    (status != ISC_R_ADDRINUSE) &&
+			    (status != ISC_R_ADDRNOTAVAIL))
 				goto cleanup;
 
+			/*
+			 * If we didn't honor this lease, for solicit and
+			 * request we simply omit it from our answer.  For
+			 * rebind, we send it with zeroed lifetimes.
+			 */
 			if (reply->lease == NULL) {
 				if (reply->packet->dhcpv6_msg_type ==
 							DHCPV6_REBIND) {
