@@ -12,6 +12,9 @@ SAVE_CFLAGS="$CFLAGS"
 # Now find our C compiler.
 AC_PROG_CC
 
+# Suppress warnings about --datarootdir
+AC_DEFUN([AC_DATAROOTDIR_CHECKED])
+
 # If we have gcc, and AC_PROG_CC changed the flags, then we know the
 # user did not specify any flags. Add warnings in this case.
 if test "$GCC" = "yes"; then
