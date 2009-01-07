@@ -52,6 +52,10 @@ work on other platforms. Please report any problems and suggested fixes to
 
 - Suppress spurious warnings from configure about --datarootdir
 
+- A bug was fixed that caused the server not to answer some valid Solicit
+  and Request packets, if the dynamic range covering any requested addresses
+  had been deleted from configuration.
+
 			Changes since 4.1.0b1
 
 - A missing "else" in dhcrelay.c could have caused an interface not to
