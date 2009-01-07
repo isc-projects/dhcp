@@ -1,34 +1,22 @@
 	      Internet Systems Consortium DHCP Distribution
-		              Version 4.1.0
-			     5 December 2008
+			      Version 4.2.0
+			     21 December 2012
 
 			      Release Notes
 
 			      NEW FEATURES
 
-ISC DHCP 4.1.x includes several new DHCPv6 features that were not included
-in DHCP 4.0.x.  These include:
-
-- Support for the rapid-commit option on the client side
-
-- Prefix Delegation support
-
-- IA_TA address support
-
-- A basic DHCPv6 relay agent
-
-- Basic and partial DHCPv6 leasequery support
+ISC DHCP 4.2.x includes features that were not included in DHCP 4.1.x.
+These include:
 
 There are a number of DHCPv6 limitations and features missing in this
 release, which will be addressed in the future:
 
 - Only Solaris, Linux, FreeBSD, NetBSD, and OpenBSD are supported.
 
-- Only a single address is supported per IA.
-
-- DHCPv6 includes human-readable text in status code messages. These
-  should be configurable, and probably localized via gettext() or the
-  like.
+- DHCPv6 includes human-readable text in status code messages, in
+  English.  A method to reconfigure or support other languages would
+  be preferrable.
 
 - The "host-identifier" option is limited to a simple token.
 
@@ -47,6 +35,11 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and may not
 work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
+
+			Changes since 4.1.0 (new features)
+
+
+
 			Changes since 4.1.0 (bug fixes)
 
 - Validate the argument to the -p option.
@@ -57,7 +50,7 @@ work on other platforms. Please report any problems and suggested fixes to
   (which are bogus corruption read from the packet anyway).  It also
   carries a hopefully more useful explanation.
 
-                        Changes since 4.1.0b1
+			Changes since 4.1.0b1
 
 - A missing "else" in dhcrelay.c could have caused an interface not to
   be recognized.
@@ -1729,7 +1722,7 @@ work on other platforms. Please report any problems and suggested fixes to
 - A minor bug fix in the arguments to a logging function call.
 - Documentation update for dhcpd.conf.
 
-		        Changes since 3.0.1rc2
+			Changes since 3.0.1rc2
 
 - Allow the primary to send a POOLREQ message.   This isn't what the current
   failover draft says to do, so we may have to back it out if I can't get the
@@ -1737,7 +1730,7 @@ work on other platforms. Please report any problems and suggested fixes to
   current draft seems needlessly hairy, so I'm floating a trial balloon.
   The rc1 code did not implement the method described in the draft either.
 
-		        Changes since 3.0.1rc1
+			Changes since 3.0.1rc1
 
 - Treat NXDOMAIN and NXRRSET as success when we are trying to delete a
   domain or RRSET.   This allows the DHCP server to forget about a name
@@ -1772,7 +1765,7 @@ work on other platforms. Please report any problems and suggested fixes to
   than a history of all references and dereferences.   This code is only used
   when extensive additional debugging is enabled.
 
-		           Changes since 3.0
+			   Changes since 3.0
 
 - Make allocators for hash tables.   As a side effect, this fixes a memory
   smash in the subclass allocation code.
@@ -2150,7 +2143,7 @@ work on other platforms. Please report any problems and suggested fixes to
 
 - Support GCC on SCO.
 
-	        Changes since 3.0 Beta 2 Patchlevel 23
+		Changes since 3.0 Beta 2 Patchlevel 23
 
 - Fix a bug in the DNS update code where a status code was not being
   checked.   This may have been causing core dumps.
@@ -2187,18 +2180,18 @@ work on other platforms. Please report any problems and suggested fixes to
 
 - Fix some memory allocation bugs in failover.
 
-	        Changes since 3.0 Beta 2 Patchlevel 22
+		Changes since 3.0 Beta 2 Patchlevel 22
 
 - Apply some patches suggested by Cyrille Lefevre, who is maintaining
   the FreeBSD ISC DHCP Distribution port.
 
 - Fix a core dump in DHCPRELEASE.
 
-	        Changes since 3.0 Beta 2 Patchlevel 21
+		Changes since 3.0 Beta 2 Patchlevel 21
 
 - This time for sure: fix the spin described in the changes for pl20.
 
-	        Changes since 3.0 Beta 2 Patchlevel 20
+		Changes since 3.0 Beta 2 Patchlevel 20
 
 - Fix a problem with Linux detecting large numbers of interfaces (Ben)
 
@@ -2209,7 +2202,7 @@ work on other platforms. Please report any problems and suggested fixes to
   previous fix only partially fixed the problem - enough to get it
   past the regression test.
 
-	        Changes since 3.0 Beta 2 Patchlevel 19
+		Changes since 3.0 Beta 2 Patchlevel 19
 
 - Fix a bug that could cause the server to abort if compiled with
   POINTER_DEBUG enabled.
@@ -2223,7 +2216,7 @@ work on other platforms. Please report any problems and suggested fixes to
 
 - Install unformatted man pages on SunOS.
 
-	        Changes since 3.0 Beta 2 Patchlevel 18
+		Changes since 3.0 Beta 2 Patchlevel 18
 
 - Allow the server to be placed in partner-down state using OMAPI.
   (Damien Neil)
@@ -2277,7 +2270,7 @@ work on other platforms. Please report any problems and suggested fixes to
 
 		       ** there was no pl17 **
 
-	        Changes since 3.0 Beta 2 Patchlevel 16
+		Changes since 3.0 Beta 2 Patchlevel 16
 
 - Add support for transaction tracing.   This allows the state of the
   DHCP server on startup, and all the subsequent transactions, to be
@@ -2323,7 +2316,7 @@ work on other platforms. Please report any problems and suggested fixes to
   would cause two DHCPDISCOVERS to be sent back-to-back on startup.
 
 
-	        Changes since 3.0 Beta 2 Patchlevel 15
+		Changes since 3.0 Beta 2 Patchlevel 15
 
 - Some documentation tweaks.
 
@@ -2339,7 +2332,7 @@ work on other platforms. Please report any problems and suggested fixes to
 - Fix a core dump that would occur if a packet was sent with no
   options.
 
-	        Changes since 3.0 Beta 2 Patchlevel 14
+		Changes since 3.0 Beta 2 Patchlevel 14
 
 - Finish fixing a long-standing bug in the agent options code.   This
   was causing core dumps and failing to operate correctly - in
@@ -2363,7 +2356,7 @@ work on other platforms. Please report any problems and suggested fixes to
 - Don't send faked-out giaddr when renewing or bound - again, useful
   for debugging.
 
-	        Changes since 3.0 Beta 2 Patchlevel 13
+		Changes since 3.0 Beta 2 Patchlevel 13
 
 - Fixed a problem where the fqdn decoder would sometimes try to store
   an option with an (unsigned) negative length, resulting in a core
@@ -2390,7 +2383,7 @@ work on other platforms. Please report any problems and suggested fixes to
   the transition.
   
 
-	        Changes since 3.0 Beta 2 Patchlevel 12
+		Changes since 3.0 Beta 2 Patchlevel 12
 
 - Fixed a couple of silly compile errors.
 

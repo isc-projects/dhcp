@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-		              Version 4.1.0
-			     5 December 2008
+			      Version 4.2.0
+			     21 December 2012
 
 			      README FILE
 
@@ -399,7 +399,7 @@ relay agent) is available from the Ports Collection in
 /usr/ports/net/isc-dhcp3, or as a package on FreeBSD installation
 CDROMs.
 
-                              NeXTSTEP
+			      NeXTSTEP
 
 The NeXTSTEP support uses the NeXTSTEP Berkeley Packet Filter
 extension, which is not included in the base NextStep system.  You
@@ -544,24 +544,24 @@ report.  This will save us a great deal of time and more informative
 bug reports are more likely to get handled more quickly overall.
 
       1.  The specific operating system name and version of the
-          machine on which the DHCP server or client is running.
+	  machine on which the DHCP server or client is running.
       2.  The specific operating system name and version of the
-          machine on which the client is running, if you are having
-          trouble getting a client working with the server.
+	  machine on which the client is running, if you are having
+	  trouble getting a client working with the server.
       3.  If you're running Linux, the version number we care about is
-          the kernel version and maybe the library version, not the
-          distribution version - e.g., while we don't mind knowing
-          that you're running Redhat version mumble.foo, we must know
-          what kernel version you're running, and it helps if you can
-          tell us what version of the C library you're running,
-          although if you don't know that off the top of your head it
-          may be hard for you to figure it out, so don't go crazy
-          trying.
+	  the kernel version and maybe the library version, not the
+	  distribution version - e.g., while we don't mind knowing
+	  that you're running Redhat version mumble.foo, we must know
+	  what kernel version you're running, and it helps if you can
+	  tell us what version of the C library you're running,
+	  although if you don't know that off the top of your head it
+	  may be hard for you to figure it out, so don't go crazy
+	  trying.
       4.  The specific version of the DHCP distribution you're
-          running, as reported by dhcpd -t.
+	  running, as reported by dhcpd -t.
       5.  Please explain the problem carefully, thinking through what
-          you're saying to ensure that you don't assume we know
-          something about your situation that we don't know.
+	  you're saying to ensure that you don't assume we know
+	  something about your situation that we don't know.
       6.  Include your dhcpd.conf and dhcpd.leases file as MIME attachments
 	  if they're not over 100 kilobytes in size each.  If they are
 	  this large, please make them available to us eg via a hidden
@@ -569,17 +569,17 @@ bug reports are more likely to get handled more quickly overall.
 	  this information due to sensitive contents, you may encrypt
 	  the file to our release signing key, available on our website.
       7.  Include a log of your server or client running until it
-          encounters the problem - for example, if you are having
-          trouble getting some client to get an address, restart the
-          server with the -d flag and then restart the client, and
-          send us what the server prints.   Likewise, with the client,
-          include the output of the client as it fails to get an
-          address or otherwise does the wrong thing.   Do not leave
-          out parts of the output that you think aren't interesting.
+	  encounters the problem - for example, if you are having
+	  trouble getting some client to get an address, restart the
+	  server with the -d flag and then restart the client, and
+	  send us what the server prints.   Likewise, with the client,
+	  include the output of the client as it fails to get an
+	  address or otherwise does the wrong thing.   Do not leave
+	  out parts of the output that you think aren't interesting.
       8.  If the client or server is dumping core, please run the
-          debugger and get a stack trace, and include that in your
-          bug report.   For example, if your debugger is gdb, do the
-          following:
+	  debugger and get a stack trace, and include that in your
+	  bug report.   For example, if your debugger is gdb, do the
+	  following:
 
 		gdb dhcpd dhcpd.core
 		(gdb) where
