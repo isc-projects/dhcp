@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.98.2.18 2008/12/02 19:49:09 sar Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.98.2.19 2009/01/07 19:56:51 dhankins Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -143,6 +143,7 @@ int parse_option_buffer (options, buffer, length, universe)
 	struct option_cache *op = (struct option_cache *)0;
 	struct buffer *bp = (struct buffer *)0;
 	struct option *option = NULL;
+	char *reason = "general failure";
 
 	if (!buffer_allocate (&bp, length, MDL)) {
 		log_error ("no memory for option buffer.");
@@ -161,7 +162,8 @@ int parse_option_buffer (options, buffer, length, universe)
 
 		/* Don't look for length if the buffer isn't that big. */
 		if ((offset + universe->length_size) > length) {
-			len = 65536;
+			reason = "code tag at end of buffer - missing "
+				 "length field";
 			goto bogus;
 		}
 
@@ -177,10 +179,12 @@ int parse_option_buffer (options, buffer, length, universe)
 
 		/* If the length is outrageous, the options are bad. */
 		if (offset + len > length) {
+			reason = "option length exceeds option buffer length";
 		      bogus:
-			log_error ("parse_option_buffer: option %s (%u:%u) %s.",
-				   option ? option->name : "<unknown>",
-				   code, len, "larger than buffer");
+			log_error("parse_option_buffer: malformed option "
+				  "%s.%s (code %u): %s.", universe->name,
+				  option ? option->name : "<unknown>",
+				  code, reason);
 			buffer_dereference (&bp, MDL);
 			return 0;
 		}

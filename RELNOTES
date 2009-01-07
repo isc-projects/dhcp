@@ -38,9 +38,15 @@ as well as how to find documentation and report bugs, please consult
 the README file.
 
 
-			Changes since 3.1.2 (bug fixes)
+			Changes since 3.1.2
 
 - Validate the argument to the -p option.
+
+- The notorious 'option <unknown> ... larger than buffer' log line,
+  which is seen in some malformed DHCP client packets, was modified.
+  It now logs the universe name, and does not log the length values
+  (which are bogus corruption read from the packet anyway).  It also
+  carries a hopefully more useful explanation.
 
 			Changes since 3.1.2rc1
 
