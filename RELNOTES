@@ -47,7 +47,7 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and may not
 work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
-			Changes since 4.1.0 (bug fixes)
+			Changes since 4.1.0
 
 - Validate the argument to the -p option.
 
