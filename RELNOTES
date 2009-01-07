@@ -61,6 +61,8 @@ work on other platforms. Please report any problems and suggested fixes to
   and Request packets, if the dynamic range covering any requested addresses
   had been deleted from configuration.
 
+- Suppress spurious warnings from configure about --datarootdir
+
                         Changes since 4.1.0b1
 
 - A missing "else" in dhcrelay.c could have caused an interface not to
