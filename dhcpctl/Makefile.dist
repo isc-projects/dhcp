@@ -63,14 +63,12 @@ install: all $(CATMANPAGES)
 	$(CHMOD) 644 $(DESTDIR)$(LIBDIR)/libdhcpctl.a
 	$(INSTALL) dhcpctl.h $(DESTDIR)$(INCDIR)
 	$(CHMOD) 644 $(DESTDIR)$(INCDIR)/dhcpctl.h
-	for man in $(MAN); do \
-	  prefix=`echo $$man |sed -e 's/\.[0-9]$$//'`; \
-	  suffix=`echo $$man |sed -e 's/.*\.\([0-9]\)$$/\1/'`; \
-	  $(MANINSTALL) $(MANFROM) $${prefix}.$(MANCAT)$${suffix} $(MANTO) \
-			$(DESTDIR)$(LIBMANDIR)/$${prefix}$(LIBMANEXT); \
-	done
+
 	$(INSTALL) omshell $(DESTDIR)$(USERBINDIR)
 	$(CHMOD) 755 $(DESTDIR)$(USERBINDIR)/omshell
+
+	$(MANINSTALL) $(MANFROM) dhcpctl.$(MANCAT)3 $(MANTO) \
+				$(DESTDIR)$(LIBMANDIR)/dhcpctl$(LIBMANEXT)
 	$(MANINSTALL) $(MANFROM) omshell.$(MANCAT)1 $(MANTO) \
 				$(DESTDIR)$(USRMANDIR)/omshell$(USRMANEXT)
 
