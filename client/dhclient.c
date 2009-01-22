@@ -3,7 +3,7 @@
    DHCP Client. */
 
 /*
- * Copyright (c) 2004-2008 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -61,10 +61,10 @@ struct data_string default_duid;
    assert (state_is == state_shouldbe). */
 #define ASSERT_STATE(state_is, state_shouldbe) {}
 
-static char copyright[] = "Copyright 2004-2008 Internet Systems Consortium.";
-static char arr [] = "All rights reserved.";
-static char message [] = "Internet Systems Consortium DHCP Client";
-static char url [] = "For info, please visit http://www.isc.org/sw/dhcp/";
+static const char copyright[] = "Copyright 2004-2009 Internet Systems Consortium.";
+static const char arr [] = "All rights reserved.";
+static const char message [] = "Internet Systems Consortium DHCP Client";
+static const char url [] = "For info, please visit http://www.isc.org/sw/dhcp/";
 
 u_int16_t local_port=0;
 u_int16_t remote_port=0;
@@ -3059,7 +3059,7 @@ void go_daemon ()
 
 	write_client_pid_file ();
 
-        chdir("/");
+	IGNORE_RET (chdir("/"));
 }
 
 void write_client_pid_file ()

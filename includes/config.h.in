@@ -7,6 +7,9 @@
 /* Define to 1 to include DHCPv6 support. */
 #undef DHCPv6
 
+/* Define to 1 if you need the _GNU_SOURCE flag defined */
+#undef _GNU_SOURCE
+
 /* Define to 1 if you have the /dev/random file. */
 #undef HAVE_DEV_RANDOM
 

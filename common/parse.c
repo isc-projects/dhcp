@@ -3,7 +3,7 @@
    Common parser code for dhcpd and dhclient. */
 
 /*
- * Copyright (c) 2004-2008 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -5604,14 +5604,14 @@ int parse_warn (struct parse *cfile, const char *fmt, ...)
 #endif
 
 	if (log_perror) {
-		write (STDERR_FILENO, mbuf, strlen (mbuf));
-		write (STDERR_FILENO, "\n", 1);
-		write (STDERR_FILENO, cfile -> token_line,
-		       strlen (cfile -> token_line));
-		write (STDERR_FILENO, "\n", 1);
+		IGNORE_RET (write (STDERR_FILENO, mbuf, strlen (mbuf)));
+		IGNORE_RET (write (STDERR_FILENO, "\n", 1));
+		IGNORE_RET (write (STDERR_FILENO, cfile -> token_line,
+				   strlen (cfile -> token_line)));
+		IGNORE_RET (write (STDERR_FILENO, "\n", 1));
 		if (cfile -> lexchar < 81)
-			write (STDERR_FILENO, lexbuf, lix);
-		write (STDERR_FILENO, "^\n", 2);
+			IGNORE_RET (write (STDERR_FILENO, lexbuf, lix));
+		IGNORE_RET (write (STDERR_FILENO, "^\n", 2));
 	}
 
 	cfile -> warnings_occurred = 1;

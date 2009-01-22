@@ -68,6 +68,11 @@ suggested fixes to <dhcp-users@isc.org>.
   and Request packets, if the dynamic range covering any requested addresses
   had been deleted from configuration.
 
+- Update the code to deal with GCC 4.3.  This included two sets of changes.
+  The first is to the configuration files to include the use of
+  AC_USE_SYSTME_EXTENSIONS.  The second is to deal with return values that
+  were being ignored.
+
 			Changes since 4.0.1rc1
 
 - None.

@@ -3,7 +3,7 @@
    Turn data structures into printable text. */
 
 /*
- * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2007,2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -308,7 +308,7 @@ void dump_raw (buf, len)
 			lbuf[54]=' ';
 			lbuf[55]=' ';
 			lbuf[73]='\0';
-			log_info (lbuf);
+			log_info ("%s", lbuf);
 		  }
 		  memset(lbuf, ' ', 79);
 		  lbuf [79] = 0;
@@ -332,7 +332,7 @@ void dump_raw (buf, len)
 	lbuf[54]=' ';
 	lbuf[55]=' ';
 	lbuf[73]='\0';
-	log_info (lbuf);
+	log_info ("%s", lbuf);
 }
 
 void hash_dump (table)

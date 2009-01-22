@@ -59,10 +59,10 @@ static void
 test_buffer_allocate(void) {
 	static const char *test_desc = 
 		"buffer_allocate basic test";
-	
+
 	struct buffer *buf;
 
-	t_assert("buffer_allocate", 1, T_REQUIRED, test_desc);
+	t_assert("buffer_allocate", 1, T_REQUIRED, "%s", test_desc);
 
 	/*
 	 * Check a 0-length buffer.
@@ -115,10 +115,10 @@ test_buffer_reference(void) {
 	static const char *test_desc = 
 		"buffer_reference basic test";
 	int result = T_PASS;
-	
+
 	struct buffer *a, *b;
 
-	t_assert("buffer_reference", 1, T_REQUIRED, test_desc);
+	t_assert("buffer_reference", 1, T_REQUIRED, "%s", test_desc);
 
 	/*
 	 * Create a buffer.
@@ -186,10 +186,10 @@ static void
 test_buffer_dereference(void) {
 	static const char *test_desc = 
 		"buffer_dereference basic test";
-	
+
 	struct buffer *a, *b;
 
-	t_assert("buffer_dereference", 1, T_REQUIRED, test_desc);
+	t_assert("buffer_dereference", 1, T_REQUIRED, "%s", test_desc);
 
 	/*
 	 * Confirm buffer_dereference() doesn't work if we pass in NULL.
@@ -278,12 +278,12 @@ test_data_string_forget(void) {
 	static const char *test_desc = 
 		"data_string_forget basic test";
 	int result = T_PASS;
-	
+
 	struct buffer *buf;
 	struct data_string a;
 	const char *str = "Lorem ipsum dolor sit amet turpis duis.";
 
-	t_assert("data_string_forget", 1, T_REQUIRED, test_desc);
+	t_assert("data_string_forget", 1, T_REQUIRED, "%s", test_desc);
 
 	/* 
 	 * Create the string we want to forget.
@@ -347,11 +347,11 @@ test_data_string_forget_nobuf(void) {
 	static const char *test_desc = 
 		"data_string_forget test, data_string without buffer";
 	int result = T_PASS;
-	
+
 	struct data_string a;
 	const char *str = "Lorem ipsum dolor sit amet massa nunc.";
 
-	t_assert("data_string_forget, no buffer", 1, T_REQUIRED, test_desc);
+	t_assert("data_string_forget, no buffer", 1, T_REQUIRED, "%s", test_desc);
 
 	/* 
 	 * Create the string we want to forget.
@@ -395,7 +395,7 @@ test_data_string_copy(void) {
 	struct data_string a, b;
 	const char *str = "Lorem ipsum dolor sit amet orci aliquam.";
 
-	t_assert("data_string_copy", 1, T_REQUIRED, test_desc);
+	t_assert("data_string_copy", 1, T_REQUIRED, "%s", test_desc);
 
 
 	/* 
@@ -452,7 +452,8 @@ test_data_string_copy_nobuf(void) {
 	struct data_string a, b;
 	const char *str = "Lorem ipsum dolor sit amet cras amet.";
 
-	t_assert("data_string_copy, no buffer", 1, T_REQUIRED, test_desc);
+	t_assert("data_string_copy, no buffer", 1, T_REQUIRED, "%s",
+		 test_desc);
 
 
 	/* 

@@ -4,7 +4,7 @@
 
 /*
  * Copyright (c) 1995 RadioMail Corporation.  All rights reserved.
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004,2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -54,4 +54,23 @@
 #define ANSI_DECL(x)
 #define INLINE
 #endif /* __GNUC__ || __STDC__ */
+
+/* The following macro handles the case of unwanted return values.  In
+ * GCC one can specify an attribute for a function to generate a warning
+ * if the return value of the function is ignored and one can't dispose of
+ * the warning by the use of void.  In conjunction with the use of -Werror
+ * these warnings prohibit the compilation of the package.  This macro
+ * allows us to assign the return value to a variable and then ignore it.
+ */
+#if !defined(__GNUC__) || (__GNUC__ < 4) || \
+	((__GNUC__ == 4) && (__GNUC_MINOR__ < 3))
+#define IGNORE_RET(x) (void) x
+#else
+#define IGNORE_RET(x)			\
+	do {				\
+		int ignore_return;	\
+		ignore_return = x;	\
+	} while (0)
+#endif
+
 #endif /* __ISC_DHCP_CDEFS_H__ */
