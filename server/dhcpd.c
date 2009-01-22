@@ -3,7 +3,7 @@
    DHCP Server Daemon. */
 
 /*
- * Copyright (c) 2004-2008 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -32,11 +32,12 @@
  * ``http://www.nominum.com''.
  */
 
-static char copyright[] =
-"Copyright 2004-2008 Internet Systems Consortium.";
-static char arr [] = "All rights reserved.";
-static char message [] = "Internet Systems Consortium DHCP Server";
-static char url [] = "For info, please visit http://www.isc.org/sw/dhcp/";
+static const char copyright[] =
+"Copyright 2004-2009 Internet Systems Consortium.";
+static const char arr [] = "All rights reserved.";
+static const char message [] = "Internet Systems Consortium DHCP Server";
+static const char url [] =
+"For info, please visit http://www.isc.org/sw/dhcp/";
 
 #include "dhcpd.h"
 #include <omapip/omapip_p.h>
@@ -783,7 +784,7 @@ main(int argc, char **argv) {
         /* Write new pid file. */
         if ((i = open(path_dhcpd_pid, O_WRONLY|O_CREAT|O_TRUNC, 0644)) >= 0) {
                 sprintf(pbuf, "%d\n", (int) getpid());
-                write(i, pbuf, strlen(pbuf));
+                IGNORE_RET (write(i, pbuf, strlen(pbuf)));
                 close(i);
         } else {
                 log_error("Can't create PID file %s: %m.", path_dhcpd_pid);
@@ -812,7 +813,7 @@ main(int argc, char **argv) {
                 open("/dev/null", O_RDWR);
                 log_perror = 0; /* No sense logging to /dev/null. */
 
-                chdir("/");
+       		IGNORE_RET (chdir("/"));
 	}
 #endif /* !DEBUG */
 
