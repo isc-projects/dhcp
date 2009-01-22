@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.leases.5,v 1.11 2006/06/15 17:49:49 dhankins Exp $
+.\" $Id: dhcpd.leases.5,v 1.11.60.1 2009/01/22 21:26:47 dhankins Exp $
 .\"
 .TH dhcpd.leases 5
 .SH NAME
@@ -101,8 +101,11 @@ and \fBends\fR statements.   The \fBtstp\fR statement is specified if
 the failover protocol is being used, and indicates what time the peer
 has been told the lease expires.   The \fBtsfp\fR statement is
 also specified if the failover protocol is being used, and indicates
-the lease expiry time that the peer has acknowledged.   The \fIdate\fR
-is specified as follows:
+the lease expiry time that the peer has acknowledged.
+.PP
+The \fIdate\fR is specified in two ways, depending on the configuration
+value for the \fBdb-time-format\fR parameter.  If it was set to \fIdefault\fR,
+then the \fIdate\fR fields appear as follows:
 .PP
 .I weekday year\fB/\fImonth\fB/\fIday hour\fB:\fIminute\fB:\fIsecond\fR
 .PP
@@ -121,6 +124,18 @@ the local time zone.  There is probably nowhere in the world where the
 times recorded on a lease are always the same as wall clock times.  On
 most unix machines, you can display the current time in UTC by typing
 \fBdate -u\fR.
+.PP
+If the \fBdb-time-format\fR was configured to \fIlocal\fR, then
+the \fIdate\fR fields appear as follows:
+.PP
+ \fBepoch\fR \fI<seconds-since-epoch>\fR\fB; #\fR \fI<day-name> <month-name>
+<day-number> <hours>\fR\fB:\fR\fI<minutes>\fR\fB:\fR\fI<seconds> <year>\fR
+.PP
+The \fIseconds-since-epoch\fR is as according to the system's local clock (often
+referred to as "unix time").  The \fB#\fR symbol supplies a comment that
+describes what actual time this is as according to the system's configured
+timezone, at the time the value was written.  It is provided only for human
+inspection.
 .PP
 If a lease will never expire, \fIdate\fR is \fBnever\fR instead of an
 actual date.

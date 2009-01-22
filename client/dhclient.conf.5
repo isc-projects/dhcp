@@ -1,4 +1,4 @@
-.\"	$Id: dhclient.conf.5,v 1.17.84.2 2007/05/23 23:30:32 each Exp $
+.\"	$Id: dhclient.conf.5,v 1.17.84.3 2009/01/22 21:26:47 dhankins Exp $
 .\"
 .\" Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhclient.conf.5,v 1.17.84.2 2007/05/23 23:30:32 each Exp $
+.\" $Id: dhclient.conf.5,v 1.17.84.3 2009/01/22 21:26:47 dhankins Exp $
 .\"
 .TH dhclient.conf 5
 .SH NAME
@@ -469,7 +469,11 @@ DHCP client, but must also be configured in predefined leases - a
 predefined lease whose expiry time has passed will not be used by the
 DHCP client.
 .PP
-Dates are specified as follows:
+Dates are specified in one of two ways.  The software will output times in
+these two formats depending on if the \fBdb-time-format\fR configuration
+parameter has been set to \fIdefault\fR or \fIlocal\fR.
+.PP
+If it is set to \fIdefault\fR, then \fIdate\fR values appear as follows:
 .PP
  \fI<weekday> <year>\fB/\fI<month>\fB/\fI<day>
 <hour>\fB:\fI<minute>\fB:\fI<second>\fR
@@ -483,6 +487,25 @@ month is specified as a number starting with 1 for January.  The day
 of the month is likewise specified starting with 1.  The hour is a
 number between 0 and 23, the minute a number between 0 and 59, and the
 second also a number between 0 and 59.
+.PP
+If the \fBdb-time-format\fR configuration was set to \fIlocal\fR, then
+the \fIdate\fR values appear as follows:
+.PP
+ \fBepoch\fR \fI<seconds-since-epoch>\fR\fB; #\fR \fI<day-name> <month-name>
+<day-number> <hours>\fR\fB:\fR\fI<minutes>\fR\fB:\fR\fI<seconds> <year>\fR
+.PP
+The \fIseconds-since-epoch\fR is as according to the system's local clock (often
+referred to as "unix time").  The \fB#\fR symbol supplies a comment that
+describes what actual time this is as according to the system's configured
+timezone, at the time the value was written.  It is provided only for human
+inspection, the epoch time is the only recommended value for machine
+inspection.
+.PP
+Note that when defining a static lease, one may use either time format one
+wishes, and need not include the comment or values after it.
+.PP
+If the time is infinite in duration, then the \fIdate\fR is \fBnever\fR
+instead of an actual date.
 .SH ALIAS DECLARATIONS
  \fBalias { \fI declarations ... \fB}\fR
 .PP
@@ -504,6 +527,15 @@ declaration for the IP alias address, and a subnet-mask option
 declaration.   A medium statement should never be included in an alias
 declaration.
 .SH OTHER DECLARATIONS
+ \fBdb-time-format\fR [ \fIdefault\fR | \fIlocal\fR ] \fB;\fR
+.PP
+The \fBdb-time-format\fR option determines which of two output methods are
+used for printing times in leases files.  The \fIdefault\fR format provides
+day-and-time in UTC, whereas \fIlocal\fR uses a seconds-since-epoch to store
+the time value, and helpfully places a local timezone time in a comment on
+the same line.  The formats are described in detail in this manpage, whithin
+the LEASE DECLARATIONS section.
+.PP
  \fBreject \fIcidr-ip-address\fR [\fB,\fR \fI...\fB \fIcidr-ip-address\fR ] \fB;\fR
 .PP
 The
