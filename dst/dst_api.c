@@ -1,10 +1,10 @@
 #ifndef LINT
-static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/dst_api.c,v 1.6 2007/11/30 21:51:43 fdupont Exp $";
+static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/dst_api.c,v 1.6.220.1 2009/01/22 02:07:42 sar Exp $";
 #endif
 
 /*
  * Portions Copyright (c) 1995-1998 by Trusted Information Systems, Inc.
- * Portions Copyright (c) 2007 by Internet Systems Consortium, Inc. ("ISC")
+ * Portions Copyright (c) 2007,2009 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -545,7 +545,11 @@ dst_s_read_public_key(const char *in_name, const unsigned in_id, int in_alg)
 		return (NULL);
 	}
 	/* read in the key string */
-	fgets(enckey, sizeof(enckey), fp);
+	if ((fgets(enckey, sizeof(enckey), fp) == NULL) &&
+	    (ferror(fp) != 0)) {
+		EREPORT(("dst_read_public_kety(): Error reading key\n"));
+		return (NULL);
+	}
 
 	/* If we aren't at end-of-file, something is wrong.  */
 	while ((c = getc(fp)) != EOF)

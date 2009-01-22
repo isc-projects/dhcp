@@ -63,6 +63,11 @@ work on other platforms. Please report any problems and suggested fixes to
 
 - Suppress spurious warnings from configure about --datarootdir
 
+- Update the code to deal with GCC 4.3.  This included two sets of changes.
+  The first is to the configuration files to include the use of
+  AC_USE_SYSTME_EXTENSIONS.  The second is to deal with return values that
+  were being ignored.
+
                         Changes since 4.1.0b1
 
 - A missing "else" in dhcrelay.c could have caused an interface not to

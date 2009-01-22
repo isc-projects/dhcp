@@ -23,6 +23,13 @@ if test "$GCC" = "yes"; then
 	fi
 fi
 
+# POSIX doesn't include the IPv6 Advanced Socket API and glibc hides
+# parts of the IPv6 Advanced Socket API as a result.  This is stupid
+# as it breaks how the two halves (Basic and Advanced) of the IPv6
+# Socket API were designed to be used but we have to live with it.
+# Use this to define _GNU_SOURCE to pull in the IPv6 Advanced Socket API.
+AC_USE_SYSTEM_EXTENSIONS
+
 AC_PROG_RANLIB
 AC_CONFIG_HEADERS([includes/config.h])
 

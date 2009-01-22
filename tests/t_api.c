@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2007  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007, 2009  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: t_api.c,v 1.2 2007/11/16 11:04:12 shane Exp $ */
+/* $Id: t_api.c,v 1.2.244.1 2009/01/22 02:07:42 sar Exp $ */
 
 /*! \file */
 
@@ -61,6 +61,7 @@
 #endif /* BIND_SUPPORT */
 
 #include "t_api.h"
+#include "cdefs.h"
 
 static const char *Usage =
 		"\t-a               : run all tests\n"
@@ -245,7 +246,7 @@ main(int argc, char **argv) {
 	 */
 
 	if (T_dir != NULL)
-		(void) chdir(T_dir);
+		IGNORE_RET (chdir(T_dir));
 
 	/*
 	 * We don't want buffered output.
