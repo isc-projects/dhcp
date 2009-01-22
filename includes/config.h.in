@@ -7,9 +7,6 @@
 /* Define to 1 to include DHCPv6 support. */
 #undef DHCPv6
 
-/* Define to 1 if you need the _GNU_SOURCE flag defined */
-#undef _GNU_SOURCE
-
 /* Define to 1 if you have the /dev/random file. */
 #undef HAVE_DEV_RANDOM
 
@@ -109,6 +106,21 @@
 /* Version number of package */
 #undef VERSION
 
+/* Define to 1 if on AIX 3.
+   System headers sometimes define this.
+   We just want to avoid a redefinition error message.  */
+#ifndef _ALL_SOURCE
+# undef _ALL_SOURCE
+#endif
+
+/* Enable GNU extensions on systems that have them.  */
+#ifndef _GNU_SOURCE
+# undef _GNU_SOURCE
+#endif
+
+/* Define to 1 if on MINIX. */
+#undef _MINIX
+
 /* File for dhclient process information. */
 #undef _PATH_DHCLIENT
 
@@ -123,3 +135,21 @@
 
 /* File for dhcrelay process information. */
 #undef _PATH_DHCRELAY_PID
+
+/* Define to 2 if the system does not provide POSIX.1 features except with
+   this defined. */
+#undef _POSIX_1_SOURCE
+
+/* Define to 1 if you need to in order for `stat' and other things to work. */
+#undef _POSIX_SOURCE
+
+/* Enable extensions on Solaris.  */
+#ifndef __EXTENSIONS__
+# undef __EXTENSIONS__
+#endif
+#ifndef _POSIX_PTHREAD_SEMANTICS
+# undef _POSIX_PTHREAD_SEMANTICS
+#endif
+#ifndef _TANDEM_SOURCE
+# undef _TANDEM_SOURCE
+#endif
