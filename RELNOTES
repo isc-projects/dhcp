@@ -61,6 +61,8 @@ work on other platforms. Please report any problems and suggested fixes to
   AC_USE_SYSTME_EXTENSIONS.  The second is to deal with return values that
   were being ignored.
 
+- The db-time-format option was documented in manpages.
+
 			Changes since 4.1.0b1
 
 - A missing "else" in dhcrelay.c could have caused an interface not to

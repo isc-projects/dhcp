@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.99 2008/11/03 18:13:58 dhankins Exp $
+.\" $Id: dhcpd.conf.5,v 1.100 2009/01/22 21:22:42 dhankins Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -1988,6 +1988,19 @@ then clients without host declarations will be allowed to obtain IP
 addresses, as long as those addresses are not restricted by
 .I allow
 and \fIdeny\fR statements within their \fIpool\fR declarations.
+.RE
+.PP
+The \fIdb-time-format\fR statement
+.RS 0.25i
+.PP
+.B db-time-format \fR[ \fIdefault\fR | \fIlocal\fR ] \fB;\fR
+.PP
+The DHCP server software outputs several timestamps when writing leases to
+persistent storage.  This configuration parameter selects one of two output
+formats.  The \fIdefault\fR format prints the day, date, and time in UTC,
+while the \fIlocal\fR format prints the system seconds-since-epoch, and
+helpfully provides the day and time in the system timezone in a comment.
+The time formats are described in detail in the dhcpd.leases(5) manpage.
 .RE
 .PP
 The \fIddns-hostname\fR statement
