@@ -70,6 +70,10 @@ work on other platforms. Please report any problems and suggested fixes to
 
 - The db-time-format option was documented in manpages.
 
+- Using reserved leases no longer results in 'lease with binding state
+  free not on its queue' error messages, thanks to a patch from Frode
+  Nordahl.
+
                         Changes since 4.1.0b1
 
 - A missing "else" in dhcrelay.c could have caused an interface not to
