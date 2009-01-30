@@ -73,6 +73,10 @@ suggested fixes to <dhcp-users@isc.org>.
   AC_USE_SYSTME_EXTENSIONS.  The second is to deal with return values that
   were being ignored.
 
+- Using reserved leases no longer results in 'lease with binding state
+  free not on its queue' error messages, thanks to a patch from Frode
+  Nordahl.
+
 			Changes since 4.0.1rc1
 
 - None.

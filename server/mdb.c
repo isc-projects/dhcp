@@ -1235,9 +1235,12 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 	/* Figure out which queue it's on. */
 	switch (comp -> binding_state) {
 	      case FTS_FREE:
-		lq = &comp -> pool -> free;
-		if (!(comp->flags & RESERVED_LEASE))
+		if (comp->flags & RESERVED_LEASE)
+			lq = &comp->pool->reserved;
+		else {
+			lq = &comp->pool->free;
 			comp->pool->free_leases--;
+		}
 
 #if defined(FAILOVER_PROTOCOL)
 		do_pool_check = 1;
@@ -1259,9 +1262,12 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 		break;
 
 	      case FTS_BACKUP:
-		lq = &comp -> pool -> backup;
-		if (!(comp->flags & RESERVED_LEASE))
+		if (comp->flags & RESERVED_LEASE)
+			lq = &comp->pool->reserved;
+		else {
+			lq = &comp->pool->backup;
 			comp->pool->backup_leases--;
+		}
 
 #if defined(FAILOVER_PROTOCOL)
 		do_pool_check = 1;
