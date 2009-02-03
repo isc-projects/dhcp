@@ -54,6 +54,9 @@ the README file.
   free not on its queue' error messages, thanks to a patch from Frode
   Nordahl.
 
+- A parser bug was fixed that segfaulted if site-option-space was tried
+  to be used interchangeably with vendor-option-space.
+
 			Changes since 3.1.2rc1
 
 - None.

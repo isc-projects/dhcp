@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.117.8.8 2008/10/08 16:30:54 dhankins Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.117.8.9 2009/02/03 23:51:44 dhankins Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -4761,7 +4761,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 {
 	const char *val;
 	enum dhcp_token token;
-	struct expression *t = (struct expression *)0;
+	struct expression *t = NULL;
 	unsigned char buf [4];
 	unsigned len;
 	unsigned char *ob;
@@ -4813,11 +4813,12 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 						(const unsigned char *)val,
 							len, 1, 1, MDL))
 					log_fatal ("No memory for \"%s\"", val);
-			} else if ((*fmt) [1] != 'o') {
-				parse_warn (cfile, "expecting string %s.",
-					    "or hexadecimal data");
-				skip_to_semi (cfile);
 			} else {
+				if ((*fmt) [1] != 'o') {
+					parse_warn(cfile, "expecting string "
+						   "or hexadecimal data");
+					skip_to_semi (cfile);
+				}
 				return 0;
 			}
 		}
@@ -4981,12 +4982,13 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 		skip_to_semi (cfile);
 		return 0;
 	}
-	if (expr) {
-		if (!make_concat (rv, expr, t))
-			return 0;
-	} else
-		expression_reference (rv, t, MDL);
-	expression_dereference (&t, MDL);
+
+	if (!make_concat (rv, expr, t))
+		return 0;
+
+	if (t != NULL)
+		expression_dereference (&t, MDL);
+
 	return 1;
 }
 
