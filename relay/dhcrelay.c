@@ -164,8 +164,8 @@ main(int argc, char **argv) {
 	struct servent *ent;
 	struct server_list *sp = NULL;
 	struct interface_info *tmp = NULL;
-	char *service_local, *service_remote;
-	u_int16_t port_local, port_remote;
+	char *service_local = NULL, *service_remote = NULL;
+	u_int16_t port_local = 0, port_remote = 0;
 	int no_daemon = 0, quiet = 0;
 	int fd;
 	int i;
