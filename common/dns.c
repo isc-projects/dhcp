@@ -859,7 +859,7 @@ ddns_remove_fwd(struct data_string *ddns_fwd_name,
 
 
 	/*
-	 * A RR matches the expiring lease.
+	 * Address RR (A/AAAA) matches the expiring lease.
 	 */
 	updrec = minires_mkupdrec (S_PREREQ,
 				   (const char *)ddns_fwd_name -> data,
@@ -877,7 +877,7 @@ ddns_remove_fwd(struct data_string *ddns_fwd_name,
 
 
 	/*
-	 * Delete appropriate A RR.
+	 * Delete appropriate Address RR (A/AAAA).
 	 */
 	updrec = minires_mkupdrec (S_UPDATE,
 				   (const char *)ddns_fwd_name -> data,
@@ -926,20 +926,27 @@ ddns_remove_fwd(struct data_string *ddns_fwd_name,
 		minires_freeupdrec (updrec);
 	}
 
-	/* If the deletion of the A succeeded, and there are no A records
-	   left for this domain, then we can blow away the DHCID record
-	   as well.   We can't blow away the DHCID record above because
-	   it's possible that more than one A has been added to this
-	   domain name. */
+	/*
+	 * If the deletion of the desired address succeeded (its A or AAAA
+	 * RR was removed above), and there are zero other A or AAAA records
+	 * left for this domain, then we can delete the DHCID record as well.
+	 * We can't delete the DHCID record above because it's possible the
+	 * client has more than one valid address added to this domain name,
+	 * by this or other DHCP servers.
+	 *
+	 * Essentially, this final update is a cleanup operation that is only
+	 * intended to succeed after the last address has been removed from
+	 * DNS (which is only expected to happen after the client is not
+	 * reasonably in possession of those addresses).
+	 */
 	ISC_LIST_INIT (updqueue);
 
 	/*
 	 * A RR does not exist.
 	 */
-	updrec = minires_mkupdrec (S_PREREQ,
-				   (const char *)ddns_fwd_name -> data,
-				   C_IN, ddns_address_type, 0);
-	if (!updrec) {
+	updrec = minires_mkupdrec(S_PREREQ, (const char *)ddns_fwd_name->data,
+				  C_IN, T_A, 0);
+	if (updrec == NULL) {
 		result = ISC_R_NOMEMORY;
 		goto error;
 	}
@@ -949,6 +956,23 @@ ddns_remove_fwd(struct data_string *ddns_fwd_name,
 	updrec->r_opcode = NXRRSET;
 
 	ISC_LIST_APPEND (updqueue, updrec, r_link);
+
+	/*
+	 * AAAA RR does not exist.
+	 */
+	updrec = minires_mkupdrec(S_PREREQ, (const char *)ddns_fwd_name->data,
+				  C_IN, T_AAAA, 0);
+
+	if (updrec == NULL) {
+		result = ISC_R_NOMEMORY;
+		goto error;
+	}
+
+	updrec->r_data = NULL;
+	updrec->r_size = 0;
+	updrec->r_opcode = NXRRSET;
+
+	ISC_LIST_APPEND(updqueue, updrec, r_link);
 
 	/*
 	 * Delete appropriate DHCID RR.
