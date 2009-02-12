@@ -105,6 +105,11 @@ work on other platforms. Please report any problems and suggested fixes to
 - A dhclient-script for MacOS X has been included, which enables
   'dhclient -6' support.
 
+- DDNS removal routines were updated so that the DHCID is not removed until
+  the client has been deprived of all A and AAAA records (not only the last
+  one of either of those).  This resolves a bug where dual stack clients
+  would not be able to regain their names after either expiration event.
+
 			Changes since 4.1.0a1
 
 - Corrected list of failover state values in dhcpd man page.
