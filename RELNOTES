@@ -79,6 +79,9 @@ work on other platforms. Please report any problems and suggested fixes to
   one of either of those).  This resolves a bug where dual stack clients
   would not be able to regain their names after either expiration event.
 
+- Fix a build error in dhcrelay, using older versions of gcc with
+  dhcpv6 disabled.
+
                         Changes since 4.1.0b1
 
 - A missing "else" in dhcrelay.c could have caused an interface not to
