@@ -4,7 +4,7 @@
    Support Services in Vancouver, B.C. */
 
 /*
- * Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004,2007,2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -247,6 +247,8 @@ static void lpf_tr_filter_setup (info)
 	struct interface_info *info;
 {
 	struct sock_fprog p;
+
+	memset(&p, 0, sizeof(p));
 
 	/* Set up the bpf filter program structure.    This is defined in
 	   bpf.c */
