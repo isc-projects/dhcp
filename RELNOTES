@@ -82,6 +82,8 @@ work on other platforms. Please report any problems and suggested fixes to
 - Fix a build error in dhcrelay, using older versions of gcc with
   dhcpv6 disabled.
 
+- Two uninitialized stack structures are now memset to zero.
+
                         Changes since 4.1.0b1
 
 - A missing "else" in dhcrelay.c could have caused an interface not to
