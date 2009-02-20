@@ -82,7 +82,8 @@ suggested fixes to <dhcp-users@isc.org>.
   one of either of those).  This resolves a bug where dual stack clients
   would not be able to regain their names after either expiration event.
 
-- Two uninitialized stack structures are now memset to zero.
+- Two uninitialized stack structures are now memset to zero, thanks to
+  patch from David Cantrell at RedHat.
 
 			Changes since 4.0.1rc1
 
