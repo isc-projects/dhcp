@@ -1131,11 +1131,10 @@ void parse_failover_peer (cfile, group, type)
 	if (!peer -> partner.address)
 		parse_warn (cfile, "peer address may not be omitted");
 
-	/* XXX - when/if we get a port number assigned, just set as default */
-	if (!peer -> me.port)
-		parse_warn (cfile, "local port may not be omitted");
-	if (!peer -> partner.port)
-		parse_warn (cfile, "peer port may not be omitted");
+	if (!peer->me.port)
+		peer->me.port = DEFAULT_FAILOVER_PORT;
+	if (!peer->partner.port)
+		peer->partner.port = DEFAULT_FAILOVER_PORT;
 
 	if (peer -> i_am == primary) {
 	    if (!peer -> hba) {

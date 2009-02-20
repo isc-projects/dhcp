@@ -74,6 +74,16 @@ typedef struct {
 # define DEFAULT_MAX_RESPONSE_DELAY	20
 #endif
 
+/*
+ * IANA has assigned ports 647 ("dhcp-failover") and 847 ("dhcp-failover2").
+ * Of these, only port 647 is mentioned in the -12 draft revision.  We're not
+ * sure if they are supposed to indicate primary and secondary?  No matter,
+ * we'll stick to the -12 draft revision level.
+ */
+#ifndef  DEFAULT_FAILOVER_PORT
+# define DEFAULT_FAILOVER_PORT		647
+#endif
+
 #define FM_OFFSET(x) (long)(&(((failover_message_t *)0) -> x))
 
 /* All of the below definitions are mandated by draft-ietf-dhc-failover-12.

@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.100 2009/01/22 21:22:42 dhankins Exp $
+.\" $Id: dhcpd.conf.5,v 1.101 2009/02/20 18:20:00 dhankins Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -594,9 +594,9 @@ statement
 .B port \fIport-number\fR\fB;\fR
 .PP
 The \fBport\fR statement declares the TCP port on which the server
-should listen for connections from its failover peer.   This statement
-may not currently be omitted, because the failover protocol does not
-yet have a reserved TCP port number.
+should listen for connections from its failover peer.  This statement
+may be omitted, in which case the IANA assigned port number 647 will be
+used by default.
 .RE
 .PP
 The 
@@ -608,10 +608,8 @@ statement
 .PP
 The \fBpeer port\fR statement declares the TCP port to which the
 server should connect to reach its failover peer for failover
-messages.   This statement may not be omitted because the failover
-protocol does not yet have a reserved TCP port number.   The port
-number declared in the \fBpeer port\fR statement may be the same as
-the port number declared in the \fBport\fR statement.
+messages.  This statement may be omitted, in which case the IANA
+assigned port number 647 will be used by default.
 .RE
 .PP
 The

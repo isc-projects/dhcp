@@ -38,7 +38,9 @@ work on other platforms. Please report any problems and suggested fixes to
 
 			Changes since 4.1.0 (new features)
 
-
+- Failover port configuration can now be left to defaults (port 647) as
+  described in the -12 revision of the Failover draft (and assigned by
+  IANA).
 
 			Changes since 4.1.0 (bug fixes)
 
