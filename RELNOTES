@@ -57,6 +57,8 @@ the README file.
 - A parser bug was fixed that segfaulted if site-option-space was tried
   to be used interchangeably with vendor-option-space.
 
+- Two uninitialized stack structures are now memset to zero.
+
 			Changes since 3.1.2rc1
 
 - None.
