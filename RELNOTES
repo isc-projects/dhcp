@@ -58,7 +58,7 @@ the README file.
   to be used interchangeably with vendor-option-space.
 
 - Two uninitialized stack structures are now memset to zero, thanks to
-  patch from David Cantrell at RedHat.
+  patch from David Cantrell at Red Hat.
 
 			Changes since 3.1.2rc1
 
@@ -687,7 +687,7 @@ the README file.
   zero is redundant.  These redundancies were removed.
 
 - Some type declaration corrections to u_int16_t were made in common/tr.c
-  (Token Ring support) thanks to a patch from Jason Vas Dias at RedHat.
+  (Token Ring support) thanks to a patch from Jason Vas Dias at Red Hat.
 
 - A failover bug that was allowing leases that EXPIRED or were RELEASED
   where tsfp and tstp are identical timestamps to languish in these
@@ -747,7 +747,7 @@ the README file.
   domain-name field) that had been improperly NULL-terminated by the
   DHCP server will no longer result in a truncated string containing
   only the option from the server, and not the expected appended value.
-  Thanks to a patch from Jason Vas Dias at RedHat.
+  Thanks to a patch from Jason Vas Dias at Red Hat.
 
 - File handlers on configuration state (config files and lease dbs) should
   be treated consistently, regardless of wether TRACING is defined or not.
@@ -799,11 +799,11 @@ the README file.
 
 - The package will now compile cleanly in gcc 3.3 and 3.4.  As a side effect,
   lease structures will be 9 bytes smaller on all platforms.  Thanks to
-  Jason Vas Dias at Redhat.
+  Jason Vas Dias at Red Hat.
 
 - Interface discovery code in DISCOVER_UNCONFIGURED mode is now
   properly restricted to only detecting broadcast interfaces.  Thanks
-  to a patch from Jason Vas Dias at RedHat.
+  to a patch from Jason Vas Dias at Red Hat.
 
 - decode_udp_ip_header was changed so that the IP address was copied out
   to a variable, rather than referenced by a pointer.  This enforces 4-byte
@@ -842,7 +842,7 @@ the README file.
 
 - Configuring a subnet in dhcpd.conf with a subnet mask of 32 bits might
   cause an internal function to overflow heap.  Thanks to Jason Vas Dias
-  at Redhat.
+  at Red Hat.
 
 - Some inconsistencies in treating numbers that the lexer parsed as 'NUMBER'
   or 'NUMBER_OR_NAME' was repaired.  Hexadecimal parsing is affected, and
