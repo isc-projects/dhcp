@@ -1730,12 +1730,27 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 			}
 			fmtbuf [l + 1] = 0;
 			break;
+		      case 'c':
+			/* The 'c' atom is a 'D' modifier only. */
+			log_error("'c' atom not following D atom in format "
+				  "string: %s", option->format);
+			break;
+		      case 'D':
+			/*
+			 * Skip the 'c' atom, if present.  It does not affect
+			 * how we convert wire->text format (if compression is
+			 * present either way, we still process it).
+			 */
+			if (option->format[i+1] == 'c')
+				i++;
+			fmtbuf[l + 1] = 0;
+			numhunk = -2;
+			break;
 		      case 'd':
 			fmtbuf[l] = 't';
 			/* Fall Through ! */
 		      case 't':
-		      case 'D':
-			fmtbuf [l + 1] = 0;
+			fmtbuf[l + 1] = 0;
 			numhunk = -2;
 			break;
 		      case 'N':
