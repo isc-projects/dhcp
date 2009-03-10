@@ -85,6 +85,9 @@ suggested fixes to <dhcp-users@isc.org>.
 - Two uninitialized stack structures are now memset to zero, thanks to
   patch from David Cantrell at RedHat.
 
+- Fixed a cosmetic bug where pretty-printing valid domain-search options would
+  result in an erroneous error log message ('garbage in format string').
+
 			Changes since 4.0.1rc1
 
 - None.
