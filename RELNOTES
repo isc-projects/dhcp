@@ -85,6 +85,9 @@ work on other platforms. Please report any problems and suggested fixes to
 - Two uninitialized stack structures are now memset to zero, thanks to
   patch from David Cantrell at RedHat.
 
+- Fixed a cosmetic bug where pretty-printing valid domain-search options would
+  result in an erroneous error log message ('garbage in format string').
+
                         Changes since 4.1.0b1
 
 - A missing "else" in dhcrelay.c could have caused an interface not to
