@@ -541,6 +541,17 @@ void parse_client_statement (cfile, ip, config)
 		}
 		return;
 
+	      case ANYCAST_MAC:
+		token = next_token(&val, NULL, cfile);
+		if (ip != NULL) {
+			parse_hardware_param(cfile, &ip->anycast_mac_addr);
+		} else {
+			parse_warn(cfile, "anycast mac address parameter "
+				   "not allowed here.");
+			skip_to_semi (cfile);
+		}
+		return;
+
 	      case REQUEST:
 		token = next_token (&val, (unsigned *)0, cfile);
 		if (config -> requested_options == default_requested_options)

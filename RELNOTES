@@ -42,6 +42,10 @@ work on other platforms. Please report any problems and suggested fixes to
   described in the -12 revision of the Failover draft (and assigned by
   IANA).  Thanks in part to a patch from David Cantrell at Red Hat.
 
+- If configured, dhclient may now transmit to an anycast MAC address,
+  rather than using a broadcast address.  Thanks to a patch from David
+  Cantrell at Red Hat.
+
 			Changes since 4.1.0 (bug fixes)
 
 - Validate the argument to the -p option.

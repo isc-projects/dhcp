@@ -302,6 +302,9 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 		return send_fallback (interface, packet, raw,
 				      len, from, to, hto);
 
+	if (hto == NULL && interface->anycast_mac_addr.hlen)
+		hto = &interface->anycast_mac_addr;
+
 	/* Assemble the headers... */
 	assemble_hw_header (interface, (unsigned char *)hh, &hbufp, hto);
 	fudge = hbufp % 4;	/* IP header must be word-aligned. */

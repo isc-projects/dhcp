@@ -1156,6 +1156,7 @@ struct interface_info {
 	int dlpi_sap_length;
 	struct hardware dlpi_broadcast_addr;
 # endif /* DLPI_SEND || DLPI_RECEIVE */
+	struct hardware anycast_mac_addr;
 };
 
 struct hardware_link {

@@ -298,6 +298,9 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 		return send_fallback (interface, packet, raw,
 				      len, from, to, hto);
 
+	if (hto == NULL && interface->anycast_mac_addr.hlen)
+		hto = &interface->anycast_mac_addr;
+
 	/* Start with the sockaddr struct... */
 	junk = (struct sockaddr *)&hh [0];
 	hbufp = (((unsigned char *)&junk -> sa_data [0]) -

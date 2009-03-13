@@ -538,6 +538,9 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 		return send_fallback (interface, packet, raw,
 				      len, from, to, hto);
 
+	if (hto == NULL && interface->anycast_mac_addr.hlen)
+		hto = &interface->anycast_mac_addr;
+
 	dbuflen = 0;
 
 	/* Assemble the headers... */
@@ -593,7 +596,7 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
           else 
              memcpy ( phys, interface -> dlpi_broadcast_addr.hbuf, 
               interface -> dlpi_broadcast_addr.hlen);
-           
+
           if (sap_len < 0) { 
              memcpy ( dstaddr, phys, phys_len);
              memcpy ( (char *) &dstaddr [phys_len], sap, ABS (sap_len));

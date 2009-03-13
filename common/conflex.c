@@ -720,6 +720,8 @@ intern(char *atom, enum dhcp_token dfv) {
 		}
 		if (!strcasecmp (atom + 1, "nd"))
 			return AND;
+		if (!strcasecmp(atom + 1, "nycast-mac"))
+			return ANYCAST_MAC;
 		if (!strcasecmp (atom + 1, "ppend"))
 			return APPEND;
 		if (!strcasecmp (atom + 1, "llow"))
