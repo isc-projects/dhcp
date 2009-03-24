@@ -204,7 +204,6 @@ int if_register_dlpi (info)
 	    log_fatal ("Can't open DLPI device for %s: %m", info -> name);
 	}
 
-
 	/*
 	 * Submit a DL_INFO_REQ request, to find the dl_mac_type and 
          * dl_provider_style
@@ -291,8 +290,6 @@ int if_register_dlpi (info)
 		   info -> name);
 	}
 #endif
-
-	get_hw_addr(info->name, &info->hw_address);
 
 	return sock;
 }
@@ -642,6 +639,7 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 #endif
 
 	if (length <= 0) {
+	    log_error("receive_packet: %m");
 	    return length;
 	}
 
@@ -665,8 +663,7 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
               memcpy ((char *) &hfrom -> hbuf [1], srcaddr, phys_len);
             }
             else {
-              memcpy ((char *) &hfrom -> hbuf [1], (char *) &srcaddr [phys_len],
-                phys_len);
+              memcpy((char *)&hfrom->hbuf[1], srcaddr + sap_len, phys_len);
             }
           } 
           else if (hfrom) {
@@ -694,9 +691,16 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 	offset = decode_udp_ip_header (interface, dbuf, bufix,
 				       from, length, &paylen);
 
-	/* If the IP or UDP checksum was bad, skip the packet... */
+	/*
+	 * If the IP or UDP checksum was bad, skip the packet...
+	 *
+	 * Note: this happens all the time when writing packets via the
+	 * fallback socket.  The packet received by streams does not have
+	 * the IP or UDP checksums filled in, as those are calculated by
+	 * the hardware.
+	 */
 	if (offset < 0) {
-	    return 0;
+		return 0;
 	}
 
 	bufix += offset;
@@ -1147,22 +1151,32 @@ static int dlpiunitdataind (fd, daddr, daddrlen,
 	ctl.maxlen = DLPI_MAXDLBUF;
 	ctl.len = 0;
 	ctl.buf = (char *)buf;
-	
+
 	data.maxlen = dlen;
 	data.len = 0;
 	data.buf = (char *)dbuf;
-	
+
 	result = getmsg (fd, &ctl, &data, &flags);
-	
+
+	/*
+	 * The getmsg() manpage says:
+	 *
+	 * "On successful completion, a non-negative value is returned."
+	 *
+	 * This suggests that if MOREDATA or MORECTL are set, we error?
+	 * This seems to be safe as it never seems to happen.  Still,
+	 * set a log message, so we know if it ever starts happening.
+	 */
 	if (result != 0) {
+		log_debug("dlpiunitdataind: %m");
 		return -1;
 	}
-	
+
 	if (ctl.len < sizeof (dl_unitdata_ind_t) ||
 	    dlp -> unitdata_ind.dl_primitive != DL_UNITDATA_IND) {
 		return -1;
 	}
-	
+
 	if (data.len <= 0) {
 		return data.len;
 	}
@@ -1186,11 +1200,11 @@ static int dlpiunitdataind (fd, daddr, daddrlen,
 	if (daddrlen) {
 		*daddrlen = dlp -> unitdata_ind.dl_dest_addr_length;
 	}
-	
+
 	if (grpaddr) {
 		*grpaddr = dlp -> unitdata_ind.dl_group_address;
 	}
-	
+
 	return data.len;
 }
 
@@ -1320,7 +1334,7 @@ void maybe_setup_fallback ()
 
 void 
 get_hw_addr(const char *name, struct hardware *hw) {
-	int sock;
+	int sock, unit;
 	long buf[DLPI_MAXDLBUF];
         union DL_primitives *dlp;
 
@@ -1358,6 +1372,20 @@ get_hw_addr(const char *name, struct hardware *hw) {
 		default:
 			log_fatal("%s: unsupported DLPI MAC type %lu", name,
 				  (unsigned long)dlp->info_ack.dl_mac_type);
+	}
+
+	if (dlp->info_ack.dl_provider_style == DL_STYLE2) {
+		/*
+		 * Attach to the device.  If this fails, the device
+		 * does not exist.
+		 */
+		unit = dlpiunit((char *)name);
+
+		if (dlpiattachreq(sock, unit) < 0 ||
+		    dlpiokack(sock, (char *)buf) < 0) {
+			log_fatal("Can't attach DLPI device for %s: %m",
+				  name);
+		}
 	}
 
 	/*

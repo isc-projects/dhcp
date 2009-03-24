@@ -82,6 +82,16 @@ work on other platforms. Please report any problems and suggested fixes to
 - Fixed a cosmetic bug where pretty-printing valid domain-search options would
   result in an erroneous error log message ('garbage in format string').
 
+- A bug in DLPI packet transmission (Solaris, HP/UX) that caused the server
+  to stop receiving packets is fixed.  The same fix also means that the MAC
+  address will no longer appear 'bogus' on DLPI-based systems.
+
+- A bug in select handling was discovered where the results of one select()
+  call were discarded, causing the server to process the next select() call
+  and use more system calls than required.  This has been repaired - the
+  sockets will be handled after the first return from select(), resulting in
+  fewer system calls.
+
 			Changes since 4.1.0b1
 
 - A missing "else" in dhcrelay.c could have caused an interface not to

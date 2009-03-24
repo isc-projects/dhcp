@@ -359,7 +359,10 @@ isc_result_t omapi_one_dispatch (omapi_object_t *wo,
 		/* We are dry now */ 
 		trigger_event(&rw_queue_empty);
 		/* Wait for a packet or a timeout... XXX */
-		count = select(max + 1, &rr, &ww, &xx, t ? &to : NULL);
+		r = rr;
+		w = ww;
+		x = xx;
+		count = select(max + 1, &r, &w, &x, t ? &to : NULL);
 	}
 
 	/* Get the current time... */
