@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.101 2009/02/20 18:20:00 dhankins Exp $
+.\" $Id: dhcpd.conf.5,v 1.102 2009/03/24 16:56:15 jreed Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -1530,7 +1530,7 @@ use CIDR notation, specified as ip6-address/bits. All IP addresses
 in the \fIrange6\fR should be in the subnet6 in which the
 \fIrange6\fR statement is declared.
 .PP
-The \fItemporay\fR variant makes the prefix (by default on 64 bits) available
+The \fItemporary\fR variant makes the prefix (by default on 64 bits) available
 for temporary (RFC 4941) addresses. A new address per prefix in the shared
 network is computed at each request with an IA_TA option. Release and Confirm
 ignores temporary addresses.
