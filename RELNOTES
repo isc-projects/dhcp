@@ -88,6 +88,10 @@ suggested fixes to <dhcp-users@isc.org>.
 - Fixed a cosmetic bug where pretty-printing valid domain-search options would
   result in an erroneous error log message ('garbage in format string').
 
+- A bug in DLPI packet transmission (Solaris, HP/UX) that caused the server
+  to stop receiving packets is fixed.  The same fix also means that the MAC
+  address will no longer appear 'bogus' on DLPI-based systems.
+
 			Changes since 4.0.1rc1
 
 - None.
