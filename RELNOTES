@@ -92,6 +92,13 @@ suggested fixes to <dhcp-users@isc.org>.
   to stop receiving packets is fixed.  The same fix also means that the MAC
   address will no longer appear 'bogus' on DLPI-based systems.
 
+- The update-conflict-detection feature would leave an FQDN updated without
+  a DHCID (still currently implemented as a TXT RR).  This would cause later
+  expiration or release events to fail to remove the domain name.  The feature
+  now also inserts the client's up to date DHCID record, so records may safely
+  be removed at expiration or release time.  Thanks to a patch submitted by
+  Christof Chen.
+
 			Changes since 4.0.1rc1
 
 - None.
