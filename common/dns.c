@@ -33,7 +33,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.40 2006/07/19 17:14:55 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.40.32.1 2009/03/26 17:24:07 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -691,6 +691,26 @@ ddns_update_a(struct data_string *ddns_fwd_name, struct iaddr ddns_addr,
 		updrec->r_opcode = DELETE;
 
 		ISC_LIST_APPEND(updqueue, updrec, r_link);
+
+
+		/*
+		 * With all other DHCID RR's deleted, add this client's
+		 * DHCID unconditionally (as update-conflict-detection is
+		 * disabled).
+		 */
+		updrec = minires_mkupdrec(S_UPDATE,
+					  (const char *)ddns_fwd_name->data,
+					  C_IN, T_DHCID, ttl);
+		if (!updrec) {
+			result = ISC_R_NOMEMORY;
+			goto error;
+		}
+ 
+		updrec->r_data = ddns_dhcid->data;
+		updrec->r_size = ddns_dhcid->len;
+		updrec->r_opcode = ADD;
+ 
+		ISC_LIST_APPEND (updqueue, updrec, r_link);
 	}
 
 

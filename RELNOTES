@@ -60,6 +60,13 @@ the README file.
 - Two uninitialized stack structures are now memset to zero, thanks to
   patch from David Cantrell at Red Hat.
 
+- The update-conflict-detection feature would leave an FQDN updated without
+  a DHCID (still currently implemented as a TXT RR).  This would cause later
+  expiration or release events to fail to remove the domain name.  The feature
+  now also inserts the client's up to date DHCID record, so records may safely
+  be removed at expiration or release time.  Thanks to a patch submitted by
+  Christof Chen.
+
 			Changes since 3.1.2rc1
 
 - None.
