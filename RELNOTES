@@ -92,6 +92,13 @@ work on other platforms. Please report any problems and suggested fixes to
   sockets will be handled after the first return from select(), resulting in
   fewer system calls.
 
+- The update-conflict-detection feature would leave an FQDN updated without
+  a DHCID (still currently implemented as a TXT RR).  This would cause later
+  expiration or release events to fail to remove the domain name.  The feature
+  now also inserts the client's up to date DHCID record, so records may safely
+  be removed at expiration or release time.  Thanks to a patch submitted by
+  Christof Chen.
+
 			Changes since 4.1.0b1
 
 - A missing "else" in dhcrelay.c could have caused an interface not to
