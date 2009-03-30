@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.102 2009/03/24 16:56:15 jreed Exp $
+.\" $Id: dhcpd.conf.5,v 1.103 2009/03/30 18:28:55 jreed Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -1027,7 +1027,7 @@ class "jr-cable-modems" {
 }
 
 class "dv-dsl-modems" {
-  match if opton dhcp-vendor-identifier = "dvdsl";
+  match if option dhcp-vendor-identifier = "dvdsl";
   spawn with option agent.circuit-id;
   lease limit 16;
 }
