@@ -47,6 +47,16 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and may not
 work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
+
+			Changes since 4.1.1b1
+
+- Memory leak in the load_balance_mine() function is fixed.  This would
+  leak ~20-30 octets per DHCPDISCOVER packet while failover was in use
+  and in normal state.
+
+- Various compilation fixes have been included for the memory related
+  DEBUG #defines in includes/site.h.
+
 			Changes since 4.1.0
 
 - Validate the argument to the -p option.

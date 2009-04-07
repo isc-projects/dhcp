@@ -2955,7 +2955,7 @@ relinquish_ackqueue(void)
 {
 	struct leasequeue *q, *n;
 	
-	for (q = ackqueue ; q ; q = n) {
+	for (q = ackqueue_head ; q ; q = n) {
 		n = q->next;
 		dfree(q, MDL);
 	}
