@@ -1616,6 +1616,9 @@ extern enum dhcp_shutdown_state shutdown_state;
 isc_result_t dhcp_io_shutdown (omapi_object_t *, void *);
 isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
 				     control_object_state_t newstate);
+#if defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
+void relinquish_ackqueue(void);
+#endif
 
 /* conflex.c */
 isc_result_t new_parse PROTO ((struct parse **, int,

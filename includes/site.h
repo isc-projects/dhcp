@@ -46,6 +46,7 @@
    noticing memory leaks quickly. */
 
 /* #define DEBUG_MEMORY_LEAKAGE */
+/* #define DEBUG_MEMORY_LEAKAGE_ON_EXIT */
 
 /* Define this if you want exhaustive (and very slow) checking of the
    malloc pool for corruption. */

@@ -364,7 +364,7 @@ omapi_message_process_internal (omapi_object_t *, omapi_object_t *);
 isc_result_t omapi_message_process (omapi_object_t *mo, omapi_object_t *po)
 {
 	isc_result_t status;
-#if defined (DEBUG_MEMORY_LEAKAGE)
+#if defined (DEBUG_MEMORY_LEAKAGE) && 0
 	unsigned long previous_outstanding = dmalloc_outstanding;
 #endif
 
