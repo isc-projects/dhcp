@@ -5729,6 +5729,8 @@ int load_balance_mine (struct packet *packet, dhcp_failover_state_t *state)
 				   packet -> options, (struct option_state *)0,
 				   &global_scope, oc, MDL)) {
 		hbaix = loadb_p_hash (ds.data, ds.len);
+
+		data_string_forget(&ds, MDL);
 	} else {
 		hbaix = loadb_p_hash (packet -> raw -> chaddr,
 				      packet -> raw -> hlen);
