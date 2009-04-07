@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.83.16.11 2009/01/30 22:34:48 dhankins Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.83.16.12 2009/04/07 20:00:42 dhankins Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -532,7 +532,10 @@ void new_address_range (cfile, low, high, subnet, pool, lpchain)
 	struct pool *pool;
 	struct lease **lpchain;
 {
-	struct lease *address_range, *lp, *plp;
+#if defined(COMPACT_LEASES)
+	struct lease *address_range;
+#endif
+	struct lease *lp, *plp;
 	unsigned min, max, i;
 	char lowbuf [16], highbuf [16], netbuf [16];
 	struct shared_network *share = subnet -> shared_network;
@@ -2421,7 +2424,7 @@ extern int end;
 extern struct lease *lease_hunks;
 #endif
 
-void free_everything ()
+void free_everything(void)
 {
 	struct subnet *sc = (struct subnet *)0, *sn = (struct subnet *)0;
 	struct shared_network *nc = (struct shared_network *)0,
@@ -2432,11 +2435,7 @@ void free_everything ()
 		*in = (struct interface_info *)0;
 	struct class *cc = (struct class *)0, *cn = (struct class *)0;
 	struct collection *lp;
-	void *st = (shared_networks
-		    ? (shared_networks -> next
-		       ? shared_networks -> next -> next : 0) : 0);
 	int i;
-
 
 	/* Get rid of all the hash tables. */
 	if (host_hw_addr_hash)
@@ -2446,13 +2445,13 @@ void free_everything ()
 		host_free_hash_table (&host_uid_hash, MDL);
 	host_uid_hash = 0;
 	if (lease_uid_hash)
-		lease_free_hash_table (&lease_uid_hash, MDL);
+		lease_id_free_hash_table (&lease_uid_hash, MDL);
 	lease_uid_hash = 0;
 	if (lease_ip_addr_hash)
-		lease_free_hash_table (&lease_ip_addr_hash, MDL);
+		lease_ip_free_hash_table (&lease_ip_addr_hash, MDL);
 	lease_ip_addr_hash = 0;
 	if (lease_hw_addr_hash)
-		lease_free_hash_table (&lease_hw_addr_hash, MDL);
+		lease_id_free_hash_table (&lease_hw_addr_hash, MDL);
 	lease_hw_addr_hash = 0;
 	if (host_name_hash)
 		host_free_hash_table (&host_name_hash, MDL);
@@ -2549,7 +2548,15 @@ void free_everything ()
 	}
 
 	/* So are shared networks. */
+	/* XXX: this doesn't work presently, but i'm ok just filtering
+	 * it out of the noise (you get a bigger spike on the real leaks).
+	 * It would be good to fix this, but it is not a "real bug," so not
+	 * today.  This hack is incomplete, it doesn't trim out sub-values.
+	 */
 	if (shared_networks) {
+		shared_network_dereference (&shared_networks, MDL);
+	/* This is the old method (tries to free memory twice, broken) */
+	} else if (0) {
 	    shared_network_reference (&nn, shared_networks, MDL);
 	    do {
 		if (nn) {
@@ -2645,14 +2652,21 @@ void free_everything ()
 
 	universe_free_hash_table (&universe_hash, MDL);
 	for (i = 0; i < universe_count; i++) {
+#if 0
 		union {
 			const char *c;
 			char *s;
 		} foo;
+#endif
 		if (universes [i]) {
-			if (universes [i] -> hash)
-			    option_free_hash_table (&universes [i] -> hash,
-						    MDL);
+			if (universes[i]->name_hash)
+			    option_name_free_hash_table(
+						&universes[i]->name_hash,
+						MDL);
+			if (universes[i]->code_hash)
+			    option_code_free_hash_table(
+						&universes[i]->code_hash,
+						MDL);
 #if 0
 			if (universes [i] -> name > (char *)&end) {
 				foo.c = universes [i] -> name;
@@ -2671,7 +2685,9 @@ void free_everything ()
 	relinquish_free_binding_values ();
 	relinquish_free_option_caches ();
 	relinquish_free_packets ();
+#if defined(COMPACT_LEASES)
 	relinquish_lease_hunks ();
+#endif
 	relinquish_hash_bucket_hunks ();
 	omapi_type_relinquish ();
 }

@@ -67,6 +67,13 @@ the README file.
   be removed at expiration or release time.  Thanks to a patch submitted by
   Christof Chen.
 
+- Memory leak in the load_balance_mine() function is fixed.  This would
+  leak ~20-30 octets per DHCPDISCOVER packet while failover was in use
+  and in normal state.
+
+- Various compilation fixes have been included for the memory related
+  DEBUG #defines in includes/site.h.
+
 			Changes since 3.1.2rc1
 
 - None.

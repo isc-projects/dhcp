@@ -35,7 +35,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.26 2006/02/24 23:16:30 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium, Inc.  All rights reserved.\n";
+"$Id: alloc.c,v 1.26.116.1 2009/04/07 20:00:42 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium, Inc.  All rights reserved.\n";
 #endif /* not lint */
 
 #include <omapip/omapip_p.h>
@@ -268,8 +268,9 @@ void dmalloc_dump_outstanding ()
 {
 	static unsigned long dmalloc_cutoff_point;
 	struct dmalloc_preamble *dp;
+#if defined(DEBUG_MALLOC_POOL)
 	unsigned char *foo;
-	int i;
+#endif
 
 	if (!dmalloc_cutoff_point)
 		dmalloc_cutoff_point = dmalloc_cutoff_generation;
@@ -320,7 +321,7 @@ void dmalloc_dump_outstanding ()
 			    if (rc_history [i].addr == dp + 1) {
 				inhistory = 1;
 				if (!noted) {
-				    log_info ("  %s(%d): %d", dp -> file,
+				    log_info ("  %s(%d): %ld", dp -> file,
 					      dp -> line, dp -> size);
 				    noted = 1;
 				}
@@ -333,7 +334,7 @@ void dmalloc_dump_outstanding ()
 			} while (count--);
 			if (!inhistory)
 #endif
-				log_info ("  %s(%d): %d",
+				log_info ("  %s(%d): %ld",
 					  dp -> file, dp -> line, dp -> size);
 		}
 #endif
@@ -366,7 +367,7 @@ void dump_rc_history (void *addr)
 			i += RC_HISTORY_MAX;
 	}
 	rc_history_count = 0;
-		
+
 	while (rc_history [i].file) {
 		if (!addr || addr == rc_history [i].addr)
 			print_rc_hist_entry (i);
@@ -440,7 +441,6 @@ static int dmalloc_find_entry (struct dmalloc_preamble *dp,
 			       int min, int max)
 {
 	int middle;
-	int cmp;
 
 	middle = (min + max) / 2;
 	if (middle == min)
@@ -461,8 +461,7 @@ static int dmalloc_find_entry (struct dmalloc_preamble *dp,
 void omapi_print_dmalloc_usage_by_caller ()
 {
 	struct dmalloc_preamble *dp;
-	unsigned char *foo;
-	int ccur, cmax, i, j;
+	int ccur, cmax, i;
 	struct caller cp [1024];
 
 	cmax = 1024;
@@ -507,7 +506,9 @@ void omapi_print_dmalloc_usage_by_caller ()
 	for (i = 0; i < ccur; i++) {
 		printf ("%d\t%s:%d\t%d\n", i,
 			cp [i].dp -> file, cp [i].dp -> line, cp [i].count);
+#if defined(DUMP_RC_HISTORY)
 		dump_rc_history (cp [i].dp + 1);
+#endif
 	}
 }
 #endif /* DEBUG_MEMORY_LEAKAGE || DEBUG_MALLOC_POOL */
