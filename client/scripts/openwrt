@@ -66,6 +66,12 @@ fi
 if [ x$alias_subnet_mask != x ]; then
   alias_subnet_arg="netmask $alias_subnet_mask"
 fi
+ if [ x$new_interface_mtu != x ]; then
+   mtu_arg="mtu $new_interface_mtu"
+ fi
+if [ x$IF_METRIC != x ]; then
+  metric_arg="metric $IF_METRIC"
+fi
 
 if [ x$reason = xMEDIUM ]; then
   # Linux doesn't do mediums (ok, ok, media).
@@ -115,7 +121,7 @@ if [ x$reason = xBOUND ] || [ x$reason = xRENEW ] || \
      [ x$reason = xBOUND ] || [ x$reason = xREBOOT ]; then
 
     ifconfig $interface $new_ip_address $new_subnet_arg \
-							$new_broadcast_arg
+				$new_broadcast_arg $mtu_arg $metric_arg
     for router in $new_routers; do
       if [ "x$new_subnet_mask" = "x255.255.255.255" ] ; then
 	route add -host $router dev $interface
@@ -155,7 +161,7 @@ if [ x$reason = xTIMEOUT ]; then
     ifconfig $interface:0- 0.0.0.0
   fi
   ifconfig $interface $new_ip_address $new_subnet_arg \
-					$new_broadcast_arg
+				$new_broadcast_arg $mtu_arg $metric_arg
   set $new_routers
   if ping -q -c 1 $1; then
     if [ x$new_ip_address != x$alias_ip_address ] && \
