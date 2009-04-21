@@ -74,6 +74,13 @@ the README file.
 - Various compilation fixes have been included for the memory related
   DEBUG #defines in includes/site.h.
 
+- Fixed setting hostname in Linux hosts that require hostname argument
+  to be double-quoted.  Also allow server-provided hostname to
+  override hostnames 'localhost' and '(none)'.
+
+- Added client support for setting interface MTU and metric, thanks to
+  Roy "UberLord" Marples <roy@marples.name>.
+
 			Changes since 3.1.2rc1
 
 - None.
