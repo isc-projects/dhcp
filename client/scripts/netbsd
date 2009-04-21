@@ -72,6 +72,12 @@ fi
 if [ x$alias_subnet_mask != x ]; then
   alias_subnet_arg="netmask $alias_subnet_mask"
 fi
+ if [ x$new_interface_mtu != x ]; then
+   mtu_arg="mtu $new_interface_mtu"
+ fi
+if [ x$IF_METRIC != x ]; then
+  metric_arg="metric $IF_METRIC"
+fi
 
 if [ x$reason = xMEDIUM ]; then
   eval "ifconfig $interface $medium"
@@ -133,7 +139,7 @@ if [ x$reason = xBOUND ] || [ x$reason = xRENEW ] || \
   if [ x$old_ip_address = x ] || [ x$old_ip_address != x$new_ip_address ] || \
      [ x$reason = xBOUND ] || [ x$reason = xREBOOT ]; then
     eval "ifconfig $interface inet $new_ip_address $new_netmask_arg \
-					$new_broadcast_arg $medium"
+			$new_broadcast_arg $mtu_arg $metric_arg $medium"
     route add $new_ip_address 127.1 >/dev/null 2>&1
     for router in $new_routers; do
       route add default $router >/dev/null 2>&1
@@ -190,7 +196,7 @@ if [ x$reason = xTIMEOUT ]; then
     route delete $alias_ip_address 127.0.0.1 > /dev/null 2>&1
   fi
   eval "ifconfig $interface inet $new_ip_address $new_netmask_arg \
-					$new_broadcast_arg $medium"
+			$new_broadcast_arg $mtu_arg $metric_arg $medium"
   sleep 1
   if [ "$new_routers" != "" ]; then
     set $new_routers

@@ -106,6 +106,15 @@ suggested fixes to <dhcp-users@isc.org>.
 - Various compilation fixes have been included for the memory related
   DEBUG #defines in includes/site.h.
 
+- Fixed Linux client script 'unary operator expected' errors with DHCPv6.
+
+- Fixed setting hostname in Linux hosts that require hostname argument
+  to be double-quoted.  Also allow server-provided hostname to
+  override hostnames 'localhost' and '(none)'.
+
+- Added client support for setting interface MTU and metric, thanks to
+  Roy "UberLord" Marples <roy@marples.name>.
+
 			Changes since 4.0.1rc1
 
 - None.
