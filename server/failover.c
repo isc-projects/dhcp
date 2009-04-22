@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.63.56.20 2009/04/07 20:00:42 dhankins Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.63.56.21 2009/04/22 20:33:34 dhankins Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2988,13 +2988,11 @@ void dhcp_failover_reconnect (void *vs)
 		log_info ("failover peer %s: %s", state -> name,
 			  isc_result_totext (status));
 #if defined (DEBUG_FAILOVER_TIMING)
-		log_info ("add_timeout +90 %s",
-			  "dhcp_failover_listener_restart");
+		log_info ("add_timeout +90 dhcp_failover_reconnect");
 #endif
-		add_timeout (cur_time + 90,
-			     dhcp_failover_listener_restart, state,
-			     (tvref_t)dhcp_failover_state_reference,
-			     (tvunref_t)dhcp_failover_state_dereference);
+		add_timeout(cur_time + 90, dhcp_failover_reconnect, state,
+			    (tvref_t)dhcp_failover_state_reference,
+			    (tvunref_t)dhcp_failover_state_dereference);
 	}
 }
 

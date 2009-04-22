@@ -81,6 +81,9 @@ the README file.
 - Added client support for setting interface MTU and metric, thanks to
   Roy "UberLord" Marples <roy@marples.name>.
 
+- Fixed failover reconnection retry code to continue to retry to reconnect
+  rather than restarting the listener.
+
 			Changes since 3.1.2rc1
 
 - None.
