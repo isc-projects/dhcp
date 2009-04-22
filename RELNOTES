@@ -115,6 +115,9 @@ suggested fixes to <dhcp-users@isc.org>.
 - Added client support for setting interface MTU and metric, thanks to
   Roy "UberLord" Marples <roy@marples.name>.
 
+- Fixed failover reconnection retry code to continue to retry to reconnect
+  rather than restarting the listener.
+
 			Changes since 4.0.1rc1
 
 - None.
