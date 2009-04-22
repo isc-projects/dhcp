@@ -66,6 +66,9 @@ work on other platforms. Please report any problems and suggested fixes to
 - Added client support for setting interface MTU and metric, thanks to
   Roy "UberLord" Marples <roy@marples.name>.
 
+- Fixed failover reconnection retry code to continue to retry to reconnect
+  rather than restarting the listener.
+
 			Changes since 4.1.0
 
 - Validate the argument to the -p option.
