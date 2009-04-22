@@ -3005,15 +3005,13 @@ void dhcp_failover_reconnect (void *vs)
 		log_info ("failover peer %s: %s", state -> name,
 			  isc_result_totext (status));
 #if defined (DEBUG_FAILOVER_TIMING)
-		log_info ("add_timeout +90 %s",
-			  "dhcp_failover_listener_restart");
+		log_info("add_timeout +90 dhcp_failover_reconnect");
 #endif
 		tv . tv_sec = cur_time + 90;
 		tv . tv_usec = 0;
-		add_timeout (&tv,
-			     dhcp_failover_listener_restart, state,
-			     (tvref_t)dhcp_failover_state_reference,
-			     (tvunref_t)dhcp_failover_state_dereference);
+		add_timeout(&tv, dhcp_failover_reconnect, state,
+			    (tvref_t)dhcp_failover_state_reference,
+			    (tvunref_t)dhcp_failover_state_dereference);
 	}
 }
 

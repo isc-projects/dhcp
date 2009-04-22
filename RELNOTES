@@ -115,6 +115,9 @@ work on other platforms. Please report any problems and suggested fixes to
   to be double-quoted.  Also allow server-provided hostname to
   override hostnames 'localhost' and '(none)'.
 
+- Fixed failover reconnection retry code to continue to retry to reconnect
+  rather than restarting the listener.
+
 			Changes since 4.1.0b1
 
 - A missing "else" in dhcrelay.c could have caused an interface not to
