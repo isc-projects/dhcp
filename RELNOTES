@@ -50,6 +50,8 @@ work on other platforms. Please report any problems and suggested fixes to
 
 			Changes since 4.1.1b1
 
+- Remove infinite loop in token_print_indent_concat().
+
 - Memory leak in the load_balance_mine() function is fixed.  This would
   leak ~20-30 octets per DHCPDISCOVER packet while failover was in use
   and in normal state.
