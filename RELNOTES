@@ -120,6 +120,13 @@ suggested fixes to <dhcp-users@isc.org>.
 - Fixed failover reconnection retry code to continue to retry to reconnect
   rather than restarting the listener.
 
+- Compilation on Solaris with USE_SOCKETS defined in includes/site.h has
+  been repaired.  Other USE_ overrides should work better.
+
+- A check for the local flavor of IFNAMSIZ had a broken 'else' condition,
+  that probably still resulted in the correct behaviour (but wouldn't use
+  a larger defined value provided by the host OS).
+
 			Changes since 4.0.1rc1
 
 - None.

@@ -87,7 +87,8 @@
 
 #include "dhcpd.h"
 
-#if defined (USE_DLPI_SEND) || defined (USE_DLPI_RECEIVE)
+#if defined (USE_DLPI_SEND) || defined (USE_DLPI_RECEIVE) || \
+    defined(USE_DLPI_HWADDR)
 
 # include <sys/ioctl.h>
 # include <sys/time.h>
@@ -149,6 +150,10 @@ static int dlpiokack PROTO ((int fd, char *bufp));
 static int dlpiinfoack PROTO ((int fd, char *bufp));
 static int dlpiphysaddrack PROTO ((int fd, char *bufp));
 static int dlpibindack PROTO ((int fd, char *bufp));
+#if defined(USE_DLPI_SEND) || defined(USE_DLPI_RECEIVE)
+/* These functions are not used if we're only sourcing the get_hw_addr()
+ * function (for USE_SOCKETS).
+ */
 static int dlpiunitdatareq PROTO ((int fd, unsigned char *addr,
 				   int addrlen, unsigned long minpri,
 				   unsigned long maxpri, unsigned char *data,
@@ -161,7 +166,7 @@ static int dlpiunitdataind PROTO ((int fd,
 				   unsigned long *grpaddr,
 				   unsigned char *data,
 				   int datalen));
-
+#endif /* !USE_DLPI_HWADDR: USE_DLPI_SEND || USE_DLPI_RECEIVE */
 static int	expected PROTO ((unsigned long prim, union DL_primitives *dlp,
 				  int msgflags));
 static int	strgetmsg PROTO ((int fd, struct strbuf *ctlp,
@@ -1087,6 +1092,7 @@ int dlpiphysaddrack (fd, bufp)
 	return 0;
 }
 
+#if defined(USE_DLPI_SEND) || defined(USE_DLPI_RECEIVE)
 int dlpiunitdatareq (fd, addr, addrlen, minpri, maxpri, dbuf, dbuflen)
 	int fd;
 	unsigned char *addr;
@@ -1204,6 +1210,7 @@ static int dlpiunitdataind (fd, daddr, daddrlen,
 
 	return data.len;
 }
+#endif /* !USE_DLPI_HWADDR: USE_DLPI_RECEIVE || USE_DLPI_SEND */
 
 /*
  * expected - see if we got what we wanted.
@@ -1295,6 +1302,7 @@ static int strgetmsg (fd, ctlp, datap, flagsp, caller)
 	return 0;
 }
 
+#if defined(USE_DLPI_SEND)
 int can_unicast_without_arp (ip)
 	struct interface_info *ip;
 {
@@ -1328,6 +1336,7 @@ void maybe_setup_fallback ()
 		interface_dereference (&fbi, MDL);
 	}
 }
+#endif /* USE_DLPI_SEND */
 
 void 
 get_hw_addr(const char *name, struct hardware *hw) {
@@ -1411,4 +1420,4 @@ get_hw_addr(const char *name, struct hardware *hw) {
 
 	close(sock);
 }
-#endif /* USE_DLPI */
+#endif /* USE_DLPI_SEND || USE_DLPI_RECEIVE || USE_DLPI_HWADDR */

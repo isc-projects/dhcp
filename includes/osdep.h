@@ -83,7 +83,14 @@ typedef uint32_t u_int32_t;
     !defined (USE_NIT_RECEIVE) && \
     !defined (USE_DLPI_SEND) && \
     !defined (USE_DLPI_RECEIVE)
-#  define USE_DEFAULT_NETWORK
+/* Determine default socket API to USE. */
+# if defined(HAVE_BPF)
+#  define USE_BPF 1
+# elif defined(HAVE_LPF)
+#  define USE_LPF 1
+# elif defined(HAVE_DLPI)
+#  define USE_DLPI 1
+# endif
 #endif
 
 #if !defined (TIME_MAX)
@@ -107,6 +114,9 @@ typedef uint32_t u_int32_t;
 #ifdef USE_SOCKETS
 #  define USE_SOCKET_SEND
 #  define USE_SOCKET_RECEIVE
+#  if defined(HAVE_DLPI)
+#    define USE_DLPI_HWADDR
+#  endif
 #endif
 
 #ifdef USE_RAW_SOCKETS

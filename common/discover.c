@@ -184,7 +184,7 @@ isc_result_t interface_initialize (omapi_object_t *ipo,
 #ifndef IF_NAMESIZE
 # if defined(LIFNAMSIZ)
 #  define IF_NAMESIZE	LIFNAMSIZ
-# elseif defined(IFNAMSIZ)
+# elif defined(IFNAMSIZ)
 #  define IF_NAMESIZE	IFNAMSIZ
 # else
 #  define IF_NAMESIZE	16

@@ -1126,7 +1126,8 @@ struct interface_info {
 
 	/* Only used by DHCP client code. */
 	struct client_state *client;
-# if defined (USE_DLPI_SEND) || defined (USE_DLPI_RECEIVE)
+# if defined(USE_DLPI_SEND) || defined(USE_DLPI_RECEIVE) || \
+     defined(USE_DLPI_HWADDR)
 	int dlpi_sap_length;
 	struct hardware dlpi_broadcast_addr;
 # endif /* DLPI_SEND || DLPI_RECEIVE */
