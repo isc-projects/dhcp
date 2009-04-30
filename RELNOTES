@@ -40,6 +40,8 @@ the README file.
 
 			Changes since 3.1.2
 
+- Remove infinite loop in token_print_indent_concat().
+
 - Validate the argument to the -p option.
 
 - The notorious 'option <unknown> ... larger than buffer' log line,
