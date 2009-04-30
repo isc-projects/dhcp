@@ -5645,7 +5645,7 @@ if test -n "$DO_LPF"
 then
 
 cat >>confdefs.h <<\_ACEOF
-#define USE_LPF 1
+#define HAVE_LPF 1
 _ACEOF
 
 else
@@ -5790,7 +5790,7 @@ fi
 	then
 
 cat >>confdefs.h <<\_ACEOF
-#define USE_DLPI 1
+#define HAVE_DLPI 1
 _ACEOF
 
 	else
@@ -5935,12 +5935,11 @@ fi
 		then
 
 cat >>confdefs.h <<\_ACEOF
-#define USE_BPF ""
+#define HAVE_BPF ""
 _ACEOF
 
 		fi
 	fi
-
 fi
 
 # SIOCGLIFCONF uses some transport structures.  Trick is not all platforms
