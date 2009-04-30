@@ -22,8 +22,14 @@
 /* Define to include Failover Protocol support. */
 #undef FAILOVER_PROTOCOL
 
+/* Define to 1 to use the Berkeley Packet Filter interface code. */
+#undef HAVE_BPF
+
 /* Define to 1 if you have the /dev/random file. */
 #undef HAVE_DEV_RANDOM
+
+/* Define to 1 to use DLPI interface code. */
+#undef HAVE_DLPI
 
 /* Define to 1 if you have the <ifaddrs.h> header file. */
 #undef HAVE_IFADDRS_H
@@ -33,6 +39,9 @@
 
 /* Define to 1 if you have the <linux/types.h> header file. */
 #undef HAVE_LINUX_TYPES_H
+
+/* Define to 1 to use the Linux Packet Filter interface code. */
+#undef HAVE_LPF
 
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
@@ -114,15 +123,6 @@
 
 /* Define to include server activity tracing support. */
 #undef TRACING
-
-/* Define to 1 to use the Berkeley Packet Filter interface code. */
-#undef USE_BPF
-
-/* Define to 1 to use DLPI interface code. */
-#undef USE_DLPI
-
-/* Define to 1 to use the Linux Packet Filter interface code. */
-#undef USE_LPF
 
 /* Version number of package */
 #undef VERSION
