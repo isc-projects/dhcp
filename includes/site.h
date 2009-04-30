@@ -133,7 +133,7 @@
    you don't choose, one will be chosen for you in your system's config
    header.    DON'T MESS WITH THIS UNLESS YOU KNOW WHAT YOU'RE DOING!!! */
 
-/* Define this to use the standard BSD socket API.
+/* Define USE_SOCKETS to use the standard BSD socket API.
 
    On many systems, the BSD socket API does not provide the ability to
    send packets to the 255.255.255.255 broadcast address, which can

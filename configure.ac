@@ -332,24 +332,23 @@ AC_CHECK_HEADER(linux/filter.h, DO_LPF=1, ,
 ])
 if test -n "$DO_LPF"
 then
-	AC_DEFINE([USE_LPF], [1], 
+	AC_DEFINE([HAVE_LPF], [1], 
 		  [Define to 1 to use the Linux Packet Filter interface code.])
 else
 	AC_CHECK_HEADER(sys/dlpi.h, DO_DLPI=1)
 	if test -n "$DO_DLPI"
 	then
-		AC_DEFINE([USE_DLPI], [1], 
+		AC_DEFINE([HAVE_DLPI], [1], 
 			  [Define to 1 to use DLPI interface code.])
 	else
 		AC_CHECK_HEADER(net/bpf.h, DO_BPF=1)
 		if test -n "$DO_BPF"
 		then
-			AC_DEFINE([USE_BPF], [""],
+			AC_DEFINE([HAVE_BPF], [""],
 	  			  [Define to 1 to use the 
 				   Berkeley Packet Filter interface code.])
 		fi
 	fi
-
 fi
 
 # SIOCGLIFCONF uses some transport structures.  Trick is not all platforms
