@@ -1108,6 +1108,7 @@ int token_print_indent_concat (FILE *file, int col,  int indent,
 		len = strlen (s);
 		strcpy (u, s);
 		u += len;
+		s = va_arg (list, char *);
 	}
 	va_end (list);
 	
