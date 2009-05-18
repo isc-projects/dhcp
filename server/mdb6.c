@@ -636,7 +636,12 @@ build_address6(struct in6_addr *addr,
 		case 6: str[i] = (str[i] & 0x03) | (net_str[i] & 0xFC); break;
 		case 7: str[i] = (str[i] & 0x01) | (net_str[i] & 0xFE); break;
 	}
-	/* set the 'u' bit to zero for /64s. */
+
+	/*
+	 * Set the universal/local bit ("u bit") to zero for /64s.  The
+	 * individual/group bit ("g bit") is unchanged, because the g-bit
+	 * has no meaning when the u-bit is cleared.
+	 */
 	if (net_bits == 64)
 		str[8] &= ~0x02;
 }
