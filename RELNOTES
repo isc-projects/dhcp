@@ -127,6 +127,11 @@ work on other platforms. Please report any problems and suggested fixes to
   that probably still resulted in the correct behaviour (but wouldn't use
   a larger defined value provided by the host OS).
 
+- Fixed a bug where an OMAPI socket disconnection message would not result
+  in scheduling a failover reconnection, if the link had not negotiated a
+  failover connect yet (e.g.: connection refused, asynch socket connect()
+  timeouts).
+
 			Changes since 4.1.0b1
 
 - A missing "else" in dhcrelay.c could have caused an interface not to
