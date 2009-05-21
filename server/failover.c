@@ -330,6 +330,7 @@ isc_result_t dhcp_failover_link_signal (omapi_object_t *h,
 		add_timeout(cur_time + 5, dhcp_failover_reconnect, state,
 			    (tvref_t)dhcp_failover_state_reference,
 			    (tvunref_t)dhcp_failover_state_dereference);
+
 		dhcp_failover_state_dereference (&state, MDL);
 	    }
 	    return ISC_R_SUCCESS;
