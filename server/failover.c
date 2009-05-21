@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.63.56.21 2009/04/22 20:33:34 dhankins Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.63.56.22 2009/05/21 00:06:36 dhankins Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -330,20 +330,17 @@ isc_result_t dhcp_failover_link_signal (omapi_object_t *h,
 		link -> state = dhcp_flink_disconnected;
 
 		/* Make the transition. */
-		if (state -> link_to_peer == link) {
-		    dhcp_failover_state_transition (link -> state_object,
-						    name);
+		if (state->link_to_peer == link)
+		    dhcp_failover_state_transition(link->state_object, name);
 
-		    /* Start trying to reconnect. */
+		/* Start trying to reconnect. */
 #if defined (DEBUG_FAILOVER_TIMING)
-		    log_info ("add_timeout +5 %s",
-			      "dhcp_failover_reconnect");
+		log_info ("add_timeout +5 dhcp_failover_reconnect");
 #endif
-		    add_timeout (cur_time + 5, dhcp_failover_reconnect,
-				 state,
-				 (tvref_t)dhcp_failover_state_reference,
-				 (tvunref_t)dhcp_failover_state_dereference);
-		}
+		add_timeout(cur_time + 5, dhcp_failover_reconnect, state,
+			    (tvref_t)dhcp_failover_state_reference,
+			    (tvunref_t)dhcp_failover_state_dereference);
+
 		dhcp_failover_state_dereference (&state, MDL);
 	    }
 	    return ISC_R_SUCCESS;

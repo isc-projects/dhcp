@@ -86,6 +86,11 @@ the README file.
 - Fixed failover reconnection retry code to continue to retry to reconnect
   rather than restarting the listener.
 
+- Fixed a bug where an OMAPI socket disconnection message would not result
+  in scheduling a failover reconnection, if the link had not negotiated a
+  failover connect yet (e.g.: connection refused, asynch socket connect()
+  timeouts).
+
 			Changes since 3.1.2rc1
 
 - None.
