@@ -320,20 +320,16 @@ isc_result_t dhcp_failover_link_signal (omapi_object_t *h,
 		link -> state = dhcp_flink_disconnected;
 
 		/* Make the transition. */
-		if (state -> link_to_peer == link) {
-		    dhcp_failover_state_transition (link -> state_object,
-						    name);
+		if (state->link_to_peer == link)
+		    dhcp_failover_state_transition(link->state_object, name);
 
-		    /* Start trying to reconnect. */
+		/* Start trying to reconnect. */
 #if defined (DEBUG_FAILOVER_TIMING)
-		    log_info ("add_timeout +5 %s",
-			      "dhcp_failover_reconnect");
+		log_info ("add_timeout +5 dhcp_failover_reconnect");
 #endif
-		    add_timeout (cur_time + 5, dhcp_failover_reconnect,
-				 state,
-				 (tvref_t)dhcp_failover_state_reference,
-				 (tvunref_t)dhcp_failover_state_dereference);
-		}
+		add_timeout(cur_time + 5, dhcp_failover_reconnect, state,
+			    (tvref_t)dhcp_failover_state_reference,
+			    (tvunref_t)dhcp_failover_state_dereference);
 		dhcp_failover_state_dereference (&state, MDL);
 	    }
 	    return ISC_R_SUCCESS;
