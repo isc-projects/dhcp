@@ -2471,6 +2471,7 @@ extern const char *path_dhclient_pid;
 extern char *path_dhclient_script;
 extern int interfaces_requested;
 extern struct data_string default_duid;
+extern int duid_type;
 
 extern struct client_config top_level_config;
 

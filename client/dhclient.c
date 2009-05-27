@@ -57,6 +57,7 @@ struct in_addr inaddr_any;
 struct sockaddr_in sockaddr_broadcast;
 struct in_addr giaddr;
 struct data_string default_duid;
+int duid_type = 0;
 
 /* ASSERT_STATE() does nothing now; it used to be
    assert (state_is == state_shouldbe). */
@@ -268,6 +269,21 @@ main(int argc, char **argv) {
 				wanted_ia_na = 0;
 			}
 			wanted_ia_pd++;
+		} else if (!strcmp(argv[i], "-D")) {
+			if (local_family_set && (local_family == AF_INET)) {
+				usage();
+			}
+			local_family_set = 1;
+			local_family = AF_INET6;
+			if (++i == argc)
+				usage();
+			if (!strcasecmp(argv[i], "LL")) {
+				duid_type = DUID_LL;
+			} else if (!strcasecmp(argv[i], "LLT")) {
+				duid_type = DUID_LLT;
+			} else {
+				usage();
+			}
 #endif /* DHCPv6 */
 		} else if (!strcmp(argv[i], "-v")) {
 			quiet = 0;
@@ -651,7 +667,7 @@ static void usage()
 
 	log_error("Usage: dhclient %s %s",
 #ifdef DHCPv6
-		  "[-4|-6] [-SNTP1dvrx] [-nw] [-p <port>]",
+		  "[-4|-6] [-SNTP1dvrx] [-nw] [-p <port>] [-D LL|LLT]",
 #else /* DHCPv6 */
 		  "[-1dvrx] [-nw] [-p <port>]",
 #endif /* DHCPv6 */

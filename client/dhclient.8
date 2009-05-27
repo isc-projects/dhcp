@@ -1,4 +1,4 @@
-.\"	$Id: dhclient.8,v 1.30 2008/11/20 14:55:14 jreed Exp $
+.\"	$Id: dhclient.8,v 1.31 2009/05/27 20:11:38 pselkirk Exp $
 .\"
 .\" Copyright (c) 2004,2007-2008 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
@@ -54,6 +54,10 @@ dhclient - Dynamic Host Configuration Protocol Client
 [
 .B -P...
 ]
+]
+[
+.B -D
+.I LL|LLT
 ]
 [
 .B -p
@@ -138,10 +142,14 @@ important details about the network to which it is attached, such as
 the location of a default router, the location of a name server, and
 so on.
 .PP
-If given the -4 command line argument (default), dhclient will use the
+If given the 
+.B -4
+command line argument (default), dhclient will use the
 DHCPv4 protocol to obtain an IPv4 address and configuration parameters.
 .PP
-If given the -6 command line argument, dhclient will use the DHCPv6
+If given the
+.B -6
+command line argument, dhclient will use the DHCPv6
 protocol to obtain whatever IPv6 addresses are available along with
 configuration parameters. But with
 .B -S
@@ -161,7 +169,17 @@ address query,
 restores it. Note it is not recommended to mix queries of different types
 together, or even to share the lease file between them.
 .PP
-If given the --version command line argument, dhclient will print its
+By default, DHCPv6 dhclient creates an identifier based on the
+link-layer address (DUID-LL) if it is running in stateless mode (with
+-S, not requesting an address), or it creates an identifier based on
+the link-layer address plus a timestamp (DUID-LLT) if it is running in
+stateful mode (without -S, requesting an address).
+.B -D
+overrides this default, with a value of either "LL" or "LLT".
+.PP
+If given the 
+.B --version
+command line argument, dhclient will print its
 version number and exit.
 .PP
 On startup, dhclient reads the

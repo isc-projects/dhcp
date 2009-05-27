@@ -49,6 +49,8 @@ work on other platforms. Please report any problems and suggested fixes to
 - Added client support for setting interface MTU and metric, thanks to
   Roy "UberLord" Marples <roy@marples.name>.
 
+- Added client -D option to specify DUID type to send.
+
 			Changes since 4.1.0 (bug fixes)
 
 - Remove infinite loop in token_print_indent_concat().

@@ -143,15 +143,18 @@ form_duid(struct data_string *duid, const char *file, int line)
 	    (ip->hw_address.hlen > sizeof(ip->hw_address.hbuf)))
 		log_fatal("Impossible hardware address length at %s:%d.", MDL);
 
+	if (duid_type == 0)
+		duid_type = stateless ? DUID_LL : DUID_LLT;
+
 	/*
 	 * 2 bytes for the 'duid type' field.
 	 * 2 bytes for the 'htype' field.
-	 * (not stateless) 4 bytes for the 'current time'.
+	 * (DUID_LLT) 4 bytes for the 'current time'.
 	 * enough bytes for the hardware address (note that hw_address has
 	 * the 'htype' on byte zero).
 	 */
 	len = 4 + (ip->hw_address.hlen - 1);
-	if (!stateless)
+	if (duid_type == DUID_LLT)
 		len += 4;
 	if (!buffer_allocate(&duid->buffer, len, MDL))
 		log_fatal("no memory for default DUID!");
@@ -159,7 +162,7 @@ form_duid(struct data_string *duid, const char *file, int line)
 	duid->len = len;
 
 	/* Basic Link Local Address type of DUID. */
-	if (!stateless) {
+	if (duid_type == DUID_LLT) {
 		putUShort(duid->buffer->data, DUID_LLT);
 		putUShort(duid->buffer->data + 2, ip->hw_address.hbuf[0]);
 		putULong(duid->buffer->data + 4, cur_time - DUID_TIME_EPOCH);
