@@ -1316,6 +1316,10 @@ void parse_failover_state (cfile, state, stos)
 		state_in = communications_interrupted;
 		break;
 
+	      case CONFLICT_DONE:
+		state_in = conflict_done;
+		break;
+
 	      case RESOLUTION_INTERRUPTED:
 		state_in = resolution_interrupted;
 		break;

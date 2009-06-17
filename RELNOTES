@@ -83,6 +83,9 @@ work on other platforms. Please report any problems and suggested fixes to
   failover connect yet (e.g.: connection refused, asynch socket connect()
   timeouts).
 
+- A bug was fixed that caused the 'conflict-done' state to fail to be parsed
+  in failover state records.
+
 			Changes since 4.1.0
 
 - Validate the argument to the -p option.
