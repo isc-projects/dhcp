@@ -59,6 +59,9 @@ suggested fixes to <dhcp-users@isc.org>.
   failover connect yet (e.g.: connection refused, asynch socket connect()
   timeouts).
 
+- A bug was fixed that caused the 'conflict-done' state to fail to be parsed
+  in failover state records.
+
 			Changes since 4.0.1
 
 - Remove infinite loop in token_print_indent_concat().
