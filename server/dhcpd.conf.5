@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.103 2009/03/30 18:28:55 jreed Exp $
+.\" $Id: dhcpd.conf.5,v 1.104 2009/06/17 22:08:42 dhankins Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -739,6 +739,34 @@ failover peers gets into a state where it is responding to failover
 messages but not responding to some client requests, the other
 failover peer will take over its client load automatically as the
 clients retry.
+.RE
+.PP
+The
+.I auto-partner-down
+statement
+.RS 0.25i
+.PP
+.B auto-partner-down \fIseconds\fR\fB;\fR
+.PP
+This statement instructs the server to initiate a timed delay upon entering
+the communications-interrupted state (any situation of being out-of-contact
+with the remote failover peer).  At the conclusion of the timer, the server
+will automatically enter the partner-down state.  This permits the server
+to allocate leases from the partner's free lease pool after an STOS+MCLT
+timer expires, which can be dangerous if the partner is in fact operating
+at the time (the two servers will give conflicting bindings).
+.PP
+Think very carefully before enabling this feature.  The partner-down and
+communications-interrupted states are intentionally segregated because
+there do exist situations where a failover server can fail to communicate
+with its peer, but still has the ability to receive and reply to requests
+from DHCP clients.  In general, this feature should only be used in those
+deployments where the failover servers are directly connected to one
+another, such as by a dedicated hardwired link ("a heartbeat cable").
+.PP
+A zero value disables the auto-partner-down feature (also the default), and
+any positive value indicates the time in seconds to wait before automatically
+entering partner-down.
 .RE
 .PP
 The Failover pool balance statements.

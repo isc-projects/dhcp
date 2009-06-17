@@ -1012,6 +1012,10 @@ void parse_failover_peer (cfile, group, type)
 			tp = &peer->min_balance;
 			goto parse_idle;
 
+		      case AUTO_PARTNER_DOWN:
+			tp = &peer->auto_partner_down;
+			goto parse_idle;
+
 		      case MAX_RESPONSE_DELAY:
 			tp = &cp -> max_response_delay;
 		      parse_idle:

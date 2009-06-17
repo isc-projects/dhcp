@@ -352,6 +352,8 @@ typedef struct _dhcp_failover_state {
 	u_int32_t max_balance, min_balance;
 	TIME last_balance, sched_balance;
 
+	u_int32_t auto_partner_down;
+
 	enum service_state service_state;
 	const char *nrr;	/* Printable reason why we're in the
 				   not_responding service state (empty

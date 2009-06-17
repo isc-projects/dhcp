@@ -3150,6 +3150,7 @@ void dhcp_failover_reconnect (void *);
 void dhcp_failover_startup_timeout (void *);
 void dhcp_failover_link_startup_timeout (void *);
 void dhcp_failover_listener_restart (void *);
+void dhcp_failover_auto_partner_down(void *vs);
 isc_result_t dhcp_failover_state_get_value PROTO ((omapi_object_t *,
 						   omapi_object_t *,
 						   omapi_data_string_t *,

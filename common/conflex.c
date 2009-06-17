@@ -706,50 +706,70 @@ intern(char *atom, enum dhcp_token dfv) {
 		break;
 
 	      case 'a':
-		if (!strncasecmp (atom + 1, "uth", 3)) {
-			if (!strncasecmp (atom + 3, "uthenticat", 10)) {
-				if (!strcasecmp (atom + 13, "ed"))
-					return AUTHENTICATED;
-				if (!strcasecmp (atom + 13, "ion"))
-					return AUTHENTICATION;
-				break;
-			}
-			if (!strcasecmp (atom + 1, "uthoritative"))
-				return AUTHORITATIVE;
+		if (!strcasecmp(atom + 1, "bandoned"))
+			return TOKEN_ABANDONED;
+		if (!strcasecmp(atom + 1, "ctive"))
+			return TOKEN_ACTIVE;
+		if (!strncasecmp(atom + 1, "dd", 2)) {
+			if (atom[3] == '\0')
+				return TOKEN_ADD;
+			else if (!strcasecmp(atom + 3, "ress"))
+				return ADDRESS;
 			break;
 		}
-		if (!strcasecmp (atom + 1, "nd"))
-			return AND;
-		if (!strcasecmp(atom + 1, "nycast-mac"))
-			return ANYCAST_MAC;
-		if (!strcasecmp (atom + 1, "ppend"))
+		if (!strcasecmp(atom + 1, "fter"))
+			return AFTER;
+		if (isascii(atom[1]) && (tolower(atom[1]) == 'l')) {
+			if (!strcasecmp(atom + 2, "gorithm"))
+				return ALGORITHM;
+			if (!strcasecmp(atom + 2, "ias"))
+				return ALIAS;
+			if (isascii(atom[2]) && (tolower(atom[2]) == 'l')) {
+				if (atom[3] == '\0')
+					return ALL;
+				else if (!strcasecmp(atom + 3, "ow"))
+					return ALLOW;
+				break;
+			}
+			if (!strcasecmp(atom + 2, "so"))
+				return TOKEN_ALSO;
+			break;
+		}
+		if (isascii(atom[1]) && (tolower(atom[1]) == 'n')) {
+			if (!strcasecmp(atom + 2, "d"))
+				return AND;
+			if (!strcasecmp(atom + 2, "ycast-mac"))
+				return ANYCAST_MAC;
+			break;
+		}
+		if (!strcasecmp(atom + 1, "ppend"))
 			return APPEND;
-		if (!strcasecmp (atom + 1, "llow"))
-			return ALLOW;
-		if (!strcasecmp (atom + 1, "lias"))
-			return ALIAS;
-		if (!strcasecmp (atom + 1, "lgorithm"))
-			return ALGORITHM;
-		if (!strcasecmp (atom + 1, "lso"))
-			return TOKEN_ALSO;
-		if (!strcasecmp (atom + 1, "bandoned"))
-			return TOKEN_ABANDONED;
-		if (!strcasecmp (atom + 1, "dd"))
-			return TOKEN_ADD;
-		if (!strcasecmp (atom + 1, "ll"))
-			return ALL;
-		if (!strcasecmp (atom + 1, "t"))
-			return AT;
-		if (!strcasecmp (atom + 1, "rray"))
+		if (!strcasecmp(atom + 1, "rray"))
 			return ARRAY;
-		if (!strcasecmp (atom + 1, "ddress"))
-			return ADDRESS;
-		if (!strcasecmp (atom + 1, "ctive"))
-			return TOKEN_ACTIVE;
-		if (!strcasecmp (atom + 1, "tsfp"))
-			return ATSFP;
-                if (!strcasecmp (atom + 1, "fter"))
-                        return AFTER;
+		if (isascii(atom[1]) && (tolower(atom[1]) == 't')) {
+			if (atom[2] == '\0')
+				return AT;
+			if (!strcasecmp(atom + 2, "sfp"))
+				return ATSFP;
+			break;
+		}
+		if (!strncasecmp(atom + 1, "ut", 2)) {
+			if (isascii(atom[3] && (tolower(atom[3]) == 'h'))) {
+				if (!strncasecmp(atom + 4, "enticat", 7)) {
+					if (!strcasecmp(atom + 11, "ed"))
+						return AUTHENTICATED;
+					if (!strcasecmp(atom + 11, "ion"))
+						return AUTHENTICATION;
+					break;
+				}
+				if (!strcasecmp(atom + 4, "oritative"))
+					return AUTHORITATIVE;
+				break;
+			}
+			if (!strcasecmp(atom + 3, "o-partner-down"))
+				return AUTO_PARTNER_DOWN;
+			break;
+		}
 		break;
 	      case 'b':
 		if (!strcasecmp (atom + 1, "ackup"))

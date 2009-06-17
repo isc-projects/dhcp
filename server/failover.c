@@ -1797,6 +1797,12 @@ isc_result_t dhcp_failover_set_state (dhcp_failover_state_t *state,
     if (new_state != startup && saved_state == startup)
 	cancel_timeout (dhcp_failover_startup_timeout, state);
 
+    /*
+     * If the state changes for any reason, cancel 'delayed auto state
+     * changes' (currently there is just the one).
+     */
+    cancel_timeout(dhcp_failover_auto_partner_down, state);
+
     /* Set our service state. */
     dhcp_failover_set_service_state (state);
 
@@ -1805,6 +1811,29 @@ isc_result_t dhcp_failover_set_state (dhcp_failover_state_t *state,
 	    dhcp_failover_send_state (state);
 
     switch (new_state) {
+	  case communications_interrupted:
+	    /*
+	     * There is an optional feature to automatically enter partner
+	     * down after a timer expires, upon entering comms-interrupted.
+	     * This feature is generally not safe except in specific
+	     * circumstances.
+	     *
+	     * A zero value (also the default) disables it.
+	     */
+	    if (state->auto_partner_down == 0)
+		break;
+
+#if defined (DEBUG_FAILOVER_TIMING)
+	    log_info("add_timeout +%ul dhcp_failover_auto_partner_down",
+		      (unsigned long)state->auto_partner_down);
+#endif
+	    tv.tv_sec = cur_time + state->auto_partner_down;
+	    tv.tv_usec = 0;
+	    add_timeout(&tv, dhcp_failover_auto_partner_down, state,
+			(tvref_t)omapi_object_reference,
+			(tvunref_t)omapi_object_dereference);
+	    break;
+
 	  case normal:
 	    /* Upon entering normal state, the server is expected to retransmit
 	     * all pending binding updates.  This is a good opportunity to
@@ -1820,12 +1849,12 @@ isc_result_t dhcp_failover_set_state (dhcp_failover_state_t *state,
 	    }
 
 	    break;
-	    
+
 	  case potential_conflict:
 	    if (state -> i_am == primary)
 		    dhcp_failover_send_update_request (state);
 	    break;
-	    
+
 	  case startup:
 #if defined (DEBUG_FAILOVER_TIMING)
 	    log_info ("add_timeout +15 %s",
@@ -3064,6 +3093,18 @@ void dhcp_failover_listener_restart (void *vs)
 			     (tvref_t)dhcp_failover_state_reference,
 			     (tvunref_t)dhcp_failover_state_dereference);
 	}
+}
+
+void
+dhcp_failover_auto_partner_down(void *vs)
+{
+	dhcp_failover_state_t *state = vs;
+
+#if defined (DEBUG_FAILOVER_TIMING)
+	log_info("dhcp_failover_auto_partner_down");
+#endif
+
+	dhcp_failover_set_state(state, partner_down);
 }
 
 isc_result_t dhcp_failover_state_get_value (omapi_object_t *h,

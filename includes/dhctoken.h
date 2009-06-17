@@ -354,7 +354,8 @@ enum dhcp_token {
 	PREFIX6 = 657,
 	FIXED_PREFIX6 = 658,
 	ANYCAST_MAC = 659,
-	CONFLICT_DONE = 660
+	CONFLICT_DONE = 660,
+	AUTO_PARTNER_DOWN = 661
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\

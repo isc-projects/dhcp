@@ -51,6 +51,13 @@ work on other platforms. Please report any problems and suggested fixes to
 
 - Added client -D option to specify DUID type to send.
 
+- A new failover configuration parameter has been introduced for those
+  environments where DHCP servers can be reasonably guaranteed to be
+  "down" when the failover TCP socket is severed, "auto-partner-down".
+  This parameter is not generally safe, and by default is disabled, so
+  please carefully review the documentation of this parameter in the
+  dhcpd.conf(5) manpage before determining to use it yourself.
+
 			Changes since 4.1.0 (bug fixes)
 
 - Remove infinite loop in token_print_indent_concat().
