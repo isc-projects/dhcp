@@ -325,7 +325,8 @@ enum dhcp_token {
 	MIN_BALANCE = 629,
 	DOMAIN_LIST = 630,
 	LEASEQUERY = 631,
-	EXECUTE = 632
+	EXECUTE = 632,
+	CONFLICT_DONE = 660
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\

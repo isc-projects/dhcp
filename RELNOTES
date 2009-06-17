@@ -91,6 +91,9 @@ the README file.
   failover connect yet (e.g.: connection refused, asynch socket connect()
   timeouts).
 
+- A bug was fixed that caused the 'conflict-done' state to fail to be parsed
+  in failover state records.
+
 			Changes since 3.1.2rc1
 
 - None.
