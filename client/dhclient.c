@@ -2818,8 +2818,15 @@ void script_write_params (client, prefix, lease)
 		if (data.len > 3) {
 			struct iaddr netmask, subnet, broadcast;
 
-			memcpy (netmask.iabuf, data.data, data.len);
-			netmask.len = data.len;
+			/*
+			 * No matter the length of the subnet-mask option,
+			 * use only the first four octets.  Note that
+			 * subnet-mask options longer than 4 octets are not
+			 * in conformance with RFC 2132, but servers with this
+			 * flaw do exist.
+			 */
+			memcpy(netmask.iabuf, data.data, 4);
+			netmask.len = 4;
 			data_string_forget (&data, MDL);
 
 			subnet = subnet_number (lease -> address, netmask);

@@ -62,6 +62,11 @@ suggested fixes to <dhcp-users@isc.org>.
 - A bug was fixed that caused the 'conflict-done' state to fail to be parsed
   in failover state records.
 
+! A stack overflow vulnerability was fixed in dhclient that could allow
+  remote attackers to execute arbitrary commands as root on the system,
+  or simply terminate the client, by providing an over-long subnet-mask
+  option.
+
 			Changes since 4.0.1
 
 - Remove infinite loop in token_print_indent_concat().
