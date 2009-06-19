@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.143.2.11 2009/01/06 00:51:24 sar Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.143.2.12 2009/06/19 23:26:54 dhankins Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2550,8 +2550,15 @@ void script_write_params (client, prefix, lease)
 		if (data.len > 3) {
 			struct iaddr netmask, subnet, broadcast;
 
-			memcpy (netmask.iabuf, data.data, data.len);
-			netmask.len = data.len;
+			/*
+			 * No matter the length of the subnet-mask option,
+			 * use only the first four octets.  Note that
+			 * subnet-mask options longer than 4 octets are not
+			 * in conformance with RFC 2132, but servers with this
+			 * flaw do exist.
+			 */
+			memcpy(netmask.iabuf, data.data, 4);
+			netmask.len = 4;
 			data_string_forget (&data, MDL);
 
 			subnet = subnet_number (lease -> address, netmask);
