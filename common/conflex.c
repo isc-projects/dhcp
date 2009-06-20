@@ -782,7 +782,7 @@ intern(char *atom, enum dhcp_token dfv) {
 			if (!strncasecmp(atom + 2, "ient", 4)) {
 				if (!strcasecmp(atom + 6, "s"))
 					return CLIENTS;
-				if (atom[7] == '-') {
+				if (atom[6] == '-') {
 					if (!strcasecmp(atom + 7, "hostname"))
 						return CLIENT_HOSTNAME;
 					if (!strcasecmp(atom + 7, "identifier"))
