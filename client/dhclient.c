@@ -3,7 +3,7 @@
    DHCP Client. */
 
 /*
- * Copyright (c) 2004-2008 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.143.2.10 2008/06/11 20:20:31 dhankins Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.143.2.10.6.1 2009/06/20 01:40:29 dhankins Exp $ Copyright (c) 2004-2009 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -61,7 +61,7 @@ struct in_addr giaddr;
    assert (state_is == state_shouldbe). */
 #define ASSERT_STATE(state_is, state_shouldbe) {}
 
-static char copyright[] = "Copyright 2004-2008 Internet Systems Consortium.";
+static char copyright[] = "Copyright 2004-2009 Internet Systems Consortium.";
 static char arr [] = "All rights reserved.";
 static char message [] = "Internet Systems Consortium DHCP Client";
 static char url [] = "For info, please visit http://www.isc.org/sw/dhcp/";
@@ -2550,8 +2550,15 @@ void script_write_params (client, prefix, lease)
 		if (data.len > 3) {
 			struct iaddr netmask, subnet, broadcast;
 
-			memcpy (netmask.iabuf, data.data, data.len);
-			netmask.len = data.len;
+			/*
+			 * No matter the length of the subnet-mask option,
+			 * use only the first four octets.  Note that
+			 * subnet-mask options longer than 4 octets are not
+			 * in conformance with RFC 2132, but servers with this
+			 * flaw do exist.
+			 */
+			memcpy(netmask.iabuf, data.data, 4);
+			netmask.len = 4;
 			data_string_forget (&data, MDL);
 
 			subnet = subnet_number (lease -> address, netmask);

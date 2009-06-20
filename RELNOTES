@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-			      Version 3.1.2
-			    December 23, 2008
+			     Version 3.1.2pl1
+			      June 19, 2009
 
 			      Release Notes
 
@@ -37,6 +37,13 @@ For information on how to install, configure and run this software,
 as well as how to find documentation and report bugs, please consult
 the README file.
 
+
+			Changes since 3.1.2
+
+! A stack overflow vulnerability was fixed in dhclient that could allow
+  remote attackers to execute arbitrary commands as root on the system,
+  or simply terminate the client, by providing an over-long subnet-mask
+  option.
 
 			Changes since 3.1.2rc1
 
