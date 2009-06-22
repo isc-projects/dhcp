@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-			    Version 3.1.2pl1
-			     June 19, 2009
+			    Version 3.1.2p1
+			     June 22, 2009
 
 			      README FILE
 
@@ -92,8 +92,8 @@ directory, it may not have up-to-date information).
 
 			    RELEASE STATUS
 
-This is ISC DHCP 3.1.2pl1, a PATCH release addressing a security
-vulnerability present in ISC DHCP versions 3.1.2 and prior.
+This is ISC DHCP 3.1.2p1, a PATCH release addressing a security
+vulnerability present in ISC DHCP Client ('dhclient') 3.1.2 and prior.
 
 In this release, the server and relay agent are currently fully
 functional on NetBSD, Linux systems with kernel version 2.2 or later,
@@ -136,12 +136,12 @@ information.   On Digital Unix, type ``man pfilt''.
 To build the DHCP Distribution, unpack the compressed tar file using
 the tar utility and the gzip command - type something like:
 
-	gunzip dhcp-3.1.2pl1.tar.gz
-	tar xvf dhcp-3.1.2pl1.tar
+	gunzip dhcp-3.1.2p1.tar.gz
+	tar xvf dhcp-3.1.2p1.tar
 
 			    CONFIGURING IT
 
-Now, cd to the dhcp-3.1.2pl1 subdirectory that you've just created and
+Now, cd to the dhcp-3.1.2p1 subdirectory that you've just created and
 configure the source tree by typing:
 
 	./configure
