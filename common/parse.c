@@ -4503,6 +4503,22 @@ int parse_non_binary (expr, cfile, lose, context)
 			goto norparen;
 		break;
 
+		/* This parses 'gethostname()'. */
+	      case GETHOSTNAME:
+		token = next_token(&val, NULL, cfile);
+		if (!expression_allocate(expr, MDL))
+			log_fatal("can't allocate expression");
+		(*expr)->op = expr_gethostname;
+
+		token = next_token(NULL, NULL, cfile);
+		if (token != LPAREN)
+			goto nolparen;
+
+		token = next_token(NULL, NULL, cfile);
+		if (token != RPAREN)
+			goto norparen;
+		break;
+
 		/* Not a valid start to an expression... */
 	      default:
 		if (token != NAME && token != NUMBER_OR_NAME)

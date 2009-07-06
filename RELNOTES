@@ -58,6 +58,14 @@ work on other platforms. Please report any problems and suggested fixes to
   please carefully review the documentation of this parameter in the
   dhcpd.conf(5) manpage before determining to use it yourself.
 
+- Added a configuration function, 'gethostname()', which calls the system
+  function of the same name and presents the results as a data expression.
+  This function can be used to incorporate the system level hostname of
+  the system the DHCP software is operating on in responses or queries (such
+  as including a failover partner's hostname in a dhcp message or binding
+  scope, or having a DHCP client send any system hostname in the host-name or
+  FQDN options by default).
+
 			Changes since 4.1.0 (bug fixes)
 
 - Remove infinite loop in token_print_indent_concat().

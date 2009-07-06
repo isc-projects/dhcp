@@ -951,6 +951,7 @@ int evaluate_dns_expression (result, packet, lease, client_state, in_options,
 	      case expr_config_option:
 	      case expr_leased_address:
 	      case expr_null:
+	      case expr_gethostname:
 		log_error ("Data opcode in evaluate_dns_expression: %d",
 		      expr -> op);
 		return 0;
@@ -1376,6 +1377,7 @@ int evaluate_boolean_expression (result, packet, lease, client_state,
 	      case expr_null:
 	      case expr_filename:
 	      case expr_sname:
+	      case expr_gethostname:
 		log_error ("Data opcode in evaluate_boolean_expression: %d",
 		      expr -> op);
 		return 0;
@@ -2299,6 +2301,39 @@ int evaluate_data_expression (result, packet, lease, client_state,
 #endif
 		return s0;
 
+		/* Provide the system's local hostname as a return value. */
+	      case expr_gethostname:
+		/*
+		 * Allocate a buffer to return.
+		 *
+		 * The largest valid hostname is maybe 64 octets at a single
+		 * label, or 255 octets if you think a hostname is allowed
+		 * to contain labels (plus termination).
+		 */
+		memset(result, 0, sizeof(*result));
+		if (!buffer_allocate(&result->buffer, 255, file, line)) {
+			log_error("data: gethostname(): no memory for buffer");
+			return 0;
+		}
+		result->data = result->buffer->data;
+
+		/*
+		 * On successful completion, gethostname() resturns 0.  It may
+		 * not null-terminate the string if there was insufficient
+		 * space.
+		 */
+		if (!gethostname((char *)result->buffer->data, 255)) {
+			if (result->buffer->data[255] == '\0')
+				result->len =
+					strlen((char *)result->buffer->data);
+			else
+				result->len = 255;
+			return 1;
+		}
+
+		data_string_forget(result, MDL);
+		return 0;
+
 	      case expr_check:
 	      case expr_equal:
 	      case expr_not_equal:
@@ -2420,6 +2455,7 @@ int evaluate_numeric_expression (result, packet, lease, client_state,
 	      case expr_config_option:
 	      case expr_leased_address:
 	      case expr_null:
+	      case expr_gethostname:
 		log_error ("Data opcode in evaluate_numeric_expression: %d",
 		      expr -> op);
 		return 0;
@@ -3202,6 +3238,7 @@ void expression_dereference (eptr, file, line)
 	      case expr_exists:
 	      case expr_known:
 	      case expr_null:
+	      case expr_gethostname:
 		break;
 
 	      default:
@@ -3261,7 +3298,8 @@ int is_data_expression (expr)
 		expr->op == expr_host_decl_name ||
 		expr->op == expr_leased_address ||
 		expr->op == expr_config_option ||
-		expr->op == expr_null);
+		expr->op == expr_null ||
+		expr->op == expr_gethostname);
 }
 
 int is_numeric_expression (expr)
@@ -3364,6 +3402,7 @@ static int op_val (op)
 	      case expr_binary_or:
 	      case expr_binary_xor:
 	      case expr_client_state:
+	      case expr_gethostname:
 		return 100;
 
 	      case expr_equal:
@@ -3457,6 +3496,7 @@ enum expression_context op_context (op)
 	      case expr_arg:
 	      case expr_funcall:
 	      case expr_function:
+	      case expr_gethostname:
 		return context_any;
 
 	      case expr_equal:
@@ -3988,6 +4028,11 @@ int write_expression (file, expr, col, indent, firstp)
 		col = token_print_indent (file, col, indent, "", "", ")");
 		break;
 
+	      case expr_gethostname:
+		col = token_print_indent(file, col, indent, "", "",
+					 "gethostname()");
+		break;
+
 	      default:
 		log_fatal ("invalid expression type in print_expression: %d",
 			   expr -> op);
@@ -4241,6 +4286,7 @@ int data_subexpression_length (int *rv,
 	      case expr_binary_or:
 	      case expr_binary_xor:
 	      case expr_client_state:
+	      case expr_gethostname:
 		return 0;
 	}
 	return 0;

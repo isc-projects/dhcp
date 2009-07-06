@@ -984,12 +984,17 @@ intern(char *atom, enum dhcp_token dfv) {
 			return TOKEN_FREE;
 		break;
 	      case 'g':
+		if (!strncasecmp(atom + 1, "et", 2)) {
+			if (!strcasecmp(atom + 3, "-lease-hostnames"))
+				return GET_LEASE_HOSTNAMES;
+			if (!strcasecmp(atom + 3, "hostname"))
+				return GETHOSTNAME;
+			break;
+		}
 		if (!strcasecmp (atom + 1, "iaddr"))
 			return GIADDR;
 		if (!strcasecmp (atom + 1, "roup"))
 			return GROUP;
-		if (!strcasecmp (atom + 1, "et-lease-hostnames"))
-			return GET_LEASE_HOSTNAMES;
 		break;
 	      case 'h':
 		if (!strcasecmp(atom + 1, "ash"))

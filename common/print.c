@@ -1062,6 +1062,13 @@ static unsigned print_subexpression (expr, buf, len)
 			return rv;
 		}
 
+	      case expr_gethostname:
+		if (len > 13) {
+			strcpy(buf, "(gethostname)");
+			return 13;
+		}
+		break;
+
 	      default:
 		log_fatal("Impossible case at %s:%d (undefined expression "
 			  "%d).", MDL, expr->op);

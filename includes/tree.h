@@ -197,7 +197,8 @@ enum expr_op {
 	expr_ucase,
 	expr_lcase,
 	expr_regex_match,
-	expr_iregex_match
+	expr_iregex_match,
+	expr_gethostname
 };
 
 struct expression {
