@@ -157,6 +157,9 @@ work on other platforms. Please report any problems and suggested fixes to
   or simply terminate the client, by providing an over-long subnet-mask
   option.
 
+- Fixed a bug where relay agent options would never be returned when
+  processing a DHCPINFORM.
+
 			Changes since 4.1.0b1
 
 - A missing "else" in dhcrelay.c could have caused an interface not to

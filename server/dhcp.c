@@ -38,6 +38,8 @@
 #include <sys/time.h>
 
 static void commit_leases_ackout(void *foo);
+static void maybe_return_agent_options(struct packet *packet,
+				       struct option_state *options);
 
 int outstanding_pings;
 
@@ -1039,6 +1041,8 @@ void dhcpinform (packet, ms_nulltp)
 	memset (&raw, 0, sizeof raw);
 	outgoing.raw = &raw;
 
+	maybe_return_agent_options(packet, options);
+
 	/* Execute statements in scope starting with the subnet scope. */
 	if (subnet)
 		execute_statements_in_scope ((struct binding_value **)0,
@@ -1513,34 +1517,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 			   packet -> options, DHO_DHCP_SERVER_IDENTIFIER))
 		state -> got_server_identifier = 1;
 
-	/* If there were agent options in the incoming packet, return
-	 * them.  Do not return the agent options if they were stashed
-	 * on the lease.  We do not check giaddr to detect the presence of
-	 * a relay, as this excludes "l2" relay agents which have no giaddr
-	 * to set.
-	 *
-	 * XXX: If the user configures options for the relay agent information
-	 * (state->options->universes[agent_universe.index] is not NULL),
-	 * we're still required to duplicate other values provided by the
-	 * relay agent.  So we need to merge the old values not configured
-	 * by the user into the new state, not just give up.
-	 */
-	if (!packet->agent_options_stashed &&
-	    packet->options->universe_count > agent_universe.index &&
-	    packet->options->universes[agent_universe.index] != NULL &&
-	    (state->options->universe_count <= agent_universe.index ||
-	     state->options->universes[agent_universe.index] == NULL)) {
-		option_chain_head_reference
-		    ((struct option_chain_head **)
-		     &(state -> options -> universes [agent_universe.index]),
-		     (struct option_chain_head *)
-		     packet -> options -> universes [agent_universe.index],
-		     MDL);
-
-		if (state->options->universe_count <= agent_universe.index)
-			state->options->universe_count =
-						agent_universe.index + 1;
-	}
+	maybe_return_agent_options(packet, state->options);
 
 	/* If we are offering a lease that is still currently valid, preserve
 	   the events.  We need to do this because if the client does not
@@ -4284,3 +4261,33 @@ lowest_site_code(const void *key, unsigned len, void *object)
 	return ISC_R_SUCCESS;
 }
 
+static void
+maybe_return_agent_options(struct packet *packet, struct option_state *options)
+{
+	/* If there were agent options in the incoming packet, return
+	 * them.  Do not return the agent options if they were stashed
+	 * on the lease.  We do not check giaddr to detect the presence of
+	 * a relay, as this excludes "l2" relay agents which have no giaddr
+	 * to set.
+	 *
+	 * XXX: If the user configures options for the relay agent information
+	 * (state->options->universes[agent_universe.index] is not NULL),
+	 * we're still required to duplicate other values provided by the
+	 * relay agent.  So we need to merge the old values not configured
+	 * by the user into the new state, not just give up.
+	 */
+	if (!packet->agent_options_stashed &&
+	    packet->options->universe_count > agent_universe.index &&
+	    packet->options->universes[agent_universe.index] != NULL &&
+	    (options->universe_count <= agent_universe.index ||
+	     options->universes[agent_universe.index] == NULL)) {
+		option_chain_head_reference
+		    ((struct option_chain_head **)
+		     &(options->universes[agent_universe.index]),
+		     (struct option_chain_head *)
+		     packet->options->universes[agent_universe.index], MDL);
+
+		if (options->universe_count <= agent_universe.index)
+			options->universe_count = agent_universe.index + 1;
+	}
+}
