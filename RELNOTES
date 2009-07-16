@@ -103,6 +103,10 @@ the README file.
   supported.  Note that, similarly to 3.0.x, for by-code lookups only the
   last option definition is used.
 
+- Fixed a bug where a time difference of greater than 60 seconds between a
+  failover pair could cause the primary to crash on contact with the
+  secondary.  Thanks to a patch from Steinar Haug.
+
 			Changes since 3.1.2rc1
 
 - None.

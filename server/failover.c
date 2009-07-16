@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.63.56.22 2009/05/21 00:06:36 dhankins Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.63.56.23 2009/07/16 19:51:34 pselkirk Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -594,7 +594,8 @@ isc_result_t dhcp_failover_link_signal (omapi_object_t *h,
 		omapi_signal ((omapi_object_t *)link -> state_object,
 			      "message", link);
 		link -> state = dhcp_flink_message_length_wait;
-		failover_message_dereference (&link -> imsg, MDL);
+		if (link -> imsg)
+			failover_message_dereference (&link -> imsg, MDL);
 		/* XXX This is dangerous because we could get into a tight
 		   XXX loop reading input without servicing any other stuff.
 		   XXX There needs to be a way to relinquish control but
