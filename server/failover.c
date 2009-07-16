@@ -3,7 +3,7 @@
    Failover protocol support code... */
 
 /*
- * Copyright (c) 2004-2008 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.63.56.23 2009/07/16 19:51:34 pselkirk Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.63.56.24 2009/07/16 22:00:48 pselkirk Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
