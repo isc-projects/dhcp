@@ -99,6 +99,9 @@ work on other platforms. Please report any problems and suggested fixes to
   failover pair could cause the primary to crash on contact with the
   secondary.  Thanks to a patch from Steinar Haug.
 
+- Don't look for IPv6 interfaces on Linux when running in DHCPv4 mode.
+  Thanks to patches from Matthew Newton and David Cantrell.
+
 			Changes since 4.1.0
 
 - Validate the argument to the -p option.
