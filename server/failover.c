@@ -597,7 +597,8 @@ isc_result_t dhcp_failover_link_signal (omapi_object_t *h,
 		omapi_signal ((omapi_object_t *)link -> state_object,
 			      "message", link);
 		link -> state = dhcp_flink_message_length_wait;
-		failover_message_dereference (&link -> imsg, MDL);
+		if (link -> imsg)
+			failover_message_dereference (&link -> imsg, MDL);
 		/* XXX This is dangerous because we could get into a tight
 		   XXX loop reading input without servicing any other stuff.
 		   XXX There needs to be a way to relinquish control but
