@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.159.16.11 2009/06/17 21:50:03 dhankins Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.159.16.12 2009/07/16 18:07:00 dhankins Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -633,6 +633,20 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 					break;
 				}
 				next_token (&val, (unsigned *)0, cfile);
+
+				/*
+				 * If the option was known, remove it from the
+				 * code and name hashes before redefining it.
+				 */
+				if (known) {
+					option_name_hash_delete(
+						option->universe->name_hash,
+							option->name, 0, MDL);
+					option_code_hash_delete(
+						option->universe->code_hash,
+							&option->code, 0, MDL);
+				}
+
 				parse_option_code_definition(cfile, option);
 				option_dereference(&option, MDL);
 				return declaration;

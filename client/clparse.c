@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.67.76.2 2007/02/14 22:41:22 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.67.76.3 2009/07/16 18:07:00 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -363,6 +363,7 @@ void parse_client_statement (cfile, ip, config)
 			return;
 		}
 
+		known = 0;
 		status = parse_option_name(cfile, 1, &known, &option);
 		if (status != ISC_R_SUCCESS || option == NULL)
 			return;
@@ -382,6 +383,18 @@ void parse_client_statement (cfile, ip, config)
 			option_dereference(&option, MDL);
 			return;
 		}
+
+		/*
+		 * If the option was known, remove it from the code and name
+		 * hash tables before redefining it.
+		 */
+		if (known) {
+			option_name_hash_delete(option->universe->name_hash,
+						option->name, 0, MDL);
+			option_code_hash_delete(option->universe->code_hash,
+						&option->code, 0, MDL);
+		}
+
 		parse_option_code_definition(cfile, option);
 		option_dereference(&option, MDL);
 		return;

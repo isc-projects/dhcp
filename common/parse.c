@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.117.8.9 2009/02/03 23:51:44 dhankins Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.117.8.10 2009/07/16 18:07:00 dhankins Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1554,9 +1554,18 @@ int parse_option_code_definition (cfile, option)
 	oldopt = NULL;
 	option_code_hash_lookup(&oldopt, option->universe->code_hash,
 				&option->code, 0, MDL);
-	if (oldopt) {
+	if (oldopt != NULL) {
+		/*
+		 * XXX: This illegalizes a configuration syntax that was
+		 * valid in 3.0.x, where multiple name->code mappings are
+		 * given, but only one code->name mapping survives.  It is
+		 * unclear what can or should be done at this point, but it
+		 * seems best to retain 3.0.x behaviour for upgrades to go
+		 * smoothly.
+		 *
 		option_name_hash_delete(option->universe->name_hash,
 					oldopt->name, 0, MDL);
+		 */
 		option_code_hash_delete(option->universe->code_hash,
 					&oldopt->code, 0, MDL);
 
