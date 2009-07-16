@@ -168,6 +168,9 @@ work on other platforms. Please report any problems and suggested fixes to
   failover pair could cause the primary to crash on contact with the
   secondary.  Thanks to a patch from Steinar Haug.
 
+- Don't look for IPv6 interfaces on Linux when running in DHCPv4 mode.
+  Thanks to patches from Matthew Newton and David Cantrell.
+
 			Changes since 4.1.0b1
 
 - A missing "else" in dhcrelay.c could have caused an interface not to
