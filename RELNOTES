@@ -95,6 +95,10 @@ work on other platforms. Please report any problems and suggested fixes to
   supported.  Note that, similarly to 3.0.x, for by-code lookups only the
   last option definition is used.
 
+- Fixed a bug where a time difference of greater than 60 seconds between a
+  failover pair could cause the primary to crash on contact with the
+  secondary.  Thanks to a patch from Steinar Haug.
+
 			Changes since 4.1.0
 
 - Validate the argument to the -p option.
