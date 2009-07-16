@@ -75,6 +75,9 @@ suggested fixes to <dhcp-users@isc.org>.
   failover pair could cause the primary to crash on contact with the
   secondary.  Thanks to a patch from Steinar Haug.
 
+- Don't look for IPv6 interfaces on Linux when running in DHCPv4 mode.
+  Thanks to patches from Matthew Newton and David Cantrell.
+
 			Changes since 4.0.1
 
 - Remove infinite loop in token_print_indent_concat().

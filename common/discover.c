@@ -443,15 +443,17 @@ begin_iface_scan(struct iface_conf_list *ifaces) {
 	}
 
 #ifdef DHCPv6
-	ifaces->fp6 = fopen("/proc/net/if_inet6", "r");
-	if (ifaces->fp6 == NULL) {
-		log_error("Error opening '/proc/net/if_inet6' to "
-			  "list IPv6 interfaces; %m");
-		close(ifaces->sock);
-		ifaces->sock = -1;
-		fclose(ifaces->fp);
-		ifaces->fp = NULL;
-		return 0;
+	if (local_family == AF_INET6) {
+		ifaces->fp6 = fopen("/proc/net/if_inet6", "r");
+		if (ifaces->fp6 == NULL) {
+			log_error("Error opening '/proc/net/if_inet6' to "
+				  "list IPv6 interfaces; %m");
+			close(ifaces->sock);
+			ifaces->sock = -1;
+			fclose(ifaces->fp);
+			ifaces->fp = NULL;
+			return 0;
+		}
 	}
 #endif
 
@@ -720,7 +722,8 @@ next_iface(struct iface_info *info, int *err, struct iface_conf_list *ifaces) {
 	}
 #ifdef DHCPv6
 	if (!(*err)) {
-		return next_iface6(info, err, ifaces);
+		if (local_family == AF_INET6)
+			return next_iface6(info, err, ifaces);
 	}
 #endif
 	return 0;
@@ -736,8 +739,10 @@ end_iface_scan(struct iface_conf_list *ifaces) {
 	close(ifaces->sock);
 	ifaces->sock = -1;
 #ifdef DHCPv6
-	fclose(ifaces->fp6);
-	ifaces->fp6 = NULL;
+	if (local_family == AF_INET6) {
+		fclose(ifaces->fp6);
+		ifaces->fp6 = NULL;
+	}
 #endif
 }
 #else
