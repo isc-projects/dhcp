@@ -65,7 +65,11 @@ suggested fixes to <dhcp-users@isc.org>.
 ! A stack overflow vulnerability was fixed in dhclient that could allow
   remote attackers to execute arbitrary commands as root on the system,
   or simply terminate the client, by providing an over-long subnet-mask
-  option.
+  option.  CERT VU#410676 - CVE-2009-0692
+
+- Versions 3.0.x syntax with multiple name->code option definitions is now
+  supported.  Note that, similarly to 3.0.x, for by-code lookups only the
+  last option definition is used.
 
 			Changes since 4.0.1
 
