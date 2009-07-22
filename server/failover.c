@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.63.56.25 2009/07/22 17:05:13 dhankins Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.63.56.26 2009/07/22 21:56:21 dhankins Exp $ Copyright (c) 2004-2008 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -5127,7 +5127,7 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 	 */
 	if (msg->binding_status == FTS_ACTIVE &&
 	    (chaddr_changed || ident_changed)) {
-		ddns_removals(lease, NULL);
+		ddns_removals(lease);
 
 		if (lease->scope != NULL)
 			binding_scope_dereference(&lease->scope, MDL);
