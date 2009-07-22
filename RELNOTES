@@ -85,6 +85,11 @@ suggested fixes to <dhcp-users@isc.org>.
   detected, rather than simply if a lease is noticed to have expired (which it
   may have expired without a failover server noticing in some situations).
 
+- A patch supplied by David Cantrell at RedHat was applied that detects
+  invalid calling parameters given to the ns_name_ntop() function.
+  Specifically, it detects if the caller passed a pointer and size pair
+  that causes the pointer to integer-wrap past zero.
+
 			Changes since 4.0.1
 
 - Remove infinite loop in token_print_indent_concat().
