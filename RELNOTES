@@ -178,6 +178,11 @@ work on other platforms. Please report any problems and suggested fixes to
   detected, rather than simply if a lease is noticed to have expired (which it
   may have expired without a failover server noticing in some situations).
 
+- A patch supplied by David Cantrell at RedHat was applied that detects
+  invalid calling parameters given to the ns_name_ntop() function.
+  Specifically, it detects if the caller passed a pointer and size pair
+  that causes the pointer to integer-wrap past zero.
+
 			Changes since 4.1.0b1
 
 - A missing "else" in dhcrelay.c could have caused an interface not to

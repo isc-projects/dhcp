@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static const char rcsid[] = "$Id: ns_name.c,v 1.2 2005/03/17 20:15:17 dhankins Exp $";
+static const char rcsid[] = "$Id: ns_name.c,v 1.3 2009/07/22 21:58:14 dhankins Exp $";
 #endif
 
 #include <sys/types.h>
@@ -70,6 +70,11 @@ ns_name_ntop(const u_char *src, char *dst, size_t dstsiz) {
 	cp = src;
 	dn = dst;
 	eom = dst + dstsiz;
+
+	if (dn >= eom) {
+		errno = EMSGSIZE;
+		return (-1);
+	}
 
 	while ((n = *cp++) != 0) {
 		if ((n & NS_CMPRSFLGS) != 0) {
