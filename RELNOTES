@@ -171,6 +171,13 @@ work on other platforms. Please report any problems and suggested fixes to
 - Don't look for IPv6 interfaces on Linux when running in DHCPv4 mode.
   Thanks to patches from Matthew Newton and David Cantrell.
 
+- Secondary servers in a failover pair will now perform ddns removals if
+  they had performed ddns updates on a lease that is expiring, or was
+  released through the primary.  As part of the same fix, stale binding scopes
+  will now be removed if a change in identity of a lease's active client is
+  detected, rather than simply if a lease is noticed to have expired (which it
+  may have expired without a failover server noticing in some situations).
+
 			Changes since 4.1.0b1
 
 - A missing "else" in dhcrelay.c could have caused an interface not to
