@@ -107,6 +107,13 @@ the README file.
   failover pair could cause the primary to crash on contact with the
   secondary.  Thanks to a patch from Steinar Haug.
 
+- Secondary servers in a failover pair will now perform ddns removals if
+  they had performed ddns updates on a lease that is expiring, or was
+  released through the primary.  As part of the same fix, stale binding scopes
+  will now be removed if a change in identity of a lease's active client is
+  detected, rather than simply if a lease is noticed to have expired (which it
+  may have expired without a failover server noticing in some situations).
+
 			Changes since 3.1.2rc1
 
 - None.
