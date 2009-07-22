@@ -4931,6 +4931,8 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 	int new_binding_state;
 	int send_to_backup = 0;
 	int required_options;
+	isc_boolean_t chaddr_changed = ISC_FALSE;
+	isc_boolean_t ident_changed = ISC_FALSE;
 
 	/* Validate the binding update. */
 	required_options = FTB_ASSIGNED_IP_ADDRESS | FTB_BINDING_STATUS;
@@ -5000,6 +5002,12 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 			message = "chaddr too long";
 			goto bad;
 		}
+
+		if ((lt->hardware_addr.hlen != msg->chaddr.count) ||
+		    (memcmp(lt->hardware_addr.hbuf, msg->chaddr.data,
+			    msg->chaddr.count) != 0))
+			chaddr_changed = ISC_TRUE;
+
 		lt -> hardware_addr.hlen = msg -> chaddr.count;
 		memcpy (lt -> hardware_addr.hbuf, msg -> chaddr.data,
 			msg -> chaddr.count);
@@ -5010,6 +5018,7 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 		reason = FTR_MISSING_BINDINFO;
 		goto bad;
 	} else if (msg->binding_status == FTS_ABANDONED) {
+		chaddr_changed = ISC_TRUE;
 		lt->hardware_addr.hlen = 0;
 		if (lt->scope)
 			binding_scope_dereference(&lt->scope, MDL);
@@ -5024,6 +5033,12 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 			message = "BNDUPD to ABANDONED with client-id";
 			goto bad;
 		}
+
+		if ((lt->uid_len != msg->client_identifier.count) ||
+		    (lt->uid == NULL) || /* Sanity; should never happen. */
+		    (memcmp(lt->uid, msg->client_identifier.data,
+			    lt->uid_len) != 0))
+			ident_changed = ISC_TRUE;
 
 		lt->uid_len = msg->client_identifier.count;
 
@@ -5053,15 +5068,45 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 	} else if (lt->uid && msg->binding_status != FTS_RESET &&
 		   msg->binding_status != FTS_FREE &&
 		   msg->binding_status != FTS_BACKUP) {
+		ident_changed = ISC_TRUE;
 		if (lt->uid != lt->uid_buf)
 			dfree (lt->uid, MDL);
 		lt->uid = NULL;
 		lt->uid_max = lt->uid_len = 0;
 	}
 
-	/* If the lease was expired, also remove the stale binding scope. */
-	if (lt->scope && lt->ends < cur_time)
-		binding_scope_dereference(&lt->scope, MDL);
+	/*
+	 * A server's configuration can assign a 'binding scope';
+	 *
+	 *	set var = "value";
+	 *
+	 * The problem with these binding scopes is that they are refreshed
+	 * when the server processes a client's DHCP packet.  A local binding
+	 * scope is trash, then, when the lease has been assigned by the
+	 * partner server.  There is no real way to detect this, a peer may
+	 * be updating us (as through potential conflict) with a binding we
+	 * sent them, but we can trivially detect the /problematic/ case;
+	 *
+	 *	lease is free.
+	 *	primary allocates lease to client A, assigns ddns name A.
+	 *	primary fails.
+	 *	secondary enters partner down.
+	 *	lease expires, and is set free.
+	 *	lease is allocated to client B and given ddns name B.
+	 *	primary recovers.
+	 *
+	 * The binding update in this case will be active->active, but the
+	 * client identification on the lease will have changed.  The ddns
+	 * update on client A will have leaked if we just remove the binding
+	 * scope blindly.
+	 */
+	if (msg->binding_status == FTS_ACTIVE &&
+	    (chaddr_changed || ident_changed)) {
+		ddns_removals(lease, NULL);
+
+		if (lease->scope != NULL)
+			binding_scope_dereference(&lease->scope, MDL);
+	}
 
 	/* XXX Times may need to be adjusted based on clock skew! */
 	if (msg -> options_present & FTB_STOS) {
