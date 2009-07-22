@@ -1462,6 +1462,21 @@ void make_binding_state_transition (struct lease *lease)
 	      lease -> binding_state == FTS_ACTIVE &&
 	      lease -> next_binding_state == FTS_RELEASED))) {
 #if defined (NSUPDATE)
+		/*
+		 * Note: ddns_removals() is also iterated when the lease
+		 * enters state 'released' in 'release_lease()'.  The below
+		 * is caught when a peer receives a BNDUPD from a failover
+		 * peer; it may not have received the client's release (it
+		 * may have been offline).
+		 *
+		 * We could remove the call from release_lease() because
+		 * it will also catch here on the originating server after the
+		 * peer acknowledges the state change.  However, there could
+		 * be many hours inbetween, and in this case we /know/ the
+		 * client is no longer using the lease when we receive the
+		 * release message.  This is not true of expiry, where the
+		 * peer may have extended the lease.
+		 */
 		ddns_removals(lease, NULL);
 #endif
 		if (lease -> on_release) {
