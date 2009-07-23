@@ -23,7 +23,7 @@
  *   950 Charter Street
  *   Redwood City, CA 94063
  *   <info@isc.org>
- *   http://www.isc.org/
+ *   https://www.isc.org/
  *
  * This software was written for RadioMail Corporation by Ted Lemon
  * under a contract with Vixie Enterprises.   Further modifications have
@@ -33,7 +33,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: errwarn.c,v 1.10 2005/03/17 20:15:21 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: errwarn.c,v 1.10.140.1 2009/07/23 21:43:35 sar Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include <omapip/omapip_p.h>

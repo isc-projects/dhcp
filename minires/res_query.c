@@ -71,12 +71,12 @@
  *   950 Charter Street
  *   Redwood City, CA 94063
  *   <info@isc.org>
- *   http://www.isc.org/
+ *   https://www.isc.org/
  */
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static const char sccsid[] = "@(#)res_query.c	8.1 (Berkeley) 6/4/93";
-static const char rcsid[] = "$Id: res_query.c,v 1.5.140.1 2007/05/29 17:49:44 each Exp $";
+static const char rcsid[] = "$Id: res_query.c,v 1.5.140.2 2009/07/23 21:43:35 sar Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 #include <sys/types.h>

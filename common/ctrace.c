@@ -22,17 +22,17 @@
  *   950 Charter Street
  *   Redwood City, CA 94063
  *   <info@isc.org>
- *   http://www.isc.org/
+ *   https://www.isc.org/
  *
  * This software has been written for Internet Systems Consortium
  * by Ted Lemon, as part of a project for Nominum, Inc.   To learn more
- * about Internet Systems Consortium, see http://www.isc.org/.  To
+ * about Internet Systems Consortium, see https://www.isc.org/.  To
  * learn more about Nominum, Inc., see ``http://www.nominum.com''.
  */
 
 #ifndef lint
 static char copyright[] =
-"$Id: ctrace.c,v 1.6 2006/08/09 14:57:47 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: ctrace.c,v 1.6.2.1 2009/07/23 21:43:33 sar Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"

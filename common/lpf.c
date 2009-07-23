@@ -23,12 +23,12 @@
  *   950 Charter Street
  *   Redwood City, CA 94063
  *   <info@isc.org>
- *   http://www.isc.org/
+ *   https://www.isc.org/
  */
 
 #ifndef lint
 static char copyright[] =
-"$Id: lpf.c,v 1.30.140.5 2009/02/20 00:13:40 dhankins Exp $ Copyright (c) 2004,2007-2008 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: lpf.c,v 1.30.140.6 2009/07/23 21:43:33 sar Exp $ Copyright (c) 2004,2007-2008 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"

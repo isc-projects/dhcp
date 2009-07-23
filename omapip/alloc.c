@@ -23,19 +23,19 @@
  *   950 Charter Street
  *   Redwood City, CA 94063
  *   <info@isc.org>
- *   http://www.isc.org/
+ *   https://www.isc.org/
  *
  * This software has been written for Internet Systems Consortium
  * by Ted Lemon in cooperation with Vixie Enterprises and Nominum, Inc.
  * To learn more about Internet Systems Consortium, see
- * ``http://www.isc.org/''.  To learn more about Vixie Enterprises,
+ * ``https://www.isc.org/''.  To learn more about Vixie Enterprises,
  * see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
  * ``http://www.nominum.com''.
  */
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.26.116.1 2009/04/07 20:00:42 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium, Inc.  All rights reserved.\n";
+"$Id: alloc.c,v 1.26.116.2 2009/07/23 21:43:35 sar Exp $ Copyright (c) 2004-2006 Internet Systems Consortium, Inc.  All rights reserved.\n";
 #endif /* not lint */
 
 #include <omapip/omapip_p.h>

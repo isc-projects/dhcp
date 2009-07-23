@@ -22,11 +22,11 @@
  *   950 Charter Street
  *   Redwood City, CA 94063
  *   <info@isc.org>
- *   http://www.isc.org/
+ *   https://www.isc.org/
  *
  * This software was written for Internet Systems Consortium
  * by Eric James Negaard, <lmdejn@lmd.ericsson.se>.  To learn more about
- * Internet Systems Consortium, see ``http://www.isc.org''.
+ * Internet Systems Consortium, see ``https://www.isc.org''.
  *
  * Joost Mulders has also done considerable work in debugging the DLPI API
  * support on Solaris and getting this code to work properly on a variety
@@ -79,7 +79,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dlpi.c,v 1.29.140.2 2007/05/23 23:30:32 each Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dlpi.c,v 1.29.140.3 2009/07/23 21:43:33 sar Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"

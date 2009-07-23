@@ -1,6 +1,6 @@
 <?xml version='1.0' ?>
 
-<!-- $Id: References.xml,v 1.1.2.6 2006/08/28 22:06:11 dhankins Exp $ -->
+<!-- $Id: References.xml,v 1.1.2.7 2009/07/23 21:43:34 sar Exp $ -->
 
 <?rfc private="ISC-DHCP-REFERENCES" ?>
 
@@ -65,6 +65,14 @@
 	'http://xml.resource.org/public/rfc/bibxml/reference.RFC.3942.xml'>
   <!ENTITY rfc4388 PUBLIC ''
 	'http://xml.resource.org/public/rfc/bibxml/reference.RFC.4388.xml'>
+  <!ENTITY rfc4701 PUBLIC ''
+	'http://xml.resource.org/public/rfc/bibxml/reference.RFC.4701.xml'>
+  <!ENTITY rfc4702 PUBLIC ''
+	'http://xml.resource.org/public/rfc/bibxml/reference.RFC.4702.xml'>
+  <!ENTITY rfc4703 PUBLIC ''
+	'http://xml.resource.org/public/rfc/bibxml/reference.RFC.4703.xml'>
+  <!ENTITY rfc4704 PUBLIC ''
+	'http://xml.resource.org/public/rfc/bibxml/reference.RFC.4704.xml'>
 ]>
 
 <rfc ipr="none">
@@ -89,10 +97,10 @@
       </address>
     </author>
 
-    <date month="August" year="2006"/>
+    <date month="May" year="2007"/>
 
     <note title="Copyright Notice">
-	<t>Copyright (c) 2006 by Internet Systems Consortium, Inc.
+	<t>Copyright (c) 2006,2009 by Internet Systems Consortium, Inc.
 	("ISC")</t>
 
 	<t>Permission to use, copy, modify, and distribute this software for
@@ -453,43 +461,35 @@
   	  sub-option.</t>
         </section>
 
-	<section title="Experimental: Dynamic DNS Updates References">
+	<section title="Dynamic DNS Updates References">
 	  <t>The collection of documents that describe the standards-based
-	  method to update dns names of DHCP clients is very near to
-	  RFC publication, despite the references listed below being
-	  drafts.  The sources currently shipped in ISC DHCP could still
-	  be called experimental, but the protocol itself could not.
-	  There will be at least one change in ISC DHCP's DDNS updates
-	  at some point in the future which may not be backwards
-	  compatible, but will be on a feature that probably won't be
-	  missed.</t>
+	  method to update dns names of DHCP clients starts most easily
+	  with <xref target="RFC4703">RFC4703</xref> to define the overall
+	  architecture, travels through RFCs <xref target="RFC4702">4702</xref>
+	  and <xref target="RFC4704">4704</xref> to describe the DHCPv4 and
+	  DHCPv6 FQDN options (to carry the client name), and ends up at
+	  <xref target="RFC4701">RFC4701</xref> which describes the DHCID
+	  RR used in DNS to perform a kind of atomic locking.</t>
 
-	  <t>The status of this experiment is fairly sure.</t>
+	  <t>ISC DHCP adoped early versions of these documents, and has not
+	  yet synched up with the final standards versions.</t>
 
-	  <t><xref target="draft-fqdn">draft-ietf-dhc-fqdn-option-13.txt</xref>
-	  defines the FQDN option which is the basis of what ISC DHCP terms
-	  "interim style" DDNS updates.</t>
+	  <t>For RFCs 4702 and 4704, the 'N' bit is not yet supported.  The
+	  result is that it is always set zero, and is ignored if set.</t>
 
-	  <t><xref target="draft-ddns-resolution">
-	  draft-ietf-dhc-ddns-resolution-12.txt</xref> describes a process
-	  through which multiple DHCP servers and clients may all act upon
-	  a single DNS resource and insure there are no collisions.</t>
-
-	  <t><xref target="draft-dhcid">
-	  draft-ietf-dnsext-dhcid-rr-13.txt</xref> defines the DHCID DNS
-	  RR type, which is used to match client identities with names in
-	  the DNS as part of name conflict resolution.  Note that ISC DHCP's
+	  <t>For RFC4701, which is used to match client identities with names
+	  in the DNS as part of name conflict resolution.  Note that ISC DHCP's
 	  implementation of DHCIDs vary wildly from this specification.
 	  First, ISC DHCP uses a TXT record in which the contents are stored
 	  in hexadecimal.  Second, there is a flaw in the selection of the
 	  'Identifier Type', which results in a completely different value
-	  being selected than is defined (or even than was defined in an older
-	  revision of this draft)...also this field is one byte prior to
-	  hexadecimal encoding rather than two.  Third, ISC DHCP does not
-	  use a digest type code.  Rather, all values for such TXT records
-	  are reached via an MD5 sum.  In short, nothing is compatible, but
-	  the principle of the TXT record is the same as the standard DHCID
-	  record.</t>
+	  being selected than was defined in an older revision of this
+	  document...also this field is one byte prior to hexadecimal
+	  encoding rather than two.  Third, ISC DHCP does not use a digest
+	  type code.  Rather, all values for such TXT records are reached
+	  via an MD5 sum.  In short, nothing is compatible, but the
+	  principle of the TXT record is the same as the standard DHCID
+	  record.  </t>
 	</section>
 
 	<section title="Experimental: Failover References">
@@ -565,6 +565,10 @@
 	&rfc3925;
 	&rfc3942;
 	&rfc4388;
+	&rfc4701;
+	&rfc4702;
+	&rfc4703;
+	&rfc4704;
 
 	<reference anchor='draft-failover'>
 	  <front>
@@ -576,46 +580,7 @@
 
 	    <date month='March' year='2003'/>
 	  </front>
-	  <format type="TXT" octets="312151" target="http://www.isc.org/sw/dhcp/drafts/draft-ietf-dhc-failover-12.txt"/>
-	</reference>
-
-	<reference anchor='draft-fqdn'>
-	  <front>
-	    <title>The DHCP Client FQDN Option</title>
-
-	    <author initials='M.' surname='Stapp' fullname='Mark Stapp'>
-		<organization abbrev='Cisco'>Cisco Systems, Inc.</organization>
-	    </author>
-
-	    <date month='September' year='2006'/>
-	  </front>
-	  <format type="TXT" octets="38241" target="http://www.isc.org/sw/dhcp/drafts/draft-ietf-dhc-fqdn-option-13.txt"/>
-	</reference>
-
-	<reference anchor='draft-ddns-resolution'>
-	  <front>
-	    <title>Resolution of FQDN Conflicts among DHCP Clients</title>
-
-	    <author initials='M.' surname='Stapp' fullname='Mark Stapp'>
-		<organization abbrev='Cisco'>Cisco Systems, Inc.</organization>
-	    </author>
-
-	    <date month='September' year='2006'/>
-	  </front>
-	  <format type="TXT" octets="30459" target="http://www.isc.org/sw/dhcp/drafts/draft-ietf-dhc-ddns-resolution-12.txt"/>
-	</reference>
-
-	<reference anchor='draft-dhcid'>
-	  <front>
-	    <title>A DNS RR for Encoding DHCP Information</title>
-
-	    <author initials='M.' surname='Stapp' fullname='Mark Stapp'>
-		<organization abbrev='Cisco'>Cisco Systems, Inc.</organization>
-	    </author>
-
-	    <date month='September' year='2006'/>
-	  </front>
-	  <format type="TXT" octets="25276" target="http://www.isc.org/sw/dhcp/drafts/draft-ietf-dnsext-dhcid-rr-13.txt"/>
+	  <format type="TXT" octets="312151" target="https://www.isc.org/sw/dhcp/drafts/draft-ietf-dhc-failover-12.txt"/>
 	</reference>
     </references>
   </back>

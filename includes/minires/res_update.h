@@ -18,11 +18,11 @@
  *   950 Charter Street
  *   Redwood City, CA 94063
  *   <info@isc.org>
- *   http://www.isc.org/
+ *   https://www.isc.org/
  */
 
 /*
- *	$Id: res_update.h,v 1.4 2005/03/17 20:15:15 dhankins Exp $
+ *	$Id: res_update.h,v 1.4.140.1 2009/07/23 21:43:34 sar Exp $
  */
 
 #ifndef __RES_UPDATE_H

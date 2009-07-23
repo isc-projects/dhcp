@@ -1,6 +1,6 @@
 # Makefile.dist
 #
-# Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+# Copyright (c) 2004,2009 by Internet Systems Consortium, Inc. ("ISC")
 # Copyright (c) 1996-2003 by Internet Software Consortium
 #
 # Permission to use, copy, modify, and distribute this software for any
@@ -19,7 +19,7 @@
 #   950 Charter Street
 #   Redwood City, CA 94063
 #   <info@isc.org>
-#   http://www.isc.org/
+#   https://www.isc.org/
 
 SRC    = dst_support.c dst_api.c hmac_link.c md5_dgst.c base64.c prandom.c
 OBJ    = dst_support.o dst_api.o hmac_link.o md5_dgst.o base64.o prandom.o

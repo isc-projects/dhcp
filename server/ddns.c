@@ -22,19 +22,19 @@
  *   950 Charter Street
  *   Redwood City, CA 94063
  *   <info@isc.org>
- *   http://www.isc.org/
+ *   https://www.isc.org/
  *
  * This software has been donated to Internet Systems Consortium
  * by Damien Neil of Nominum, Inc.
  *
  * To learn more about Internet Systems Consortium, see
- * ``http://www.isc.org/''.   To learn more about Nominum, Inc., see
+ * ``https://www.isc.org/''.   To learn more about Nominum, Inc., see
  * ``http://www.nominum.com''.
  */
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.23.10.3 2007/04/27 22:48:10 each Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.23.10.4 2009/07/23 21:43:35 sar Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"

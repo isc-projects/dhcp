@@ -23,7 +23,7 @@
  *   950 Charter Street
  *   Redwood City, CA 94063
  *   <info@isc.org>
- *   http://www.isc.org/
+ *   https://www.isc.org/
  *
  * This software was written for RadioMail Corporation by Ted Lemon
  * under a contract with Vixie Enterprises.   Further modifications have

@@ -24,17 +24,17 @@
  *   950 Charter Street
  *   Redwood City, CA 94063
  *   <info@isc.org>
- *   http://www.isc.org/
+ *   https://www.isc.org/
  *
  * This software has been written for Internet Systems Consortium
  * by Ted Lemon, as part of a project for Nominum, Inc.   To learn more
- * about Internet Systems Consortium, see http://www.isc.org/.  To
+ * about Internet Systems Consortium, see https://www.isc.org/.  To
  * learn more about Nominum, Inc., see ``http://www.nominum.com''.
  */
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: trace.c,v 1.12.116.2 2007/05/23 23:30:33 each Exp $ Copyright 2004-2006 Internet Systems Consortium.";
+"$Id: trace.c,v 1.12.116.3 2009/07/23 21:43:35 sar Exp $ Copyright 2004-2006 Internet Systems Consortium.";
 #endif
 
 #include <omapip/omapip_p.h>

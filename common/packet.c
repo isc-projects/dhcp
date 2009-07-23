@@ -23,7 +23,7 @@
  *   950 Charter Street
  *   Redwood City, CA 94063
  *   <info@isc.org>
- *   http://www.isc.org/
+ *   https://www.isc.org/
  *
  * This code was originally contributed by Archie Cobbs, and is still
  * very similar to that contribution, although the packet checksum code
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: packet.c,v 1.45.2.3 2009/02/20 00:13:40 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: packet.c,v 1.45.2.4 2009/07/23 21:43:34 sar Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"

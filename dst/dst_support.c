@@ -1,4 +1,4 @@
-static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/dst_support.c,v 1.1.272.2 2008/01/22 19:02:51 dhankins Exp $";
+static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/dst_support.c,v 1.1.272.3 2009/07/23 21:43:34 sar Exp $";
 
 /*
  * Portions Copyright (c) 1995-1998 by Trusted Information Systems, Inc.
@@ -37,7 +37,7 @@ static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/dst_support.c,v 1.1.
  *   950 Charter Street
  *   Redwood City, CA 94063
  *   <info@isc.org>
- *   http://www.isc.org/
+ *   https://www.isc.org/
  */
 
 #include <stdio.h>
