@@ -1,6 +1,6 @@
 <?xml version='1.0' ?>
 
-<!-- $Id: References.xml,v 1.3 2007/05/19 19:16:25 dhankins Exp $ -->
+<!-- $Id: References.xml,v 1.3.400.1 2009/07/23 19:02:09 sar Exp $ -->
 
 <?rfc private="ISC-DHCP-REFERENCES" ?>
 
@@ -120,7 +120,7 @@
     <date month="May" year="2007"/>
 
     <note title="Copyright Notice">
-	<t>Copyright (c) 2006-2007 by Internet Systems Consortium, Inc.
+	<t>Copyright (c) 2006-2007,2009 by Internet Systems Consortium, Inc.
 	("ISC")</t>
 
 	<t>Permission to use, copy, modify, and distribute this software for
@@ -510,7 +510,7 @@
 	for the purpose of sharing information about DHCP served addresses
 	and clients.</t>
 
-	<t><xref target="RFC4580">RFC4580></xref> defines a DHCPv6
+	<t><xref target="RFC4580">RFC4580</xref> defines a DHCPv6
 	subscriber-id option, which is similar in principle to the DHCPv4
 	relay agent option of the same name.</t>
 
@@ -660,7 +660,7 @@
 
 	    <date month='March' year='2003'/>
 	  </front>
-	  <format type="TXT" octets="312151" target="http://www.isc.org/sw/dhcp/drafts/draft-ietf-dhc-failover-12.txt"/>
+	  <format type="TXT" octets="312151" target="https://www.isc.org/sw/dhcp/drafts/draft-ietf-dhc-failover-12.txt"/>
 	</reference>
     </references>
   </back>

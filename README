@@ -486,7 +486,7 @@ sponsors.  ISC now also offers commercial quality support contracts for
 ISC DHCP, more information about ISC Support Contracts can be found at
 the following URL:
 
-	http://www.isc.org/sw/support/
+	https://www.isc.org/services/support/
 
 Please understand that we may not respond to support inquiries unless
 you have a support contract.  ISC will continue its practice of always
@@ -590,6 +590,6 @@ bug reports are more likely to get handled more quickly overall.
 	  This assumes that it's the dhcp server you're debugging, and
 	  that the core file is in dhcpd.core.
 
-Please see http://www.isc.org/sw/dhcp/ for details on how to subscribe
+Please see https://www.isc.org/software/dhcp/ for details on how to subscribe
 to the ISC DHCP mailing lists.
 

@@ -22,7 +22,7 @@
  *   950 Charter Street
  *   Redwood City, CA 94063
  *   <info@isc.org>
- *   http://www.isc.org/
+ *   https://www.isc.org/
  *
  * This code is based on the original client state machine that was
  * written by Elliot Poger.  The code has been extensively hacked on
@@ -65,7 +65,7 @@ struct data_string default_duid;
 static const char copyright[] = "Copyright 2004-2009 Internet Systems Consortium.";
 static const char arr [] = "All rights reserved.";
 static const char message [] = "Internet Systems Consortium DHCP Client";
-static const char url [] = "For info, please visit http://www.isc.org/sw/dhcp/";
+static const char url [] = "For info, please visit https://www.isc.org/software/dhcp/";
 
 u_int16_t local_port = 0;
 u_int16_t remote_port = 0;
