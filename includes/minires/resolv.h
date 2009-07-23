@@ -51,12 +51,12 @@
  *   950 Charter Street
  *   Redwood City, CA 94063
  *   <info@isc.org>
- *   http://www.isc.org/
+ *   https://www.isc.org/
  */
 
 /*
  *	@(#)resolv.h	8.1 (Berkeley) 6/2/93
- *	$Id: resolv.h,v 1.4.580.2 2008/02/08 18:46:34 dhankins Exp $
+ *	$Id: resolv.h,v 1.4.580.3 2009/07/23 19:14:11 sar Exp $
  */
 
 #ifndef _RESOLV_H_

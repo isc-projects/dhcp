@@ -17,7 +17,7 @@
 #   950 Charter Street
 #   Redwood City, CA 94063
 #   <info@isc.org>
-#   http://www.isc.org/
+#   https://www.isc.org/
 
 all: References.txt References.html
 

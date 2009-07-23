@@ -18,7 +18,7 @@
  *   950 Charter Street
  *   Redwood City, CA 94063
  *   <info@isc.org>
- *   http://www.isc.org/
+ *   https://www.isc.org/
  */
 
 /*
@@ -27,7 +27,7 @@
  */
 
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_mkupdate.c,v 1.11.140.1 2008/11/03 21:42:48 dhankins Exp $";
+static const char rcsid[] = "$Id: res_mkupdate.c,v 1.11.140.2 2009/07/23 19:14:11 sar Exp $";
 #endif /* not lint */
 
 #include <sys/types.h>

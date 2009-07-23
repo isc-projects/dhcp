@@ -22,13 +22,13 @@
  *   950 Charter Street
  *   Redwood City, CA 94063
  *   <info@isc.org>
- *   http://www.isc.org/
+ *   https://www.isc.org/
  *
  * This software has been donated to Internet Systems Consortium
  * by Damien Neil of Nominum, Inc.
  *
  * To learn more about Internet Systems Consortium, see
- * ``http://www.isc.org/''.   To learn more about Nominum, Inc., see
+ * ``https://www.isc.org/''.   To learn more about Nominum, Inc., see
  * ``http://www.nominum.com''.
  */
 
