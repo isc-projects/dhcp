@@ -18,11 +18,11 @@
  *   950 Charter Street
  *   Redwood City, CA 94063
  *   <info@isc.org>
- *   http://www.isc.org/
+ *   https://www.isc.org/
  */
 
 #ifndef lint
-static const char rcsid[] = "$Id: ns_verify.c,v 1.9 2007/09/05 17:32:10 dhankins Exp $";
+static const char rcsid[] = "$Id: ns_verify.c,v 1.10 2009/07/23 18:52:20 sar Exp $";
 #endif
 
 /* Import. */

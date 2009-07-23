@@ -22,7 +22,7 @@
  *   950 Charter Street
  *   Redwood City, CA 94063
  *   <info@isc.org>
- *   http://www.isc.org/
+ *   https://www.isc.org/
  *
  * This code was originally contributed by Archie Cobbs, and is still
  * very similar to that contribution, although the packet checksum code

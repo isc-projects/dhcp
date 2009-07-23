@@ -22,11 +22,11 @@
  *   950 Charter Street
  *   Redwood City, CA 94063
  *   <info@isc.org>
- *   http://www.isc.org/
+ *   https://www.isc.org/
  *
  * This software has been written for Internet Systems Consortium
  * by Ted Lemon in cooperation with Vixie Enterprises.  To learn more
- * about Internet Systems Consortium, see ``http://www.isc.org''.
+ * about Internet Systems Consortium, see ``https://www.isc.org''.
  * To learn more about Vixie Enterprises, see ``http://www.vix.com''.
  */
 

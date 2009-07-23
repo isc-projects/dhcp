@@ -22,7 +22,7 @@
  *   950 Charter Street
  *   Redwood City, CA 94063
  *   <info@isc.org>
- *   http://www.isc.org/
+ *   https://www.isc.org/
  *
  * This software was contributed to Internet Systems Consortium
  * by Brian Murrell.
