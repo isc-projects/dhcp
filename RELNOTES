@@ -114,6 +114,9 @@ work on other platforms. Please report any problems and suggested fixes to
   Specifically, it detects if the caller passed a pointer and size pair
   that causes the pointer to integer-wrap past zero.
 
+- Fixed a fenceposting bug when a client had two host records configured,
+  one using 'uid' and the other using 'hardware ethernet'.
+
 			Changes since 4.1.0
 
 - Validate the argument to the -p option.

@@ -1753,6 +1753,8 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 			}
 			if (h)
 				host_reference (&host, h, MDL);
+			if (hp != NULL)
+				host_dereference(&hp, MDL);
 		}
 		if (!host) {
 			find_hosts_by_haddr (&hp,
@@ -1766,9 +1768,9 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 			}
 			if (h)
 				host_reference (&host, h, MDL);
+			if (hp != NULL)
+				host_dereference(&hp, MDL);
 		}
-		if (hp)
-			host_dereference (&hp, MDL);
 	}
 
 	/* If we have a host_decl structure, run the options associated
