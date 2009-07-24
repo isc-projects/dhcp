@@ -119,6 +119,9 @@ the README file.
   Specifically, it detects if the caller passed a pointer and size pair
   that causes the pointer to integer-wrap past zero.
 
+- Fixed a fenceposting bug when a client had two host records configured,
+  one using 'uid' and the other using 'hardware ethernet'.
+
 			Changes since 3.1.2rc1
 
 - None.
