@@ -32,7 +32,7 @@
  */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004,2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -55,7 +55,7 @@
  */
 
 /*
- *	$Id: nameser.h,v 1.5.580.1 2009/07/23 19:14:11 sar Exp $
+ *	$Id: nameser.h,v 1.5.580.2 2009/08/06 22:05:34 sar Exp $
  */
 
 #ifndef _ARPA_NAMESER_H_

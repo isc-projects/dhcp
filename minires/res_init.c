@@ -52,7 +52,7 @@
  */
 
 /*
- * Portions Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
+ * Portions Copyright (c) 2004,2007,2009 by Internet Systems Consortium, Inc. ("ISC")
  * Portions Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -76,7 +76,7 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static const char sccsid[] = "@(#)res_init.c	8.1 (Berkeley) 6/7/93";
-static const char rcsid[] = "$Id: res_init.c,v 1.10.102.1 2009/07/23 19:14:11 sar Exp $";
+static const char rcsid[] = "$Id: res_init.c,v 1.10.102.2 2009/08/06 22:05:34 sar Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 #include <sys/types.h>
