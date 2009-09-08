@@ -1825,7 +1825,7 @@ isc_result_t dhcp_failover_set_state (dhcp_failover_state_t *state,
 		break;
 
 #if defined (DEBUG_FAILOVER_TIMING)
-	    log_info("add_timeout +%ul dhcp_failover_auto_partner_down",
+	    log_info("add_timeout +%lu dhcp_failover_auto_partner_down",
 		      (unsigned long)state->auto_partner_down);
 #endif
 	    tv.tv_sec = cur_time + state->auto_partner_down;
