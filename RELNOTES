@@ -186,6 +186,9 @@ work on other platforms. Please report any problems and suggested fixes to
 - Fixed a fenceposting bug when a client had two host records configured,
   one using 'uid' and the other using 'hardware ethernet'.
 
+- Fixed the check in the dhcp_interface_signal_handler routine to verify
+  the existence of the linked signal handler before calling it.
+
 			Changes since 4.1.0b1
 
 - A missing "else" in dhcrelay.c could have caused an interface not to
