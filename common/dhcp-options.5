@@ -1,4 +1,4 @@
-.\"	$Id: dhcp-options.5,v 1.44 2009/07/23 18:52:19 sar Exp $
+.\"	$Id: dhcp-options.5,v 1.45 2009/09/11 18:13:12 dhankins Exp $
 .\"
 .\" Copyright (c) 2004-2008 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
@@ -364,7 +364,11 @@ return.
 This option specifies the number of seconds from the time a client gets
 an address until the client transitions to the REBINDING state.
 .PP
-This option is not user configurable.
+This option is user configurable, but it will be ignored if the value is
+greater than the lease time.
+.PP
+To make DHCPv4+DHCPv6 migration easier in the future, any value configured
+in this option is also used as a DHCPv6 "T1" (renew) time.
 .PP
 .RE
 .PP
@@ -374,7 +378,11 @@ This option is not user configurable.
 This option specifies the number of seconds from the time a client gets
 an address until the client transitions to the RENEWING state.
 .PP
-This option is not user configurable.
+This option is user configurable, but it will be ignored if the value is
+greater than the rebinding time, or lease time.
+.PP
+To make DHCPv4+DHCPv6 migration easier in the future, any value configured
+in this option is also used as a DHCPv6 "T2" (rebind) time.
 .PP
 .RE
 .PP

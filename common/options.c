@@ -642,6 +642,8 @@ cons_options(struct packet *inpacket, struct dhcp_packet *outpacket,
 	priority_list[priority_len++] = DHO_DHCP_MESSAGE_TYPE;
 	priority_list[priority_len++] = DHO_DHCP_SERVER_IDENTIFIER;
 	priority_list[priority_len++] = DHO_DHCP_LEASE_TIME;
+	priority_list[priority_len++] = DHO_DHCP_RENEWAL_TIME;
+	priority_list[priority_len++] = DHO_DHCP_REBINDING_TIME;
 	priority_list[priority_len++] = DHO_DHCP_MESSAGE;
 	priority_list[priority_len++] = DHO_DHCP_REQUESTED_ADDRESS;
 	priority_list[priority_len++] = DHO_ASSOCIATED_IP;
@@ -656,6 +658,10 @@ cons_options(struct packet *inpacket, struct dhcp_packet *outpacket,
 
 		data_string_truncate(prl, (PRIORITY_COUNT - priority_len));
 
+		/*
+		 * Copy the client's PRL onto the priority_list after our high
+		 * priority header.
+		 */
 		for (i = 0; i < prl->len; i++) {
 			/*
 			 * Prevent client from changing order of delivery

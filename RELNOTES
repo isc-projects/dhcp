@@ -66,6 +66,11 @@ work on other platforms. Please report any problems and suggested fixes to
   scope, or having a DHCP client send any system hostname in the host-name or
   FQDN options by default).
 
+- The dhcp-renewal-time and dhcp-rebinding-time options may now be configured
+  for DHCPv4 operation and used independently of the dhcp-lease-time
+  calculations.  Invalid renew and rebinding times (e.g., greater than the
+  determined lease time) are omitted.
+
 			Changes since 4.1.0 (bug fixes)
 
 - Remove infinite loop in token_print_indent_concat().

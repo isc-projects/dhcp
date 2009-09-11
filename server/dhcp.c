@@ -2546,39 +2546,38 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 			option_cache_dereference (&oc, MDL);
 		}
 
-		/* Renewal time is lease time * 0.5. */
-		offered_lease_time /= 2;
-		putULong(state->renewal, (u_int32_t)offered_lease_time);
-		i = DHO_DHCP_RENEWAL_TIME;
-		oc = (struct option_cache *)0;
-		if (option_cache_allocate (&oc, MDL)) {
-			if (make_const_data(&oc->expression, state->renewal,
-					    4, 0, 0, MDL)) {
-				option_code_hash_lookup(&oc->option,
-							dhcp_universe.code_hash,
-							&i, 0, MDL);
-				save_option (&dhcp_universe,
-					     state -> options, oc);
-			}
-			option_cache_dereference (&oc, MDL);
+		/*
+		 * Validate any configured renew or rebinding times against
+		 * the determined lease time.  Do rebinding first so that
+		 * the renew time can be validated against the rebind time.
+		 */
+		if ((oc = lookup_option(&dhcp_universe, state->options,
+					DHO_DHCP_REBINDING_TIME)) != NULL &&
+		    evaluate_option_cache(&d1, packet, lease, NULL,
+					  packet->options, state->options,
+					  &lease->scope, oc, MDL)) {
+			TIME rebind_time = getULong(d1.data);
+
+			/* Drop the configured (invalid) rebinding time. */
+			if (rebind_time >= offered_lease_time)
+				delete_option(&dhcp_universe, state->options,
+					      DHO_DHCP_REBINDING_TIME);
+			else /* XXX: variable is reused. */
+				offered_lease_time = rebind_time;
+
+			data_string_forget(&d1, MDL);
 		}
 
-		/* Rebinding time is lease time * 0.875. */
-		offered_lease_time += (offered_lease_time / 2
-				       + offered_lease_time / 4);
-		putULong(state->rebind, (u_int32_t)offered_lease_time);
-		i = DHO_DHCP_REBINDING_TIME;
-		oc = (struct option_cache *)0;
-		if (option_cache_allocate (&oc, MDL)) {
-			if (make_const_data(&oc->expression, state->rebind,
-					    4, 0, 0, MDL)) {
-				option_code_hash_lookup(&oc->option,
-							dhcp_universe.code_hash,
-							&i, 0, MDL);
-				save_option (&dhcp_universe,
-					     state -> options, oc);
-			}
-			option_cache_dereference (&oc, MDL);
+		if ((oc = lookup_option(&dhcp_universe, state->options,
+					DHO_DHCP_RENEWAL_TIME)) != NULL &&
+		    evaluate_option_cache(&d1, packet, lease, NULL,
+					  packet->options, state->options,
+					  &lease->scope, oc, MDL)) {
+			if (getULong(d1.data) >= offered_lease_time)
+				delete_option(&dhcp_universe, state->options,
+					      DHO_DHCP_RENEWAL_TIME);
+
+			data_string_forget(&d1, MDL);
 		}
 	} else {
 		/* XXXSK: should we use get_server_source_address() here? */

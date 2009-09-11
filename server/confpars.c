@@ -754,26 +754,6 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 				return declaration;
 			}
 
-			/*
-			 * If the configuration attempts to define on option
-			 * that we ignore, then warn about it now.
-			 *
-			 * In DHCPv4 we do not use dhcp-renewal-time or
-			 * dhcp-rebinding-time, but we use these in DHCPv6.
-			 *
-			 * XXX: We may want to include a "blacklist" of 
-			 *      options we ignore in the future, as a table.
-			 */
-			if ((option->code == DHO_DHCP_LEASE_TIME) ||
-			    ((local_family != AF_INET6) && 
-			     ((option->code == DHO_DHCP_RENEWAL_TIME) ||
-			      (option->code == DHO_DHCP_REBINDING_TIME))))
-			{
-				log_error("WARNING: server ignoring option %s "
-				          "in configuration file.",
-                                          option->name);
-			}
-
 		      finish_option:
 			et = (struct executable_statement *)0;
 			if (!parse_option_statement
