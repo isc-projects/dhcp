@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.105 2009/07/23 18:52:21 sar Exp $
+.\" $Id: dhcpd.conf.5,v 1.106 2009/09/14 18:51:46 jreed Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -437,10 +437,9 @@ server into the PARTNER-DOWN state.
 .PP
 You can put the server into the PARTNER-DOWN state either by using the
 .B omshell (1)
-command or by stopping the server, editing the last peer state
+command or by stopping the server, editing the last failover state
 declaration in the lease file, and restarting the server.   If you use
-this last method, be sure to leave the date and time of the start of
-the state blank:
+this last method, change the "my state" line to:
 .PP
 .nf
 .B failover peer "\fIname\fB" state {
@@ -448,6 +447,8 @@ the state blank:
 .B   peer state \fIstate\fB at \fIdate\fB;
 .B }
 .fi
+.PP
+It is only required to change "my state" as shown above.
 .PP
 When the other server comes back online, it should automatically
 detect that it has been offline and request a complete update from the
