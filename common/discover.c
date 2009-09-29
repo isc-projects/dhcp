@@ -1559,7 +1559,7 @@ isc_result_t dhcp_interface_signal_handler (omapi_object_t *h,
 	}
 
 	/* Try to find some inner object that can take the value. */
-	if (h -> inner && h -> inner -> type -> get_value) {
+	if (h -> inner && h -> inner -> type -> signal_handler) {
 		status = ((*(h -> inner -> type -> signal_handler))
 			  (h -> inner, name, ap));
 		if (status == ISC_R_SUCCESS)
