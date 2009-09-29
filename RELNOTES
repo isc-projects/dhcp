@@ -51,6 +51,10 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and
 may not work on other platforms. Please report any problems and 
 suggested fixes to <dhcp-users@isc.org>.
 
+			Changes since 4.0.2b2
+
+- Fix test in dhcp_interface_signal_handler to check that the inner handler
+  has a signal_handler before calling it.
 
 			Changes since 4.0.2b1
 
