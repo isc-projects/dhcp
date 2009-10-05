@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
 			      Version 3.1.3
-			     October 1, 2009
+			     October 5, 2009
 
 			      Release Notes
 
@@ -127,8 +127,8 @@ the README file.
   Specifically, it detects if the caller passed a pointer and size pair
   that causes the pointer to integer-wrap past zero.
 
-- Fixed a fenceposting bug when a client had two host records configured,
-  one using 'uid' and the other using 'hardware ethernet'.
+! Fixed a fenceposting bug when a client had two host records configured,
+  one using 'uid' and the other using 'hardware ethernet'.  CVE-2009-1892
 
 			Changes since 3.1.2rc1
 
