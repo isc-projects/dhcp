@@ -94,8 +94,8 @@ suggested fixes to <dhcp-users@isc.org>.
   Specifically, it detects if the caller passed a pointer and size pair
   that causes the pointer to integer-wrap past zero.
 
-- Fixed a fenceposting bug when a client had two host records configured,
-  one using 'uid' and the other using 'hardware ethernet'.
+! Fixed a fenceposting bug when a client had two host records configured,
+  one using 'uid' and the other using 'hardware ethernet'.  CVE-2009-1892
 
 			Changes since 4.0.1
 
