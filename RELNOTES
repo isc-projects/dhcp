@@ -60,6 +60,9 @@ work on other platforms. Please report any problems and suggested fixes to
   over-riding vlaues were not present in a matching fixed-address6 host
   configuration.
 
+- ./configure now checks to ensure the intX_t and u_intX_t types are defined,
+  correcting a compilation failure when using Sun's compiler.
+
 			Changes since 4.1.1b1
 
 - Remove infinite loop in token_print_indent_concat().

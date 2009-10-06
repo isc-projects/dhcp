@@ -318,6 +318,28 @@ AC_ARG_WITH(relay-pid-file,
 	AC_DEFINE_UNQUOTED([_PATH_DHCRELAY_PID], ["$withval"],
 			   [File for dhcrelay process information.]))
 
+# Check basic types.
+AC_TYPE_INT8_T
+AC_TYPE_INT16_T
+AC_TYPE_INT32_T
+
+# Some systems need the u_intX_t types defined across.
+AC_CHECK_TYPE([u_int8_t], [], [
+  AC_TYPE_UINT8_T
+  AC_DEFINE(u_int8_t, [uint8_t], [Define a type for 8-bit unsigned
+				  integers.])
+])
+AC_CHECK_TYPE([u_int16_t], [], [
+  AC_TYPE_UINT16_T
+  AC_DEFINE(u_int16_t, [uint16_t], [Define a type for 16-bit unsigned
+				    integers.])
+])
+AC_CHECK_TYPE([u_int32_t], [], [
+  AC_TYPE_UINT32_T
+  AC_DEFINE(u_int32_t, [uint32_t], [Define a type for 32-bit unsigned
+				    integers.])
+])
+
 # see if ifaddrs.h is available
 AC_CHECK_HEADERS(ifaddrs.h)
 
