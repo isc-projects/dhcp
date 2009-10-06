@@ -56,6 +56,9 @@ suggested fixes to <dhcp-users@isc.org>.
 - Fix test in dhcp_interface_signal_handler to check that the inner handler
   has a signal_handler before calling it.
 
+- ./configure now checks to ensure the intX_t and u_intX_t types are defined,
+  correcting a compilation failure when using Sun's compiler.
+
 			Changes since 4.0.2b1
 
 - Fixed a bug where an OMAPI socket disconnection message would not result
