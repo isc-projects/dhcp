@@ -59,6 +59,11 @@ suggested fixes to <dhcp-users@isc.org>.
 - ./configure now checks to ensure the intX_t and u_intX_t types are defined,
   correcting a compilation failure when using Sun's compiler.
 
+- Modified the handling of a connection to avoid releasing the omapi io
+  object for the connection while it is still in use.  One symptom from
+  this error was a segfault when a failover secondary attempted to connect
+  to the failover primary if their clocks were not synchronized.
+
 			Changes since 4.0.2b1
 
 - Fixed a bug where an OMAPI socket disconnection message would not result

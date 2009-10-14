@@ -107,6 +107,50 @@ isc_result_t omapi_register_io_object (omapi_object_t *h,
 	return ISC_R_SUCCESS;
 }
 
+/* ReRegister an I/O handle so that we can do asynchronous I/O on it.
+ * If the handle doesn't exist we call the register routine to build it.
+ * if it does exist we change the functions associated with it, and
+ * repoke the fd code to make it happy.  Neither the objects nor the
+ * fd are allowed to have changed. */
+
+isc_result_t omapi_reregister_io_object (omapi_object_t *h,
+					 int (*readfd) (omapi_object_t *),
+					 int (*writefd) (omapi_object_t *),
+					 isc_result_t (*reader)
+					 	(omapi_object_t *),
+					 isc_result_t (*writer)
+					 	(omapi_object_t *),
+					 isc_result_t (*reaper)
+					 	(omapi_object_t *))
+{
+	omapi_io_object_t *obj;
+
+	if ((!h -> outer) || (h -> outer -> type != omapi_type_io_object)) {
+		/* If we don't have an object or if the type isn't what 
+		 * we expect do the normal registration (which will overwrite
+		 * an incorrect type, that's what we did historically, may
+		 * want to change that)
+		 */
+		return (omapi_register_io_object (h, readfd, writefd,
+						  reader, writer, reaper));
+	}
+
+	/* We have an io object of the correct type, try to update it */
+	/*sar*/
+	/* Should we validate that the fd matches the previous one?
+	 * It's suppossed to, that's a requirement, don't bother yet */
+
+	obj = (omapi_io_object_t *)h->outer;
+
+	obj -> readfd = readfd;
+	obj -> writefd = writefd;
+	obj -> reader = reader;
+	obj -> writer = writer;
+	obj -> reaper = reaper;
+	
+	return (ISC_R_SUCCESS);
+}
+
 isc_result_t omapi_unregister_io_object (omapi_object_t *h)
 {
 	omapi_io_object_t *p, *obj, *last, *ph;
