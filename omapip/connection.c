@@ -677,16 +677,16 @@ static isc_result_t omapi_connection_connect_internal (omapi_object_t *h)
 			 (struct sockaddr *)&c -> local_addr, &sl) < 0) {
 	}
 
-	/* Disconnect from I/O object, if any. */
-	if (h -> outer)
-		omapi_unregister_io_object (h);
+	/* Reregister with the I/O object.  If we don't already have an
+	   I/O object this turns into a register call, otherwise we simply
+	   modify the pointers in the I/O object. */
 
-	status = omapi_register_io_object (h,
-					   omapi_connection_readfd,
-					   omapi_connection_writefd,
-					   omapi_connection_reader,
-					   omapi_connection_writer,
-					   omapi_connection_reaper);
+	status = omapi_reregister_io_object (h,
+					     omapi_connection_readfd,
+					     omapi_connection_writefd,
+					     omapi_connection_reader,
+					     omapi_connection_writer,
+					     omapi_connection_reaper);
 
 	if (status != ISC_R_SUCCESS) {
 		omapi_disconnect (h, 1);
