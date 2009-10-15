@@ -45,6 +45,9 @@ the README file.
   this error was a segfault when a failover secondary attempted to connect
   to the failover primary if their clocks were not synchronized.
 
+- Fix test in dhcp_interface_signal_handler to check that the inner handler
+  has a signal_handler before calling it.
+
 			Changes since 3.1.3rc1
 
 - None.

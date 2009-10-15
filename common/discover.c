@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.51.2.2 2009/07/23 21:43:33 sar Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.51.2.3 2009/10/15 18:50:55 sar Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -913,7 +913,7 @@ isc_result_t dhcp_interface_signal_handler (omapi_object_t *h,
 	}
 
 	/* Try to find some inner object that can take the value. */
-	if (h -> inner && h -> inner -> type -> get_value) {
+	if (h -> inner && h -> inner -> type -> signal_handler) {
 		status = ((*(h -> inner -> type -> signal_handler))
 			  (h -> inner, name, ap));
 		if (status == ISC_R_SUCCESS)
