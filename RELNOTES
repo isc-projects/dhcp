@@ -205,6 +205,11 @@ work on other platforms. Please report any problems and suggested fixes to
 - ./configure now checks to ensure the intX_t and u_intX_t types are defined,
   correcting a compilation failure when using Sun's compiler.
 
+- Modified the handling of a connection to avoid releasing the omapi io
+  object for the connection while it is still in use.  One symptom from
+  this error was a segfault when a failover secondary attempted to connect
+  to the failover primary if their clocks were not synchronized.
+
 			Changes since 4.1.0b1
 
 - A missing "else" in dhcrelay.c could have caused an interface not to
