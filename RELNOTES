@@ -125,7 +125,7 @@ suggested fixes to <dhcp-users@isc.org>.
 
 - Update the code to deal with GCC 4.3.  This included two sets of changes.
   The first is to the configuration files to include the use of
-  AC_USE_SYSTME_EXTENSIONS.  The second is to deal with return values that
+  AC_USE_SYSTEM_EXTENSIONS.  The second is to deal with return values that
   were being ignored.
 
 - Using reserved leases no longer results in 'lease with binding state
