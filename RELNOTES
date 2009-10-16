@@ -57,7 +57,7 @@ work on other platforms. Please report any problems and suggested fixes to
   precedence.  This fixes two bugs, one where host scoped configuration
   would not be included from a non-fixed-address6 host record, and the equal
   and opposite bug where subnet6 scoped configuration would not be used when
-  over-riding vlaues were not present in a matching fixed-address6 host
+  over-riding values were not present in a matching fixed-address6 host
   configuration.
 
 - ./configure now checks to ensure the intX_t and u_intX_t types are defined,
@@ -155,7 +155,7 @@ work on other platforms. Please report any problems and suggested fixes to
 
 - Update the code to deal with GCC 4.3.  This included two sets of changes.
   The first is to the configuration files to include the use of
-  AC_USE_SYSTME_EXTENSIONS.  The second is to deal with return values that
+  AC_USE_SYSTEM_EXTENSIONS.  The second is to deal with return values that
   were being ignored.
 
 - The db-time-format option was documented in manpages.
