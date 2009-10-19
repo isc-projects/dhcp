@@ -43,6 +43,7 @@ struct reply_state {
 	/* root level persistent state */
 	struct shared_network *shared;
 	struct host_decl *host;
+	struct subnet *subnet; /* Used to match fixed-addrs to subnet scopes. */
 	struct option_state *opt_state;
 	struct packet *packet;
 	struct data_string client_id;
@@ -1275,6 +1276,8 @@ reply_process_ia(struct reply_state *reply, struct option_cache *ia) {
 
 	/* Check & cache the fixed host record. */
 	if ((reply->host != NULL) && (reply->host->fixed_addr != NULL)) {
+		struct iaddr tmp_addr;
+
 		if (!evaluate_option_cache(&reply->fixed, NULL, NULL, NULL,
 					   NULL, NULL, &global_scope,
 					   reply->host->fixed_addr, MDL)) {
@@ -1289,6 +1292,14 @@ reply_process_ia(struct reply_state *reply, struct option_cache *ia) {
 			status = ISC_R_INVALIDARG;
 			goto cleanup;
 		}
+
+		/* Find the static lease's subnet. */
+		tmp_addr.len = 16;
+		memcpy(tmp_addr.iabuf, reply->fixed.data, 16);
+
+		if (find_grouped_subnet(&reply->subnet, reply->shared,
+					tmp_addr, MDL) == 0)
+			log_fatal("Impossible condition at %s:%d.", MDL);
 
 		reply->static_lease = ISC_TRUE;
 	} else
@@ -1585,6 +1596,8 @@ reply_process_ia(struct reply_state *reply, struct option_cache *ia) {
 	}
 	if (reply->fixed.data != NULL)
 		data_string_forget(&reply->fixed, MDL);
+	if (reply->subnet != NULL)
+		subnet_dereference(&reply->subnet, MDL);
 
 	/*
 	 * ISC_R_CANCELED is a status code used by the addr processing to
@@ -1820,7 +1833,7 @@ reply_process_addr(struct reply_state *reply, struct option_cache *addr) {
 			log_fatal("Impossible condition at %s:%d.", MDL);
 
 		scope = &global_scope;
-		group = reply->host->group;
+		group = reply->subnet->group;
 	} else {
 		if (reply->lease == NULL)
 			log_fatal("Impossible condition at %s:%d.", MDL);
@@ -1974,11 +1987,6 @@ find_client_address(struct reply_state *reply) {
 	struct group *group;
 	int i;
 
-	if (reply->host != NULL)
-		group = reply->host->group;
-	else
-		group = reply->shared->group;
-
 	if (reply->static_lease) {
 		if (reply->host == NULL)
 			return ISC_R_INVALIDARG;
@@ -1988,6 +1996,7 @@ find_client_address(struct reply_state *reply) {
 
 		status = ISC_R_SUCCESS;
 		scope = &global_scope;
+		group = reply->subnet->group;
 		goto send_addr;
 	}
 
@@ -2056,10 +2065,25 @@ reply_process_is_addressed(struct reply_state *reply,
 	/* Initialize values we will cleanup. */
 	memset(&data, 0, sizeof(data));
 
-	/* Execute relevant options into root scope. */
+	/*
+	 * Bring configured options into the root packet level cache - start
+	 * with the lease's closest enclosing group (passed in by the caller
+	 * as 'group').
+	 */
 	execute_statements_in_scope(NULL, reply->packet, NULL, NULL,
 				    reply->packet->options, reply->opt_state,
 				    scope, group, root_group);
+
+	/*
+	 * If there is a host record, over-ride with values configured there,
+	 * without re-evaluating configuration from the previously executed
+	 * group or its common enclosers.
+	 */
+	if (reply->host != NULL)
+		execute_statements_in_scope(NULL, reply->packet, NULL, NULL,
+					    reply->packet->options,
+					    reply->opt_state, scope,
+					    reply->host->group, group);
 
 	/* Determine valid lifetime. */
 	if (reply->client_valid == 0)
@@ -2160,6 +2184,16 @@ reply_process_is_addressed(struct reply_state *reply,
 	execute_statements_in_scope(NULL, reply->packet, NULL, NULL,
 				    reply->packet->options, reply->reply_ia,
 				    scope, group, root_group);
+
+	/*
+	 * And bring in host record configuration, if any, but not to overlap
+	 * the previous group or its common enclosers.
+	 */
+	if (reply->host != NULL)
+		execute_statements_in_scope(NULL, reply->packet, NULL, NULL,
+					    reply->packet->options,
+					    reply->reply_ia, scope,
+					    reply->host->group, group);
 
       cleanup:
 	if (data.data != NULL)

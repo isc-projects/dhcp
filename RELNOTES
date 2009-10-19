@@ -64,6 +64,14 @@ suggested fixes to <dhcp-users@isc.org>.
   this error was a segfault when a failover secondary attempted to connect
   to the failover primary if their clocks were not synchronized.
 
+- Both host and subnet6 configuration groups are now included whether a
+  fixed-address6 (DHCPv6) is in use or not.  Host scoped configuration takes
+  precedence.  This fixes two bugs, one where host scoped configuration
+  would not be included from a non-fixed-address6 host record, and the equal
+  and opposite bug where subnet6 scoped configuration would not be used when
+  over-riding values were not present in a matching fixed-address6 host
+  configuration.
+
 			Changes since 4.0.2b1
 
 - Fixed a bug where an OMAPI socket disconnection message would not result
