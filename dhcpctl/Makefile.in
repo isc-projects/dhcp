@@ -68,11 +68,11 @@ PROGRAMS = $(bin_PROGRAMS) $(noinst_PROGRAMS)
 am_cltest_OBJECTS = cltest.$(OBJEXT)
 cltest_OBJECTS = $(am_cltest_OBJECTS)
 cltest_DEPENDENCIES = libdhcpctl.a ../common/libdhcp.a \
-	../minires/libres.a ../omapip/libomapi.a ../dst/libdst.a
+	../omapip/libomapi.a ../bind/lib/libdns.a ../bind/lib/libisc.a
 am_omshell_OBJECTS = omshell.$(OBJEXT)
 omshell_OBJECTS = $(am_omshell_OBJECTS)
 omshell_DEPENDENCIES = libdhcpctl.a ../common/libdhcp.a \
-	../minires/libres.a ../omapip/libomapi.a ../dst/libdst.a
+	../omapip/libomapi.a ../bind/lib/libdns.a ../bind/lib/libisc.a
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)/includes
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -175,13 +175,13 @@ lib_LIBRARIES = libdhcpctl.a
 man_MANS = omshell.1 dhcpctl.3
 EXTRA_DIST = $(man_MANS)
 omshell_SOURCES = omshell.c
-omshell_LDADD = libdhcpctl.a ../common/libdhcp.a ../minires/libres.a \
-                ../omapip/libomapi.a ../dst/libdst.a
+omshell_LDADD = libdhcpctl.a ../common/libdhcp.a ../omapip/libomapi.a \
+	        ../bind/lib/libdns.a ../bind/lib/libisc.a
 
 libdhcpctl_a_SOURCES = dhcpctl.c callback.c remote.c
 cltest_SOURCES = cltest.c
-cltest_LDADD = libdhcpctl.a ../common/libdhcp.a ../minires/libres.a \
-               ../omapip/libomapi.a ../dst/libdst.a
+cltest_LDADD = libdhcpctl.a ../common/libdhcp.a ../omapip/libomapi.a \
+	       ../bind/lib/libdns.a ../bind/lib/libisc.a
 
 all: all-am
 

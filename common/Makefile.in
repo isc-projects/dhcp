@@ -53,10 +53,10 @@ am_libdhcp_a_OBJECTS = alloc.$(OBJEXT) bpf.$(OBJEXT) comapi.$(OBJEXT) \
 	dispatch.$(OBJEXT) dlpi.$(OBJEXT) dns.$(OBJEXT) \
 	ethernet.$(OBJEXT) execute.$(OBJEXT) fddi.$(OBJEXT) \
 	icmp.$(OBJEXT) inet.$(OBJEXT) lpf.$(OBJEXT) memory.$(OBJEXT) \
-	nit.$(OBJEXT) options.$(OBJEXT) packet.$(OBJEXT) \
-	parse.$(OBJEXT) print.$(OBJEXT) raw.$(OBJEXT) resolv.$(OBJEXT) \
-	socket.$(OBJEXT) tables.$(OBJEXT) tr.$(OBJEXT) tree.$(OBJEXT) \
-	upf.$(OBJEXT) heap.$(OBJEXT)
+	nit.$(OBJEXT) ns_name.$(OBJEXT) options.$(OBJEXT) \
+	packet.$(OBJEXT) parse.$(OBJEXT) print.$(OBJEXT) raw.$(OBJEXT) \
+	resolv.$(OBJEXT) socket.$(OBJEXT) tables.$(OBJEXT) \
+	tr.$(OBJEXT) tree.$(OBJEXT) upf.$(OBJEXT)
 libdhcp_a_OBJECTS = $(am_libdhcp_a_OBJECTS)
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)/includes
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -166,9 +166,9 @@ AM_CPPFLAGS = -I.. -DLOCALSTATEDIR='"@localstatedir@"'
 noinst_LIBRARIES = libdhcp.a
 libdhcp_a_SOURCES = alloc.c bpf.c comapi.c conflex.c ctrace.c discover.c \
 		    dispatch.c dlpi.c dns.c ethernet.c execute.c fddi.c \
-		    icmp.c inet.c lpf.c memory.c nit.c options.c packet.c \
-		    parse.c print.c raw.c resolv.c socket.c tables.c tr.c \
-		    tree.c upf.c heap.c
+		    icmp.c inet.c lpf.c memory.c nit.c ns_name.c options.c \
+		    packet.c parse.c print.c raw.c resolv.c socket.c \
+		    tables.c tr.c tree.c upf.c
 
 man_MANS = dhcp-eval.5 dhcp-options.5
 EXTRA_DIST = $(man_MANS)
@@ -232,12 +232,12 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ethernet.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/execute.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fddi.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/heap.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/icmp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/inet.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lpf.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/memory.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nit.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ns_name.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/options.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/packet.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/parse.Po@am__quote@
