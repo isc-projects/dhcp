@@ -46,11 +46,6 @@ struct binding_scope *global_scope;
 static int do_host_lookup PROTO ((struct data_string *,
 				  struct dns_host_entry *));
 
-#ifdef NSUPDATE
-struct __res_state resolver_state;
-int resolver_inited = 0;
-#endif
-
 #define DS_SPRINTF_SIZE 128
 
 /* 
@@ -650,8 +645,8 @@ int evaluate_expression (result, packet, lease, client_state,
 		status = (evaluate_data_expression
 			  (&bv -> value.data, packet, lease, client_state,
 			   in_options, cfg_options, scope, expr, MDL));
+#if defined (NSUPDATE_OLD)
 	} else if (is_dns_expression (expr)) {
-#if defined (NSUPDATE)
 		if (!binding_value_allocate (&bv, MDL))
 			return 0;
 		bv -> type = binding_dns;
@@ -705,7 +700,7 @@ int binding_value_dereference (struct binding_value **v,
 			data_string_forget (&bv -> value.data, file, line);
 		break;
 	      case binding_dns:
-#if defined (NSUPDATE)
+#if defined (NSUPDATE_OLD)
 		if (bv -> value.dns) {
 			if (bv -> value.dns -> r_data) {
 				dfree (bv -> value.dns -> r_data_ephem, MDL);
@@ -726,7 +721,7 @@ int binding_value_dereference (struct binding_value **v,
 	return 1;
 }
 
-#if defined (NSUPDATE)
+#if defined (NSUPDATE_OLD)
 int evaluate_dns_expression (result, packet, lease, client_state, in_options,
 			     cfg_options, scope, expr)
 	ns_updrec **result;
@@ -988,7 +983,7 @@ int evaluate_dns_expression (result, packet, lease, client_state, in_options,
 		   expr -> op);
 	return 0;
 }
-#endif /* defined (NSUPDATE) */
+#endif /* defined (NSUPDATE_OLD) */
 
 int evaluate_boolean_expression (result, packet, lease, client_state,
 				 in_options, cfg_options, scope, expr)
@@ -1061,7 +1056,7 @@ int evaluate_boolean_expression (result, packet, lease, client_state,
 			    else
 				*result = expr -> op == expr_not_equal;
 			    break;
-
+#if defined (NSUPDATE_OLD)
 			  case binding_dns:
 #if defined (NSUPDATE)
 			    /* XXX This should be a comparison for equal
@@ -1074,7 +1069,7 @@ int evaluate_boolean_expression (result, packet, lease, client_state,
 				*result = expr -> op == expr_not_equal;
 #endif
 			    break;
-
+#endif /* NSUPDATE_OLD */
 			  case binding_function:
 			    if (bv -> value.fundef == obv -> value.fundef)
 				*result = expr -> op == expr_equal;
@@ -2404,11 +2399,12 @@ int evaluate_numeric_expression (result, packet, lease, client_state,
 {
 	struct data_string data;
 	int status, sleft, sright;
-#if defined (NSUPDATE)
+#if defined (NSUPDATE_OLD)
 	ns_updrec *nut;
 	ns_updque uq;
-#endif
 	struct expression *cur, *next;
+#endif
+
 	struct binding *binding;
 	struct binding_value *bv;
 	unsigned long ileft, iright;
@@ -2534,7 +2530,7 @@ int evaluate_numeric_expression (result, packet, lease, client_state,
 		return 1;
  
 	      case expr_dns_transaction:
-#if !defined (NSUPDATE)
+#if !defined (NSUPDATE_OLD)
 		return 0;
 #else
 		if (!resolver_inited) {
@@ -2578,7 +2574,7 @@ int evaluate_numeric_expression (result, packet, lease, client_state,
 			minires_freeupdrec (tmp);
 		}
 		return status;
-#endif /* NSUPDATE */
+#endif /* NSUPDATE_OLD */
 
 	      case expr_variable_reference:
 		if (scope && *scope) {

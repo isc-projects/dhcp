@@ -57,19 +57,21 @@ isc_result_t omapi_auth_key_destroy (omapi_object_t *h,
 {
 	omapi_auth_key_t *a;
 
-	if (h -> type != omapi_type_auth_key)
-		return ISC_R_INVALIDARG;
+	if (h->type != omapi_type_auth_key)
+		return DHCP_R_INVALIDARG;
 	a = (omapi_auth_key_t *)h;
 
-	if (auth_key_hash)
-		omapi_auth_key_hash_delete (auth_key_hash, a -> name, 0, MDL);
+	if (auth_key_hash != NULL)
+		omapi_auth_key_hash_delete(auth_key_hash, a->name, 0, MDL);
 
-	if (a -> name)
-		dfree (a -> name, MDL);
-	if (a -> algorithm)
-		dfree (a -> algorithm, MDL);
-	if (a -> key)
-		omapi_data_string_dereference (&a -> key, MDL);
+	if (a->name != NULL)
+		dfree(a->name, MDL);
+	if (a->algorithm != NULL)
+		dfree(a->algorithm, MDL);
+	if (a->key != NULL)
+		omapi_data_string_dereference(&a->key, MDL);
+	if (a->tsec_key != NULL)
+		dns_tsec_destroy(&a->tsec_key);
 	
 	return ISC_R_SUCCESS;
 }
@@ -77,9 +79,11 @@ isc_result_t omapi_auth_key_destroy (omapi_object_t *h,
 isc_result_t omapi_auth_key_enter (omapi_auth_key_t *a)
 {
 	omapi_auth_key_t *tk;
+	isc_result_t      status;
+	dst_key_t        *dstkey;
 
 	if (a -> type != omapi_type_auth_key)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	tk = (omapi_auth_key_t *)0;
 	if (auth_key_hash) {
@@ -99,9 +103,28 @@ isc_result_t omapi_auth_key_enter (omapi_auth_key_t *a)
 					     KEY_HASH_SIZE, MDL))
 			return ISC_R_NOMEMORY;
 	}
+
+	/*
+	 * If possible create a tsec structure for this key,
+	 * if we can't create the structure we put out a warning 
+	 * and continue.
+	 */
+	status = isclib_make_dst_key(a->name, a->algorithm,
+				     a->key->value, a->key->len,
+				     &dstkey);
+	if (status == ISC_R_SUCCESS) {
+		status = dns_tsec_create(dhcp_gbl_ctx.mctx, dns_tsectype_tsig,
+					 dstkey, &a->tsec_key);
+	}
+	if (status != ISC_R_SUCCESS) {
+		if (dstkey != NULL) {
+			dst_key_free(&dstkey);
+		}
+		log_error("Unable to create tsec structure for %s", a->name);
+	}
+
 	omapi_auth_key_hash_add (auth_key_hash, a -> name, 0, a, MDL);
 	return ISC_R_SUCCESS;
-	
 }
 
 isc_result_t omapi_auth_key_lookup_name (omapi_auth_key_t **a,
@@ -126,7 +149,7 @@ isc_result_t omapi_auth_key_lookup (omapi_object_t **h,
 		return ISC_R_NOTFOUND;
 
 	if (!ref)
-		return ISC_R_NOKEYS;
+		return DHCP_R_NOKEYS;
 
 	status = omapi_get_value_str (ref, id, "name", &name);
 	if (status != ISC_R_SUCCESS)
@@ -183,7 +206,7 @@ isc_result_t omapi_auth_key_stuff_values (omapi_object_t *c,
 	isc_result_t status;
 
 	if (h -> type != omapi_type_auth_key)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	a = (omapi_auth_key_t *)h;
 
 	/* Write only the name and algorithm -- not the secret! */

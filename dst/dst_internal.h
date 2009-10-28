@@ -157,5 +157,15 @@ void      dst_s_put_int32( u_int8_t *buf, const u_int32_t val);
 # define DUMP(a,b,c,d)
 #endif
 
+#if defined (MINIRES_LIB)
+#define b64_pton MRb64_pton
+#define b64_ntop MRb64_ntop
+
+int b64_pton (char const *, unsigned char *, size_t);
+int b64_ntop (unsigned char const *, size_t, char *, size_t);
+
+#define USE_MD5
+#endif
+
 
 #endif /* DST_INTERNAL_H */

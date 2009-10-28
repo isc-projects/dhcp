@@ -183,7 +183,7 @@ dhcpctl_status dhcpctl_open_object (dhcpctl_handle h,
 	dhcpctl_remote_object_t *remote;
 
 	if (h -> type != dhcpctl_remote_type)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	remote = (dhcpctl_remote_object_t *)h;
 
 	status = omapi_message_new (&message, MDL);
@@ -264,7 +264,7 @@ isc_result_t dhcpctl_remote_set_value (omapi_object_t *h,
 	isc_result_t status;
 
 	if (h -> type != dhcpctl_remote_type)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	ro = (dhcpctl_remote_object_t *)h;
 
 	if (!omapi_ds_strcmp (name, "remote-handle")) {
@@ -286,7 +286,7 @@ isc_result_t dhcpctl_remote_get_value (omapi_object_t *h,
 				       omapi_value_t **value)
 {
 	if (h -> type != dhcpctl_remote_type)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	
 	if (h -> inner && h -> inner -> type -> get_value)
 		return (*(h -> inner -> type -> get_value))
@@ -301,7 +301,7 @@ isc_result_t dhcpctl_remote_signal_handler (omapi_object_t *o,
 	omapi_typed_data_t *tv;
 
 	if (o -> type != dhcpctl_remote_type)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	p = (dhcpctl_remote_object_t *)o;
 
 	if (!strcmp (name, "updated")) {
@@ -332,7 +332,7 @@ isc_result_t dhcpctl_remote_destroy (omapi_object_t *h,
 {
 	dhcpctl_remote_object_t *p;
 	if (h -> type != dhcpctl_remote_type)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	p = (dhcpctl_remote_object_t *)h;
 	if (p -> handle)
 		omapi_object_dereference ((omapi_object_t **)&p -> handle,
@@ -351,7 +351,7 @@ isc_result_t dhcpctl_remote_stuff_values (omapi_object_t *c,
 					  omapi_object_t *p)
 {
 	if (p -> type != dhcpctl_remote_type)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	if (p -> inner && p -> inner -> type -> stuff_values)
 		return (*(p -> inner -> type -> stuff_values)) (c, id,

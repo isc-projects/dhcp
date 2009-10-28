@@ -288,7 +288,7 @@ generate_new_server_duid(void) {
 	if ((server_duid_type != DUID_LL) && (server_duid_type != DUID_LLT)) {
 		log_error("Invalid DUID type %d specified, "
 			  "only LL and LLT types supported", server_duid_type);
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 
 	/*
@@ -355,7 +355,7 @@ get_client_id(struct packet *packet, struct data_string *client_id) {
 	 * Verify our client_id structure is empty.
 	 */
 	if ((client_id->data != NULL) || (client_id->len != 0)) {
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 
 	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_CLIENTID);
@@ -949,7 +949,7 @@ try_client_v6_address(struct iasubopt **addr,
 	isc_result_t result;
 
 	if (requested_addr->len < sizeof(tmp_addr)) {
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 	memcpy(&tmp_addr, requested_addr->data, sizeof(tmp_addr));
 	if (IN6_IS_ADDR_UNSPECIFIED(&tmp_addr)) {
@@ -1088,7 +1088,7 @@ try_client_v6_prefix(struct iasubopt **pref,
 	isc_result_t result;
 
 	if (requested_pref->len < sizeof(tmp_plen) + sizeof(tmp_pref)) {
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 	tmp_plen = (int) requested_pref->data[0];
 	if ((tmp_plen < 3) || (tmp_plen > 128)) {
@@ -1599,7 +1599,7 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 
 		if (reply->fixed.len < 16) {
 			log_error("reply_process_ia_na: invalid fixed address.");
-			status = ISC_R_INVALIDARG;
+			status = DHCP_R_INVALIDARG;
 			goto cleanup;
 		}
 
@@ -1838,6 +1838,7 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 			renew_lease6(tmp->ipv6_pool, tmp);
 			schedule_lease_timeout(tmp->ipv6_pool);
 
+#if defined (NSUPDATE)
 			/*
 			 * Perform ddns updates.
 			 */
@@ -1853,6 +1854,7 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 				ddns_updates(reply->packet, NULL, NULL,
 					     tmp, NULL, reply->opt_state);
 			}
+#endif
 		}
 
 		/* Remove any old ia from the hash. */
@@ -2494,6 +2496,7 @@ reply_process_ia_ta(struct reply_state *reply, struct option_cache *ia) {
 			renew_lease6(tmp->ipv6_pool, tmp);
 			schedule_lease_timeout(tmp->ipv6_pool);
 
+#if defined (NSUPDATE)
 			/*
 			 * Perform ddns updates.
 			 */
@@ -2509,6 +2512,7 @@ reply_process_ia_ta(struct reply_state *reply, struct option_cache *ia) {
 				ddns_updates(reply->packet, NULL, NULL,
 					     tmp, NULL, reply->opt_state);
 			}
+#endif
 		}
 
 		/* Remove any old ia from the hash. */
@@ -2700,7 +2704,7 @@ reply_process_try_addr(struct reply_state *reply, struct iaddr *addr) {
 	if ((reply == NULL) || (reply->shared == NULL) ||
 	    (reply->shared->ipv6_pools == NULL) || (addr == NULL) ||
 	    (reply->lease != NULL))
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	memset(&data_addr, 0, sizeof(data_addr));
 	data_addr.len = addr->len;
@@ -2736,7 +2740,7 @@ find_client_address(struct reply_state *reply) {
 
 	if (reply->static_lease) {
 		if (reply->host == NULL)
-			return ISC_R_INVALIDARG;
+			return DHCP_R_INVALIDARG;
 
 		send_addr.len = 16;
 		memcpy(send_addr.iabuf, reply->fixed.data, 16);
@@ -3671,7 +3675,7 @@ reply_process_try_prefix(struct reply_state *reply,
 	if ((reply == NULL) || (reply->shared == NULL) ||
 	    (reply->shared->ipv6_pools == NULL) || (pref == NULL) ||
 	    (reply->lease != NULL))
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	memset(&data_pref, 0, sizeof(data_pref));
 	data_pref.len = 17;
@@ -3713,7 +3717,7 @@ find_client_prefix(struct reply_state *reply) {
 		struct iaddrcidrnetlist *l;
 
 		if (reply->host == NULL)
-			return ISC_R_INVALIDARG;
+			return DHCP_R_INVALIDARG;
 
 		for (l = reply->host->fixed_prefix; l != NULL; l = l->next) {
 			if (l->cidrnet.bits == reply->preflen)
@@ -4135,7 +4139,7 @@ shared_network_from_packet6(struct shared_network **shared,
 	isc_result_t status;
 
 	if ((shared == NULL) || (*shared != NULL) || (packet == NULL))
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	/*
 	 * First, find the link address where the packet from the client

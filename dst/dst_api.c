@@ -1,5 +1,5 @@
 #ifndef LINT
-static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/dst_api.c,v 1.7 2009/01/22 00:43:58 sar Exp $";
+static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/dst_api.c,v 1.8 2009/10/28 04:12:30 sar Exp $";
 #endif
 
 /*
@@ -54,7 +54,6 @@ static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/dst_api.c,v 1.7 2009
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-#include "minires/minires.h"
 #include "arpa/nameser.h"
 
 #include "dst_internal.h"

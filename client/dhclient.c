@@ -37,6 +37,7 @@
 #include <sys/time.h>
 #include <sys/wait.h>
 #include <limits.h>
+#include <dns/result.h>
 
 TIME default_lease_time = 43200; /* 12 hours... */
 TIME max_lease_time = 86400; /* 24 hours... */
@@ -133,6 +134,12 @@ main(int argc, char **argv) {
 #if !(defined(DEBUG) || defined(__CYGWIN32__))
 	setlogmask(LOG_UPTO(LOG_INFO));
 #endif
+
+	/* Set up the isc and dns library managers */
+	status = dhcp_context_create();
+	if (status != ISC_R_SUCCESS)
+		log_fatal("Can't initialize context: %s",
+			  isc_result_totext(status));
 
 	/* Set up the OMAPI. */
 	status = omapi_init();
@@ -1186,9 +1193,10 @@ void bind_lease (client)
 	client -> state = S_BOUND;
 	reinitialize_interfaces ();
 	go_daemon ();
+#if defined (NSUPDATE)
 	if (client->config->do_forward_update)
-		dhclient_schedule_updates(client, &client->active->address,
-					  1);
+		dhclient_schedule_updates(client, &client->active->address, 1);
+#endif
 }
 
 /* state_bound is called when we've successfully bound to a particular
@@ -2676,7 +2684,7 @@ write_duid(struct data_string *duid)
 	int stat;
 
 	if ((duid == NULL) || (duid->len <= 2))
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	if (leaseFile == NULL) {	/* XXX? */
 		leaseFile = fopen(path_dhclient_db, "w");
@@ -2724,7 +2732,7 @@ write_client6_lease(struct client_state *client, struct dhc6_lease *lease,
 	}
 
 	if (client == NULL || lease == NULL)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	if (leaseFile == NULL) {	/* XXX? */
 		leaseFile = fopen(path_dhclient_db, "w");
@@ -3570,6 +3578,75 @@ static void shutdown_exit (void *foo)
 	exit (0);
 }
 
+#if defined (NSUPDATE)
+/*
+ * If the first query fails, the updater MUST NOT delete the DNS name.  It
+ * may be that the host whose lease on the server has expired has moved
+ * to another network and obtained a lease from a different server,
+ * which has caused the client's A RR to be replaced. It may also be
+ * that some other client has been configured with a name that matches
+ * the name of the DHCP client, and the policy was that the last client
+ * to specify the name would get the name.  In this case, the DHCID RR
+ * will no longer match the updater's notion of the client-identity of
+ * the host pointed to by the DNS name.
+ *   -- "Interaction between DHCP and DNS"
+ */
+
+/* The first and second stages are pretty similar so we combine them */
+void
+client_dns_remove_action(dhcp_ddns_cb_t *ddns_cb,
+			 isc_result_t    eresult)
+{
+
+	isc_result_t result;
+
+	if ((eresult == ISC_R_SUCCESS) &&
+	    (ddns_cb->state == DDNS_STATE_REM_FW_YXDHCID)) {
+		/* Do the second stage of the FWD removal */
+		ddns_cb->state = DDNS_STATE_REM_FW_NXRR;
+
+		result = ddns_modify_fwd(ddns_cb);
+		if (result == ISC_R_SUCCESS) {
+			return;
+		}
+	}
+
+	/* If we are done or have an error clean up */
+	ddns_cb_free(ddns_cb, MDL);
+	return;
+}
+
+void
+client_dns_remove(struct client_state *client,
+		  struct iaddr        *addr)
+{
+	dhcp_ddns_cb_t *ddns_cb;
+	isc_result_t result;
+
+	/* if we have an old ddns request for this client, cancel it */
+	if (client->ddns_cb != NULL) {
+		ddns_cancel(client->ddns_cb);
+		client->ddns_cb = NULL;
+	}
+	
+	ddns_cb = ddns_cb_alloc(MDL);
+	if (ddns_cb != NULL) {
+		ddns_cb->address = *addr;
+		ddns_cb->timeout = 0;
+
+		ddns_cb->state = DDNS_STATE_REM_FW_YXDHCID;
+		ddns_cb->flags = DDNS_UPDATE_ADDR;
+		ddns_cb->cur_func = client_dns_remove_action;
+
+		result = client_dns_update(client, ddns_cb);
+
+		if (result != ISC_R_TIMEDOUT) {
+			ddns_cb_free(ddns_cb, MDL);
+		}
+	}
+}
+#endif
+
 isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
 				     control_object_state_t newstate)
 {
@@ -3590,9 +3667,12 @@ isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
 		  case server_shutdown:
 		    if (client -> active &&
 			client -> active -> expiry > cur_time) {
-			    if (client -> config -> do_forward_update)
-				    client_dns_update(client, 0, 0,
-						    &client->active->address);
+#if defined (NSUPDATE)
+			    if (client->config->do_forward_update) {
+				    client_dns_remove(client,
+						      &client->active->address);
+			    }
+#endif
 			    do_release (client);
 		    }
 		    break;
@@ -3616,71 +3696,136 @@ isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
 	return ISC_R_SUCCESS;
 }
 
-/* Schedule updates to retry occasionally until it no longer times out.
+#if defined (NSUPDATE)
+/*
+ * Called after a timeout if the DNS update failed on the previous try.
+ * Starts the retry process.  If the retry times out it will schedule
+ * this routine to run again after a 10x wait.
  */
 void
-dhclient_schedule_updates(struct client_state *client, struct iaddr *addr,
-			  int offset)
+client_dns_update_timeout (void *cp)
 {
-	struct dns_update_state *ustate;
-	struct timeval tv;
+	dhcp_ddns_cb_t *ddns_cb = (dhcp_ddns_cb_t *)cp;
+	struct client_state *client = (struct client_state *)ddns_cb->lease;
+	isc_result_t status = ISC_R_FAILURE;
 
-	if (!client->config->do_forward_update)
-		return;
+	if ((client != NULL) &&
+	    ((client->active != NULL) ||
+	     (client->active_lease != NULL)))
+		status = client_dns_update(client, ddns_cb);
 
-	ustate = dmalloc(sizeof(*ustate), MDL);
-
-	if (ustate != NULL) {
-		ustate->client = client;
-		ustate->address = *addr;
-		ustate->dns_update_timeout = 1;
-
-		tv.tv_sec = cur_time + offset;
-		tv.tv_usec = 0;
-		add_timeout(&tv, client_dns_update_timeout,
-			    ustate, NULL, NULL);
-	} else {
-		log_error("Unable to allocate dns update state for %s.",
-			  piaddr(*addr));
+	/*
+	 * A status of timedout indicates that we started the update and
+	 * have released control of the control block.  Any other status
+	 * indicates that we should clean up the control block.  We either
+	 * got a success which indicates that we didn't really need to
+	 * send an update or some other error in which case we weren't able
+	 * to start the update process.  In both cases we still own
+	 * the control block and should free it.
+	 */
+	if (status != ISC_R_TIMEDOUT) {
+		if (client != NULL) {
+			client->ddns_cb = NULL;
+		}
+		ddns_cb_free(ddns_cb, MDL);
 	}
 }
 
-/* Called after a timeout if the DNS update failed on the previous try.
-   Retries the update, and if it times out, schedules a retry after
-   ten times as long of a wait. */
+/*
+ * If the first query succeeds, the updater can conclude that it
+ * has added a new name whose only RRs are the A and DHCID RR records.
+ * The A RR update is now complete (and a client updater is finished,
+ * while a server might proceed to perform a PTR RR update).
+ *   -- "Interaction between DHCP and DNS"
+ *
+ * If the second query succeeds, the updater can conclude that the current
+ * client was the last client associated with the domain name, and that
+ * the name now contains the updated A RR. The A RR update is now
+ * complete (and a client updater is finished, while a server would
+ * then proceed to perform a PTR RR update).
+ *   -- "Interaction between DHCP and DNS"
+ *
+ * If the second query fails with NXRRSET, the updater must conclude
+ * that the client's desired name is in use by another host.  At this
+ * juncture, the updater can decide (based on some administrative
+ * configuration outside of the scope of this document) whether to let
+ * the existing owner of the name keep that name, and to (possibly)
+ * perform some name disambiguation operation on behalf of the current
+ * client, or to replace the RRs on the name with RRs that represent
+ * the current client. If the configured policy allows replacement of
+ * existing records, the updater submits a query that deletes the
+ * existing A RR and the existing DHCID RR, adding A and DHCID RRs that
+ * represent the IP address and client-identity of the new client.
+ *   -- "Interaction between DHCP and DNS"
+ */
 
-void client_dns_update_timeout (void *cp)
+/* The first and second stages are pretty similar so we combine them */
+void
+client_dns_update_action(dhcp_ddns_cb_t *ddns_cb,
+			 isc_result_t    eresult)
 {
-	struct dns_update_state *ustate = cp;
-	isc_result_t status = ISC_R_FAILURE;
+	isc_result_t result;
 	struct timeval tv;
 
-	/* XXX: DNS TTL is a problem we need to solve properly.  Until
-	 * that time, 300 is a placeholder default for something that is
-	 * less insane than a value scaled by lease timeout.
-	 */
-	if ((ustate->client->active != NULL) ||
-	    (ustate->client->active_lease != NULL))
-		status = client_dns_update(ustate->client, 1, 300,
-					   &ustate->address);
+	switch(eresult) {
+	case ISC_R_SUCCESS:
+	default:
+		/* Either we succeeded or broke in a bad way, clean up */
+		break;
 
-	if (status == ISC_R_TIMEDOUT) {
-		if (ustate->dns_update_timeout < 3600)
-			ustate->dns_update_timeout *= 10;
-		tv.tv_sec = cur_time + ustate->dns_update_timeout;
+	case DNS_R_YXRRSET:
+		/*
+		 * This is the only difference between the two stages,
+		 * check to see if it is the first stage, in which case
+		 * start the second stage
+		 */
+		if (ddns_cb->state == DDNS_STATE_ADD_FW_NXDOMAIN) {
+			ddns_cb->state = DDNS_STATE_ADD_FW_YXDHCID;
+			ddns_cb->cur_func = client_dns_update_action;
+
+			result = ddns_modify_fwd(ddns_cb);
+			if (result == ISC_R_SUCCESS) {
+				return;
+			}
+		}
+		break;
+
+	case ISC_R_TIMEDOUT:
+		/*
+		 * We got a timeout response from the DNS module.  Schedule
+		 * another attempt for later.  We forget the name, dhcid and
+		 * zone so if it gets changed we will get the new information.
+		 */
+		data_string_forget(&ddns_cb->fwd_name, MDL);
+		data_string_forget(&ddns_cb->dhcid, MDL);
+		if (ddns_cb->zone != NULL) {
+			forget_zone((struct dns_zone **)&ddns_cb->zone);
+		}
+
+		/* Reset to doing the first stage */
+		ddns_cb->state    = DDNS_STATE_ADD_FW_NXDOMAIN;
+		ddns_cb->cur_func = client_dns_update_action;
+
+		/* and update our timer */
+		if (ddns_cb->timeout < 3600)
+			ddns_cb->timeout *= 10;
+		tv.tv_sec = cur_time + ddns_cb->timeout;
 		tv.tv_usec = 0;
 		add_timeout(&tv, client_dns_update_timeout,
-			    ustate, NULL, NULL);
-	} else
-		dfree(ustate, MDL);
+			    ddns_cb, NULL, NULL);
+		return;
+	}
+
+	ddns_cb_free(ddns_cb, MDL);
+	return;
 }
 
 /* See if we should do a DNS update, and if so, do it. */
 
-isc_result_t client_dns_update (struct client_state *client, int addp,
-				int ttl, struct iaddr *address)
+isc_result_t
+client_dns_update(struct client_state *client, dhcp_ddns_cb_t *ddns_cb)
 {
-	struct data_string ddns_fwd_name, ddns_dhcid, client_identifier;
+	struct data_string client_identifier;
 	struct option_cache *oc;
 	int ignorep;
 	int result;
@@ -3717,10 +3862,9 @@ isc_result_t client_dns_update (struct client_state *client, int addp,
 		return ISC_R_SUCCESS;
 
 	/* If no FQDN option was supplied, don't do the update. */
-	memset (&ddns_fwd_name, 0, sizeof ddns_fwd_name);
 	if (!(oc = lookup_option (&fqdn_universe, client -> sent_options,
 				  FQDN_FQDN)) ||
-	    !evaluate_option_cache (&ddns_fwd_name, (struct packet *)0,
+	    !evaluate_option_cache (&ddns_cb->fwd_name, (struct packet *)0,
 				    (struct lease *)0, client,
 				    client -> sent_options,
 				    (struct option_state *)0,
@@ -3732,8 +3876,6 @@ isc_result_t client_dns_update (struct client_state *client, int addp,
 	 * the client identifier, if there is one, or the interface's
 	 * MAC address.
 	 */
-	memset (&ddns_dhcid, 0, sizeof ddns_dhcid);
-
 	result = 0;
 	memset(&client_identifier, 0, sizeof(client_identifier));
 	if (client->active_lease != NULL) {
@@ -3747,7 +3889,7 @@ isc_result_t client_dns_update (struct client_state *client, int addp,
 			 * field.  We aren't using RFC4701 DHCID RR's yet,
 			 * but this is as good a value as any.
 			 */
-			result = get_dhcid(&ddns_dhcid, 2,
+			result = get_dhcid(&ddns_cb->dhcid, 2,
 					   client_identifier.data,
 					   client_identifier.len);
 			data_string_forget(&client_identifier, MDL);
@@ -3760,46 +3902,92 @@ isc_result_t client_dns_update (struct client_state *client, int addp,
 		    evaluate_option_cache(&client_identifier, NULL, NULL,
 					  client, client->sent_options, NULL,
 					  &global_scope, oc, MDL)) {
-			result = get_dhcid(&ddns_dhcid,
+			result = get_dhcid(&ddns_cb->dhcid,
 					   DHO_DHCP_CLIENT_IDENTIFIER,
 					   client_identifier.data,
 					   client_identifier.len);
 			data_string_forget(&client_identifier, MDL);
 		} else
-			result = get_dhcid(&ddns_dhcid, 0,
+			result = get_dhcid(&ddns_cb->dhcid, 0,
 					   client->interface->hw_address.hbuf,
 					   client->interface->hw_address.hlen);
 	}
 	if (!result) {
-		data_string_forget(&ddns_fwd_name, MDL);
 		return ISC_R_SUCCESS;
-	}
-
-	/* Start the resolver, if necessary. */
-	if (!resolver_inited) {
-		minires_ninit (&resolver_state);
-		resolver_inited = 1;
-		resolver_state.retrans = 1;
-		resolver_state.retry = 1;
 	}
 
 	/*
 	 * Perform updates.
 	 */
-	if (ddns_fwd_name.len && ddns_dhcid.len) {
-		if (addp)
-			rcode = ddns_update_fwd(&ddns_fwd_name, *address,
-						&ddns_dhcid, ttl, 1, 1);
-		else
-			rcode = ddns_remove_fwd(&ddns_fwd_name, *address,
-						&ddns_dhcid);
+	if (ddns_cb->fwd_name.len && ddns_cb->dhcid.len) {
+		rcode = ddns_modify_fwd(ddns_cb);
 	} else
 		rcode = ISC_R_FAILURE;
 
-	data_string_forget (&ddns_fwd_name, MDL);
-	data_string_forget (&ddns_dhcid, MDL);
+	/*
+	 * A success from the modify routine means we are performing
+	 * async processing, for which we use the timedout error message.
+	 */
+	if (rcode == ISC_R_SUCCESS) {
+		rcode = ISC_R_TIMEDOUT;
+	}
+
 	return rcode;
 }
+
+
+/*
+ * Schedule the first update.  They will continue to retry occasionally
+ * until they no longer time out (or fail).
+ */
+void
+dhclient_schedule_updates(struct client_state *client,
+			  struct iaddr        *addr,
+			  int                  offset)
+{
+	dhcp_ddns_cb_t *ddns_cb;
+	struct timeval tv;
+
+	if (!client->config->do_forward_update)
+		return;
+
+	/* cancel any outstanding ddns requests */
+	if (client->ddns_cb != NULL) {
+		ddns_cancel(client->ddns_cb);
+		client->ddns_cb = NULL;
+	}
+
+	ddns_cb = ddns_cb_alloc(MDL);
+
+	if (ddns_cb != NULL) {
+		ddns_cb->lease = (void *)client;
+		ddns_cb->address = *addr;
+		ddns_cb->timeout = 1;
+
+		/*
+		 * XXX: DNS TTL is a problem we need to solve properly.
+		 * Until that time, 300 is a placeholder default for
+		 * something that is less insane than a value scaled
+		 * by lease timeout.
+		 */
+		ddns_cb->ttl = 300;
+
+		ddns_cb->state = DDNS_STATE_ADD_FW_NXDOMAIN;
+		ddns_cb->cur_func = client_dns_update_action;
+		ddns_cb->flags = DDNS_UPDATE_ADDR | DDNS_INCLUDE_RRSET;
+
+		client->ddns_cb = ddns_cb;
+
+		tv.tv_sec = cur_time + offset;
+		tv.tv_usec = 0;
+		add_timeout(&tv, client_dns_update_timeout,
+			    ddns_cb, NULL, NULL);
+	} else {
+		log_error("Unable to allocate dns update state for %s",
+			  piaddr(*addr));
+	}
+}
+#endif
 
 void
 dhcpv4_client_assignments(void)

@@ -1247,26 +1247,34 @@ discover_interfaces(int state) {
 			interface_reference (&tmp, next, MDL);
 	}
 
-	/* Now register all the remaining interfaces as protocols. */
+	/*
+	 * Now register all the remaining interfaces as protocols.
+	 * We register with omapi to allow for control of the interface,
+	 * we've already registered the fd or socket with the socket
+	 * manager as part of if_register_receive().
+	 */
 	for (tmp = interfaces; tmp; tmp = tmp -> next) {
 		/* not if it's been registered before */
 		if (tmp -> flags & INTERFACE_RUNNING)
 			continue;
 		if (tmp -> rfdesc == -1)
 			continue;
+		switch (local_family) {
 #ifdef DHCPv6 
-		if (local_family == AF_INET6) {
+		case AF_INET6:
 			status = omapi_register_io_object((omapi_object_t *)tmp,
 							  if_readsocket, 
 							  0, got_one_v6, 0, 0);
-		} else {
-#else
-		{
+			break;
 #endif /* DHCPv6 */
+		case AF_INET:
+		default:
 			status = omapi_register_io_object((omapi_object_t *)tmp,
 							  if_readsocket, 
 							  0, got_one, 0, 0);
+			break;
 		}
+
 		if (status != ISC_R_SUCCESS)
 			log_fatal ("Can't register I/O handle for %s: %s",
 				   tmp -> name, isc_result_totext (status));
@@ -1281,7 +1289,7 @@ discover_interfaces(int state) {
 		if (local_family == AF_INET6)
 			break;
 #endif
-	}
+	} /* for (tmp = interfaces; ... */
 
 	if (state == DISCOVER_SERVER && wifcount == 0) {
 		log_info ("%s", "");
@@ -1366,7 +1374,7 @@ isc_result_t got_one (h)
 	struct interface_info *ip;
 
 	if (h -> type != dhcp_type_interface)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	ip = (struct interface_info *)h;
 
       again:
@@ -1414,7 +1422,7 @@ got_one_v6(omapi_object_t *h) {
 	unsigned int if_idx = 0;
 
 	if (h->type != dhcp_type_interface) {
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 	ip = (struct interface_info *)h;
 
@@ -1467,7 +1475,7 @@ isc_result_t dhcp_interface_set_value  (omapi_object_t *h,
 	isc_result_t status;
 
 	if (h -> type != dhcp_type_interface)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	interface = (struct interface_info *)h;
 
 	if (!omapi_ds_strcmp (name, "name")) {
@@ -1479,7 +1487,7 @@ isc_result_t dhcp_interface_set_value  (omapi_object_t *h,
 				value -> u.buffer.len);
 			interface -> name [value -> u.buffer.len] = 0;
 		} else
-			return ISC_R_INVALIDARG;
+			return DHCP_R_INVALIDARG;
 		return ISC_R_SUCCESS;
 	}
 
@@ -1487,7 +1495,7 @@ isc_result_t dhcp_interface_set_value  (omapi_object_t *h,
 	if (h -> inner && h -> inner -> type -> set_value) {
 		status = ((*(h -> inner -> type -> set_value))
 			  (h -> inner, id, name, value));
-		if (status == ISC_R_SUCCESS || status == ISC_R_UNCHANGED)
+		if (status == ISC_R_SUCCESS || status == DHCP_R_UNCHANGED)
 			return status;
 	}
 			  
@@ -1509,7 +1517,7 @@ isc_result_t dhcp_interface_destroy (omapi_object_t *h,
 	struct interface_info *interface;
 
 	if (h -> type != dhcp_type_interface)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	interface = (struct interface_info *)h;
 
 	if (interface -> ifp) {
@@ -1539,7 +1547,7 @@ isc_result_t dhcp_interface_signal_handler (omapi_object_t *h,
 	isc_result_t status;
 
 	if (h -> type != dhcp_type_interface)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	interface = (struct interface_info *)h;
 
 	/* If it's an update signal, see if the interface is dead right
@@ -1576,7 +1584,7 @@ isc_result_t dhcp_interface_stuff_values (omapi_object_t *c,
 	isc_result_t status;
 
 	if (h -> type != dhcp_type_interface)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	interface = (struct interface_info *)h;
 
 	/* Write out all the values. */
@@ -1611,7 +1619,7 @@ isc_result_t dhcp_interface_lookup (omapi_object_t **ip,
 	struct interface_info *interface;
 
 	if (!ref)
-		return ISC_R_NOKEYS;
+		return DHCP_R_NOKEYS;
 
 	/* First see if we were sent a handle. */
 	status = omapi_get_value_str (ref, id, "handle", &tv);
@@ -1625,7 +1633,7 @@ isc_result_t dhcp_interface_lookup (omapi_object_t **ip,
 		/* Don't return the object if the type is wrong. */
 		if ((*ip) -> type != dhcp_type_interface) {
 			omapi_object_dereference (ip, MDL);
-			return ISC_R_INVALIDARG;
+			return DHCP_R_INVALIDARG;
 		}
 	}
 
@@ -1667,7 +1675,7 @@ isc_result_t dhcp_interface_lookup (omapi_object_t **ip,
 		omapi_value_dereference (&tv, MDL);
 		if (*ip && *ip != (omapi_object_t *)interface) {
 			omapi_object_dereference (ip, MDL);
-			return ISC_R_KEYCONFLICT;
+			return DHCP_R_KEYCONFLICT;
 		} else if (!interface) {
 			if (*ip)
 				omapi_object_dereference (ip, MDL);
@@ -1681,7 +1689,7 @@ isc_result_t dhcp_interface_lookup (omapi_object_t **ip,
 	/* If we get to here without finding an interface, no valid key was
 	   specified. */
 	if (!*ip)
-		return ISC_R_NOKEYS;
+		return DHCP_R_NOKEYS;
 	return ISC_R_SUCCESS;
 }
 
@@ -1748,13 +1756,17 @@ isc_result_t dhcp_interface_remove (omapi_object_t *lp,
 	/* remove the io object */
 	omapi_unregister_io_object ((omapi_object_t *)interface);
 
-	if (local_family == AF_INET) {
+	switch(local_family) {
+#ifdef DHCPv6
+	case AF_INET6:
+		if_deregister6(interface);
+		break;
+#endif /* DHCPv6 */
+	case AF_INET:
+	default:
 		if_deregister_send(interface);
 		if_deregister_receive(interface);
-#ifdef DHCPv6
-	} else {
-		if_deregister6(interface);
-#endif /* DHCPv6 */
+		break;
 	}
 
 	return ISC_R_SUCCESS;

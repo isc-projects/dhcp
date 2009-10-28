@@ -46,7 +46,7 @@ isc_result_t omapi_array_allocate (omapi_array_t **array,
 	omapi_array_t *aptr;
 
 	if (!array || *array)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	aptr = dmalloc (sizeof (omapi_array_t),file, line);
 	if (!aptr)
 		return ISC_R_NOMEMORY;
@@ -63,7 +63,7 @@ isc_result_t omapi_array_free (omapi_array_t **array,
 	int i;
 
 	if (!array || !*array)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	aptr = *array;
 	for (i = 0; i < aptr -> count; i++)
 		if (aptr -> data [i] && aptr -> deref)
@@ -98,11 +98,11 @@ isc_result_t omapi_array_set (omapi_array_t *array, void *ptr, int index,
 	isc_result_t status;
 
 	if (!array)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	if (!ptr)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	if (index < 0)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	/* If the proposed index is larger than the current available
 	   space in the array, make more space in the array. */
@@ -153,7 +153,7 @@ isc_result_t omapi_array_lookup (char **ptr, omapi_array_t *array, int index,
 				 const char *file, int line)
 {
 	if (!array || !ptr || *ptr || index < 0 || index >= array -> count)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	if (array -> data [index])
 		return (*array -> ref) (ptr,
 					array -> data [index], file, line);

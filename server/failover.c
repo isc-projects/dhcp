@@ -76,7 +76,7 @@ void dhcp_failover_startup ()
 		/* In case the peer is already running, immediately try
 		   to establish a connection with it. */
 		status = dhcp_failover_link_initiate ((omapi_object_t *)state);
-		if (status != ISC_R_SUCCESS && status != ISC_R_INCOMPLETE) {
+		if (status != ISC_R_SUCCESS && status != DHCP_R_INCOMPLETE) {
 #if defined (DEBUG_FAILOVER_TIMING)
 			log_info ("add_timeout +90 dhcp_failover_reconnect");
 #endif
@@ -195,7 +195,7 @@ isc_result_t dhcp_failover_link_initiate (omapi_object_t *h)
 			break;
 	}
 	if (!o)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	state = (dhcp_failover_state_t *)o;
 
 	obj = (dhcp_failover_link_t *)0;
@@ -258,7 +258,7 @@ isc_result_t dhcp_failover_link_initiate (omapi_object_t *h)
 			data_string_forget (&ds, MDL);
 			dhcp_failover_link_dereference (&obj, MDL);
 			omapi_addr_list_dereference (&addrs, MDL);
-			return ISC_R_INVALIDARG;
+			return DHCP_R_INVALIDARG;
 		}
 		local_addr.addrtype = AF_INET;
 		local_addr.addrlen = ds.len;
@@ -387,7 +387,7 @@ isc_result_t dhcp_failover_link_signal (omapi_object_t *h,
 	}
 
 	if (!h -> outer || h -> outer -> type != omapi_type_connection)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	c = h -> outer;
 
 	/* We get here because we requested that we be woken up after
@@ -589,7 +589,7 @@ isc_result_t dhcp_failover_link_signal (omapi_object_t *h,
 			log_info ("failover: connect: no matching state.");
 			omapi_disconnect (c, 1);
 			link -> state = dhcp_flink_disconnected;
-			return ISC_R_INVALIDARG;
+			return DHCP_R_INVALIDARG;
 		}
 
 		/* Once we have the entire message, and we've validated
@@ -628,7 +628,7 @@ static isc_result_t do_a_failover_option (c, link)
 	
 	if (link -> imsg_count + 2 > link -> imsg_len) {
 		log_error ("FAILOVER: message overflow at option code.");
-		return ISC_R_PROTOCOLERROR;
+		return DHCP_R_PROTOCOLERROR;
 	}
 
 	/* Get option code. */
@@ -637,7 +637,7 @@ static isc_result_t do_a_failover_option (c, link)
 	
 	if (link -> imsg_count + 2 > link -> imsg_len) {
 		log_error ("FAILOVER: message overflow at length.");
-		return ISC_R_PROTOCOLERROR;
+		return DHCP_R_PROTOCOLERROR;
 	}
 
 	/* Get option length. */
@@ -646,7 +646,7 @@ static isc_result_t do_a_failover_option (c, link)
 
 	if (link -> imsg_count + option_len > link -> imsg_len) {
 		log_error ("FAILOVER: message overflow at data.");
-		return ISC_R_PROTOCOLERROR;
+		return DHCP_R_PROTOCOLERROR;
 	}
 
 	/* If it's an unknown code, skip over it. */
@@ -668,7 +668,7 @@ static isc_result_t do_a_failover_option (c, link)
 		link -> imsg_count += option_len;
 		if (link -> imsg_count != link -> imsg_len) {
 			log_error ("FAILOVER: digest not at end of message");
-			return ISC_R_PROTOCOLERROR;
+			return DHCP_R_PROTOCOLERROR;
 		}
 #if defined (DEBUG_FAILOVER_MESSAGES)
 		log_debug ("  option %s len %d",
@@ -683,7 +683,7 @@ static isc_result_t do_a_failover_option (c, link)
 	if (link -> imsg -> options_present & ft_options [option_code].bit) {
 		log_error ("FAILOVER: duplicate option %s",
 			   ft_options [option_code].name);
-		return ISC_R_PROTOCOLERROR;
+		return DHCP_R_PROTOCOLERROR;
 	}
 
 	/* Make sure the option is appropriate for this type of message.
@@ -718,7 +718,7 @@ static isc_result_t do_a_failover_option (c, link)
 				   (ft_sizes [ft_options [option_code].type] *
 				    ft_options [option_code].num_present),
 				   ft_options [option_code].name);
-			return ISC_R_PROTOCOLERROR;
+			return DHCP_R_PROTOCOLERROR;
 		}
 	} else {
 		failover_option_t *fo;
@@ -751,7 +751,7 @@ static isc_result_t do_a_failover_option (c, link)
 
 				/* Actually, NO_MEMORY, but if we lose here
 				   we have to drop the connection. */
-				return ISC_R_PROTOCOLERROR;
+				return DHCP_R_PROTOCOLERROR;
 			}
 			omapi_connection_copyout (ddns -> data, c, op_count);
 			goto out;
@@ -769,7 +769,7 @@ static isc_result_t do_a_failover_option (c, link)
 		if (op_size > 1 && option_len % op_size) {
 			log_error ("FAILOVER: option_len %d not %s%d",
 				   option_len, "multiple of ", op_size);
-			return ISC_R_PROTOCOLERROR;
+			return DHCP_R_PROTOCOLERROR;
 		}
 
 		op_count = option_len / op_size;
@@ -784,7 +784,7 @@ static isc_result_t do_a_failover_option (c, link)
 			log_error ("FAILOVER: no memory getting %s (%d)",
 				   "option data", op_count);
 
-			return ISC_R_PROTOCOLERROR;
+			return DHCP_R_PROTOCOLERROR;
 		}			
 		op = fo -> data;
 	}
@@ -848,7 +848,7 @@ static isc_result_t do_a_failover_option (c, link)
 			log_error ("FAILOVER: option %s: bad type %d",
 				   ft_options [option_code].name,
 				   ft_options [option_code].type);
-			return ISC_R_PROTOCOLERROR;
+			return DHCP_R_PROTOCOLERROR;
 		}
 	}
       out:
@@ -863,7 +863,7 @@ isc_result_t dhcp_failover_link_set_value (omapi_object_t *h,
 					   omapi_typed_data_t *value)
 {
 	if (h -> type != omapi_type_protocol)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	/* Never valid to set these. */
 	if (!omapi_ds_strcmp (name, "link-port") ||
@@ -885,7 +885,7 @@ isc_result_t dhcp_failover_link_get_value (omapi_object_t *h,
 	dhcp_failover_link_t *link;
 
 	if (h -> type != omapi_type_protocol)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	link = (dhcp_failover_link_t *)h;
 	
 	if (!omapi_ds_strcmp (name, "link-port")) {
@@ -913,7 +913,7 @@ isc_result_t dhcp_failover_link_destroy (omapi_object_t *h,
 {
 	dhcp_failover_link_t *link;
 	if (h -> type != dhcp_type_failover_link)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	link = (dhcp_failover_link_t *)h;
 
 	if (link -> peer_address)
@@ -937,7 +937,7 @@ isc_result_t dhcp_failover_link_stuff_values (omapi_object_t *c,
 	isc_result_t status;
 
 	if (l -> type != dhcp_type_failover_link)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	link = (dhcp_failover_link_t *)l;
 	
 	status = omapi_connection_put_name (c, "link-port");
@@ -985,7 +985,7 @@ isc_result_t dhcp_failover_listen (omapi_object_t *h)
 		return status;
 	if (!value -> value) {
 		omapi_value_dereference (&value, MDL);
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 	
 	status = omapi_get_int_value (&port, value -> value);
@@ -1001,7 +1001,7 @@ isc_result_t dhcp_failover_listen (omapi_object_t *h)
 	if (!value -> value) {
 	      nogood:
 		omapi_value_dereference (&value, MDL);
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 	
 	if (value -> value -> type != omapi_datatype_data ||
@@ -1074,7 +1074,7 @@ isc_result_t dhcp_failover_listener_signal (omapi_object_t *o,
 	dhcp_failover_state_t *s, *state = (dhcp_failover_state_t *)0;
 
 	if (!o || o -> type != dhcp_type_failover_listener)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	p = (dhcp_failover_listener_t *)o;
 
 	/* Not a signal we recognize? */
@@ -1087,7 +1087,7 @@ isc_result_t dhcp_failover_listener_signal (omapi_object_t *o,
 
 	c = va_arg (ap, omapi_connection_object_t *);
 	if (!c || c -> type != omapi_type_connection)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	/* See if we can find a failover_state object that
 	   matches this connection. */
@@ -1141,7 +1141,7 @@ isc_result_t dhcp_failover_listener_set_value (omapi_object_t *h,
 						omapi_typed_data_t *value)
 {
 	if (h -> type != dhcp_type_failover_listener)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	
 	if (h -> inner && h -> inner -> type -> set_value)
 		return (*(h -> inner -> type -> set_value))
@@ -1155,7 +1155,7 @@ isc_result_t dhcp_failover_listener_get_value (omapi_object_t *h,
 						omapi_value_t **value)
 {
 	if (h -> type != dhcp_type_failover_listener)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	
 	if (h -> inner && h -> inner -> type -> get_value)
 		return (*(h -> inner -> type -> get_value))
@@ -1169,7 +1169,7 @@ isc_result_t dhcp_failover_listener_destroy (omapi_object_t *h,
 	dhcp_failover_listener_t *l;
 
 	if (h -> type != dhcp_type_failover_listener)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	l = (dhcp_failover_listener_t *)h;
 	if (l -> next)
 		dhcp_failover_listener_dereference (&l -> next, file, line);
@@ -1185,7 +1185,7 @@ isc_result_t dhcp_failover_listener_stuff (omapi_object_t *c,
 					   omapi_object_t *p)
 {
 	if (p -> type != dhcp_type_failover_listener)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	if (p -> inner && p -> inner -> type -> stuff_values)
 		return (*(p -> inner -> type -> stuff_values)) (c, id,
@@ -1208,7 +1208,7 @@ isc_result_t dhcp_failover_register (omapi_object_t *h)
 		return status;
 	if (!value -> value) {
 		omapi_value_dereference (&value, MDL);
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 	
 	status = omapi_get_int_value (&port, value -> value);
@@ -1248,7 +1248,7 @@ isc_result_t dhcp_failover_state_signal (omapi_object_t *o,
 	struct timeval tv;
 
 	if (!o || o -> type != dhcp_type_failover_state)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	state = (dhcp_failover_state_t *)o;
 
 	/* Not a signal we recognize? */
@@ -1606,7 +1606,7 @@ isc_result_t dhcp_failover_state_transition (dhcp_failover_state_t *state,
 			break;
 		}
 	}
-	return ISC_R_INVALIDARG;
+	return DHCP_R_INVALIDARG;
 }
 
 isc_result_t dhcp_failover_set_service_state (dhcp_failover_state_t *state)
@@ -2953,7 +2953,7 @@ isc_result_t dhcp_failover_state_set_value (omapi_object_t *h,
 	isc_result_t status;
 
 	if (h -> type != dhcp_type_failover_state)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	/* This list of successful returns is completely wrong, but the
 	   fastest way to make dhcpctl do something vaguely sane when
@@ -3028,7 +3028,7 @@ void dhcp_failover_reconnect (void *vs)
 		return;
 
 	status = dhcp_failover_link_initiate ((omapi_object_t *)state);
-	if (status != ISC_R_SUCCESS && status != ISC_R_INCOMPLETE) {
+	if (status != ISC_R_SUCCESS && status != DHCP_R_INCOMPLETE) {
 		log_info ("failover peer %s: %s", state -> name,
 			  isc_result_totext (status));
 #if defined (DEBUG_FAILOVER_TIMING)
@@ -3119,7 +3119,7 @@ isc_result_t dhcp_failover_state_get_value (omapi_object_t *h,
 	isc_result_t status;
 
 	if (h -> type != dhcp_type_failover_state)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	s = (dhcp_failover_state_t *)h;
 	
 	if (!omapi_ds_strcmp (name, "name")) {
@@ -3213,7 +3213,7 @@ isc_result_t dhcp_failover_state_destroy (omapi_object_t *h,
 	dhcp_failover_state_t *s;
 
 	if (h -> type != dhcp_type_failover_state)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	s = (dhcp_failover_state_t *)h;
 
 	if (s -> link_to_peer)
@@ -3261,11 +3261,11 @@ isc_result_t dhcp_failover_state_stuff (omapi_object_t *c,
 	isc_result_t status;
 
 	if (c -> type != omapi_type_connection)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	conn = (omapi_connection_object_t *)c;
 
 	if (h -> type != dhcp_type_failover_state)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	s = (dhcp_failover_state_t *)h;
 	
 	status = omapi_connection_put_name (c, "name");
@@ -3482,7 +3482,7 @@ isc_result_t dhcp_failover_state_lookup (omapi_object_t **sp,
 	dhcp_failover_state_t *s;
 
 	if (!ref)
-		return ISC_R_NOKEYS;
+		return DHCP_R_NOKEYS;
 
 	/* First see if we were sent a handle. */
 	status = omapi_get_value_str (ref, id, "handle", &tv);
@@ -3496,7 +3496,7 @@ isc_result_t dhcp_failover_state_lookup (omapi_object_t **sp,
 		/* Don't return the object if the type is wrong. */
 		if ((*sp) -> type != dhcp_type_failover_state) {
 			omapi_object_dereference (sp, MDL);
-			return ISC_R_INVALIDARG;
+			return DHCP_R_INVALIDARG;
 		}
 	}
 
@@ -3516,7 +3516,7 @@ isc_result_t dhcp_failover_state_lookup (omapi_object_t **sp,
 		   then the query was invalid. */
 		if (*sp && *sp != (omapi_object_t *)s) {
 			omapi_object_dereference (sp, MDL);
-			return ISC_R_KEYCONFLICT;
+			return DHCP_R_KEYCONFLICT;
 		} else if (!s) {
 			if (*sp)
 				omapi_object_dereference (sp, MDL);
@@ -3530,7 +3530,7 @@ isc_result_t dhcp_failover_state_lookup (omapi_object_t **sp,
 	/* If we get to here without finding a lease, no valid key was
 	   specified. */
 	if (!*sp)
-		return ISC_R_NOKEYS;
+		return DHCP_R_NOKEYS;
 	return ISC_R_SUCCESS;
 }
 
@@ -4177,7 +4177,7 @@ isc_result_t dhcp_failover_put_message (dhcp_failover_link_t *link,
 	va_end(list);
 
 	if (bad_option)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	/* Now send the message header. */
 
@@ -4325,12 +4325,12 @@ isc_result_t dhcp_failover_send_state (dhcp_failover_state_t *state)
 #endif
 
 	if (!state || state -> type != dhcp_type_failover_state)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	link = state -> link_to_peer;
 	if (!link ||
 	    !link -> outer ||
 	    link -> outer -> type != omapi_type_connection)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	status = (dhcp_failover_put_message
 		  (link, link -> outer,
@@ -4375,11 +4375,11 @@ isc_result_t dhcp_failover_send_connect (omapi_object_t *l)
 #endif
 
 	if (!l || l -> type != dhcp_type_failover_link)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	link = (dhcp_failover_link_t *)l;
 	state = link -> state_object;
 	if (!l -> outer || l -> outer -> type != omapi_type_connection)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	status =
 	    (dhcp_failover_put_message
@@ -4432,10 +4432,10 @@ isc_result_t dhcp_failover_send_connectack (omapi_object_t *l,
 #endif
 
 	if (!l || l -> type != dhcp_type_failover_link)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	link = (dhcp_failover_link_t *)l;
 	if (!l -> outer || l -> outer -> type != omapi_type_connection)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	status =
 	    (dhcp_failover_put_message
@@ -4502,11 +4502,11 @@ isc_result_t dhcp_failover_send_disconnect (omapi_object_t *l,
 #endif
 
 	if (!l || l -> type != dhcp_type_failover_link)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	link = (dhcp_failover_link_t *)l;
 	state = link -> state_object;
 	if (!l -> outer || l -> outer -> type != omapi_type_connection)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	if (!message && reason)
 		message = dhcp_failover_reject_reason_print (reason);
@@ -4554,11 +4554,11 @@ isc_result_t dhcp_failover_send_bind_update (dhcp_failover_state_t *state,
 
 	if (!state -> link_to_peer ||
 	    state -> link_to_peer -> type != dhcp_type_failover_link)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	link = (dhcp_failover_link_t *)state -> link_to_peer;
 
 	if (!link -> outer || link -> outer -> type != omapi_type_connection)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	transmit_state = lease->desired_binding_state;
 	if (lease->flags & RESERVED_LEASE) {
@@ -4651,11 +4651,11 @@ isc_result_t dhcp_failover_send_bind_ack (dhcp_failover_state_t *state,
 
 	if (!state -> link_to_peer ||
 	    state -> link_to_peer -> type != dhcp_type_failover_link)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	link = (dhcp_failover_link_t *)state -> link_to_peer;
 
 	if (!link -> outer || link -> outer -> type != omapi_type_connection)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	if (!message && reason)
 		message = dhcp_failover_reject_reason_print (reason);
@@ -4735,11 +4735,11 @@ isc_result_t dhcp_failover_send_poolreq (dhcp_failover_state_t *state)
 
 	if (!state -> link_to_peer ||
 	    state -> link_to_peer -> type != dhcp_type_failover_link)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	link = (dhcp_failover_link_t *)state -> link_to_peer;
 
 	if (!link -> outer || link -> outer -> type != omapi_type_connection)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	status = (dhcp_failover_put_message
 		  (link, link -> outer,
@@ -4774,11 +4774,11 @@ isc_result_t dhcp_failover_send_poolresp (dhcp_failover_state_t *state,
 
 	if (!state -> link_to_peer ||
 	    state -> link_to_peer -> type != dhcp_type_failover_link)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	link = (dhcp_failover_link_t *)state -> link_to_peer;
 
 	if (!link -> outer || link -> outer -> type != omapi_type_connection)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	status = (dhcp_failover_put_message
 		  (link, link -> outer,
@@ -4814,11 +4814,11 @@ isc_result_t dhcp_failover_send_update_request (dhcp_failover_state_t *state)
 
 	if (!state -> link_to_peer ||
 	    state -> link_to_peer -> type != dhcp_type_failover_link)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	link = (dhcp_failover_link_t *)state -> link_to_peer;
 
 	if (!link -> outer || link -> outer -> type != omapi_type_connection)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	if (state -> curUPD)
 		return ISC_R_ALREADYRUNNING;
@@ -4860,11 +4860,11 @@ isc_result_t dhcp_failover_send_update_request_all (dhcp_failover_state_t
 
 	if (!state -> link_to_peer ||
 	    state -> link_to_peer -> type != dhcp_type_failover_link)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	link = (dhcp_failover_link_t *)state -> link_to_peer;
 
 	if (!link -> outer || link -> outer -> type != omapi_type_connection)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	/* If there is an UPDREQ in progress, then upgrade to UPDREQALL. */
 	if (state -> curUPD && (state -> curUPD != FTM_UPDREQ))
@@ -4906,11 +4906,11 @@ isc_result_t dhcp_failover_send_update_done (dhcp_failover_state_t *state)
 
 	if (!state -> link_to_peer ||
 	    state -> link_to_peer -> type != dhcp_type_failover_link)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	link = (dhcp_failover_link_t *)state -> link_to_peer;
 
 	if (!link -> outer || link -> outer -> type != omapi_type_connection)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	status = (dhcp_failover_put_message
 		  (link, link -> outer,
@@ -5187,7 +5187,7 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 	 */
 	if (msg->binding_status == FTS_ACTIVE &&
 	    (chaddr_changed || ident_changed)) {
-		ddns_removals(lease, NULL);
+		ddns_removals(lease, NULL, NULL);
 
 		if (lease->scope != NULL)
 			binding_scope_dereference(&lease->scope, MDL);

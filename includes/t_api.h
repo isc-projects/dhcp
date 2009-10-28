@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: t_api.h,v 1.2 2007/11/16 11:04:11 shane Exp $ */
+/* $Id: t_api.h,v 1.3 2009/10/28 04:12:30 sar Exp $ */
 
 #ifndef TESTS_T_API_H
 #define TESTS_T_API_H 1
@@ -24,9 +24,9 @@
 
 #include <stdio.h>
 
-#include <isc-dhcp/lang.h>
-#include <isc-dhcp/result.h>
-#include <isc-dhcp/formatcheck.h>
+#include <omapip/result.h>
+#include <isc/lang.h>
+#include <isc/formatcheck.h>
 
 /*
  *

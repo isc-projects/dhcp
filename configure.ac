@@ -483,9 +483,30 @@ AC_CHECK_MEMBER(struct msghdr.msg_control,,
 #include <sys/socket.h>
 	])
 
+libbind =
+AC_ARG_WITH(libbind,
+	AC_HELP_STRING([--with-libbind=PATH],
+		       [bind includes and libraries are in PATH 
+		        (default is ./bind)]),
+	use_libbind="$withval", use_libbind="no")
+case "$use_libbind" in 
+yes)
+	libbind="\${top_srcdir}/bind"
+	;;
+no)
+	libbind="\${top_srcdir}/bind"
+	;;
+*)
+	libbind="$use_libbind"
+	;;
+esac
+
 # Append selected warning levels to CFLAGS before substitution (but after
 # AC_TRY_COMPILE & etc).
 CFLAGS="$CFLAGS $STD_CWARNINGS"
+
+# Try to add the bind include directory
+CFLAGS="$CFLAGS -I$libbind/include"
 
 AC_OUTPUT([
   Makefile
@@ -495,7 +516,6 @@ AC_OUTPUT([
   dhcpctl/Makefile
   dst/Makefile
   includes/Makefile
-  minires/Makefile
   omapip/Makefile
   relay/Makefile
   server/Makefile

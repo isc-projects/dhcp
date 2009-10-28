@@ -71,9 +71,8 @@
 #include "osdep.h"
 
 #include "arpa/nameser.h"
-#if defined (NSUPDATE)
-# include "minires/minires.h"
-#endif
+
+#include "minires.h"
 
 struct hash_table;
 typedef struct hash_table group_hash_t;
@@ -92,15 +91,16 @@ typedef time_t TIME;
 #define EOL '\n'
 #endif
 
+#include <omapip/isclib.h>
+#include <omapip/result.h>
+
 #include "dhcp.h"
 #include "dhcp6.h"
 #include "statement.h"
 #include "tree.h"
 #include "inet.h"
 #include "dhctoken.h"
-#include "heap.h"
 
-#include <isc-dhcp/result.h>
 #include <omapip/omapip_p.h>
 
 #if !defined (BYTE_NAME_HASH_SIZE)
@@ -512,6 +512,14 @@ struct lease {
 	TIME cltt;	/* Client last transaction time. */
 	u_int32_t last_xid; /* XID we sent in this lease's BNDUPD */
 	struct lease *next_pending;
+
+	/*
+	 * A pointer to the state of the ddns update for this lease.
+	 * It should be set while the update is in progress and cleared
+	 * when the update finishes.  It can be used to cancel the
+	 * update if we want to do a different update.
+	 */
+	struct dhcp_ddns_cb *ddns_cb;
 };
 
 struct lease_state {
@@ -1087,6 +1095,14 @@ struct client_state {
 	 * a no-op).
 	 */
 	void (*v6_handler)(struct packet *, struct client_state *);
+
+	/*
+	 * A pointer to the state of the ddns update for this lease.
+	 * It should be set while the update is in progress and cleared
+	 * when the update finishes.  It can be used to cancel the
+	 * update if we want to do a different update.
+	 */
+	struct dhcp_ddns_cb *ddns_cb;
 };
 
 struct envadd_state {
@@ -1181,6 +1197,7 @@ struct timeout {
 	void *what;
 	tvref_t ref;
 	tvunref_t unref;
+	isc_timer_t *isc_timeout;  
 };
 
 struct eventqueue {
@@ -1372,6 +1389,15 @@ struct iasubopt {
 
 	int heap_index;				/* index into heap, or -1 
 						   (internal use only) */
+
+	/*
+	 * A pointer to the state of the ddns update for this lease.
+	 * It should be set while the update is in progress and cleared
+	 * when the update finishes.  It can be used to cancel the
+	 * update if we want to do a different update.
+	 */
+	struct dhcp_ddns_cb *ddns_cb;
+
 };
 
 struct ia_xx {
@@ -1404,6 +1430,64 @@ struct ipv6_pool {
 						   this pool */
 	struct subnet *subnet;			/* subnet for this pool */
 };
+
+/* Flags and state for dhcp_ddns_cb_t */
+#define DDNS_UPDATE_ADDR        0x01
+#define DDNS_UPDATE_PTR         0x02
+#define DDNS_INCLUDE_RRSET      0x04
+#define DDNS_CONFLICT_OVERRIDE  0x08
+#define DDNS_CLIENT_DID_UPDATE  0x10
+#define DDNS_EXECUTE_NEXT       0x20
+#define DDNS_ABORT              0x40
+
+/*
+ * The following two groups are separate and we could reuse
+ * values but not reusing them may be useful in the future.
+ */
+#define DDNS_STATE_CLEANUP          0 // The previous step failed, cleanup
+
+#define DDNS_STATE_ADD_FW_NXDOMAIN  1
+#define DDNS_STATE_ADD_FW_YXDHCID   2
+#define DDNS_STATE_ADD_PTR          3
+
+#define DDNS_STATE_REM_FW_YXDHCID  17
+#define DDNS_STATE_REM_FW_NXRR     18
+#define DDNS_STATE_REM_PTR         19
+
+struct dhcp_ddns_cb;
+
+typedef void (*ddns_action_t)(struct dhcp_ddns_cb *ddns_cb,
+			      isc_result_t result);
+
+typedef struct dhcp_ddns_cb {
+	struct data_string fwd_name;
+	struct data_string rev_name;
+	struct data_string dhcid;
+	struct iaddr address;
+	int address_type;
+
+	unsigned long ttl;
+
+	unsigned char zone_name[DHCP_MAXDNS_WIRE];
+	isc_sockaddrlist_t zone_server_list;
+	isc_sockaddr_t zone_addrs[DHCP_MAXNS];
+	int zone_addr_count;
+	struct dns_zone *zone;
+
+	int flags;
+	TIME timeout;
+	int state;
+	ddns_action_t cur_func;
+
+	struct dhcp_ddns_cb * next_op;
+
+	/* Lease or client state that triggered the ddns operation */
+	void *lease;
+	struct binding_scope **scope;
+ 
+	void *transaction;
+	void *dataspace;
+} dhcp_ddns_cb_t;
 
 extern struct ipv6_pool **pools;
 extern int num_pools;
@@ -1743,7 +1827,7 @@ void parse_server_duid_conf(struct parse *cfile);
 /* ddns.c */
 int ddns_updates(struct packet *, struct lease *, struct lease *,
 		 struct iasubopt *, struct iasubopt *, struct option_state *);
-int ddns_removals(struct lease *, struct iasubopt *);
+int ddns_removals(struct lease *, struct iasubopt *, struct dhcp_ddns_cb *);
 
 /* parse.c */
 void add_enumeration (struct enumeration *);
@@ -1849,7 +1933,7 @@ int evaluate_expression (struct binding_value **, struct packet *,
 			 struct binding_scope **, struct expression *,
 			 const char *, int);
 int binding_value_dereference (struct binding_value **, const char *, int);
-#if defined (NSUPDATE)
+#if defined (NSUPDATE_OLD)
 int evaluate_dns_expression PROTO ((ns_updrec **, struct packet *,
 				    struct lease *, 
 				    struct client_state *,
@@ -2137,7 +2221,9 @@ int token_print_indent (FILE *, int, int,
 			const char *, const char *, const char *);
 void indent_spaces (FILE *, int);
 #if defined (NSUPDATE)
+#if 0
 void print_dns_status (int, ns_updque *);
+#endif
 #endif
 const char *print_time(TIME);
 
@@ -2540,8 +2626,9 @@ isc_result_t dhclient_interface_startup_hook (struct interface_info *);
 void dhclient_schedule_updates(struct client_state *client,
 			       struct iaddr *addr, int offset);
 void client_dns_update_timeout (void *cp);
-isc_result_t client_dns_update(struct client_state *client, int, int,
-			       struct iaddr *);
+isc_result_t client_dns_update(struct client_state *client,
+			       dhcp_ddns_cb_t *ddns_cb);
+void client_dns_remove(struct client_state *client, struct iaddr *addr);
 
 void dhcpv4_client_assignments(void);
 void dhcpv6_client_assignments(void);
@@ -2685,13 +2772,15 @@ isc_result_t enter_dns_zone (struct dns_zone *);
 isc_result_t dns_zone_lookup (struct dns_zone **, const char *);
 int dns_zone_dereference PROTO ((struct dns_zone **, const char *, int));
 #if defined (NSUPDATE)
-isc_result_t find_cached_zone (const char *, ns_class, char *,
-			       size_t, struct in_addr *, int, int *,
-			       struct dns_zone **);
+#define FIND_FORWARD 0
+#define FIND_REVERSE 1
+isc_result_t find_cached_zone (dhcp_ddns_cb_t *, int);
 void forget_zone (struct dns_zone **);
 void repudiate_zone (struct dns_zone **);
-void cache_found_zone (ns_class, char *, struct in_addr *, int);
+//void cache_found_zone (ns_class, char *, struct in_addr *, int);
 int get_dhcid (struct data_string *, int, const u_int8_t *, unsigned);
+void dhcid_tolease (struct data_string *, struct data_string *);
+isc_result_t dhcid_fromlease (struct data_string *, struct data_string *);
 isc_result_t ddns_update_fwd(struct data_string *, struct iaddr,
 			     struct data_string *, unsigned long, unsigned,
 			     unsigned);
@@ -3318,3 +3407,17 @@ void mark_hosts_unavailable(void);
 void mark_phosts_unavailable(void);
 void mark_interfaces_unavailable(void);
 
+dhcp_ddns_cb_t *ddns_cb_alloc(const char *file, int line);
+void ddns_cb_free (dhcp_ddns_cb_t *ddns_cb, const char *file, int line);
+void ddns_cb_forget_zone (dhcp_ddns_cb_t *ddns_cb);
+
+//void *key_from_zone(struct dns_zone *zone);
+
+isc_result_t
+ddns_modify_fwd(dhcp_ddns_cb_t *ddns_cb);
+
+isc_result_t
+ddns_modify_ptr(dhcp_ddns_cb_t *ddns_cb);
+
+void
+ddns_cancel(dhcp_ddns_cb_t *ddns_cb);

@@ -16,9 +16,11 @@ EXTRA_DIST = RELNOTES LICENSE \
 	     doc/ja_JP.eucJP/dhclient-script.8 doc/ja_JP.eucJP/dhclient.8 \
 	     doc/ja_JP.eucJP/dhclient.conf.5 doc/ja_JP.eucJP/dhclient.leases.5 \
 	     doc/ja_JP.eucJP/dhcp-eval.5 doc/ja_JP.eucJP/dhcp-options.5 \
-	     doc/examples/dhclient-dhcpv6.conf doc/examples/dhcpd-dhcpv6.conf
+	     doc/examples/dhclient-dhcpv6.conf doc/examples/dhcpd-dhcpv6.conf \
+	     util/bind.sh util/bindlib.sh util/bindcus.sh \
+	     bind/bind.tar.gz bind/version.tmp 
 
-SUBDIRS = includes tests common minires dst omapip client dhcpctl relay server
+SUBDIRS = includes tests common dst omapip client dhcpctl relay server
 
 nobase_include_HEADERS = dhcpctl/dhcpctl.h
 

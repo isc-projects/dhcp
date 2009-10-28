@@ -104,6 +104,60 @@ trigger_event(struct eventqueue **queue)
 	}
 }
 
+/*
+ * Callback routine to connect the omapi I/O object and socket with
+ * the isc socket code.  The isc socket code will call this routine
+ * which will then call the correct local routine to process the bytes.
+ * 
+ * Currently we are always willing to read more data, this should be modified
+ * so that on connections we don't read more if we already have enough.
+ *
+ * If we have more bytes to write we ask the library to call us when
+ * we can write more.  If we indicate we don't have more to write we need
+ * to poke the library via isc_socket_fdwatchpoke.
+ */
+int
+omapi_iscsock_cb(isc_task_t   *task,
+		 isc_socket_t *socket,
+		 void         *cbarg,
+		 int           flags)
+{
+	omapi_io_object_t *obj;
+	isc_result_t status;
+
+	/* Get the current time... */
+	gettimeofday (&cur_tv, (struct timezone *)0);
+
+	/* Not much to be done if we have the wrong type of object. */
+	if (((omapi_object_t *)cbarg) -> type != omapi_type_io_object) {
+		log_fatal ("Incorrect object type, must be of type io_object");
+	}
+	obj = (omapi_io_object_t *)cbarg;
+
+	if ((flags == ISC_SOCKFDWATCH_READ) &&
+	    (obj->reader != NULL) &&
+	    (obj->inner != NULL)) {
+		obj->reader(obj->inner);
+		/* We always ask for more when reading */
+		return (1);
+	} else if ((flags == ISC_SOCKFDWATCH_WRITE) &&
+		 (obj->writer != NULL) &&
+		 (obj->inner != NULL)) {
+		status = obj->writer(obj->inner);
+		/* If the writer has more to write they should return
+		 * ISC_R_INPROGRESS */
+		if (status == ISC_R_INPROGRESS) {
+			return (1);
+		}
+	}
+
+	/*
+	 * We get here if we either had an error (inconsistent
+	 * structures etc) or no more to write, tell the socket
+	 * lib we don't have more to do right now.
+	 */
+	return (0);
+}
 
 /* Register an I/O handle so that we can do asynchronous I/O on it. */
 
@@ -119,6 +173,7 @@ isc_result_t omapi_register_io_object (omapi_object_t *h,
 {
 	isc_result_t status;
 	omapi_io_object_t *obj, *p;
+	int fd_flags = 0, fd = 0;
 
 	/* omapi_io_states is a static object.   If its reference count
 	   is zero, this is the first I/O handle to be registered, so
@@ -147,6 +202,43 @@ isc_result_t omapi_register_io_object (omapi_object_t *h,
 		omapi_io_dereference (&obj, MDL);
 		return status;
 	}
+
+	/*
+	 * Attach the I/O object to the isc socket library via the 
+	 * fdwatch function.  This allows the socket library to watch
+	 * over a socket that we built.  If there are both a read and
+	 * a write socket we asssume they are the same socket.
+	 */
+
+	if (readfd) {
+		fd_flags |= ISC_SOCKFDWATCH_READ;
+		fd = readfd(h);
+	}
+
+	if (writefd) {
+		fd_flags |= ISC_SOCKFDWATCH_WRITE;
+		fd = writefd(h);
+	}
+
+	if (fd_flags != 0) {
+		status = isc_socket_fdwatchcreate(dhcp_gbl_ctx.socketmgr,
+						  fd, fd_flags,
+						  omapi_iscsock_cb,
+						  obj,
+						  dhcp_gbl_ctx.task,
+						  &obj->fd);
+		if (status != ISC_R_SUCCESS) {
+			log_error("Unable to register fd with library %s",
+				   isc_result_totext(status));
+
+			/*sar*/
+			/* is this the cleanup we need? */
+			omapi_object_dereference(&h->outer, MDL);
+			omapi_io_dereference (&obj, MDL);
+			return (status);
+		}
+	}
+
 
 	/* Find the last I/O state, if there are any. */
 	for (p = omapi_io_states.next;
@@ -216,7 +308,7 @@ isc_result_t omapi_unregister_io_object (omapi_object_t *h)
 	omapi_io_object_t *p, *obj, *last, *ph;
 
 	if (!h -> outer || h -> outer -> type != omapi_type_io_object)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	obj = (omapi_io_object_t *)h -> outer;
 	ph = (omapi_io_object_t *)0;
 	omapi_io_reference (&ph, obj, MDL);
@@ -242,6 +334,12 @@ isc_result_t omapi_unregister_io_object (omapi_object_t *h)
 	}
 	omapi_object_dereference (&obj -> inner, MDL);
 	omapi_object_dereference (&h -> outer, MDL);
+
+	/* remove isc socket associations */
+	if (obj->fd != NULL) {
+		isc_socket_detach(&obj->fd);
+	}
+
 	omapi_io_dereference (&ph, MDL);
 	return ISC_R_SUCCESS;
 }
@@ -577,7 +675,6 @@ isc_result_t omapi_one_dispatch (omapi_object_t *wo,
 				omapi_io_dereference(&prev, MDL);
 			}
 			omapi_io_reference(&prev, io, MDL);
-
 		}
 
 		/*
@@ -608,7 +705,7 @@ isc_result_t omapi_io_set_value (omapi_object_t *h,
 				 omapi_typed_data_t *value)
 {
 	if (h -> type != omapi_type_io_object)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	
 	if (h -> inner && h -> inner -> type -> set_value)
 		return (*(h -> inner -> type -> set_value))
@@ -622,7 +719,7 @@ isc_result_t omapi_io_get_value (omapi_object_t *h,
 				 omapi_value_t **value)
 {
 	if (h -> type != omapi_type_io_object)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	
 	if (h -> inner && h -> inner -> type -> get_value)
 		return (*(h -> inner -> type -> get_value))
@@ -643,7 +740,7 @@ isc_result_t omapi_io_destroy (omapi_object_t *h, const char *file, int line)
 	omapi_io_object_t *obj = NULL, *p, *last = NULL, **holder;
 
 	if (h -> type != omapi_type_io_object)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	
 	/* remove from the list of I/O states */
 	for (p = omapi_io_states.next; p; p = p -> next) {
@@ -674,7 +771,7 @@ isc_result_t omapi_io_signal_handler (omapi_object_t *h,
 				      const char *name, va_list ap)
 {
 	if (h -> type != omapi_type_io_object)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	
 	if (h -> inner && h -> inner -> type -> signal_handler)
 		return (*(h -> inner -> type -> signal_handler)) (h -> inner,
@@ -687,7 +784,7 @@ isc_result_t omapi_io_stuff_values (omapi_object_t *c,
 				    omapi_object_t *i)
 {
 	if (i -> type != omapi_type_io_object)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	if (i -> inner && i -> inner -> type -> stuff_values)
 		return (*(i -> inner -> type -> stuff_values)) (c, id,
@@ -701,7 +798,7 @@ isc_result_t omapi_waiter_signal_handler (omapi_object_t *h,
 	omapi_waiter_object_t *waiter;
 
 	if (h -> type != omapi_type_waiter)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	
 	if (!strcmp (name, "ready")) {
 		waiter = (omapi_waiter_object_t *)h;
@@ -710,17 +807,17 @@ isc_result_t omapi_waiter_signal_handler (omapi_object_t *h,
 		return ISC_R_SUCCESS;
 	}
 
-	if (!strcmp (name, "status")) {
+	if (!strcmp(name, "status")) {
 		waiter = (omapi_waiter_object_t *)h;
-		waiter -> ready = 1;
-		waiter -> waitstatus = va_arg (ap, isc_result_t);
+		waiter->ready = 1;
+		waiter->waitstatus = va_arg(ap, isc_result_t);
 		return ISC_R_SUCCESS;
 	}
 
 	if (!strcmp (name, "disconnect")) {
 		waiter = (omapi_waiter_object_t *)h;
 		waiter -> ready = 1;
-		waiter -> waitstatus = ISC_R_CONNRESET;
+		waiter -> waitstatus = DHCP_R_CONNRESET;
 		return ISC_R_SUCCESS;
 	}
 

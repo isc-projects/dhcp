@@ -37,15 +37,18 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
-#include <isc-dhcp/result.h>
+#include <omapip/result.h>
 #include <sys/time.h>
 #include <omapip/omapip.h>
+#include <omapip/isclib.h>
 
 int main (int argc, char **argv)
 {
 	omapi_object_t *listener = (omapi_object_t*)0;
 	omapi_object_t *connection = (omapi_object_t*)0;
 	isc_result_t status;
+
+	dhcp_context_create();
 
 	omapi_init ();
 

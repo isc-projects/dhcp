@@ -84,7 +84,7 @@ isc_result_t dhcpctl_callback_set_value (omapi_object_t *h,
 					 omapi_typed_data_t *value)
 {
 	if (h -> type != dhcpctl_callback_type)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	if (h -> inner && h -> inner -> type -> set_value)
 		return (*(h -> inner -> type -> set_value))
@@ -98,7 +98,7 @@ isc_result_t dhcpctl_callback_get_value (omapi_object_t *h,
 					 omapi_value_t **value)
 {
 	if (h -> type != dhcpctl_callback_type)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	
 	if (h -> inner && h -> inner -> type -> get_value)
 		return (*(h -> inner -> type -> get_value))
@@ -113,7 +113,7 @@ isc_result_t dhcpctl_callback_signal_handler (omapi_object_t *o,
 	isc_result_t waitstatus;
 
 	if (o -> type != dhcpctl_callback_type)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	p = (dhcpctl_callback_object_t *)o;
 
 	/* Not a signal we recognize? */
@@ -142,7 +142,7 @@ isc_result_t dhcpctl_callback_destroy (omapi_object_t *h,
 {
 	dhcpctl_callback_object_t *p;
 	if (h -> type != dhcpctl_callback_type)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	p = (dhcpctl_callback_object_t *)h;
 	if (p -> handle)
 		omapi_object_dereference ((omapi_object_t **)&p -> handle,
@@ -158,7 +158,7 @@ isc_result_t dhcpctl_callback_stuff_values (omapi_object_t *c,
 					    omapi_object_t *p)
 {
 	if (p -> type != dhcpctl_callback_type)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	if (p -> inner && p -> inner -> type -> stuff_values)
 		return (*(p -> inner -> type -> stuff_values)) (c, id,

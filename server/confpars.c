@@ -245,7 +245,7 @@ isc_result_t conf_file_subparse (struct parse *cfile, struct group *group,
 	} while (1);
 	token = next_token (&val, (unsigned *)0, cfile);
 
-	status = cfile -> warnings_occurred ? ISC_R_BADPARSE : ISC_R_SUCCESS;
+	status = cfile->warnings_occurred ? DHCP_R_BADPARSE : ISC_R_SUCCESS;
 	return status;
 }
 
@@ -304,7 +304,7 @@ isc_result_t lease_file_subparse (struct parse *cfile)
 
 	} while (1);
 
-	status = cfile -> warnings_occurred ? ISC_R_BADPARSE : ISC_R_SUCCESS;
+	status = cfile->warnings_occurred ? DHCP_R_BADPARSE : ISC_R_SUCCESS;
 	return status;
 }
 

@@ -116,6 +116,10 @@ if_register_socket(struct interface_info *info, int family,
 	int sock;
 	int flag;
 	int domain;
+#ifdef DHCPv6
+	struct sockaddr_in6 *addr6;
+#endif
+	struct sockaddr_in *addr;
 
 	/* INSIST((family == AF_INET) || (family == AF_INET6)); */
 
@@ -133,28 +137,30 @@ if_register_socket(struct interface_info *info, int family,
 	 * address family. 
 	 */ 
 	memset(&name, 0, sizeof(name));
+	switch (family) {
 #ifdef DHCPv6
-	if (family == AF_INET6) {
-		struct sockaddr_in6 *addr = (struct sockaddr_in6 *)&name; 
-		addr->sin6_family = AF_INET6;
-		addr->sin6_port = local_port;
+	case AF_INET6:
+		addr6 = (struct sockaddr_in6 *)&name; 
+		addr6->sin6_family = AF_INET6;
+		addr6->sin6_port = local_port;
 		/* XXX: What will happen to multicasts if this is nonzero? */
-		memcpy(&addr->sin6_addr,
+		memcpy(&addr6->sin6_addr,
 		       &local_address6, 
-		       sizeof(addr->sin6_addr));
+		       sizeof(addr6->sin6_addr));
 #ifdef HAVE_SA_LEN
-		addr->sin6_len = sizeof(*addr);
+		addr6->sin6_len = sizeof(*addr6);
 #endif
-		name_len = sizeof(*addr);
+		name_len = sizeof(*addr6);
 		domain = PF_INET6;
 		if ((info->flags & INTERFACE_STREAMS) == INTERFACE_UPSTREAM) {
 			*do_multicast = 0;
 		}
-	} else { 
-#else 
-	{
+		break;
 #endif /* DHCPv6 */
-		struct sockaddr_in *addr = (struct sockaddr_in *)&name; 
+
+	case AF_INET:
+	default:
+		addr = (struct sockaddr_in *)&name; 
 		addr->sin_family = AF_INET;
 		addr->sin_port = local_port;
 		memcpy(&addr->sin_addr,
@@ -165,6 +171,7 @@ if_register_socket(struct interface_info *info, int family,
 #endif
 		name_len = sizeof(*addr);
 		domain = PF_INET;
+		break;
 	}
 
 	/* Make a socket... */
@@ -770,7 +777,7 @@ isc_result_t fallback_discard (object)
 	struct interface_info *interface;
 
 	if (object -> type != dhcp_type_interface)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	interface = (struct interface_info *)object;
 
 	status = recvfrom (interface -> wfdesc, buf, sizeof buf, 0,

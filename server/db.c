@@ -54,7 +54,7 @@ write_binding_scope(FILE *db_file, struct binding *bnd, char *prepend) {
 	char *s;
 
 	if ((db_file == NULL) || (bnd == NULL) || (prepend == NULL))
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	if (bnd->value->type == binding_data) {
 		if (bnd->value->value.data.data != NULL) {

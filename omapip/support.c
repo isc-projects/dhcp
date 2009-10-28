@@ -68,8 +68,6 @@ isc_result_t omapi_init (void)
 {
 	isc_result_t status;
 
-	dst_init();
-
 	/* Register all the standard object types... */
 	status = omapi_object_type_register (&omapi_type_connection,
 					     "connection",
@@ -543,7 +541,7 @@ isc_result_t omapi_object_update (omapi_object_t *obj, omapi_object_t *id,
 	int i;
 
 	if (!src)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	if (src -> type != omapi_type_generic)
 		return ISC_R_NOTIMPLEMENTED;
 	gsrc = (omapi_generic_object_t *)src;
@@ -551,7 +549,7 @@ isc_result_t omapi_object_update (omapi_object_t *obj, omapi_object_t *id,
 		status = omapi_set_value (obj, id,
 					  gsrc -> values [i] -> name,
 					  gsrc -> values [i] -> value);
-		if (status != ISC_R_SUCCESS && status != ISC_R_UNCHANGED)
+		if (status != ISC_R_SUCCESS && status != DHCP_R_UNCHANGED)
 			return status;
 	}
 	if (handle)
@@ -845,10 +843,10 @@ isc_result_t omapi_get_int_value (unsigned long *v, omapi_typed_data_t *t)
 	} else if (t -> type == omapi_datatype_string ||
 		   t -> type == omapi_datatype_data) {
 		if (t -> u.buffer.len != sizeof (rv))
-			return ISC_R_INVALIDARG;
+			return DHCP_R_INVALIDARG;
 		memcpy (&rv, t -> u.buffer.value, sizeof rv);
 		*v = ntohl (rv);
 		return ISC_R_SUCCESS;
 	}
-	return ISC_R_INVALIDARG;
+	return DHCP_R_INVALIDARG;
 }

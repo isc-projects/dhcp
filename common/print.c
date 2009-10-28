@@ -1208,6 +1208,7 @@ void indent_spaces (FILE *file, int indent)
 }
 
 #if defined (NSUPDATE)
+#if 0
 void print_dns_status (int status, ns_updque *uq)
 {
 	char obuf [1024];
@@ -1454,6 +1455,7 @@ void print_dns_status (int status, ns_updque *uq)
 	else
 		log_info ("%s", obuf);
 }
+#endif
 #endif /* NSUPDATE */
 
 /* Format the given time as "A; # B", where A is the format

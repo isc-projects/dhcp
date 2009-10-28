@@ -134,6 +134,17 @@ the tar utility and the gzip command - type something like:
 	gunzip dhcp-4.1.0.tar.gz
 	tar xvf dhcp-4.1.0.tar
 
+			    BUILDING BIND LIBRARIES
+
+To build the BIND libraries used by DHCP cd to the dhcp-4.1.0 subdirectory
+that you've just created and run the bindcus.sh from the the util 
+subdirectory - something like this:
+	
+	sh util/bindcus.sh
+
+In order to build the necessary libraries you will need to have "gmake"
+available on your build system.
+
 			    CONFIGURING IT
 
 Now, cd to the dhcp-4.1.0 subdirectory that you've just created and
@@ -150,8 +161,8 @@ your own.
 			 DYNAMIC DNS UPDATES
 
 A fully-featured implementation of dynamic DNS updates is included in
-this release.   There are no build dependencies with any BIND version
-- this version can and should just use the resolver in your C library.
+this release.  It uses libraries from BIND and, to avoid issues with
+different versions, includes the necessary BIND version.
 
 There is documentation for the DDNS support in the dhcpd.conf manual
 page - see the beginning of this document for information on finding

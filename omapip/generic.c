@@ -61,7 +61,7 @@ isc_result_t omapi_generic_set_value (omapi_object_t *h,
 	isc_result_t status;
 
 	if (h -> type != omapi_type_generic)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	g = (omapi_generic_object_t *)h;
 
 	/* See if there's already a value with this name attached to
@@ -177,7 +177,7 @@ isc_result_t omapi_generic_get_value (omapi_object_t *h,
 	omapi_generic_object_t *g;
 
 	if (h -> type != omapi_type_generic)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	g = (omapi_generic_object_t *)h;
 	
 	/* Look up the specified name in our list of objects. */
@@ -232,7 +232,7 @@ isc_result_t omapi_generic_signal_handler (omapi_object_t *h,
 					   const char *name, va_list ap)
 {
 	if (h -> type != omapi_type_generic)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	
 	if (h -> inner && h -> inner -> type -> signal_handler)
 		return (*(h -> inner -> type -> signal_handler)) (h -> inner,
@@ -252,7 +252,7 @@ isc_result_t omapi_generic_stuff_values (omapi_object_t *c,
 	isc_result_t status;
 
 	if (g -> type != omapi_type_generic)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	src = (omapi_generic_object_t *)g;
 	
 	for (i = 0; i < src -> nvalues; i++) {
@@ -292,7 +292,7 @@ isc_result_t omapi_generic_clear_flags (omapi_object_t *o)
 	omapi_generic_object_t *g;
 
 	if (o -> type != omapi_type_generic)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	g = (omapi_generic_object_t *)o;
 
 	for (i = 0; i < g -> nvalues; i++) {

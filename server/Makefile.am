@@ -7,9 +7,9 @@ dhcpd_SOURCES = dhcpd.c dhcp.c bootp.c confpars.c db.c class.c failover.c \
 		dhcpv6.c mdb6.c
 
 # libomapi.a this is here twice to handle circular library dependencies :(
-dhcpd_LDADD = ../common/libdhcp.a ../omapip/libomapi.a ../dst/libdst.a \
-	      ../dhcpctl/libdhcpctl.a ../minires/libres.a \
-	      ../omapip/libomapi.a
+dhcpd_LDADD = ../common/libdhcp.a ../omapip/libomapi.a \
+	      ../dhcpctl/libdhcpctl.a ../omapip/libomapi.a \
+	      ../bind/lib/libdns.a ../bind/lib/libisc.a
 
 man_MANS = dhcpd.8 dhcpd.conf.5 dhcpd.leases.5
 EXTRA_DIST = $(man_MANS)

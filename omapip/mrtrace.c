@@ -33,7 +33,7 @@
 #include "dhcpd.h"
 #include <omapip/omapip_p.h>
 
-#include "minires/minires.h"
+#include "minires.h"
 #include "arpa/nameser.h"
 
 #include <errno.h>
@@ -83,6 +83,7 @@ void trace_mr_init ()
 						 trace_mr_randomid_stop, MDL);
 }
 
+#if 0
 void trace_mr_statp_setup (res_state statp)
 {
 	unsigned buflen = 0;
@@ -141,6 +142,7 @@ void trace_mr_statp_setup (res_state statp)
 		dfree (iov, MDL);
 	}
 }
+#endif
 #endif
 
 ssize_t trace_mr_send (int fd, void *msg, size_t len, int flags)

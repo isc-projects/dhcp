@@ -137,7 +137,7 @@ isc_result_t trace_begin (const char *filename,
 	if (traceoutfile) {
 		log_error ("%s(%d): trace_begin called twice",
 			   file, line);
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 
 	traceoutfile = open (filename, O_CREAT | O_WRONLY | O_EXCL, 0600);
@@ -218,12 +218,12 @@ isc_result_t trace_write_packet_iov (trace_type_t *ttype,
 	if (!ttype) {
 		log_error ("%s(%d): trace_write_packet with null trace type",
 			   file ? file : "<unknown file>", line);
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 	if (!traceoutfile) {
 		log_error ("%s(%d): trace_write_packet with no tracefile.",
 			   file ? file : "<unknown file>", line);
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 	
 	/* Compute the total length of the iov. */
@@ -532,7 +532,7 @@ isc_result_t trace_get_next_packet (trace_type_t **ttp,
 				   "%ld %ld.",
 				   (long int)status,
 				   (long int)tracefile_header.phlen);
-		return ISC_R_PROTOCOLERROR;
+		return DHCP_R_PROTOCOLERROR;
 	}
 
 	/* Swap the packet. */
@@ -547,7 +547,7 @@ isc_result_t trace_get_next_packet (trace_type_t **ttp,
 	else {
 		log_error ("Trace packet with unknown index %ld",
 			   (long int)tpkt -> type_index);
-		return ISC_R_PROTOCOLERROR;
+		return DHCP_R_PROTOCOLERROR;
 	}
 
 	/* If we were just hunting for the time marker, we've found it,
@@ -558,7 +558,7 @@ isc_result_t trace_get_next_packet (trace_type_t **ttp,
 		status = fsetpos (traceinfile, &curpos);
 		if (status < 0) {
 			log_error ("fsetpos in tracefile failed: %m");
-			return ISC_R_PROTOCOLERROR;
+			return DHCP_R_PROTOCOLERROR;
 		}
 		return ISC_R_EXISTS;
 	}
@@ -571,7 +571,7 @@ isc_result_t trace_get_next_packet (trace_type_t **ttp,
 		status = fsetpos (traceinfile, &curpos);
 		if (status < 0) {
 			log_error ("fsetpos in tracefile failed: %m");
-			return ISC_R_PROTOCOLERROR;
+			return DHCP_R_PROTOCOLERROR;
 		}
 		return ISC_R_UNEXPECTEDTOKEN;
 	}
@@ -598,7 +598,7 @@ isc_result_t trace_get_next_packet (trace_type_t **ttp,
 		else
 			log_error ("Short read on trace payload: %d %d.",
 				   status, paylen);
-		return ISC_R_PROTOCOLERROR;
+		return DHCP_R_PROTOCOLERROR;
 	}
 
 	/* Store the actual length of the payload. */
@@ -620,7 +620,7 @@ isc_result_t trace_get_packet (trace_type_t **ttp,
 	isc_result_t status;
 
 	if (!buf || *buf)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	tpkt = dmalloc ((unsigned)tracefile_header.phlen, MDL);
 	if (!tpkt) {
@@ -676,7 +676,7 @@ isc_result_t trace_get_file (trace_type_t *ttype,
 
 	/* Disallow some obvious bogosities. */
 	if (!buf || !len || *buf)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	/* Save file position in case of filename mismatch. */
 	status = fgetpos (traceinfile, &curpos);
@@ -705,7 +705,7 @@ isc_result_t trace_get_file (trace_type_t *ttype,
 			log_error ("fsetpos in tracefile failed: %m");
 			dfree (tpkt, MDL);
 			dfree (*buf, MDL);
-			return ISC_R_PROTOCOLERROR;
+			return DHCP_R_PROTOCOLERROR;
 		}
 		return ISC_R_UNEXPECTEDTOKEN;
 	}

@@ -21,13 +21,11 @@
 #include <time.h>
 #include <netinet/in.h>
 
-#include "isc-dhcp/result.h"
-
 #include <stdarg.h>
 #include "dhcpd.h"
 #include "omapip/omapip.h"
 #include "omapip/hash.h"
-#include "dst/md5.h"
+#include <isc/md5.h>
 
 HASH_FUNCTIONS(ia, unsigned char *, struct ia_xx, ia_hash_t,
 	       ia_reference, ia_dereference, do_string_hash);
@@ -54,11 +52,11 @@ iasubopt_allocate(struct iasubopt **iasubopt, const char *file, int line) {
 
 	if (iasubopt == NULL) {
 		log_error("%s(%d): NULL pointer reference", file, line);
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 	if (*iasubopt != NULL) {
 		log_error("%s(%d): non-NULL pointer", file, line);
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 
 	tmp = dmalloc(sizeof(*tmp), file, line);
@@ -86,15 +84,15 @@ iasubopt_reference(struct iasubopt **iasubopt, struct iasubopt *src,
 		 const char *file, int line) {
 	if (iasubopt == NULL) {
 		log_error("%s(%d): NULL pointer reference", file, line);
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 	if (*iasubopt != NULL) {
 		log_error("%s(%d): non-NULL pointer", file, line);
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 	if (src == NULL) {
 		log_error("%s(%d): NULL pointer reference", file, line);
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 	*iasubopt = src;
 	src->refcnt++;
@@ -114,7 +112,7 @@ iasubopt_dereference(struct iasubopt **iasubopt, const char *file, int line) {
 
 	if ((iasubopt == NULL) || (*iasubopt == NULL)) {
 		log_error("%s(%d): NULL pointer", file, line);
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 
 	tmp = *iasubopt;
@@ -180,11 +178,11 @@ ia_allocate(struct ia_xx **ia, u_int32_t iaid,
 
 	if (ia == NULL) {
 		log_error("%s(%d): NULL pointer reference", file, line);
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 	if (*ia != NULL) {
 		log_error("%s(%d): non-NULL pointer", file, line);
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 
 	tmp = dmalloc(sizeof(*tmp), file, line);
@@ -215,15 +213,15 @@ ia_reference(struct ia_xx **ia, struct ia_xx *src,
 	     const char *file, int line) {
 	if (ia == NULL) {
 		log_error("%s(%d): NULL pointer reference", file, line);
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 	if (*ia != NULL) {
 		log_error("%s(%d): non-NULL pointer", file, line);
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 	if (src == NULL) {
 		log_error("%s(%d): NULL pointer reference", file, line);
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 	*ia = src;
 	src->refcnt++;
@@ -243,7 +241,7 @@ ia_dereference(struct ia_xx **ia, const char *file, int line) {
 
 	if ((ia == NULL) || (*ia == NULL)) {
 		log_error("%s(%d): NULL pointer", file, line);
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 
 	tmp = *ia;
@@ -459,11 +457,11 @@ ipv6_pool_allocate(struct ipv6_pool **pool, u_int16_t type,
 
 	if (pool == NULL) {
 		log_error("%s(%d): NULL pointer reference", file, line);
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 	if (*pool != NULL) {
 		log_error("%s(%d): non-NULL pointer", file, line);
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 
 	tmp = dmalloc(sizeof(*tmp), file, line);
@@ -480,13 +478,13 @@ ipv6_pool_allocate(struct ipv6_pool **pool, u_int16_t type,
 		dfree(tmp, file, line);
 		return ISC_R_NOMEMORY;
 	}
-	if (isc_heap_create(lease_older, lease_index_changed,
+	if (isc_heap_create(dhcp_gbl_ctx.mctx, lease_older, lease_index_changed,
 			    0, &(tmp->active_timeouts)) != ISC_R_SUCCESS) {
 		iasubopt_free_hash_table(&(tmp->leases), file, line);
 		dfree(tmp, file, line);
 		return ISC_R_NOMEMORY;
 	}
-	if (isc_heap_create(lease_older, lease_index_changed,
+	if (isc_heap_create(dhcp_gbl_ctx.mctx, lease_older, lease_index_changed,
 			    0, &(tmp->inactive_timeouts)) != ISC_R_SUCCESS) {
 		isc_heap_destroy(&(tmp->active_timeouts));
 		iasubopt_free_hash_table(&(tmp->leases), file, line);
@@ -509,15 +507,15 @@ ipv6_pool_reference(struct ipv6_pool **pool, struct ipv6_pool *src,
 		    const char *file, int line) {
 	if (pool == NULL) {
 		log_error("%s(%d): NULL pointer reference", file, line);
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 	if (*pool != NULL) {
 		log_error("%s(%d): non-NULL pointer", file, line);
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 	if (src == NULL) {
 		log_error("%s(%d): NULL pointer reference", file, line);
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 	*pool = src;
 	src->refcnt++;
@@ -569,7 +567,7 @@ ipv6_pool_dereference(struct ipv6_pool **pool, const char *file, int line) {
 
 	if ((pool == NULL) || (*pool == NULL)) {
 		log_error("%s(%d): NULL pointer", file, line);
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 
 	tmp = *pool;
@@ -603,7 +601,7 @@ static void
 build_address6(struct in6_addr *addr, 
 	       const struct in6_addr *net_start_addr, int net_bits, 
 	       const struct data_string *input) {
-	MD5_CTX ctx;
+	isc_md5_t ctx;
 	int net_bytes;
 	int i;
 	char *str;
@@ -614,9 +612,9 @@ build_address6(struct in6_addr *addr,
 	 * Yes, we know MD5 isn't cryptographically sound. 
 	 * No, we don't care.
 	 */
-	MD5_Init(&ctx);
-	MD5_Update(&ctx, input->data, input->len);
-	MD5_Final((unsigned char *)addr, &ctx);
+	isc_md5_init(&ctx);
+	isc_md5_update(&ctx, input->data, input->len);
+	isc_md5_final(&ctx, (unsigned char *)addr);
 
 	/*
 	 * Copy the [0..128] network bits over.
@@ -654,28 +652,27 @@ static void
 build_temporary6(struct in6_addr *addr, 
 		 const struct in6_addr *net_start_addr, int net_bits,
 		 const struct data_string *input) {
-	static u_int8_t history[8];
+	static u_int32_t history[2];
 	static u_int32_t counter = 0;
-	MD5_CTX ctx;
+	isc_md5_t ctx;
 	unsigned char md[16];
-	extern int dst_s_random(u_int8_t *, unsigned);
 
 	/*
 	 * First time/time to reseed.
 	 * Please use a good pseudo-random generator here!
 	 */
 	if (counter == 0) {
-		if (dst_s_random(history, 8) != 8)
-			log_fatal("Random failed.");
+		isc_random_get(&history[0]);
+		isc_random_get(&history[1]);
 	}
 
 	/* 
 	 * Use MD5 as recommended by RFC 4941.
 	 */
-	MD5_Init(&ctx);
-	MD5_Update(&ctx, history, 8UL);
-	MD5_Update(&ctx, input->data, input->len);
-	MD5_Final(md, &ctx);
+	isc_md5_init(&ctx);
+	isc_md5_update(&ctx, (unsigned char *)&history[0], 8UL);
+	isc_md5_update(&ctx, input->data, input->len);
+	isc_md5_final(&ctx, md);
 
 	/*
 	 * Build the address.
@@ -715,7 +712,7 @@ build_temporary6(struct in6_addr *addr,
 	/*
 	 * Save history for the next call.
 	 */
-	memcpy(history, md + 8, 8);
+	memcpy((unsigned char *)&history[0], md + 8, 8);
 	counter++;
 }
 
@@ -802,10 +799,10 @@ create_lease6(struct ipv6_pool *pool, struct iasubopt **addr,
 		case D6O_IA_PD:
 			/* prefix */
 			log_error("create_lease6: prefix pool.");
-			return ISC_R_INVALIDARG;
+			return DHCP_R_INVALIDARG;
 		default:
 			log_error("create_lease6: untyped pool.");
-			return ISC_R_INVALIDARG;
+			return DHCP_R_INVALIDARG;
 		}
 
 		/*
@@ -1044,10 +1041,12 @@ move_lease_to_inactive(struct ipv6_pool *pool, struct iasubopt *lease,
 	old_heap_index = lease->heap_index;
 	insert_result = isc_heap_insert(pool->inactive_timeouts, lease);
 	if (insert_result == ISC_R_SUCCESS) {
+#if defined (NSUPDATE)
 		/* Process events upon expiration. */
 		if (pool->pool_type != D6O_IA_PD) {
-			ddns_removals(NULL, lease);
+			ddns_removals(NULL, lease, NULL);
 		}
+#endif
 
 		/* Binding scopes are no longer valid after expiry or
 		 * release.
@@ -1083,11 +1082,11 @@ expire_lease6(struct iasubopt **leasep, struct ipv6_pool *pool, time_t now) {
 
 	if (leasep == NULL) {
 		log_error("%s(%d): NULL pointer reference", MDL);
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 	if (*leasep != NULL) {
 		log_error("%s(%d): non-NULL pointer", MDL);
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 
 	if (pool->num_active > 0) {
@@ -1147,7 +1146,7 @@ build_prefix6(struct in6_addr *pref,
 	      const struct in6_addr *net_start_pref,
 	      int pool_bits, int pref_bits,
 	      const struct data_string *input) {
-	MD5_CTX ctx;
+	isc_md5_t ctx;
 	int net_bytes;
 	int i;
 	char *str;
@@ -1158,9 +1157,9 @@ build_prefix6(struct in6_addr *pref,
 	 * Yes, we know MD5 isn't cryptographically sound. 
 	 * No, we don't care.
 	 */
-	MD5_Init(&ctx);
-	MD5_Update(&ctx, input->data, input->len);
-	MD5_Final((unsigned char *)pref, &ctx);
+	isc_md5_init(&ctx);
+	isc_md5_update(&ctx, input->data, input->len);
+	isc_md5_final(&ctx, (unsigned char *)pref);
 
 	/*
 	 * Copy the network bits over.
@@ -1467,9 +1466,11 @@ lease_timeout_support(void *vpool) {
 		 * DH: Do we want to do this on a special 'depref'
 		 * timer rather than expiration timer?
 		 */
+#if defined (NSUPDATE)
 		if (pool->pool_type != D6O_IA_PD) {
-			ddns_removals(NULL, lease);
+			ddns_removals(NULL, lease, NULL);
 		}
+#endif
 
 		write_ia(lease->ia);
 
@@ -1624,11 +1625,11 @@ find_ipv6_pool(struct ipv6_pool **pool, u_int16_t type,
 
 	if (pool == NULL) {
 		log_error("%s(%d): NULL pointer reference", MDL);
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 	if (*pool != NULL) {
 		log_error("%s(%d): non-NULL pointer", MDL);
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 
 	for (i=0; i<num_pools; i++) {
@@ -1930,12 +1931,12 @@ main(int argc, char *argv[]) {
 	 * Test 1: Error iaaddr manipulation.
 	 */
 	/* bogus allocate arguments */
-	if (iasubopt_allocate(NULL, MDL) != ISC_R_INVALIDARG) {
+	if (iasubopt_allocate(NULL, MDL) != DHCP_R_INVALIDARG) {
 		printf("ERROR: iasubopt_allocate() %s:%d\n", MDL);
 		return 1;
 	}
 	iaaddr = (struct iasubopt *)1;
-	if (iasubopt_allocate(&iaaddr, MDL) != ISC_R_INVALIDARG) {
+	if (iasubopt_allocate(&iaaddr, MDL) != DHCP_R_INVALIDARG) {
 		printf("ERROR: iasubopt_allocate() %s:%d\n", MDL);
 		return 1;
 	}
@@ -1946,17 +1947,18 @@ main(int argc, char *argv[]) {
 		printf("ERROR: iasubopt_allocate() %s:%d\n", MDL);
 		return 1;
 	}
-	if (iasubopt_reference(NULL, iaaddr, MDL) != ISC_R_INVALIDARG) {
+	if (iasubopt_reference(NULL, iaaddr, MDL) != DHCP_R_INVALIDARG) {
 		printf("ERROR: iasubopt_reference() %s:%d\n", MDL);
 		return 1;
 	}
 	iaaddr_copy = (struct iasubopt *)1;
-	if (iasubopt_reference(&iaaddr_copy, iaaddr, MDL) != ISC_R_INVALIDARG) {
+	if (iasubopt_reference(&iaaddr_copy, iaaddr,
+			       MDL) != DHCP_R_INVALIDARG) {
 		printf("ERROR: iasubopt_reference() %s:%d\n", MDL);
 		return 1;
 	}
 	iaaddr_copy = NULL;
-	if (iasubopt_reference(&iaaddr_copy, NULL, MDL) != ISC_R_INVALIDARG) {
+	if (iasubopt_reference(&iaaddr_copy, NULL, MDL) != DHCP_R_INVALIDARG) {
 		printf("ERROR: iasubopt_reference() %s:%d\n", MDL);
 		return 1;
 	}
@@ -1966,12 +1968,12 @@ main(int argc, char *argv[]) {
 	}
 
 	/* bogus dereference arguments */
-	if (iasubopt_dereference(NULL, MDL) != ISC_R_INVALIDARG) {
+	if (iasubopt_dereference(NULL, MDL) != DHCP_R_INVALIDARG) {
 		printf("ERROR: iasubopt_dereference() %s:%d\n", MDL);
 		return 1;
 	}
 	iaaddr = NULL;
-	if (iasubopt_dereference(&iaaddr, MDL) != ISC_R_INVALIDARG) {
+	if (iasubopt_dereference(&iaaddr, MDL) != DHCP_R_INVALIDARG) {
 		printf("ERROR: iasubopt_dereference() %s:%d\n", MDL);
 		return 1;
 	}
@@ -2091,12 +2093,12 @@ main(int argc, char *argv[]) {
 	 * Test 4: Errors in ia_na.
 	 */
 	/* bogus allocate arguments */
-	if (ia_allocate(NULL, 123, "", 0, MDL) != ISC_R_INVALIDARG) {
+	if (ia_allocate(NULL, 123, "", 0, MDL) != DHCP_R_INVALIDARG) {
 		printf("ERROR: ia_allocate() %s:%d\n", MDL);
 		return 1;
 	}
 	ia_na = (struct ia_na *)1;
-	if (ia_allocate(&ia_na, 456, "", 0, MDL) != ISC_R_INVALIDARG) {
+	if (ia_allocate(&ia_na, 456, "", 0, MDL) != DHCP_R_INVALIDARG) {
 		printf("ERROR: ia_allocate() %s:%d\n", MDL);
 		return 1;
 	}
@@ -2108,17 +2110,17 @@ main(int argc, char *argv[]) {
 		printf("ERROR: ia_allocate() %s:%d\n", MDL);
 		return 1;
 	}
-	if (ia_reference(NULL, ia_na, MDL) != ISC_R_INVALIDARG) {
+	if (ia_reference(NULL, ia_na, MDL) != DHCP_R_INVALIDARG) {
 		printf("ERROR: ia_reference() %s:%d\n", MDL);
 		return 1;
 	}
 	ia_na_copy = (struct ia_na *)1;
-	if (ia_reference(&ia_na_copy, ia_na, MDL) != ISC_R_INVALIDARG) {
+	if (ia_reference(&ia_na_copy, ia_na, MDL) != DHCP_R_INVALIDARG) {
 		printf("ERROR: ia_reference() %s:%d\n", MDL);
 		return 1;
 	}
 	ia_na_copy = NULL;
-	if (ia_reference(&ia_na_copy, NULL, MDL) != ISC_R_INVALIDARG) {
+	if (ia_reference(&ia_na_copy, NULL, MDL) != DHCP_R_INVALIDARG) {
 		printf("ERROR: ia_reference() %s:%d\n", MDL);
 		return 1;
 	}
@@ -2128,7 +2130,7 @@ main(int argc, char *argv[]) {
 	}
 
 	/* bogus dereference arguments */
-	if (ia_dereference(NULL, MDL) != ISC_R_INVALIDARG) {
+	if (ia_dereference(NULL, MDL) != DHCP_R_INVALIDARG) {
 		printf("ERROR: ia_dereference() %s:%d\n", MDL);
 		return 1;
 	}
@@ -2303,34 +2305,36 @@ main(int argc, char *argv[]) {
 	/*
 	 * Test 6: Error ipv6_pool manipulation
 	 */
-	if (ipv6_pool_allocate(NULL, 0, &addr, 64, 128, MDL) != ISC_R_INVALIDARG) {
+	if (ipv6_pool_allocate(NULL, 0, &addr,
+			       64, 128, MDL) != DHCP_R_INVALIDARG) {
 		printf("ERROR: ipv6_pool_allocate() %s:%d\n", MDL);
 		return 1;
 	}
 	pool = (struct ipv6_pool *)1;
-	if (ipv6_pool_allocate(&pool, 0, &addr, 64, 128, MDL) != ISC_R_INVALIDARG) {
+	if (ipv6_pool_allocate(&pool, 0, &addr,
+			       64, 128, MDL) != DHCP_R_INVALIDARG) {
 		printf("ERROR: ipv6_pool_allocate() %s:%d\n", MDL);
 		return 1;
 	}
-	if (ipv6_pool_reference(NULL, pool, MDL) != ISC_R_INVALIDARG) {
+	if (ipv6_pool_reference(NULL, pool, MDL) != DHCP_R_INVALIDARG) {
 		printf("ERROR: ipv6_pool_reference() %s:%d\n", MDL);
 		return 1;
 	}
 	pool_copy = (struct ipv6_pool *)1;
-	if (ipv6_pool_reference(&pool_copy, pool, MDL) != ISC_R_INVALIDARG) {
+	if (ipv6_pool_reference(&pool_copy, pool, MDL) != DHCP_R_INVALIDARG) {
 		printf("ERROR: ipv6_pool_reference() %s:%d\n", MDL);
 		return 1;
 	}
 	pool_copy = NULL;
-	if (ipv6_pool_reference(&pool_copy, NULL, MDL) != ISC_R_INVALIDARG) {
+	if (ipv6_pool_reference(&pool_copy, NULL, MDL) != DHCP_R_INVALIDARG) {
 		printf("ERROR: ipv6_pool_reference() %s:%d\n", MDL);
 		return 1;
 	}
-	if (ipv6_pool_dereference(NULL, MDL) != ISC_R_INVALIDARG) {
+	if (ipv6_pool_dereference(NULL, MDL) != DHCP_R_INVALIDARG) {
 		printf("ERROR: ipv6_pool_dereference() %s:%d\n", MDL);
 		return 1;
 	}
-	if (ipv6_pool_dereference(&pool_copy, MDL) != ISC_R_INVALIDARG) {
+	if (ipv6_pool_dereference(&pool_copy, MDL) != DHCP_R_INVALIDARG) {
 		printf("ERROR: ipv6_pool_dereference() %s:%d\n", MDL);
 		return 1;
 	}

@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
- * Copyright (c) 1999-2003 by Internet Software Consortium
+ * Copyright (c) 2004,2007-2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2001-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -18,18 +18,26 @@
  *   950 Charter Street
  *   Redwood City, CA 94063
  *   <info@isc.org>
- *   https://www.isc.org/
+ *   http://www.isc.org/
+ */
+#ifndef MINIRES_H
+#define MINIRES_H
+
+#include "cdefs.h"
+#include "osdep.h"
+
+/*
+ * Based on the Dynamic DNS reference implementation by Viraj Bais
+ * <viraj_bais@ccm.fm.intel.com>
  */
 
-#ifndef ISC_LANG_H
-#define ISC_LANG_H 1
+int MRns_name_compress(const char *, u_char *, size_t, const unsigned char **,
+		       const unsigned char **);
+int MRns_name_unpack(const unsigned char *, const unsigned char *,
+		     const unsigned char *, unsigned char *, size_t);
+int MRns_name_pack (const unsigned char *, unsigned char *,
+		    unsigned, const unsigned char **, const unsigned char **);
+int MRns_name_ntop(const unsigned char *, char *, size_t);
+int MRns_name_pton(const char *, u_char *, size_t);
 
-#ifdef __cplusplus
-#define ISC_LANG_BEGINDECLS	extern "C" {
-#define ISC_LANG_ENDDECLS	}
-#else
-#define ISC_LANG_BEGINDECLS
-#define ISC_LANG_ENDDECLS
-#endif
-
-#endif /* ISC_LANG_H */
+#endif /* MINIRES_H */

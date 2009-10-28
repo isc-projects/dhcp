@@ -34,9 +34,15 @@
 
 #include "dhcpd.h"
 #include "dst/md5.h"
-#include "minires/minires.h"
+#include <dns/result.h>
 
 #ifdef NSUPDATE
+
+static void ddns_fwd_srv_connector(struct lease          *lease,
+				   struct iasubopt       *lease6,
+				   struct binding_scope **inscope,
+				   dhcp_ddns_cb_t        *ddns_cb,
+				   isc_result_t           eresult);
 
 /* DN: No way of checking that there is enough space in a data_string's
    buffer.  Be certain to allocate enough!
@@ -49,162 +55,6 @@ static void data_string_append (struct data_string *ds1,
 		ds2 -> data,
 		ds2 -> len);
 	ds1 -> len += ds2 -> len;
-}
-
-static isc_result_t ddns_update_ptr (struct data_string *ddns_fwd_name,
-				     struct data_string *ddns_rev_name,
-				     unsigned long ttl)
-{
-	ns_updque updqueue;
-	ns_updrec *updrec;
-	isc_result_t result = ISC_R_UNEXPECTED;
-
-	/*
-	 * The DHCP server submits a DNS query which deletes all of the PTR RRs
-	 * associated with the lease IP address, and adds a PTR RR whose data
-	 * is the client's (possibly disambiguated) host name. The server also
-	 * adds a DHCID RR specified in Section 4.3.
-	 *   -- "Interaction between DHCP and DNS"
-	 */
-
-	ISC_LIST_INIT (updqueue);
-
-	/*
-	 * Delete all PTR RRs.
-	 */
-	updrec = minires_mkupdrec (S_UPDATE,
-				   (const char *)ddns_rev_name -> data,
-				   C_IN, T_PTR, 0);
-	if (!updrec) {
-		result = ISC_R_NOMEMORY;
-		goto error;
-	}
-
-	updrec -> r_data = (unsigned char *)0;
-	updrec -> r_size = 0;
-	updrec -> r_opcode = DELETE;
-
-	ISC_LIST_APPEND (updqueue, updrec, r_link);
-
-	/*
-	 * Add PTR RR.
-	 */
-	updrec = minires_mkupdrec (S_UPDATE,
-				   (const char *)ddns_rev_name -> data,
-				   C_IN, T_PTR, ttl);
-	if (!updrec) {
-		result = ISC_R_NOMEMORY;
-		goto error;
-	}
-
-	updrec -> r_data = ddns_fwd_name -> data;
-	updrec -> r_size = ddns_fwd_name -> len;
-	updrec -> r_opcode = ADD;
-
-	ISC_LIST_APPEND (updqueue, updrec, r_link);
-
-	/*
-	 * Attempt to perform the update.
-	 */
-	result = minires_nupdate (&resolver_state, ISC_LIST_HEAD (updqueue));
-#if defined (DEBUG)
-	print_dns_status ((int)result, &updqueue);
-#endif
-	if (result == ISC_R_SUCCESS) {
-		log_info ("added reverse map from %.*s to %.*s",
-			  (int)ddns_rev_name -> len,
-			  (const char *)ddns_rev_name -> data,
-			  (int)ddns_fwd_name -> len,
-			  (const char *)ddns_fwd_name -> data);
-	} else {
-		log_error ("unable to add reverse map from %.*s to %.*s: %s",
-			   (int)ddns_rev_name -> len,
-			   (const char *)ddns_rev_name -> data,
-			   (int)ddns_fwd_name -> len,
-			   (const char *)ddns_fwd_name -> data,
-			   isc_result_totext (result));
-	}
-
-	/* Fall through. */
-      error:
-
-	while (!ISC_LIST_EMPTY (updqueue)) {
-		updrec = ISC_LIST_HEAD (updqueue);
-		ISC_LIST_UNLINK (updqueue, updrec, r_link);
-		minires_freeupdrec (updrec);
-	}
-
-	return result;
-}
-
-
-static isc_result_t ddns_remove_ptr (struct data_string *ddns_rev_name)
-{
-	ns_updque updqueue;
-	ns_updrec *updrec;
-	isc_result_t result;
-
-	/*
-	 * When a lease expires or a DHCP client issues a DHCPRELEASE request,
-	 * the DHCP server SHOULD delete the PTR RR that matches the DHCP
-	 * binding, if one was successfully added. The server's update query
-	 * SHOULD assert that the name in the PTR record matches the name of
-	 * the client whose lease has expired or been released.
-	 *   -- "Interaction between DHCP and DNS"
-	 */
-
-	ISC_LIST_INIT (updqueue);
-
-	/*
-	 * Delete the PTR RRset for the leased address.
-	 */
-	updrec = minires_mkupdrec (S_UPDATE,
-				   (const char *)ddns_rev_name -> data,
-				   C_IN, T_PTR, 0);
-	if (!updrec) {
-		result = ISC_R_NOMEMORY;
-		goto error;
-	}
-
-	updrec -> r_data = (unsigned char *)0;
-	updrec -> r_size = 0;
-	updrec -> r_opcode = DELETE;
-
-	ISC_LIST_APPEND (updqueue, updrec, r_link);
-
-	/*
-	 * Attempt to perform the update.
-	 */
-	result = minires_nupdate (&resolver_state, ISC_LIST_HEAD (updqueue));
-#if defined (DEBUG)
-	print_dns_status ((int)result, &updqueue);
-#endif
-	if (result == ISC_R_SUCCESS) {
-		log_info ("removed reverse map on %.*s",
-			  (int)ddns_rev_name -> len,
-			  (const char *)ddns_rev_name -> data);
-	} else {
-		if (result != ISC_R_NXRRSET && result != ISC_R_NXDOMAIN)
-			log_error ("can't remove reverse map on %.*s: %s",
-				   (int)ddns_rev_name -> len,
-				   (const char *)ddns_rev_name -> data,
-				   isc_result_totext (result));
-	}
-
-	/* Not there is success. */
-	if (result == ISC_R_NXRRSET || result == ISC_R_NXDOMAIN)
-		result = ISC_R_SUCCESS;
-
-	/* Fall through. */
-      error:
-
-	while (!ISC_LIST_EMPTY (updqueue)) {
-		updrec = ISC_LIST_HEAD (updqueue);
-		ISC_LIST_UNLINK (updqueue, updrec, r_link);
-		minires_freeupdrec (updrec);
-	}
-
-	return result;
 }
 
 
@@ -221,44 +71,75 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 	struct data_string ddns_domainname;
 	struct data_string old_ddns_fwd_name;
 	struct data_string ddns_fwd_name;
-	struct data_string ddns_rev_name;
+	//struct data_string ddns_rev_name;
 	struct data_string ddns_dhcid;
-	struct binding_scope **scope;
-	struct iaddr addr;
+	struct binding_scope **scope = NULL;
+	//struct iaddr addr;
 	struct data_string d1;
 	struct option_cache *oc;
 	int s1, s2;
 	int result = 0;
-	isc_result_t rcode1 = ISC_R_SUCCESS, rcode2 = ISC_R_SUCCESS;
+	isc_result_t rcode1 = ISC_R_SUCCESS;
 	int server_updates_a = 1;
-	int server_updates_ptr = 1;
+	//int server_updates_ptr = 1;
 	struct buffer *bp = (struct buffer *)0;
 	int ignorep = 0, client_ignorep = 0;
 	int rev_name_len;
 	int i;
 
+	dhcp_ddns_cb_t *ddns_cb;
+	int do_remove = 0;
+
 	if (ddns_update_style != 2)
 		return 0;
 
+	/*
+	 * sigh, I want to cancel any previous udpates before we do anything
+	 * else but this means we need to deal with the lease vs lease6
+	 * question twice.
+	 * If there is a ddns request already outstanding cancel it.
+	 */
+
 	if (lease != NULL) {
-		scope = &(lease->scope);
-		addr = lease->ip_addr;
+		if ((old != NULL) && (old->ddns_cb != NULL)) {
+			ddns_cancel(old->ddns_cb);
+			old->ddns_cb = NULL;
+		}
 	} else if (lease6 != NULL) {
-		scope = &(lease6->scope);
-		memcpy(addr.iabuf, lease6->addr.s6_addr, 16);
-		addr.len = 16;
+		if ((old6 != NULL) && (old6->ddns_cb != NULL)) {
+			ddns_cancel(old->ddns_cb);
+			old6->ddns_cb = NULL;
+		}
 	} else {
 		log_fatal("Impossible condition at %s:%d.", MDL);
 		/* Silence compiler warnings. */
-		return 0;
+		result = 0;
+		return(0);
 	}
 
-	memset(&d1, 0, sizeof(d1));
+	/* allocate our control block */
+	ddns_cb = ddns_cb_alloc(MDL);
+	if (ddns_cb == NULL) {
+		return(0);
+	}
+	/* assume that we shall update both the A and ptr records */
+	ddns_cb->flags = DDNS_UPDATE_ADDR | DDNS_UPDATE_PTR;
+ 	
+	if (lease != NULL) {
+		scope = &(lease->scope);
+		ddns_cb->address = lease->ip_addr;
+	} else if (lease6 != NULL) {
+		scope = &(lease6->scope);
+		memcpy(ddns_cb->address.iabuf, lease6->addr.s6_addr, 16);
+		ddns_cb->address.len = 16;
+	}
+
+	memset (&d1, 0, sizeof(d1));
 	memset (&ddns_hostname, 0, sizeof (ddns_hostname));
 	memset (&ddns_domainname, 0, sizeof (ddns_domainname));
 	memset (&old_ddns_fwd_name, 0, sizeof (ddns_fwd_name));
 	memset (&ddns_fwd_name, 0, sizeof (ddns_fwd_name));
-	memset (&ddns_rev_name, 0, sizeof (ddns_rev_name));
+	//memset (&ddns_rev_name, 0, sizeof (ddns_rev_name));
 	memset (&ddns_dhcid, 0, sizeof (ddns_dhcid));
 
 	/* If we are allowed to accept the client's update of its own A
@@ -288,6 +169,7 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 					   NULL, packet->options,
 					   options, scope, oc, MDL))
 			goto noclient;
+		ddns_cb->flags &= ~DDNS_UPDATE_ADDR;
 		server_updates_a = 0;
 		goto client_updates;
 	}
@@ -300,7 +182,7 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 	    !evaluate_boolean_option_cache(&ignorep, packet, lease,
 					   NULL, packet->options,
 					   options, scope, oc, MDL)) {
-		return 0;
+		goto out;
 	}
 
 	/* If it's a static lease, then don't do the DNS update unless we're
@@ -313,7 +195,7 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 		    !evaluate_boolean_option_cache(&ignorep, packet, lease,
 						   NULL, packet->options,
 						   options, scope, oc, MDL))
-			return 0;
+			goto out;
 	}
 
 	/*
@@ -346,12 +228,12 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 				 ddns_hostname.len + ddns_domainname.len + 2,
 				 MDL);
 		if (ddns_fwd_name.buffer) {
-			ddns_fwd_name.data = ddns_fwd_name.buffer -> data;
+			ddns_fwd_name.data = ddns_fwd_name.buffer->data;
 			data_string_append (&ddns_fwd_name, &ddns_hostname);
-			ddns_fwd_name.buffer -> data [ddns_fwd_name.len] = '.';
+			ddns_fwd_name.buffer->data[ddns_fwd_name.len] = '.';
 			ddns_fwd_name.len++;
 			data_string_append (&ddns_fwd_name, &ddns_domainname);
-			ddns_fwd_name.buffer -> data [ddns_fwd_name.len] ='\0';
+			ddns_fwd_name.buffer->data[ddns_fwd_name.len] ='\0';
 			ddns_fwd_name.terminated = 1;
 		}
 	}
@@ -363,12 +245,11 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 		if (old_ddns_fwd_name.len != ddns_fwd_name.len ||
 		    memcmp (old_ddns_fwd_name.data, ddns_fwd_name.data,
 			    old_ddns_fwd_name.len)) {
-			/* If the name is different, try to delete
-			   the old A record. */
-			if (!ddns_removals(lease, lease6))
-				goto out;
-			/* If the delete succeeded, go install the new
-			   record. */
+			/*
+			 * If the name is different, mark the old record
+			 * for deletion and continue getting the new info.
+			 */
+			do_remove = 1;
 			goto in;
 		}
 
@@ -432,11 +313,16 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 		
 	/* If we don't have a name that the client has been assigned, we
 	   can just skip all this. */
-	if (!ddns_fwd_name.len)
-		goto out;
 
-	if (ddns_fwd_name.len > 255) {
-		log_error ("client provided fqdn: too long");
+	if ((!ddns_fwd_name.len) || (ddns_fwd_name.len > 255)) {
+		if (ddns_fwd_name.len > 255) {
+			log_error ("client provided fqdn: too long");
+		}
+
+		/* If desired do the removals */
+		if (do_remove != 0) {
+			(void) ddns_removals(lease, lease6, NULL);
+		}
 		goto out;
 	}
 
@@ -449,7 +335,7 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 					  packet->options, options, scope,
 					  oc, MDL)) {
 			if (d1.len == sizeof (u_int32_t))
-				ddns_ttl = getULong (d1.data);
+				ddns_cb->ttl = getULong (d1.data);
 			data_string_forget (&d1, MDL);
 		}
 	}
@@ -469,14 +355,14 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 	 * Figure out the length of the part of the name that depends 
 	 * on the address.
 	 */
-	if (addr.len == 4) {
+	if (ddns_cb->address.len == 4) {
 		char buf[17];
 		/* XXX: WOW this is gross. */
 		rev_name_len = snprintf(buf, sizeof(buf), "%u.%u.%u.%u.",
-					addr.iabuf[3] & 0xff,
-					addr.iabuf[2] & 0xff,
-					addr.iabuf[1] & 0xff,
-					addr.iabuf[0] & 0xff) + 1;
+					ddns_cb->address.iabuf[3] & 0xff,
+					ddns_cb->address.iabuf[2] & 0xff,
+					ddns_cb->address.iabuf[1] & 0xff,
+					ddns_cb->address.iabuf[0] & 0xff) + 1;
 
 		if (s1) {
 			rev_name_len += d1.len;
@@ -488,7 +374,7 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 				data_string_forget(&d1, MDL);
 			}
 		}
-	} else if (addr.len == 16) {
+	} else if (ddns_cb->address.len == 16) {
 		/* 
 		 * IPv6 reverse names are always the same length, with 
 		 * 32 hex characters separated by dots.
@@ -502,7 +388,7 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 		/* Set s1 to make sure we gate into updates. */
 		s1 = 1;
 	} else {
-		log_fatal("invalid address length %d", addr.len);
+		log_fatal("invalid address length %d", ddns_cb->address.len);
 		/* Silence compiler warnings. */
 		return 0;
 	}
@@ -513,33 +399,33 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 	    !evaluate_boolean_option_cache(&ignorep, packet, lease, NULL,
 					   packet->options, options,
 					   scope, oc, MDL)) {
-		server_updates_ptr = 0;
+		ddns_cb->flags &= ~DDNS_UPDATE_PTR;
 	}
 
 	if (s1) {
-		buffer_allocate(&ddns_rev_name.buffer, rev_name_len, MDL);
-		if (ddns_rev_name.buffer != NULL) {
-			ddns_rev_name.data = ddns_rev_name.buffer->data;
+		buffer_allocate(&ddns_cb->rev_name.buffer, rev_name_len, MDL);
+		if (ddns_cb->rev_name.buffer != NULL) {
+			struct data_string *rname = &ddns_cb->rev_name;
+			rname->data = rname->buffer->data;
 
-			if (addr.len == 4) {
-				ddns_rev_name.len =
-				    sprintf((char *)ddns_rev_name.buffer->data,
+			if (ddns_cb->address.len == 4) {
+				rname->len =
+				    sprintf((char *)rname->buffer->data,
 					    "%u.%u.%u.%u.", 
-					    addr.iabuf[3] & 0xff,
-					    addr.iabuf[2] & 0xff,
-					    addr.iabuf[1] & 0xff,
-					    addr.iabuf[0] & 0xff);
+					    ddns_cb->address.iabuf[3] & 0xff,
+					    ddns_cb->address.iabuf[2] & 0xff,
+					    ddns_cb->address.iabuf[1] & 0xff,
+					    ddns_cb->address.iabuf[0] & 0xff);
 
 				/*
 				 * d1.data may be opaque, garbage bytes, from
 				 * user (mis)configuration.
 				 */
-				data_string_append(&ddns_rev_name, &d1);
-				ddns_rev_name.buffer->data[ddns_rev_name.len] =
-					'\0';
-			} else if (addr.len == 16) {
-				char *p = (char *)&ddns_rev_name.buffer->data;
-				unsigned char *a = addr.iabuf + 15;
+				data_string_append(rname, &d1);
+				rname->buffer->data[rname->len] = '\0';
+			} else if (ddns_cb->address.len == 16) {
+				char *p = (char *)&rname->buffer->data;
+				unsigned char *a = ddns_cb->address.iabuf + 15;
 				for (i=0; i<16; i++) {
 					sprintf(p, "%x.%x.", 
 						(*a & 0xF), ((*a >> 4) & 0xF));
@@ -547,11 +433,10 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 					a -= 1;
 				}
 				strcat(p, "ip6.arpa.");
-				ddns_rev_name.len =
-				    strlen((const char *)ddns_rev_name.data);
+				rname->len = strlen((const char *)rname->data);
 			}
 
-			ddns_rev_name.terminated = 1;
+			rname->terminated = 1;
 		}
 
 		if (d1.data != NULL)
@@ -561,19 +446,18 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 	/*
 	 * If we are updating the A record, compute the DHCID value.
 	 */
-	if (server_updates_a) {
-		memset (&ddns_dhcid, 0, sizeof ddns_dhcid);
+	if ((ddns_cb->flags & DDNS_UPDATE_ADDR) != 0) {
 		if (lease6 != NULL)
-			result = get_dhcid(&ddns_dhcid, 2,
+			result = get_dhcid(&ddns_cb->dhcid, 2,
 					   lease6->ia->iaid_duid.data,
 					   lease6->ia->iaid_duid.len);
 		else if ((lease != NULL) && (lease->uid != NULL) &&
 			 (lease->uid_len != 0))
-			result = get_dhcid (&ddns_dhcid,
+			result = get_dhcid (&ddns_cb->dhcid,
 					    DHO_DHCP_CLIENT_IDENTIFIER,
 					    lease -> uid, lease -> uid_len);
 		else if (lease != NULL)
-			result = get_dhcid (&ddns_dhcid, 0,
+			result = get_dhcid (&ddns_cb->dhcid, 0,
 					    lease -> hardware_addr.hbuf,
 					    lease -> hardware_addr.hlen);
 		else
@@ -584,54 +468,36 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 	}
 
 	/*
-	 * Start the resolver, if necessary.
+	 * Perform updates.
 	 */
-	if (!resolver_inited) {
-		minires_ninit (&resolver_state);
-		resolver_inited = 1;
-		resolver_state.retrans = 1;
-		resolver_state.retry = 1;
+
+	data_string_copy(&ddns_cb->fwd_name, &ddns_fwd_name, MDL);
+
+	if (ddns_cb->flags && DDNS_UPDATE_ADDR) {
+		oc = lookup_option(&server_universe, options,
+				   SV_DDNS_CONFLICT_DETECT);
+		if (oc &&
+		    !evaluate_boolean_option_cache(&ignorep, packet, lease,
+						   NULL, packet->options,
+						   options, scope, oc, MDL))
+			ddns_cb->flags |= DDNS_CONFLICT_OVERRIDE;
+
 	}
 
 	/*
-	 * Perform updates.
+	 * Previously if we failed during the removal operations
+	 * we skipped the fqdn option processing.  I'm not sure
+	 * if we want to continue with that if we fail before sending
+	 * the ddns messages.  Currently we don't.
 	 */
-	if (ddns_fwd_name.len && ddns_dhcid.len) {
-		unsigned conflict;
-
-		oc = lookup_option(&server_universe, options,
-				   SV_DDNS_CONFLICT_DETECT);
-		if (!oc ||
-		    evaluate_boolean_option_cache(&ignorep, packet, lease,
-						  NULL, packet->options,
-						  options, scope, oc, MDL))
-			conflict = 1;
-		else
-			conflict = 0;
-
-		rcode1 = ddns_update_fwd(&ddns_fwd_name, addr, &ddns_dhcid,
-					 ddns_ttl, 0, conflict);
+	if (do_remove) {
+		rcode1 = ddns_removals(lease, lease6, ddns_cb);
 	}
-
-	if (rcode1 == ISC_R_SUCCESS && server_updates_ptr) {
-		if (ddns_fwd_name.len && ddns_rev_name.len)
-			rcode2 = ddns_update_ptr (&ddns_fwd_name,
-						  &ddns_rev_name, ddns_ttl);
-	} else
-		rcode2 = rcode1;
-
-	if (rcode1 == ISC_R_SUCCESS &&
-	    (server_updates_a || rcode2 == ISC_R_SUCCESS)) {
-		bind_ds_value(scope, server_updates_a ? "ddns-fwd-name"
-						       : "ddns-client-fqdn",
-			      &ddns_fwd_name);
-		if (server_updates_a)
-			bind_ds_value(scope, "ddns-txt", &ddns_dhcid);
+	else {
+		ddns_fwd_srv_connector(lease, lease6, scope, ddns_cb,
+				       ISC_R_SUCCESS);
 	}
-
-	if (rcode2 == ISC_R_SUCCESS && server_updates_ptr) {
-		bind_ds_value(scope, "ddns-rev-name", &ddns_rev_name);
-	}
+	ddns_cb = NULL;
 
       noerror:
 	/*
@@ -760,12 +626,12 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 					bp, &bp->data [2], 1,
 					FQDN_ENCODED, 0))
 			goto badfqdn;
-		bp -> data [3] = isc_rcode_to_ns (rcode1);
+		bp -> data [3] = 255;//isc_rcode_to_ns (rcode1);
 		if (!save_option_buffer(&fqdn_universe, options,
 					bp, &bp->data [3], 1,
 					FQDN_RCODE1, 0))
 			goto badfqdn;
-		bp -> data [4] = isc_rcode_to_ns (rcode2);
+		bp -> data [4] = 255;//isc_rcode_to_ns (rcode2);
 		if (!save_option_buffer(&fqdn_universe, options,
 					bp, &bp->data [4], 1,
 					FQDN_RCODE2, 0))
@@ -786,119 +652,850 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 	/*
 	 * Final cleanup.
 	 */
+	if (ddns_cb != NULL) {
+		ddns_cb_free(ddns_cb, MDL);
+	}
+
 	data_string_forget(&d1, MDL);
 	data_string_forget(&ddns_hostname, MDL);
 	data_string_forget(&ddns_domainname, MDL);
 	data_string_forget(&old_ddns_fwd_name, MDL);
 	data_string_forget(&ddns_fwd_name, MDL);
-	data_string_forget(&ddns_rev_name, MDL);
-	data_string_forget(&ddns_dhcid, MDL);
+	//data_string_forget(&ddns_rev_name, MDL);
+	//data_string_forget(&ddns_dhcid, MDL);
 	if (bp)
 		buffer_dereference(&bp, MDL);
 
 	return result;
 }
 
-/* Remove relevant entries from DNS. */
-int
-ddns_removals(struct lease *lease, struct iasubopt *lease6)
-{
-	struct data_string ddns_fwd_name;
-	struct data_string ddns_rev_name;
-	struct data_string ddns_dhcid;
-	isc_result_t rcode;
-	struct binding_scope **scope;
-	struct iaddr addr;
-	int result = 0;
-	int client_updated = 0;
+/*
+ * Utility function to update text strings within a lease.
+ *
+ * The first issue is to find the proper scope.  Sometimes we shall be
+ * called with a pointer to the scope in other cases we need to find
+ * the proper lease and then get the scope.  Once we have the scope we update
+ * the proper strings, as indicated by the state value in the control block.
+ * Lastly, if we needed to find the scope we write it out, if we used a
+ * scope that was passed as an argument we don't write it, assuming that
+ * our caller (or his ...) will do the write.
+ */
 
+isc_result_t
+ddns_update_lease_text(dhcp_ddns_cb_t        *ddns_cb,
+		       struct binding_scope **inscope)
+{
+	struct binding_scope **scope  = NULL;
+	struct lease          *lease  = NULL;
+	struct iasubopt       *lease6 = NULL;
+	struct ipv6_pool      *pool   = NULL;
+	struct in6_addr        addr;
+	struct data_string     lease_dhcid;
+	
+	if (inscope != NULL) {
+		scope = inscope;
+	} else if (ddns_cb->address.len == 4) {
+		if (find_lease_by_ip_addr(&lease, ddns_cb->address, MDL) != 0){
+			scope = &(lease->scope);
+		}
+	} else if (ddns_cb->address.len == 16) {
+		memcpy(&addr, &ddns_cb->address.iabuf, 16);
+		if ((find_ipv6_pool(&pool, D6O_IA_TA, &addr) ==
+		     ISC_R_SUCCESS) ||
+		    (find_ipv6_pool(&pool, D6O_IA_NA, &addr) == 
+		     ISC_R_SUCCESS)) {
+			if (iasubopt_hash_lookup(&lease6,  pool->leases,
+						 &addr, 16, MDL)) {
+				scope = &(lease6->scope);
+			}
+			ipv6_pool_dereference(&pool, MDL);
+		}
+	} else {
+		log_fatal("Impossible condition at %s:%d.", MDL);
+	}
+
+	if (scope == NULL) {
+		/* If necessary get rid of the lease */
+		if (lease) {
+			lease_dereference(&lease, MDL);
+		}
+		else if (lease6) {
+			iasubopt_dereference(&lease6, MDL);
+		}
+
+		return(ISC_R_FAILURE);
+	}
+
+	/* We now have a scope and can proceed to update it */
+	switch(ddns_cb->state) {
+	case DDNS_STATE_REM_PTR:
+		unset(*scope, "ddns-rev-name");
+		if ((ddns_cb->flags & DDNS_CLIENT_DID_UPDATE) != 0) {
+			unset(*scope, "ddns-client-fqdn");
+		}
+		break;
+
+	case DDNS_STATE_ADD_PTR:
+	case DDNS_STATE_CLEANUP:
+		bind_ds_value(scope, "ddns-rev-name", &ddns_cb->rev_name);
+		if ((ddns_cb->flags & DDNS_UPDATE_ADDR) == 0) {
+			bind_ds_value(scope, "ddns-client-fqdn",
+				      &ddns_cb->fwd_name);
+		}
+		break;
+
+	case DDNS_STATE_ADD_FW_YXDHCID:
+	case DDNS_STATE_ADD_FW_NXDOMAIN:
+		bind_ds_value(scope, "ddns-fwd-name", &ddns_cb->fwd_name);
+
+		/* convert from dns version to lease version of dhcid */
+		memset(&lease_dhcid, 0, sizeof(lease_dhcid));
+		dhcid_tolease(&ddns_cb->dhcid, &lease_dhcid);
+		bind_ds_value(scope, "ddns-txt", &lease_dhcid);
+		data_string_forget(&lease_dhcid, MDL);
+
+		break;
+
+	case DDNS_STATE_REM_FW_NXRR:
+	case DDNS_STATE_REM_FW_YXDHCID:
+		unset(*scope, "ddns-fwd-name");
+		unset(*scope, "ddns-txt");
+		break;
+	}
+		
+	/* If necessary write it out and get rid of the lease */
+	if (lease) {
+		write_lease(lease);
+		lease_dereference(&lease, MDL);
+	} else if (lease6) {
+		write_ia(lease6->ia);
+		iasubopt_dereference(&lease6, MDL);
+	}
+
+	return(ISC_R_SUCCESS);
+}
+
+
+#if 0
+isc_result_t
+ddns_get_lease(dhcp_ddns_cb_t *ddns_cb)
+{
+	isc_result_t result = ISC_R_FAILURE;
+
+	if (ddns_cb->address.len == 4) {
+		struct lease **lease = (struct lease **)(&(ddns_cb->lease));
+		if (find_lease_by_ip_addr(lease, ddns_cb->address, MDL) != 0) {
+			ddns_cb->scope  = &((*lease)->scope);
+			result = ISC_R_SUCCESS;
+		}
+	}
+	else if (ddns_cb->address.len == 16) {
+		struct ipv6_pool *pool = NULL;
+		struct iasubopt **lease = (struct iasubopt **)(&(ddns_cb->lease));
+		struct in6_addr addr;
+
+		memcpy(&addr, &ddns_cb->address.iabuf, 16);
+		if ((find_ipv6_pool(&pool, D6O_IA_TA, &addr) != 
+		     ISC_R_SUCCESS) &&
+		    (find_ipv6_pool(&pool, D6O_IA_NA, &addr) != 
+		     ISC_R_SUCCESS)) {
+			return(ISC_R_FAILURE);
+		}
+
+		if (iasubopt_hash_lookup(lease,  pool->leases,
+					 &addr, 16, MDL)) {
+			ddns_cb->scope = &((*lease)->scope);
+			result = ISC_R_SUCCESS;
+		}
+		ipv6_pool_dereference(&pool, MDL);
+	}
+	else {
+		log_fatal("Impossible condition at %s:%d.", MDL);
+	}
+
+	return(result);
+}
+
+isc_result_t
+ddns_write_lease(dhcp_ddns_cb_t *ddns_cb)
+{
+
+	if (ddns_cb->address.len == 4) {
+		struct lease **lease = (struct lease **)(&(ddns_cb->lease));
+	       
+		write_lease(*lease);
+		ddns_cb->scope = NULL;
+		lease_dereference(lease, MDL);
+	}
+	else if (ddns_cb->address.len == 16) {
+		struct iasubopt **lease = (struct iasubopt **)(&(ddns_cb->lease));
+		/*sar*/
+		/* Hmmm, this seems to be what we do elsewhere, but I'm
+		   not sure this is writing the scope info */
+		write_ia((*lease)->ia);
+		ddns_cb->scope = NULL;
+		iasubopt_dereference(lease, MDL);
+	}
+	else {
+		log_fatal("Impossible condition at %s:%d.", MDL);
+	}
+
+	return(ISC_R_SUCCESS);
+}
+#endif
+
+/*
+ * Utility function to update the pointer to the DDNS control block
+ * in a lease.
+ * SUCCESS - able to update the pointer
+ * FAILURE - lease didn't exist or sanity checks failed
+ * lease and lease6 may be empty in which case we attempt to find
+ * the lease from the ddns_cb information.
+ * ddns_cb is the control block to use if a lookup is necessary
+ * ddns_cb_set is the pointer to insert into the lease and may be NULL
+ * The last two arguments may look odd as they will be the same much of the
+ * time, but I need an argument to tell me if I'm setting or clearing in
+ * addition to the address information from the cb to look up the lease.
+ * using the same value twice allows me more flexibility.
+ */
+
+isc_result_t 
+ddns_update_lease_ptr(struct lease    *lease,
+		      struct iasubopt *lease6,
+		      dhcp_ddns_cb_t  *ddns_cb,
+		      dhcp_ddns_cb_t  *ddns_cb_set)
+{
+	if (lease != NULL) {
+		lease->ddns_cb = ddns_cb_set;
+	} else if (lease6 != NULL) {
+		lease6->ddns_cb = ddns_cb_set;
+	} else if (ddns_cb->address.len == 4) {
+		struct lease *find_lease = NULL;
+		if (find_lease_by_ip_addr(&find_lease,
+					  ddns_cb->address, MDL) != 0) {
+			find_lease->ddns_cb = ddns_cb_set;
+			lease_dereference(&find_lease, MDL);
+		}
+		else {
+			return(ISC_R_FAILURE);
+		}
+	} else if (ddns_cb->address.len == 16) {
+		struct iasubopt *find_lease6 = NULL;
+		struct ipv6_pool *pool = NULL;
+		struct in6_addr addr;
+
+		memcpy(&addr, &ddns_cb->address.iabuf, 16);
+		if ((find_ipv6_pool(&pool, D6O_IA_TA, &addr) != 
+		     ISC_R_SUCCESS) &&
+		    (find_ipv6_pool(&pool, D6O_IA_NA, &addr) != 
+		     ISC_R_SUCCESS)) {
+			return(ISC_R_FAILURE);
+		}
+
+		if (iasubopt_hash_lookup(&find_lease6,  pool->leases,
+					 &addr, 16, MDL)) {
+			find_lease6->ddns_cb = ddns_cb_set;
+			iasubopt_dereference(&find_lease6, MDL);
+		} else {
+			return(ISC_R_FAILURE);
+		}
+		ipv6_pool_dereference(&pool, MDL);
+	} else {
+		/* shouldn't get here */
+		log_fatal("Impossible condition at %s:%d.", MDL);
+	}
+
+	return(ISC_R_SUCCESS);
+}		
+
+void
+ddns_ptr_add(dhcp_ddns_cb_t *ddns_cb,
+	     isc_result_t    eresult)
+{
+	if (eresult == ISC_R_SUCCESS) {
+		log_info("added reverse map from %.*s to %.*s",
+			 (int)ddns_cb->rev_name.len,
+			 (const char *)ddns_cb->rev_name.data,
+			 (int)ddns_cb->fwd_name.len,
+			 (const char *)ddns_cb->fwd_name.data);
+
+		ddns_update_lease_text(ddns_cb, NULL);
+	} else {
+		log_error("unable to add reverse map from %.*s to %.*s: %s",
+			  (int)ddns_cb->rev_name.len,
+			  (const char *)ddns_cb->rev_name.data,
+			  (int)ddns_cb->fwd_name.len,
+			  (const char *)ddns_cb->fwd_name.data,
+			  isc_result_totext (eresult));
+	}
+
+	ddns_update_lease_ptr(NULL, NULL, ddns_cb, NULL);
+	ddns_cb_free(ddns_cb, MDL);
+	/*
+	 * A single DDNS operation may require several calls depending on
+	 * the current state as the prerequisites for the first message
+	 * may not succeed requiring a second operation and potentially
+	 * a ptr operation after that.  The commit_leases operation is
+	 * invoked at the end of this set of operations in order to require
+	 * a single write for all of the changes.  We call commit_leases
+	 * here rather than immediately after the call to update the lease
+	 * text in order to save any previously written data.
+	 */
+	commit_leases();
+	return;
+}
+
+/*
+ * action routine when trying to remove a pointer
+ * this will be called after the ddns queries have completed
+ * if we succeeded in removing the pointer we go to the next step (if any)
+ * if not we cleanup and leave.
+ */
+
+void
+ddns_ptr_remove(dhcp_ddns_cb_t *ddns_cb,
+		isc_result_t    eresult)
+{
+	isc_result_t result = eresult;
+
+	switch(eresult) {
+	case ISC_R_SUCCESS:
+		log_info("removed reverse map on %.*s",
+			 (int)ddns_cb->rev_name.len,
+			 (const char *)ddns_cb->rev_name.data);
+		/* fall through */
+	case DNS_R_NXRRSET:
+	case DNS_R_NXDOMAIN:
+		/* No entry is the same as success.
+		 * Remove the information from the lease and
+		 * continue with any next step */
+		ddns_update_lease_text(ddns_cb, NULL);
+
+		/* trigger any add operation */
+		result = ISC_R_SUCCESS;
+		break;
+
+	default:
+		log_error("can't remove reverse map on %.*s: %s",
+			  (int)ddns_cb->rev_name.len,
+			  (const char *)ddns_cb->rev_name.data,
+			  isc_result_totext (eresult));
+		break;
+	}
+
+	ddns_update_lease_ptr(NULL, NULL, ddns_cb, NULL);
+	ddns_fwd_srv_connector(NULL, NULL, NULL, ddns_cb->next_op, result);
+	ddns_cb_free(ddns_cb, MDL);
+	return;
+}
+
+
+/*
+ * If the first query succeeds, the updater can conclude that it
+ * has added a new name whose only RRs are the A and DHCID RR records.
+ * The A RR update is now complete (and a client updater is finished,
+ * while a server might proceed to perform a PTR RR update).
+ *   -- "Interaction between DHCP and DNS"
+ *
+ * If the second query succeeds, the updater can conclude that the current
+ * client was the last client associated with the domain name, and that
+ * the name now contains the updated A RR. The A RR update is now
+ * complete (and a client updater is finished, while a server would
+ * then proceed to perform a PTR RR update).
+ *   -- "Interaction between DHCP and DNS"
+ *
+ * If the second query fails with NXRRSET, the updater must conclude
+ * that the client's desired name is in use by another host.  At this
+ * juncture, the updater can decide (based on some administrative
+ * configuration outside of the scope of this document) whether to let
+ * the existing owner of the name keep that name, and to (possibly)
+ * perform some name disambiguation operation on behalf of the current
+ * client, or to replace the RRs on the name with RRs that represent
+ * the current client. If the configured policy allows replacement of
+ * existing records, the updater submits a query that deletes the
+ * existing A RR and the existing DHCID RR, adding A and DHCID RRs that
+ * represent the IP address and client-identity of the new client.
+ *   -- "Interaction between DHCP and DNS"
+ */
+
+void
+ddns_fwd_srv_add2(dhcp_ddns_cb_t *ddns_cb,
+		  isc_result_t    eresult)
+{
+	isc_result_t result;
+	const char *logstr = NULL;
+	char ddns_address[
+		sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
+
+	/* Construct a printable form of the address for logging */
+	strcpy(ddns_address, piaddr(ddns_cb->address));
+
+	switch(eresult) {
+	case ISC_R_SUCCESS:
+		log_info("Added new forward map from %.*s to %s",
+			 (int)ddns_cb->fwd_name.len,
+			 (const char *)ddns_cb->fwd_name.data,
+			 ddns_address);
+
+		ddns_update_lease_text(ddns_cb, NULL);
+
+		if ((ddns_cb->flags & DDNS_UPDATE_PTR) != 0) {
+			/* if we have zone information get rid of it */
+			if (ddns_cb->zone != NULL) {
+				ddns_cb_forget_zone(ddns_cb);
+			}
+
+			ddns_cb->state = DDNS_STATE_ADD_PTR;
+			ddns_cb->cur_func = ddns_ptr_add;
+			
+			result = ddns_modify_ptr(ddns_cb);
+			if (result == ISC_R_SUCCESS) {
+				return;
+			}
+		}
+		break;
+
+	case DNS_R_YXRRSET:
+	case DNS_R_YXDOMAIN:
+		logstr = "DHCID mismatch, belongs to another client.";
+		break;
+
+	case DNS_R_NXRRSET:
+	case DNS_R_NXDOMAIN:
+		logstr = "Has an address record but no DHCID, not mine.";
+		break;
+
+	default:
+		logstr = isc_result_totext(eresult);
+		break;
+	}
+
+	if (logstr != NULL) {
+		log_error("Forward map from %.*s to %s FAILED: %s",
+			  (int)ddns_cb->fwd_name.len,
+			  (const char *)ddns_cb->fwd_name.data,
+			  ddns_address, logstr);
+	}
+
+	ddns_update_lease_ptr(NULL, NULL, ddns_cb, NULL);
+	ddns_cb_free(ddns_cb, MDL);
+	/*
+	 * A single DDNS operation may require several calls depending on
+	 * the current state as the prerequisites for the first message
+	 * may not succeed requiring a second operation and potentially
+	 * a ptr operation after that.  The commit_leases operation is
+	 * invoked at the end of this set of operations in order to require
+	 * a single write for all of the changes.  We call commit_leases
+	 * here rather than immediately after the call to update the lease
+	 * text in order to save any previously written data.
+	 */
+	commit_leases();
+	return;
+}
+
+void
+ddns_fwd_srv_add1(dhcp_ddns_cb_t *ddns_cb,
+		  isc_result_t    eresult)
+{
+	isc_result_t result;
+	char ddns_address[
+		sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
+
+	/* Construct a printable form of the address for logging */
+	strcpy(ddns_address, piaddr(ddns_cb->address));
+
+	switch(eresult) {
+	case ISC_R_SUCCESS:
+		log_info ("Added new forward map from %.*s to %s",
+			  (int)ddns_cb->fwd_name.len,
+			  (const char *)ddns_cb->fwd_name.data,
+			  ddns_address);
+
+		ddns_update_lease_text(ddns_cb, NULL);
+
+		if ((ddns_cb->flags & DDNS_UPDATE_PTR) != 0) {
+			/* if we have zone information get rid of it */
+			if (ddns_cb->zone != NULL) {
+				ddns_cb_forget_zone(ddns_cb);
+			}
+
+			ddns_cb->state = DDNS_STATE_ADD_PTR;
+			ddns_cb->cur_func = ddns_ptr_add;
+			
+			result = ddns_modify_ptr(ddns_cb);
+			if (result == ISC_R_SUCCESS) {
+				return;
+			}
+		}
+			
+		break;
+
+	case DNS_R_YXDOMAIN:
+		/* we can reuse the zone information */
+		ddns_cb->state = DDNS_STATE_ADD_FW_YXDHCID;
+		ddns_cb->cur_func = ddns_fwd_srv_add2;
+			
+		result = ddns_modify_fwd(ddns_cb);
+		if (result == ISC_R_SUCCESS) {
+			return;
+		}
+
+		break;
+
+	default:
+		log_error ("Unable to add forward map from %.*s to %s: %s",
+			   (int)ddns_cb->fwd_name.len,
+			   (const char *)ddns_cb->fwd_name.data,
+			   ddns_address,
+			   isc_result_totext (eresult));
+		break;
+	}
+
+	ddns_update_lease_ptr(NULL, NULL, ddns_cb, NULL);
+	ddns_cb_free(ddns_cb, MDL);
+	/*
+	 * A single DDNS operation may require several calls depending on
+	 * the current state as the prerequisites for the first message
+	 * may not succeed requiring a second operation and potentially
+	 * a ptr operation after that.  The commit_leases operation is
+	 * invoked at the end of this set of operations in order to require
+	 * a single write for all of the changes.  We call commit_leases
+	 * here rather than immediately after the call to update the lease
+	 * text in order to save any previously written data.
+	 */
+	commit_leases();
+	return;
+}
+
+static void
+ddns_fwd_srv_connector(struct lease          *lease,
+		       struct iasubopt       *lease6,
+		       struct binding_scope **inscope,
+		       dhcp_ddns_cb_t        *ddns_cb,
+		       isc_result_t           eresult)
+{
+	isc_result_t result = ISC_R_FAILURE;
+
+	if (ddns_cb == NULL) {
+		/* nothing to do */
+		return;
+	}
+
+	if (eresult == ISC_R_SUCCESS) {
+		/*
+		 * If we have updates dispatch as appropriate,
+		 * if not do FQDN binding if desired.
+		 */
+
+		if (ddns_cb->flags & DDNS_UPDATE_ADDR) {
+			ddns_cb->state    = DDNS_STATE_ADD_FW_NXDOMAIN;
+			ddns_cb->cur_func = ddns_fwd_srv_add1;
+			result = ddns_modify_fwd(ddns_cb);
+		} else if ((ddns_cb->flags & DDNS_UPDATE_PTR) &&
+			 (ddns_cb->rev_name.len != 0)) {
+			ddns_cb->state    = DDNS_STATE_ADD_PTR;
+			ddns_cb->cur_func = ddns_ptr_add;
+			result = ddns_modify_ptr(ddns_cb);
+		} else {
+			ddns_update_lease_text(ddns_cb, inscope);
+		}
+	}
+
+	if (result == ISC_R_SUCCESS) {
+		ddns_update_lease_ptr(lease, lease6, ddns_cb, ddns_cb);
+	} else {
+		ddns_cb_free(ddns_cb, MDL);
+	}
+
+	return;
+}
+
+/*
+ * If the first query fails, the updater MUST NOT delete the DNS name.  It
+ * may be that the host whose lease on the server has expired has moved
+ * to another network and obtained a lease from a different server,
+ * which has caused the client's A RR to be replaced. It may also be
+ * that some other client has been configured with a name that matches
+ * the name of the DHCP client, and the policy was that the last client
+ * to specify the name would get the name.  In this case, the DHCID RR
+ * will no longer match the updater's notion of the client-identity of
+ * the host pointed to by the DNS name.
+ *   -- "Interaction between DHCP and DNS"
+ */
+
+void
+ddns_fwd_srv_rem2(dhcp_ddns_cb_t *ddns_cb,
+		  isc_result_t    eresult)
+{
+	if (eresult == ISC_R_SUCCESS) {
+		ddns_update_lease_text(ddns_cb, NULL);
+
+		/* Do the next operation */
+		if ((ddns_cb->flags & DDNS_UPDATE_PTR) != 0) {
+			/* if we have zone information get rid of it */
+			if (ddns_cb->zone != NULL) {
+				ddns_cb_forget_zone(ddns_cb);
+			}
+
+			ddns_cb->state = DDNS_STATE_REM_PTR;
+			ddns_cb->cur_func = ddns_ptr_remove;
+			
+			eresult = ddns_modify_ptr(ddns_cb);
+			if (eresult == ISC_R_SUCCESS) {
+				return;
+			}
+		}
+	}
+
+	ddns_update_lease_ptr(NULL, NULL, ddns_cb, NULL);
+	ddns_fwd_srv_connector(NULL, NULL, NULL, ddns_cb->next_op, eresult);
+	ddns_cb_free(ddns_cb, MDL);
+	return;
+}
+
+
+/*
+ * First action routine when trying to remove a fwd
+ * this will be called after the ddns queries have completed
+ * if we succeeded in removing the fwd we go to the next step (if any)
+ * if not we cleanup and leave.
+ */
+
+void
+ddns_fwd_srv_rem1(dhcp_ddns_cb_t *ddns_cb,
+		  isc_result_t    eresult)
+{
+	isc_result_t result = eresult;
+
+	switch(eresult) {
+	case ISC_R_SUCCESS:
+		/* Do the second step of the FWD removal */
+		ddns_cb->state    = DDNS_STATE_REM_FW_NXRR;
+		ddns_cb->cur_func = ddns_fwd_srv_rem2;
+		result = ddns_modify_fwd(ddns_cb);
+		if (result == ISC_R_SUCCESS) {
+			return;
+		}
+		break;
+
+	case DNS_R_NXRRSET:
+	case DNS_R_NXDOMAIN:
+		ddns_update_lease_text(ddns_cb, NULL);
+
+		/* Do the next operation */
+		if ((ddns_cb->flags & DDNS_UPDATE_PTR) != 0) {
+			/* if we have zone information get rid of it */
+			if (ddns_cb->zone != NULL) {
+				ddns_cb_forget_zone(ddns_cb);
+			}
+
+			ddns_cb->state    = DDNS_STATE_REM_PTR;
+			ddns_cb->cur_func = ddns_ptr_remove;
+			
+			result = ddns_modify_ptr(ddns_cb);
+			if (result == ISC_R_SUCCESS) {
+				return;
+			}
+		}
+		else {
+			/* Trigger the add operation */
+			eresult = ISC_R_SUCCESS;
+		}
+		break;
+			
+	default:
+		break;
+	}
+
+	ddns_update_lease_ptr(NULL, NULL, ddns_cb, NULL);
+	ddns_fwd_srv_connector(NULL, NULL, NULL, ddns_cb->next_op, eresult);
+	ddns_cb_free(ddns_cb, MDL);
+}
+
+
+/*
+ * Remove relevant entries from DNS.
+ *
+ * Return values:
+ * 0 - badness occurred and we weren't able to do what was wanted
+ * 1 - we were able to do stuff but it's in progress
+ * in both cases any additional block has been passed on to it's handler
+ */
+
+int
+ddns_removals(struct lease    *lease,
+	      struct iasubopt *lease6,
+	      dhcp_ddns_cb_t  *add_ddns_cb)
+{
+	isc_result_t rcode, execute_add = ISC_R_FAILURE;
+	struct binding_scope **scope = NULL;
+	int result = 0;
+	dhcp_ddns_cb_t        *ddns_cb;
+	struct data_string     leaseid;
+
+	/* allocate our control block */
+	ddns_cb = ddns_cb_alloc(MDL);
+	if (ddns_cb == NULL) {
+		goto cleanup;
+	}
+	
 	if (lease != NULL) {
 		scope = &(lease->scope);
-		addr = lease->ip_addr;
+		ddns_cb->address = lease->ip_addr;
 	} else if (lease6 != NULL) {
 		scope = &(lease6->scope);
-		memcpy(addr.iabuf, lease6->addr.s6_addr, 16);
-		addr.len = 16;
+		memcpy(&ddns_cb->address.iabuf, lease6->addr.s6_addr, 16);
+		ddns_cb->address.len = 16;
 	} else
-		return 0;
+		goto cleanup;
 
 	/* No scope implies that DDNS has not been performed for this lease. */
 	if (*scope == NULL)
-		return 0;
+		goto cleanup;
 
 	if (ddns_update_style != 2)
-		return 0;
+		goto cleanup;
+
+	/* Assume that we are removing both records */
+	ddns_cb->flags = DDNS_UPDATE_ADDR | DDNS_UPDATE_PTR;
+
+	/* and that we want to do the add call */
+	execute_add = ISC_R_SUCCESS;
 
 	/*
 	 * Look up stored names.
 	 */
-	memset (&ddns_fwd_name, 0, sizeof (ddns_fwd_name));
-	memset (&ddns_rev_name, 0, sizeof (ddns_rev_name));
-	memset (&ddns_dhcid, 0, sizeof (ddns_dhcid));
 
 	/*
-	 * Start the resolver, if necessary.
+	 * Find the fwd name and copy it to the control block.  If we don't
+	 * have it we can't delete the fwd record but we can still try to
+	 * remove the ptr record and cleanup the lease information if the
+	 * client did the fwd update.
 	 */
-	if (!resolver_inited) {
-		minires_ninit (&resolver_state);
-		resolver_inited = 1;
-		resolver_state.retrans = 1;
-		resolver_state.retry = 1;
-	}
+	if (!find_bound_string(&ddns_cb->fwd_name, *scope, "ddns-fwd-name")) {
+		/* don't try and delete the A, or do the add */
+		ddns_cb->flags &= ~DDNS_UPDATE_ADDR;
+		execute_add = ISC_R_FAILURE;
 
-	/* We need the fwd name whether we are deleting both records or just
-	   the PTR record, so if it's not there, we can't proceed. */
-	if (!find_bound_string(&ddns_fwd_name, *scope, "ddns-fwd-name")) {
-		/* If there's no ddns-fwd-name, look for the client fqdn,
-		   in case the client did the update. */
-		if (find_bound_string(&ddns_fwd_name, *scope,
-				       "ddns-client-fqdn"))
-			client_updated = 1;
-		goto try_rev;
-	}
-
-	/* If the ddns-txt binding isn't there, this isn't an interim
-	   or rfc3??? record, so we can't delete the A record using
-	   this mechanism, but we can delete the PTR record. */
-	if (!find_bound_string (&ddns_dhcid, *scope, "ddns-txt")) {
-		result = 1;
-		goto try_rev;
-	}
-
-	/*
-	 * Perform removals.
-	 */
-	if (ddns_fwd_name.len)
-		rcode = ddns_remove_fwd(&ddns_fwd_name, addr, &ddns_dhcid);
-	else
-		rcode = ISC_R_SUCCESS;
-
-	if (rcode == ISC_R_SUCCESS) {
-		result = 1;
-		unset(*scope, "ddns-fwd-name");
-		unset(*scope, "ddns-txt");
-	      try_rev:
-		if (find_bound_string(&ddns_rev_name, *scope,
-				      "ddns-rev-name")) {
-			if (ddns_remove_ptr(&ddns_rev_name) == NOERROR) {
-				unset(*scope, "ddns-rev-name");
-				if (client_updated)
-					unset(*scope, "ddns-client-fqdn");
-				/* XXX this is to compensate for a bug in
-				   XXX 3.0rc8, and should be removed before
-				   XXX 3.0pl1. */
-				else if (!ddns_fwd_name.len)
-					unset(*scope, "ddns-text");
-			} else
-				result = 0;
+		/* Check if client did update */
+		if (find_bound_string(&ddns_cb->fwd_name, *scope,
+				      "ddns-client-fqdn")) {
+			ddns_cb->flags |= DDNS_CLIENT_DID_UPDATE;
 		}
 	}
 
-	data_string_forget (&ddns_fwd_name, MDL);
-	data_string_forget (&ddns_rev_name, MDL);
-	data_string_forget (&ddns_dhcid, MDL);
+	/*
+	 * Find the ptr name and copy it to the control block.  If we don't
+	 * have it this isn't an interim or rfc3??? record so we can't delete
+	 * the A record using this mechanism but we can delete the ptr record.
+	 * In this case we will attempt to do any requested next step.
+	 */
+	memset(&leaseid, 0, sizeof(leaseid));
+	if (!find_bound_string (&leaseid, *scope, "ddns-txt")) {
+		ddns_cb->flags &= ~DDNS_UPDATE_ADDR;
+	} else {
+		if (dhcid_fromlease(&ddns_cb->dhcid, &leaseid) != 
+		    ISC_R_SUCCESS) {
+			/* We couldn't convert the dhcid from the lease
+			 * version to the dns version.  We can't delete
+			 * the A record but can continue to the ptr
+			 */
+			ddns_cb->flags &= ~DDNS_UPDATE_ADDR;
+		}
+		data_string_forget(&leaseid, MDL);
+	}
 
-	return result;
+	/*
+	 * Find the rev name and copy it to the control block.  If we don't
+	 * have it we can't get rid of it but we can try to remove the fwd
+	 * pointer if desired.
+	 */
+	if (!find_bound_string(&ddns_cb->rev_name, *scope, "ddns-rev-name")) {
+		ddns_cb->flags &= ~DDNS_UPDATE_PTR;
+	}
+	
+	/*
+	 * If we have a second control block for doing an add
+	 * after the remove finished attach it to our control block.
+	 */
+	ddns_cb->next_op = add_ddns_cb;
+
+	/*
+	 * Now that we've collected the information we can try to process it.
+	 * If necessary we call an appropriate routine to send a message and
+	 * provide it with an action routine to run on the control block given
+	 * the results of the message.  We have three entry points from here,
+	 * one for removing the A record, the next for removing the PTR and
+	 * the third for doing any requested add.
+	 */
+	if ((ddns_cb->flags & DDNS_UPDATE_ADDR) != 0) {
+		if (ddns_cb->fwd_name.len != 0) {
+			ddns_cb->state    = DDNS_STATE_REM_FW_YXDHCID;
+			ddns_cb->cur_func = ddns_fwd_srv_rem1;
+
+			rcode = ddns_modify_fwd(ddns_cb);
+			if (rcode == ISC_R_SUCCESS) {
+				ddns_update_lease_ptr(lease, lease6, ddns_cb,
+						      ddns_cb);
+				return(1);
+			}
+
+			/*
+			 * We weren't able to process the request tag the
+			 * add so we won't execute it.
+			 */
+			execute_add = ISC_R_FAILURE;
+			goto cleanup;
+		}
+		else {
+			/*remove info from scope */
+			unset(*scope, "ddns-fwd-name");
+			unset(*scope, "ddns-txt");
+		}
+	}
+
+	if ((ddns_cb->flags & DDNS_UPDATE_PTR) != 0) {
+		ddns_cb->state      = DDNS_STATE_REM_PTR;
+		ddns_cb->cur_func   = ddns_ptr_remove;
+
+		/*
+		 * if execute add isn't success remove the control block so
+		 * it won't be processed when the remove completes.  We
+		 * also arrange to clean it up and get rid of it.
+		 */
+		if (execute_add != ISC_R_SUCCESS) {
+		   	ddns_cb->next_op = NULL;
+			ddns_fwd_srv_connector(lease, lease6, scope, 
+					       add_ddns_cb, execute_add);
+			add_ddns_cb = NULL;
+		}
+		else {
+			result = 1;
+		}
+
+		rcode = ddns_modify_ptr(ddns_cb);
+		if (rcode == ISC_R_SUCCESS) {
+			ddns_update_lease_ptr(lease, lease6, ddns_cb, ddns_cb);
+			return(result);
+		}
+
+		/* We weren't able to process the request tag the
+		 * add so we won't execute it */
+		execute_add = ISC_R_FAILURE;
+		goto cleanup;
+	}
+
+ cleanup:
+	/*
+	 * We've gotten here because we didn't need to send a message or
+	 * we failed when trying to do so.  We send the additional cb
+	 * off to handle sending and/or cleanup and cleanup anything
+	 * we allocated here.
+	 */
+	ddns_fwd_srv_connector(lease, lease6, scope, add_ddns_cb, execute_add);
+	ddns_cb_free(ddns_cb, MDL);
+
+	return(result);
 }
 
 #endif /* NSUPDATE */

@@ -155,8 +155,8 @@ on commit {								    \n\
   }									    \n\
 }";
 
-int ddns_update_style;
 #endif /* NSUPDATE */
+int ddns_update_style;
 
 const char *path_dhcpd_conf = _PATH_DHCPD_CONF;
 const char *path_dhcpd_db = _PATH_DHCPD_DB;
@@ -177,7 +177,7 @@ static isc_result_t verify_addr (omapi_object_t *l, omapi_addr_t *addr) {
 
 static isc_result_t verify_auth (omapi_object_t *p, omapi_auth_key_t *a) {
 	if (a != omapi_key)
-		return ISC_R_INVALIDKEY;
+		return DHCP_R_INVALIDKEY;
 	return ISC_R_SUCCESS;
 }
 
@@ -242,8 +242,10 @@ main(int argc, char **argv) {
 	isc_result_t result;
 	unsigned seed;
 	struct interface_info *ip;
+#if defined (NSUPDATE)
 	struct parse *parse;
 	int lose;
+#endif
 	int no_dhcpd_conf = 0;
 	int no_dhcpd_db = 0;
 	int no_dhcpd_pid = 0;
@@ -276,6 +278,12 @@ main(int argc, char **argv) {
                 log_perror = 0; /* No sense logging to /dev/null. */
         else if (fd != -1)
                 close(fd);
+
+	/* Set up the isc and dns library managers */
+	status = dhcp_context_create();
+	if (status != ISC_R_SUCCESS)
+		log_fatal("Can't initialize context: %s",
+			  isc_result_totext(status));
 
 	/* Set up the client classification system. */
 	classification_setup ();
@@ -844,7 +852,9 @@ void postconf_initialization (int quiet)
 	struct option_cache *oc;
 	char *s;
 	isc_result_t result;
+#if defined (NSUPDATE)
 	struct parse *parse;
+#endif
 	int tmp;
 
 	/* Now try to get the lease file name. */
@@ -1033,6 +1043,17 @@ void postconf_initialization (int quiet)
 	} else {
 		ddns_update_style = DDNS_UPDATE_STYLE_NONE;
 	}
+#if defined (NSUPDATE)
+	/* We no longer support ad_hoc, tell the user */
+	if (ddns_update_style == DDNS_UPDATE_STYLE_AD_HOC) {
+		log_fatal("ddns-update-style ad_hoc no longer supported");
+	}
+#else
+	/* If we don't have support for updates compiled in tell the user */
+	if (ddns_update_style != DDNS_UPDATE_STYLE_NONE) {
+		log_fatal("Support for ddns-update-style not compiled in");
+	}
+#endif
 
 	oc = lookup_option (&server_universe, options, SV_LOG_FACILITY);
 	if (oc) {
@@ -1456,5 +1477,5 @@ isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
 		dhcp_io_shutdown_countdown (0);
 		return ISC_R_SUCCESS;
 	}
-	return ISC_R_INVALIDARG;
+	return DHCP_R_INVALIDARG;
 }

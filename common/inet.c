@@ -376,13 +376,13 @@ range2cidr(struct iaddrcidrnetlist **result,
 	int tmp;
 
 	if (result == NULL) {
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 	if (*result != NULL) {
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 	if ((lo == NULL) || (hi == NULL) || (lo->len != hi->len)) {
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 
 	/*
@@ -511,10 +511,10 @@ free_iaddrcidrnetlist(struct iaddrcidrnetlist **result) {
 	struct iaddrcidrnetlist *p;
 
 	if (result == NULL) {
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 	if (*result == NULL) {
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 
 	while (*result != NULL) {

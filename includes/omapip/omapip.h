@@ -34,8 +34,10 @@
 
 #ifndef _OMAPIP_H_
 #define _OMAPIP_H_
-#include <isc-dhcp/result.h>
+#include "result.h"
 #include <stdarg.h>
+
+#include <dns/tsec.h>
 
 typedef unsigned int omapi_handle_t;
 
@@ -153,6 +155,7 @@ typedef struct auth_key {
 	char *name;
 	char *algorithm;
 	omapi_data_string_t *key;
+	dns_tsec_t *tsec_key;
 } omapi_auth_key_t;
 
 #define OMAPI_CREATE          1

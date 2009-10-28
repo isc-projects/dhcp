@@ -115,7 +115,7 @@ struct binding_value {
 		struct data_string data;
 		unsigned long intval;
 		int boolean;
-#if defined (NSUPDATE)
+#if defined (NSUPDATE_OLD)
 		ns_updrec *dns;
 #endif
 		struct fundef *fundef;

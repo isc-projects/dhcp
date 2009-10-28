@@ -111,7 +111,7 @@ isc_result_t dhcp_lease_free (omapi_object_t *lo,
 {
 	struct lease *lease;
 	if (lo -> type != dhcp_type_lease)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	lease = (struct lease *)lo;
 	memset (lease, 0, sizeof (struct lease));
 	lease -> next = free_leases;

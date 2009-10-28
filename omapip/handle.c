@@ -290,6 +290,6 @@ isc_result_t omapi_handle_td_lookup (omapi_object_t **obj,
 		memcpy (&h, handle -> u.buffer.value, sizeof h);
 		h = ntohl (h);
 	} else
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	return omapi_handle_lookup (obj, h);
 }

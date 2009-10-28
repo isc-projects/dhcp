@@ -75,7 +75,7 @@ isc_result_t enter_class(cd, dynamicp, commit)
 	if (!collections -> classes) {
 		/* A subclass with no parent is invalid. */
 		if (cd->name == NULL)
-			return ISC_R_INVALIDARG;
+			return DHCP_R_INVALIDARG;
 
 		class_reference (&collections -> classes, cd, MDL);
 	} else if (cd->name != NULL) {	/* regular class */
@@ -1219,6 +1219,9 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 	comp->ends = lease->ends;
 	comp->next_binding_state = lease->next_binding_state;
 
+	/* move the ddns control block information */
+	comp->ddns_cb = lease->ddns_cb;
+
       just_move_it:
 #if defined (FAILOVER_PROTOCOL)
 	/* Atsfp should be cleared upon any state change that implies
@@ -1411,7 +1414,7 @@ void make_binding_state_transition (struct lease *lease)
 	      lease -> binding_state == FTS_ACTIVE &&
 	      lease -> next_binding_state != FTS_RELEASED))) {
 #if defined (NSUPDATE)
-		ddns_removals(lease, NULL);
+		ddns_removals(lease, NULL, NULL);
 #endif
 		if (lease -> on_expiry) {
 			execute_statements ((struct binding_value **)0,
@@ -1477,7 +1480,7 @@ void make_binding_state_transition (struct lease *lease)
 		 * release message.  This is not true of expiry, where the
 		 * peer may have extended the lease.
 		 */
-		ddns_removals(lease, NULL);
+		ddns_removals(lease, NULL, NULL);
 #endif
 		if (lease -> on_release) {
 			execute_statements ((struct binding_value **)0,
@@ -1646,7 +1649,7 @@ void release_lease (lease, packet)
 	/* If there are statements to execute when the lease is
 	   released, execute them. */
 #if defined (NSUPDATE)
-	ddns_removals(lease, NULL);
+	ddns_removals(lease, NULL, NULL);
 #endif
 	if (lease -> on_release) {
 		execute_statements ((struct binding_value **)0,
@@ -1707,7 +1710,7 @@ void abandon_lease (lease, message)
 {
 	struct lease *lt = (struct lease *)0;
 #if defined (NSUPDATE)
-	ddns_removals(lease, NULL);
+	ddns_removals(lease, NULL, NULL);
 #endif
 
 	if (!lease_copy (&lt, lease, MDL))
@@ -1739,7 +1742,7 @@ void dissociate_lease (lease)
 {
 	struct lease *lt = (struct lease *)0;
 #if defined (NSUPDATE)
-	ddns_removals(lease, NULL);
+	ddns_removals(lease, NULL, NULL);
 #endif
 
 	if (!lease_copy (&lt, lease, MDL))

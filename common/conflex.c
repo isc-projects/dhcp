@@ -162,7 +162,7 @@ restore_parse_state(struct parse *cfile) {
 	struct parse *saved_state;
 
 	if (cfile->saved_state == NULL) {
-		return ISC_R_NOTYET;
+		return DHCP_R_NOTYET;
 	}
 
 	saved_state = cfile->saved_state;

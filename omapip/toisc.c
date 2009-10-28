@@ -36,60 +36,9 @@
 
 #include <omapip/omapip_p.h>
 #include "arpa/nameser.h"
-#include "minires/minires.h"
+#include "minires.h"
 
 #include <errno.h>
-
-isc_result_t ns_rcode_to_isc (int nsr)
-{
-	switch (nsr) {
-	      case ns_r_noerror:
-		return ISC_R_SUCCESS;
-
-	      case ns_r_formerr:
-		return ISC_R_FORMERR;
-
-	      case ns_r_servfail:
-		return ISC_R_SERVFAIL;
-
-	      case ns_r_nxdomain:
-		return ISC_R_NXDOMAIN;
-
-	      case ns_r_notimpl:
-		return ISC_R_NOTIMPL;
-
-	      case ns_r_refused:
-		return ISC_R_REFUSED;
-
-	      case ns_r_yxdomain:
-		return ISC_R_YXDOMAIN;
-
-	      case ns_r_yxrrset:
-		return ISC_R_YXRRSET;
-
-	      case ns_r_nxrrset:
-		return ISC_R_NXRRSET;
-
-	      case ns_r_notauth:
-		return ISC_R_NOTAUTH;
-
-	      case ns_r_notzone:
-		return ISC_R_NOTZONE;
-
-	      case ns_r_badsig:
-		return ISC_R_BADSIG;
-
-	      case ns_r_badkey:
-		return ISC_R_BADKEY;
-
-	      case ns_r_badtime:
-		return ISC_R_BADTIME;
-
-	      default:
-		;
-	}
-	return ISC_R_UNEXPECTED;
-}
 
 isc_result_t uerr2isc (int err)
 {
@@ -113,7 +62,7 @@ isc_result_t uerr2isc (int err)
 		return ISC_R_NOSPACE;
 
 	      case ENOEXEC:
-		return ISC_R_FORMERR;
+		return DHCP_R_FORMERR;
 
 	      case ECHILD:
 		return ISC_R_NOTFOUND;
@@ -125,16 +74,16 @@ isc_result_t uerr2isc (int err)
 		return ISC_R_NOPERM;
 
 	      case EFAULT:
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	      case EEXIST:
 		return ISC_R_EXISTS;
 
 	      case EINVAL:
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	      case ENOTTY:
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	      case EFBIG:
 		return ISC_R_NOSPACE;
@@ -161,13 +110,13 @@ isc_result_t uerr2isc (int err)
 		return ISC_R_INVALIDFILE;
 
 	      case EDESTADDRREQ:
-		return ISC_R_DESTADDRREQ;
+		return DHCP_R_DESTADDRREQ;
 
 	      case EMSGSIZE:
 		return ISC_R_NOSPACE;
 
 	      case EPROTOTYPE:
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	      case ENOPROTOOPT:
 		return ISC_R_NOTIMPLEMENTED;
@@ -203,7 +152,7 @@ isc_result_t uerr2isc (int err)
 		return ISC_R_TIMEDOUT;
 
 	      case ECONNRESET:
-		return ISC_R_CONNRESET;
+		return DHCP_R_CONNRESET;
 
 	      case ENOBUFS:
 		return ISC_R_NOSPACE;
@@ -241,22 +190,22 @@ isc_result_t uerr2isc (int err)
 
 #ifdef ERPCMISMATCH
 	      case ERPCMISMATCH:
-		return ISC_R_VERSIONMISMATCH;
+		return DHCP_R_VERSIONMISMATCH;
 #endif
 
 #ifdef EPROGMISMATCH
 	      case EPROGMISMATCH:
-		return ISC_R_VERSIONMISMATCH;
+		return DHCP_R_VERSIONMISMATCH;
 #endif
 
 #ifdef EAUTH
 	      case EAUTH:
-		return ISC_R_NOTAUTH;
+		return DHCP_R_NOTAUTH;
 #endif
 
 #ifdef ENEEDAUTH
 	      case ENEEDAUTH:
-		return ISC_R_NOTAUTH;
+		return DHCP_R_NOTAUTH;
 #endif
 
 #ifdef EOVERFLOW
@@ -265,55 +214,4 @@ isc_result_t uerr2isc (int err)
 #endif
 	}
 	return ISC_R_UNEXPECTED;
-}
-
-ns_rcode isc_rcode_to_ns (isc_result_t isc)
-{
-	switch (isc) {
-	      case ISC_R_SUCCESS:
-		return ns_r_noerror;
-
-	      case ISC_R_FORMERR:
-		return ns_r_formerr;
-
-	      case ISC_R_SERVFAIL:
-		return ns_r_servfail;
-
-	      case ISC_R_NXDOMAIN:
-		return ns_r_nxdomain;
-
-	      case ISC_R_NOTIMPL:
-		return ns_r_notimpl;
-
-	      case ISC_R_REFUSED:
-		return ns_r_refused;
-
-	      case ISC_R_YXDOMAIN:
-		return ns_r_yxdomain;
-
-	      case ISC_R_YXRRSET:
-		return ns_r_yxrrset;
-
-	      case ISC_R_NXRRSET:
-		return ns_r_nxrrset;
-
-	      case ISC_R_NOTAUTH:
-		return ns_r_notauth;
-
-	      case ISC_R_NOTZONE:
-		return ns_r_notzone;
-
-	      case ISC_R_BADSIG:
-		return ns_r_badsig;
-
-	      case ISC_R_BADKEY:
-		return ns_r_badkey;
-
-	      case ISC_R_BADTIME:
-		return ns_r_badtime;
-
-	      default:
-		;
-	}
-	return ns_r_servfail;
 }

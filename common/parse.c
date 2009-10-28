@@ -1121,7 +1121,7 @@ parse_option_name (cfile, allocate, known, opt)
 	unsigned code;
 
 	if (opt == NULL)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	token = next_token (&val, (unsigned *)0, cfile);
 	if (!is_identifier (token)) {
@@ -1129,7 +1129,7 @@ parse_option_name (cfile, allocate, known, opt)
 			    "expecting identifier after option keyword.");
 		if (token != SEMI)
 			skip_to_semi (cfile);
-		return ISC_R_BADPARSE;
+		return DHCP_R_BADPARSE;
 	}
 	uname = dmalloc (strlen (val) + 1, MDL);
 	if (!uname)
@@ -1146,7 +1146,7 @@ parse_option_name (cfile, allocate, known, opt)
 			parse_warn (cfile, "expecting identifier after '.'");
 			if (token != SEMI)
 				skip_to_semi (cfile);
-			return ISC_R_BADPARSE;
+			return DHCP_R_BADPARSE;
 		}
 
 		/* Look up the option name hash table for the specified
@@ -3374,7 +3374,7 @@ int parse_numeric_expression (expr, cfile, lose)
 	}
 	return 1;
 }
-
+#if defined (NSUPDATE_OLD)
 /*
  * dns-expression :==
  *	UPDATE LPAREN ns-class COMMA ns-type COMMA data-expression COMMA
@@ -3409,7 +3409,7 @@ int parse_dns_expression (expr, cfile, lose)
 	}
 	return 1;
 }
-
+#endif /* NSUPDATE_OLD */
 /* Parse a subexpression that does not contain a binary operator. */
 
 int parse_non_binary (expr, cfile, lose, context)
@@ -3423,10 +3423,12 @@ int parse_non_binary (expr, cfile, lose, context)
 	struct collection *col;
 	struct expression *nexp, **ep;
 	int known;
+	char *cptr;
+#if defined (NSUPDATE_OLD)
 	enum expr_op opcode;
 	const char *s;
-	char *cptr;
 	unsigned long u;
+#endif 
 	isc_result_t status;
 	unsigned len;
 
@@ -3459,10 +3461,12 @@ int parse_non_binary (expr, cfile, lose, context)
 
 	      case TOKEN_NOT:
 		token = next_token (&val, (unsigned *)0, cfile);
+#if defined(NSUPDATE_OLD)
 		if (context == context_dns) {
 			token = peek_token (&val, (unsigned *)0, cfile);
 			goto not_exists;
 		}
+#endif
 		if (!expression_allocate (expr, MDL))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_not;
@@ -3506,8 +3510,10 @@ int parse_non_binary (expr, cfile, lose, context)
 		break;
 
 	      case EXISTS:
+#if defined(NSUPDATE_OLD)
 		if (context == context_dns)
 			goto ns_exists;
+#endif
 		token = next_token (&val, (unsigned *)0, cfile);
 		if (!expression_allocate (expr, MDL))
 			log_fatal ("can't allocate expression");
@@ -3821,6 +3827,7 @@ int parse_non_binary (expr, cfile, lose, context)
 			goto norparen;
 		break;
 
+#if defined(NSUPDATE_OLD)
 		/* dns-update and dns-delete are present for historical
 		   purposes, but are deprecated in favor of ns-update
 		   in combination with update, delete, exists and not
@@ -4098,7 +4105,7 @@ int parse_non_binary (expr, cfile, lose, context)
 		if (token != RPAREN)
 			goto norparen;
 		break;
-
+#endif /* NSUPDATE_OLD */
 	      case OPTION:
 	      case CONFIG_OPTION:
 		if (!expression_allocate (expr, MDL))
@@ -4175,6 +4182,7 @@ int parse_non_binary (expr, cfile, lose, context)
 		(*expr) -> op = expr_host_decl_name;
 		break;
 
+#if defined(NSUPDATE_OLD)
 	      case UPDATED_DNS_RR:
 		token = next_token (&val, (unsigned *)0, cfile);
 
@@ -4211,7 +4219,7 @@ int parse_non_binary (expr, cfile, lose, context)
 			log_fatal ("can't allocate variable name.");
 		strcpy ((*expr) -> data.variable, s);
 		break;
-
+#endif /* NSUPDATE_OLD */
 	      case PACKET:
 		token = next_token (&val, (unsigned *)0, cfile);
 		if (!expression_allocate (expr, MDL))
@@ -4423,7 +4431,7 @@ int parse_non_binary (expr, cfile, lose, context)
 		goto ns_const;
 
 	      case NS_NOTAUTH:
-		known = ISC_R_NOTAUTH;
+		known = DHCP_R_NOTAUTH;
 		goto ns_const;
 
 	      case NS_NOTIMP:
@@ -4431,31 +4439,31 @@ int parse_non_binary (expr, cfile, lose, context)
 		goto ns_const;
 
 	      case NS_NOTZONE:
-		known = ISC_R_NOTZONE;
+		known = DHCP_R_NOTZONE;
 		goto ns_const;
 
 	      case NS_NXDOMAIN:
-		known = ISC_R_NXDOMAIN;
+		known = DHCP_R_NXDOMAIN;
 		goto ns_const;
 
 	      case NS_NXRRSET:
-		known = ISC_R_NXRRSET;
+		known = DHCP_R_NXRRSET;
 		goto ns_const;
 
 	      case NS_REFUSED:
-		known = ISC_R_REFUSED;
+		known = DHCP_R_REFUSED;
 		goto ns_const;
 
 	      case NS_SERVFAIL:
-		known = ISC_R_SERVFAIL;
+		known = DHCP_R_SERVFAIL;
 		goto ns_const;
 
 	      case NS_YXDOMAIN:
-		known = ISC_R_YXDOMAIN;
+		known = DHCP_R_YXDOMAIN;
 		goto ns_const;
 
 	      case NS_YXRRSET:
-		known = ISC_R_YXRRSET;
+		known = DHCP_R_YXRRSET;
 		goto ns_const;
 
 	      case BOOTING:

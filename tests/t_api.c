@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: t_api.c,v 1.3 2009/01/22 00:43:58 sar Exp $ */
+/* $Id: t_api.c,v 1.4 2009/10/28 04:12:30 sar Exp $ */
 
 /*! \file */
 
@@ -43,15 +43,15 @@
 
 #include <sys/wait.h>
 
-#include <isc-dhcp/boolean.h>
-#include <isc-dhcp/commandline.h>
-#include <isc-dhcp/print.h>
-#include <isc-dhcp/string.h>
-#include <isc-dhcp/mem.h>
+#include <isc/boolean.h>
+#include <isc/commandline.h>
+#include <isc/print.h>
+#include <isc/string.h>
+#include <isc/mem.h>
 
 #ifdef DNS_SUPPORT
 #include <dns/compress.h>
-#include <dns/result.h>
+#include <omapip/result.h>
 #endif /* DNS_SUPPORT */
 
 #ifndef BIND_SUPPORT

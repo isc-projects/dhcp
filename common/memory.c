@@ -48,14 +48,14 @@ isc_result_t delete_group (struct group_object *group, int writep)
 		group_hash_lookup (&d, group_name_hash, group -> name,
 				   strlen (group -> name), MDL);
 	} else
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	if (!d)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	/* Also not okay to delete a group that's not the one in
 	   the hash table. */
 	if (d != group)
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 
 	/* If it's dynamic, and we're deleting it, we can just blow away the
 	   hash table entry. */

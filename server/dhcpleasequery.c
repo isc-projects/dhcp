@@ -718,7 +718,7 @@ get_lq_query(struct lq6_state *lq)
 	 * Verify our lq_query structure is empty.
 	 */
 	if ((lq_query->data != NULL) || (lq_query->len != 0)) {
-		return ISC_R_INVALIDARG;
+		return DHCP_R_INVALIDARG;
 	}
 
 	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_LQ_QUERY);

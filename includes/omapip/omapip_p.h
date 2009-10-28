@@ -63,13 +63,20 @@
 #include "osdep.h"
  */
 
-#include <isc-dhcp/dst.h>
-#include <isc-dhcp/result.h>
+#include <dst/dst.h>
+#include "result.h"
 
 #include <omapip/convert.h>
 #include <omapip/hash.h>
 #include <omapip/omapip.h>
 #include <omapip/trace.h>
+
+/* DST_API control flags */
+/* These are used in functions dst_sign_data and dst_verify_data */
+#define SIG_MODE_INIT		1  /* initalize digest */
+#define SIG_MODE_UPDATE		2  /* add data to digest */
+#define SIG_MODE_FINAL		4  /* generate/verify signature */
+#define SIG_MODE_ALL		(SIG_MODE_INIT|SIG_MODE_UPDATE|SIG_MODE_FINAL)
 
 /* OMAPI protocol header, version 1.00 */
 typedef struct {
@@ -190,10 +197,10 @@ typedef struct __omapi_connection_object {
 	omapi_buffer_t *outbufs;
 	omapi_listener_object_t *listener;	/* Listener that accepted this
 						   connection, if any. */
-	DST_KEY *in_key;	/* Authenticator signing incoming
+	dst_key_t *in_key;	/* Authenticator signing incoming
 				   data. */
 	void *in_context;	/* Input hash context. */
-	DST_KEY *out_key;	/* Authenticator signing outgoing
+	dst_key_t *out_key;	/* Authenticator signing outgoing
 				   data. */
 	void *out_context;	/* Output hash context. */
 } omapi_connection_object_t;
@@ -206,6 +213,7 @@ typedef struct __omapi_io_object {
 	isc_result_t (*reader) (omapi_object_t *);
 	isc_result_t (*writer) (omapi_object_t *);
 	isc_result_t (*reaper) (omapi_object_t *);
+	isc_socket_t *fd;
 } omapi_io_object_t;
 
 typedef struct __omapi_generic_object {
@@ -255,7 +263,7 @@ OMAPI_OBJECT_ALLOC_DECL (omapi_message,
 			 omapi_message_object_t, omapi_type_message)
 
 isc_result_t omapi_connection_sign_data (int mode,
-					 DST_KEY *key,
+					 dst_key_t *key,
 					 void **context,
 					 const unsigned char *data,
 					 const unsigned len,

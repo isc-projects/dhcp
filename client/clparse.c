@@ -226,7 +226,7 @@ int read_client_conf_file (const char *name, struct interface_info *ip,
 	} while (1);
 	token = next_token (&val, (unsigned *)0, cfile);
 	status = (cfile -> warnings_occurred
-		  ? ISC_R_BADPARSE
+		  ? DHCP_R_BADPARSE
 		  : ISC_R_SUCCESS);
 	end_parse (&cfile);
 	return status;

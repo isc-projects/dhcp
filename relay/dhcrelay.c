@@ -193,6 +193,12 @@ main(int argc, char **argv) {
 	setlogmask(LOG_UPTO(LOG_INFO));
 #endif	
 
+	/* Set up the isc and dns library managers */
+	status = dhcp_context_create();
+	if (status != ISC_R_SUCCESS)
+		log_fatal("Can't initialize context: %s",
+			  isc_result_totext(status));
+
 	/* Set up the OMAPI. */
 	status = omapi_init();
 	if (status != ISC_R_SUCCESS)

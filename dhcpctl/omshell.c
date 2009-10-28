@@ -38,7 +38,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
-#include <isc-dhcp/result.h>
+//#include "result.h"
 #include <syslog.h>
 #include "dhcpctl.h"
 #include "dhcpd.h"
@@ -310,20 +310,31 @@ main(int argc, char **argv) {
 		    break;
 
 		  case KEY:
-		    token = next_token (&val, (unsigned *)0, cfile);
-		    if (!is_identifier (token)) {
-			    printf ("usage: key <name> <value>\n");
-			    skip_to_semi (cfile);
-			    break;
+		    token = peek_token(&val, (unsigned *)0, cfile);
+		    if (token == STRING) {
+			    token = next_token (&val, (unsigned *)0, cfile);
+			    if (!is_identifier (token)) {
+				    printf ("usage: key <name> <value>\n");
+				    skip_to_semi (cfile);
+				    break;
+			    }
+			    s = dmalloc (strlen (val) + 1, MDL);
+			    if (!s) {
+				    printf ("no memory for key name.\n");
+				    skip_to_semi (cfile);
+				    break;
+			    }
+			    strcpy (s, val);
+		    } else {
+			    s = parse_host_name(cfile);
+			    if (s == NULL) {
+				    printf ("usage: key <name> <value>\n");
+				    skip_to_semi(cfile);
+				    break;
+			    }
 		    }
-		    s = dmalloc (strlen (val) + 1, MDL);
-		    if (!s) {
-			    printf ("no memory for key name.\n");
-			    skip_to_semi (cfile);
-			    break;
-		    }
-		    strcpy (s, val);
 		    name = s;
+
 		    memset (&secret, 0, sizeof secret);
 		    if (!parse_base64 (&secret, cfile)) {
 			    skip_to_semi (cfile);
