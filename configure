@@ -739,6 +739,7 @@ with_srv6_pid_file
 with_cli_pid_file
 with_cli6_pid_file
 with_relay_pid_file
+with_libbind
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1420,6 +1421,8 @@ Optional Packages:
   --with-relay-pid-file=PATH
                           File for dhcrelay process information (default is
                           LOCALSTATEDIR/run/dhcrelay.pid)
+  --with-libbind=PATH     bind includes and libraries are in PATH (default is
+                          ./bind)
 
 Some influential environment variables:
   CC          C compiler command
@@ -8547,11 +8550,35 @@ fi
 fi
 
 
+libbind =
+
+# Check whether --with-libbind was given.
+if test "${with_libbind+set}" = set; then
+  withval=$with_libbind; use_libbind="$withval"
+else
+  use_libbind="no"
+fi
+
+case "$use_libbind" in
+yes)
+	libbind="\${top_srcdir}/bind"
+	;;
+no)
+	libbind="\${top_srcdir}/bind"
+	;;
+*)
+	libbind="$use_libbind"
+	;;
+esac
+
 # Append selected warning levels to CFLAGS before substitution (but after
 # AC_TRY_COMPILE & etc).
 CFLAGS="$CFLAGS $STD_CWARNINGS"
 
-ac_config_files="$ac_config_files Makefile client/Makefile common/Makefile common/tests/Makefile dhcpctl/Makefile dst/Makefile includes/Makefile minires/Makefile omapip/Makefile relay/Makefile server/Makefile tests/Makefile"
+# Try to add the bind include directory
+CFLAGS="$CFLAGS -I$libbind/include"
+
+ac_config_files="$ac_config_files Makefile client/Makefile common/Makefile common/tests/Makefile dhcpctl/Makefile dst/Makefile includes/Makefile omapip/Makefile relay/Makefile server/Makefile tests/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -9170,7 +9197,6 @@ do
     "dhcpctl/Makefile") CONFIG_FILES="$CONFIG_FILES dhcpctl/Makefile" ;;
     "dst/Makefile") CONFIG_FILES="$CONFIG_FILES dst/Makefile" ;;
     "includes/Makefile") CONFIG_FILES="$CONFIG_FILES includes/Makefile" ;;
-    "minires/Makefile") CONFIG_FILES="$CONFIG_FILES minires/Makefile" ;;
     "omapip/Makefile") CONFIG_FILES="$CONFIG_FILES omapip/Makefile" ;;
     "relay/Makefile") CONFIG_FILES="$CONFIG_FILES relay/Makefile" ;;
     "server/Makefile") CONFIG_FILES="$CONFIG_FILES server/Makefile" ;;
