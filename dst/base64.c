@@ -47,7 +47,7 @@
  */
 
 #if !defined(LINT) && !defined(CODECENTER)
-static const char rcsid[] = "$Id: base64.c,v 1.4 2009/10/28 04:12:30 sar Exp $";
+static const char rcsid[] = "$Id: base64.c,v 1.5 2009/10/29 00:46:48 sar Exp $";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -64,6 +64,8 @@ static const char rcsid[] = "$Id: base64.c,v 1.4 2009/10/28 04:12:30 sar Exp $";
 
 #include <sys/socket.h>
 
+#include "cdefs.h"
+#include "osdep.h"
 #include "arpa/nameser.h"
 
 #define Assert(Cond) if (!(Cond)) abort()

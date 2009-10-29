@@ -1,4 +1,4 @@
-static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/dst_support.c,v 1.5 2009/10/28 04:12:30 sar Exp $";
+static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/dst_support.c,v 1.6 2009/10/29 00:46:48 sar Exp $";
 
 
 /*
@@ -28,6 +28,8 @@ static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/dst_support.c,v 1.5 
 #include <netinet/in.h>
 #include <sys/socket.h>
 
+#include "cdefs.h"
+#include "osdep.h"
 #include "arpa/nameser.h"
 
 #include "dst_internal.h"

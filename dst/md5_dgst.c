@@ -83,6 +83,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include "md5_locl.h"
+#include "cdefs.h"
+#include "osdep.h"
 
 #ifdef USE_MD5 /* Added by ogud@tis.com 1998/1/26 */
 

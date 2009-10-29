@@ -14,7 +14,7 @@
 # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 
-# $Id: bind.sh,v 1.2 2009/10/28 04:12:30 sar Exp $
+# $Id: bind.sh,v 1.3 2009/10/29 00:46:48 sar Exp $
 
 # Get the bind distribution for the libraries
 # This script is used to build the DHCP distribution and shouldn't be shipped
@@ -30,7 +30,7 @@ binddir=$topdir/bind
 case $# in 
     1)
 	case "$1" in 
-	4.2.0) BINDTAG=v9_7_0b1 ;;
+	4.2.0a1) BINDTAG=v9_7_0b1 ;;
 	4.1.2) BINDTAG=v9_7_0b1 ;;
 	*) echo "usage: sh bind.sh <version>" >&2
 	   exit 1

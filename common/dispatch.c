@@ -28,6 +28,8 @@
 
 #include "dhcpd.h"
 
+#include <sys/time.h>
+
 struct timeout *timeouts;
 static struct timeout *free_timeouts;
 

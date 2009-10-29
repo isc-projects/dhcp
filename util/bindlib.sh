@@ -14,7 +14,7 @@
 # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 
-# $Id: bindlib.sh,v 1.2 2009/10/28 04:12:30 sar Exp $
+# $Id: bindlib.sh,v 1.3 2009/10/29 00:46:48 sar Exp $
 
 # Configure, build and install the bind export libraries for use by DHCP
 #
@@ -34,7 +34,7 @@ bindsrcdir="$2"
 
 # Configure the export libraries
 cd $bindsrcdir
-./configure --without-libxml2 --enable-exportlib --enable-threads=no --with-export-includedir=$binddir/include --with-export-libdir=$binddir/lib > $binddir/configure.log
+./configure --without-openssl --without-libxml2 --enable-exportlib --enable-threads=no --with-export-includedir=$binddir/include --with-export-libdir=$binddir/lib > $binddir/configure.log
 
 # Build the export librares
 cd lib/export
