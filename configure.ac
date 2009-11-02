@@ -483,7 +483,7 @@ AC_CHECK_MEMBER(struct msghdr.msg_control,,
 #include <sys/socket.h>
 	])
 
-libbind =
+libbind=
 AC_ARG_WITH(libbind,
 	AC_HELP_STRING([--with-libbind=PATH],
 		       [bind includes and libraries are in PATH 
