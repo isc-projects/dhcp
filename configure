@@ -8550,7 +8550,7 @@ fi
 fi
 
 
-libbind =
+libbind=
 
 # Check whether --with-libbind was given.
 if test "${with_libbind+set}" = set; then
