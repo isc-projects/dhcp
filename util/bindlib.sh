@@ -14,7 +14,7 @@
 # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 
-# $Id: bindlib.sh,v 1.3 2009/10/29 00:46:48 sar Exp $
+# $Id: bindlib.sh,v 1.4 2009/11/03 02:57:22 marka Exp $
 
 # Configure, build and install the bind export libraries for use by DHCP
 #
@@ -32,13 +32,25 @@
 binddir="$1"
 bindsrcdir="$2"
 
+gmake=
+for x in gmake gnumake make; do
+	if $x --version 2>/dev/null | grep GNU > /dev/null; then
+		gmake=$x
+		break;
+	fi
+done
+if test -z "$gmake"; then
+	echo "unable to find gmake" 1>&2
+	exit 1;
+fi
+
 # Configure the export libraries
 cd $bindsrcdir
 ./configure --without-openssl --without-libxml2 --enable-exportlib --enable-threads=no --with-export-includedir=$binddir/include --with-export-libdir=$binddir/lib > $binddir/configure.log
 
 # Build the export librares
 cd lib/export
-gmake > $binddir/build.log
+MAKE=$gmake $gmake > $binddir/build.log
 
 # Install the libraries and includes
-gmake install > $binddir/install.log
+MAKE=$gmake $gmake install > $binddir/install.log
