@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-		             Version 4.1.1b3
-			      13 October 2009
+		             Version 4.1.1rc1
+			      5 November 2009
 
 			      README FILE
 
@@ -94,10 +94,10 @@ directory, it may not have up-to-date information).
 
 			    RELEASE STATUS
 
-This is ISC DHCP 4.1.1b3, the THIRD BETA of a maintenance release which
-fixes bugs present in ISC DHCP 4.1.0 or prior.  A fix for a security
-vulnerability in the ISC DHCP Client ('dhclient') was included in 4.1.1b2
-and is included in this release.
+This is ISC DHCP 4.1.1rc1, the FIRST RELEASE CANDIDATE of a
+maintenance release which fixes bugs present in ISC DHCP 4.1.0 or
+prior.  A fix for a security vulnerability in the ISC DHCP Client
+('dhclient') is included in this release.
 
 In this release, the DHCPv6 server should be fully functional on Linux,
 Solaris, or any BSD.  The DHCPv6 client should be similarly functional
