@@ -3328,9 +3328,9 @@ const char *binding_state_print (enum failover_state);
 
 
 /* mdb6.c */
-HASH_FUNCTIONS_DECL(ia, unsigned char *, struct ia_xx, ia_hash_t);
+HASH_FUNCTIONS_DECL(ia, unsigned char *, struct ia_xx, ia_hash_t)
 HASH_FUNCTIONS_DECL(iasubopt, struct in6_addr *, struct iasubopt,
-		    iasubopt_hash_t);
+		    iasubopt_hash_t)
 
 isc_result_t iasubopt_allocate(struct iasubopt **iasubopt,
 			       const char *file, int line);
