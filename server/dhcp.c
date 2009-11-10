@@ -1748,6 +1748,17 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 			if (hp != NULL)
 				host_dereference(&hp, MDL);
 		}
+		if (!host) {
+			find_hosts_by_option(&hp, packet, packet->options, MDL);
+			for (h = hp; h; h = h -> n_ipaddr) {
+				if (!h -> fixed_addr)
+					break;
+			}
+			if (h)
+				host_reference (&host, h, MDL);
+			if (hp != NULL)
+				host_dereference(&hp, MDL);
+		}
 	}
 
 	/* If we have a host_decl structure, run the options associated
@@ -3274,6 +3285,25 @@ int find_lease (struct lease **lp,
 			if (fixed_lease) {
 				log_info ("Found host for link address: %s.",
 				      piaddr (fixed_lease -> ip_addr));
+			}
+#endif
+		}
+	}
+
+	/* Finally, if we haven't found anything yet try again with the
+	 * host-identifier option ... */
+	if (!fixed_lease && !host) {
+		if (find_hosts_by_option(&hp, packet,
+					 packet->options, MDL) == 1) {
+			packet->known = 1;
+			if (host)
+				host_dereference(&host, MDL);
+			host_reference(&host, hp, MDL);
+			host_dereference(&hp, MDL);
+			mockup_lease (&fixed_lease, packet, share, host);
+#if defined (DEBUG_FIND_LEASE)
+			if (fixed_lease) {
+				log_info ("Found host via host-identifier");
 			}
 #endif
 		}
