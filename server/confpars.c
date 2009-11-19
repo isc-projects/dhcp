@@ -551,16 +551,6 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 
 	      case HARDWARE:
 		next_token (&val, (unsigned *)0, cfile);
-#ifdef DHCPv6
-		if (local_family == AF_INET6) {
-			parse_warn(cfile, "You can not use a hardware "
-			                  "parameter for DHCPv6 hosts. "
-					  "Use the host-identifier parameter "
-					  "instead.");
-			skip_to_semi(cfile);
-			break;
-		}
-#endif /* DHCPv6 */
 		memset (&hardware, 0, sizeof hardware);
 		if (host_decl && memcmp(&hardware, &(host_decl->interface),
 					sizeof(hardware)) != 0) {

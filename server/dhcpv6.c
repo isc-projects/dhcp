@@ -140,7 +140,8 @@ static isc_result_t reply_process_send_prefix(struct reply_state *reply,
 static struct iasubopt *prefix_compare(struct reply_state *reply,
 				       struct iasubopt *alpha,
 				       struct iasubopt *beta);
-
+static int find_hosts_by_duid_chaddr(struct host_decl **host,
+				     const struct data_string *client_id);
 /*
  * This function returns the time since DUID time start for the
  * given time_t value.
@@ -1277,15 +1278,21 @@ lease_to_client(struct data_string *reply_ret,
 	 * Find a host record that matches from the packet, if any, and is
 	 * valid for the shared network the client is on.
 	 */
-	if (find_hosts_by_option(&reply.host, packet, packet->options, MDL)) {
+	if (find_hosts_by_uid(&reply.host, client_id->data, client_id->len,
+			      MDL))
 		seek_shared_host(&reply.host, reply.shared);
-	}
 
 	if ((reply.host == NULL) &&
-	    find_hosts_by_uid(&reply.host, client_id->data, client_id->len,
-			      MDL)) {
+	    find_hosts_by_option(&reply.host, packet, packet->options, MDL))
 		seek_shared_host(&reply.host, reply.shared);
-	}
+
+	/*
+	 * Check for 'hardware' matches last, as some of the synthesis methods
+	 * are not considered to be as reliable.
+	 */
+	if ((reply.host == NULL) &&
+	    find_hosts_by_duid_chaddr(&reply.host, client_id))
+		seek_shared_host(&reply.host, reply.shared);
 
 	/* Process the client supplied IA's onto the reply buffer. */
 	reply.ia_count = 0;
@@ -4611,6 +4618,10 @@ iterate_over_ia_na(struct data_string *reply_ret,
 		if (!find_hosts_by_option(&packet_host, 
 					  packet, packet->options, MDL)) {
 			packet_host = NULL;
+
+			if (!find_hosts_by_duid_chaddr(&packet_host,
+						       client_id))
+				packet_host = NULL;
 		}
 	}
 
@@ -4713,7 +4724,8 @@ iterate_over_ia_na(struct data_string *reply_ret,
 
 		/* 
 		 * Now we need to figure out which host record matches
-		 * this IA_NA and IAADDR.
+		 * this IA_NA and IAADDR (encapsulated option contents
+		 * matching a host record by option).
 		 *
 		 * XXX: We don't currently track IA_NA separately, but
 		 *      we will need to do this!
@@ -5129,6 +5141,10 @@ iterate_over_ia_pd(struct data_string *reply_ret,
 		if (!find_hosts_by_option(&packet_host, 
 					  packet, packet->options, MDL)) {
 			packet_host = NULL;
+
+			if (!find_hosts_by_duid_chaddr(&packet_host,
+						       client_id))
+				packet_host = NULL;
 		}
 	}
 
@@ -5181,7 +5197,8 @@ iterate_over_ia_pd(struct data_string *reply_ret,
 
 		/* 
 		 * Now we need to figure out which host record matches
-		 * this IA_PD and IAPREFIX.
+		 * this IA_PD and IAPREFIX (encapsulated option contents
+		 * matching a host record by option).
 		 *
 		 * XXX: We don't currently track IA_PD separately, but
 		 *      we will need to do this!
@@ -5913,6 +5930,79 @@ fixed_matches_shared(struct host_decl *host, struct shared_network *shared) {
 
 	data_string_forget(&addr, MDL);
 	return matched;
+}
+
+/*
+ * find_host_by_duid_chaddr() synthesizes a DHCPv4-like 'hardware'
+ * parameter from a DHCPv6 supplied DUID (client-identifier option),
+ * and may seek to use client or relay supplied hardware addresses.
+ */
+static int
+find_hosts_by_duid_chaddr(struct host_decl **host,
+			  const struct data_string *client_id) {
+	static int once_htype;
+	int htype, hlen;
+	const unsigned char *chaddr;
+
+	/*
+	 * The DUID-LL and DUID-LLT must have a 2-byte DUID type and 2-byte
+	 * htype.
+	 */
+	if (client_id->len < 4)
+		return 0;
+
+	/*
+	 * The third and fourth octets of the DUID-LL and DUID-LLT
+	 * is the hardware type, but in 16 bits.
+	 */
+	htype = getUShort(client_id->data + 2);
+	hlen = 0;
+
+	/* The first two octets of the DUID identify the type. */
+	switch(getUShort(client_id->data)) {
+	      case DUID_LLT:
+		if (client_id->len > 8) {
+			hlen = client_id->len - 8;
+			chaddr = client_id->data + 8;
+		}
+		break;
+
+	      case DUID_LL:
+		/*
+		 * Note that client_id->len must be greater than or equal
+		 * to four to get to this point in the function.
+		 */
+		hlen = client_id->len - 4;
+		chaddr = client_id->data + 4;
+		break;
+
+	      default:
+		/* Silence compiler warnings. */
+		chaddr = NULL;
+		break;
+	}
+
+	if (hlen == 0)
+		return 0;
+
+	/*
+	 * XXX: DHCPv6 gives a 16-bit field for the htype.  DHCPv4 gives an
+	 * 8-bit field.  To change the semantics of the generic 'hardware'
+	 * structure, we would have to adjust many DHCPv4 sources (from
+	 * interface to DHCPv4 lease code), and we would have to update the
+	 * 'hardware' config directive (probably being reverse compatible and
+	 * providing a new upgrade/replacement primitive).  This is a little
+	 * too much to change for now.  Hopefully we will revisit this before
+	 * hardware types exceeding 8 bits are assigned.
+	 */
+	if ((htype & 0xFF00) && !once_htype) {
+		once_htype = 1;
+		log_error("Attention: At least one client advertises a "
+			  "hardware type of %d, which exceeds the software "
+			  "limitation of 255.", htype);
+	}
+
+	return find_hosts_by_haddr(host, htype, chaddr, hlen, MDL);
 }
 
 #endif /* DHCPv6 */

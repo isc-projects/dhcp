@@ -91,7 +91,11 @@ work on other platforms. Please report any problems and suggested fixes to
 - Processing the DHCP to DNS server transactions in an asyncrhonous fashion.
   The DHCP server or client can now continue with it's processing while
   awaiting replies from the DNS server.
-  
+
+- The 'hardware [ethernet|etc] ...;' parameter in host records has been
+  extended to attempt to match DHCPv6 clients by the last octets of a
+  DUID-LL or DUID-LLT provided by the client.
+
 			Changes since 4.1.0 (bug fixes)
 
 - Remove infinite loop in token_print_indent_concat().
