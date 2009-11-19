@@ -13,6 +13,19 @@ Processing the DHCP to DNS server transactions in an asyncrhonous fashion.
 The DHCP server or client can now continue with it's processing while
 awaiting replies from the DNS server.
 
+As part of the changes to support asynchronous DNS the DHCP code was
+modified to use the current BIND libraries and a small number of changes
+were made to the BIND libraries to support DHCP.  There is a bug in one
+of these changes that can cause an exception in a DHCP server.  This bug
+requires either failover or omapi to be in use and a number of events
+(timeouts, packet reception, packet transmision) to happen within the same
+scheduling interval.  As a work around the number of events required to
+trigger this issue has been increased though this may affect the responsivness
+of the DNS code under load.  A fix is being developed but needs
+to go into a BIND release.  Note that the bug is in a part of the BIND
+libraries that is only used by the DHCP code and does NOT affect any
+other part of the BIND code.
+
 There are a number of DHCPv6 limitations and features missing in this
 release, which will be addressed in the future:
 

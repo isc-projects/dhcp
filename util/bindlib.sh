@@ -14,7 +14,7 @@
 # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 
-# $Id: bindlib.sh,v 1.4 2009/11/03 02:57:22 marka Exp $
+# $Id: bindlib.sh,v 1.5 2009/11/19 23:49:57 sar Exp $
 
 # Configure, build and install the bind export libraries for use by DHCP
 #
@@ -45,10 +45,12 @@ if test -z "$gmake"; then
 fi
 
 # Configure the export libraries
+# Currently disable the epoll and devpoll options as they don't interact
+# well with the DHCP code.
 cd $bindsrcdir
-./configure --without-openssl --without-libxml2 --enable-exportlib --enable-threads=no --with-export-includedir=$binddir/include --with-export-libdir=$binddir/lib > $binddir/configure.log
+./configure --disable-epoll --disable-devpoll --without-openssl --without-libxml2 --enable-exportlib --enable-threads=no --with-export-includedir=$binddir/include --with-export-libdir=$binddir/lib > $binddir/configure.log
 
-# Build the export librares
+# Build the export libraries
 cd lib/export
 MAKE=$gmake $gmake > $binddir/build.log
 

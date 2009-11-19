@@ -214,6 +214,7 @@ typedef struct __omapi_io_object {
 	isc_result_t (*writer) (omapi_object_t *);
 	isc_result_t (*reaper) (omapi_object_t *);
 	isc_socket_t *fd;
+	isc_boolean_t closed; /* ISC_TRUE = closed, do not use */
 } omapi_io_object_t;
 
 typedef struct __omapi_generic_object {

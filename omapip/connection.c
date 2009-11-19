@@ -587,6 +587,15 @@ isc_result_t omapi_connection_connect (omapi_object_t *h)
 	status = omapi_connection_connect_internal (h);
 	if (status != ISC_R_SUCCESS)
 		omapi_signal (h, "status", status);
+
+	/*
+	 * Currently we use the INPROGRESS error to indicate that
+	 * we want more from the socket.  In this case we have now connected
+	 * and are trying to write to the socket for the first time.
+	 */
+	if (status == ISC_R_INPROGRESS) 
+		return ISC_R_INPROGRESS;
+
 	return ISC_R_SUCCESS;
 }
 
@@ -699,7 +708,7 @@ static isc_result_t omapi_connection_connect_internal (omapi_object_t *h)
 
 	omapi_signal_in (h, "connect");
 	omapi_addr_list_dereference (&c -> connect_list, MDL);
-	return ISC_R_SUCCESS;
+	return ISC_R_INPROGRESS;
 }
 
 /* Reaper function for connection - if the connection is completely closed,
