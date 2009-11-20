@@ -127,16 +127,7 @@ dhcp_context_create(void) {
 	if (result != ISC_R_SUCCESS)
 		goto cleanup;
 
-	/*sar*/
-	/*
-	 * We currently use a large number for quantum to get around
-	 * an issue in the fdwatchpoke code that allows us to re-check
-	 * a socket for reading or writing even if it already has a pending
-	 * read or write.  This event causes an exception and stops the
-	 * program.  When that code is fixed the quantum can be reduced.
-	 */
-	result = isc_task_create(dhcp_gbl_ctx.taskmgr, 100,
-				 &dhcp_gbl_ctx.task);
+	result = isc_task_create(dhcp_gbl_ctx.taskmgr, 0, &dhcp_gbl_ctx.task);
 	if (result != ISC_R_SUCCESS)
 		goto cleanup;
 
