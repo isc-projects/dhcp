@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004,2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -47,7 +47,7 @@
  */
 
 #if !defined(LINT) && !defined(CODECENTER)
-static const char rcsid[] = "$Id: base64.c,v 1.5 2009/10/29 00:46:48 sar Exp $";
+static const char rcsid[] = "$Id: base64.c,v 1.5.6.1 2009/11/20 01:49:01 sar Exp $";
 #endif /* not lint */
 
 #include <sys/types.h>

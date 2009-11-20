@@ -1,9 +1,9 @@
-/* $Id: dhcpctl.h,v 1.17 2009/07/23 18:52:20 sar Exp $
+/* $Id: dhcpctl.h,v 1.17.24.1 2009/11/20 01:49:01 sar Exp $
 
    Subroutines providing general support for objects. */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004,2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
