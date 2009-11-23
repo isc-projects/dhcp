@@ -602,7 +602,7 @@ make_dns_dataset(dns_rdataclass_t  dataclass,
 		 int               ttl)
 {
 	dns_rdata_t *rdata = &dataspace->rdata;
-	dns_rdatalist_t *rdatalist = &dataspace->rdatalist;;
+	dns_rdatalist_t *rdatalist = &dataspace->rdatalist;
 	dns_rdataset_t *rdataset = &dataspace->rdataset;
 
 	isc_region_t region;
