@@ -5957,6 +5957,7 @@ find_hosts_by_duid_chaddr(struct host_decl **host,
 	 */
 	htype = getUShort(client_id->data + 2);
 	hlen = 0;
+	chaddr = NULL;
 
 	/* The first two octets of the DUID identify the type. */
 	switch(getUShort(client_id->data)) {
@@ -5977,8 +5978,6 @@ find_hosts_by_duid_chaddr(struct host_decl **host,
 		break;
 
 	      default:
-		/* Silence compiler warnings. */
-		chaddr = NULL;
 		break;
 	}
 
