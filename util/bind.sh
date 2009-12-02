@@ -14,14 +14,13 @@
 # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 
-# $Id: bind.sh,v 1.6 2009/11/20 00:10:14 sar Exp $
+# $Id: bind.sh,v 1.6.2.1 2009/12/02 22:35:03 sar Exp $
 
 # Get the bind distribution for the libraries
 # This script is used to build the DHCP distribution and shouldn't be shipped
 #
-# Usage: sh bind.sh
+# Usage: sh bind.sh <DHCP version>
 #
-# Currently no arguments
 #
 
 topdir=`pwd`
@@ -46,6 +45,7 @@ rm -rf bind
 
 # Make and move to our directory for all things bind
 mkdir $binddir
+cp util/Makefile.bind bind/Makefile
 cd $binddir
 
 # Get the bind release kit shell script
@@ -68,5 +68,6 @@ mv bind-9.7*.tar.gz bind.tar.gz
 #mv $binddir/bind-9.7* $binddir/$bindsrcdir
 
 # Run the script to build and install the export libraries
-sh $topdir/util/bindlib.sh $binddir $bindsrcdir
+# Let make do this now.
+#sh $topdir/util/bindlib.sh $binddir $bindsrcdir
 

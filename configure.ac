@@ -522,3 +522,4 @@ AC_OUTPUT([
   tests/Makefile
 ])
 
+sh util/bindvar.sh
