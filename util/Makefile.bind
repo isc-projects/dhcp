@@ -13,7 +13,7 @@
 # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 
-# $Id: Makefile.bind,v 1.2 2009/12/02 20:43:52 sar Exp $
+# $Id: Makefile.bind,v 1.2.2.2 2009/12/02 23:52:29 sar Exp $
 
 # Configure and build the bind libraries for use by DHCP
 
@@ -62,6 +62,11 @@ clean:
 	rm -rf ${bindsrcdir} ./lib ./include ./configure.log ./build.log \
 		./install.log
 
+# Include the following so that this Makefile is happy when the parent
+# tries to use them.
+
 distdir:
 
+disclean:
 
+install:
