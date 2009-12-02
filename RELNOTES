@@ -40,13 +40,6 @@ work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
 
-			Changes since 4.2.0a1
-
-- Clean up to allow compilation with gcc 2.95.4 on FreeBSD.  Remove an
-  extra semi-colon from common/dns.c and moved setting a variable to NULL
-  in server/dhcpv6.c to allow the compiler to decide that the variable
-  was always properly set.  
-
 			Changes since 4.1.0 (new features)
 
 - Failover port configuration can now be left to defaults (port 647) as
@@ -228,6 +221,11 @@ work on other platforms. Please report any problems and suggested fixes to
   object for the connection while it is still in use.  One symptom from
   this error was a segfault when a failover secondary attempted to connect
   to the failover primary if their clocks were not synchronized.
+
+- Clean up to allow compilation with gcc 2.95.4 on FreeBSD.  Remove an
+  extra semi-colon from common/dns.c and moved setting a variable to NULL
+  in server/dhcpv6.c to allow the compiler to decide that the variable
+  was always properly set.  
 
 			Changes since 4.1.0b1
 

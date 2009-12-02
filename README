@@ -94,8 +94,7 @@ directory, it may not have up-to-date information).
 
 			    RELEASE STATUS
 
-This is ISC DHCP 4.1.0, which adds new DHCPv6 features omitted from
-ISC DHCP 4.0.0.
+This is ISC DHCP 4.2.0, which modifies the DDNS code to be asynchronous.
 
 In this release, the DHCPv6 server should be fully functional on Linux,
 Solaris, or any BSD.  The DHCPv6 client should be similarly functional
@@ -131,23 +130,12 @@ information.   On Digital Unix, type ``man pfilt''.
 To build the DHCP Distribution, unpack the compressed tar file using
 the tar utility and the gzip command - type something like:
 
-	gunzip dhcp-4.1.0.tar.gz
-	tar xvf dhcp-4.1.0.tar
-
-			    BUILDING BIND LIBRARIES
-
-To build the BIND libraries used by DHCP cd to the dhcp-4.1.0 subdirectory
-that you've just created and run the bindcus.sh from the the util 
-subdirectory - something like this:
-	
-	sh util/bindcus.sh
-
-In order to build the necessary libraries you will need to have "gmake"
-available on your build system.
+	gunzip dhcp-4.2.0.tar.gz
+	tar xvf dhcp-4.2.0.tar
 
 			    CONFIGURING IT
 
-Now, cd to the dhcp-4.1.0 subdirectory that you've just created and
+Now, cd to the dhcp-4.2.0 subdirectory that you've just created and
 configure the source tree by typing:
 
 	./configure
@@ -162,7 +150,11 @@ your own.
 
 A fully-featured implementation of dynamic DNS updates is included in
 this release.  It uses libraries from BIND and, to avoid issues with
-different versions, includes the necessary BIND version.
+different versions, includes the necessary BIND version.  The appropriate
+BIND libraries will be compiled and installed in the bind subdirectory
+as part of the make step.  In order to build the necessary libraries you
+will need to have "gmake" available on your build system.
+
 
 There is documentation for the DDNS support in the dhcpd.conf manual
 page - see the beginning of this document for information on finding
