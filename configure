@@ -9972,3 +9972,4 @@ $as_echo "$as_me: WARNING: Unrecognized options: $ac_unrecognized_opts" >&2;}
 fi
 
 
+sh util/bindvar.sh
