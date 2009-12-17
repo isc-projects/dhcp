@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.23.10.4 2009/07/23 21:43:35 sar Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.23.10.5 2009/12/17 20:07:58 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -689,7 +689,7 @@ int ddns_updates (struct packet *packet,
 			 */
 			memcpy(&bp->data[5], d1.data, d1.len);
 			if (!save_option_buffer(&fqdn_universe, state->options,
-						bp, &bp->data[5], 1,
+						bp, &bp->data[5], d1.len,
 						FQDN_FQDN, 0))
 				goto badfqdn;
 
