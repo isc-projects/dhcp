@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-		             Version 4.1.1rc1
-			      5 November 2009
+		             Version 4.1.1
+			     7 January 2010
 
 			      README FILE
 
@@ -94,10 +94,9 @@ directory, it may not have up-to-date information).
 
 			    RELEASE STATUS
 
-This is ISC DHCP 4.1.1rc1, the FIRST RELEASE CANDIDATE of a
-maintenance release which fixes bugs present in ISC DHCP 4.1.0 or
-prior.  A fix for a security vulnerability in the ISC DHCP Client
-('dhclient') is included in this release.
+This is ISC DHCP 4.1.1, a maintenance release which fixes bugs
+present in ISC DHCP 4.1.0 or prior.  A fix for a security vulnerability
+in the ISC DHCP Client ('dhclient') is included in this release.
 
 In this release, the DHCPv6 server should be fully functional on Linux,
 Solaris, or any BSD.  The DHCPv6 client should be similarly functional
@@ -133,12 +132,12 @@ information.   On Digital Unix, type ``man pfilt''.
 To build the DHCP Distribution, unpack the compressed tar file using
 the tar utility and the gzip command - type something like:
 
-	gunzip dhcp-4.1.1rc1.tar.gz
-	tar xvf dhcp-4.1.1rc1.tar
+	gunzip dhcp-4.1.1.tar.gz
+	tar xvf dhcp-4.1.1.tar
 
 			    CONFIGURING IT
 
-Now, cd to the dhcp-4.1.1rc1 subdirectory that you've just created and
+Now, cd to the dhcp-4.1.1 subdirectory that you've just created and
 configure the source tree by typing:
 
 	./configure
