@@ -1,4 +1,4 @@
-.\"	$Id: dhcp-options.5,v 1.46 2009/11/24 02:06:56 sar Exp $
+.\"	$Id: dhcp-options.5,v 1.47 2010/01/21 22:17:17 dhankins Exp $
 .\"
 .\" Copyright (c) 2004-2009 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
@@ -1546,18 +1546,18 @@ the "search" line in /etc/resolv.conf.
 .RS 0.25i
 .PP
 The \fBia-pd\fR option is manufactured by clients and servers to create a
-Prefix Delegation binding - to delegate an IPv6 prefix to the client.  There
-is not yet any support for prefix delegation in this software, and this
-option is provided informationally only.
+Prefix Delegation binding - to delegate an IPv6 prefix to the client.  It is
+not directly edited in dhcpd.conf(5) or dhclient.conf(5), but rather is
+manufactured and consumed by the software.
 .RE
 .PP
 .B option \fBdhcp6.ia-prefix\fR \fIstring\fR\fB;\fR
 .RS 0.25i
 .PP
 The \fBia-prefix\fR option is placed inside \fBia-pd\fR options in order
-to identify the prefix(es) allocated to the client.  There is not yet
-any suport for prefix delegation in this software, and this option is
-provided informationally only.
+to identify the prefix(es) allocated to the client.  It is not directly
+edited in dhcpd.conf(5) or dhclient.conf(5), but rather is  
+manufactured and consumed by the software.
 .RE
 .PP
 .B option

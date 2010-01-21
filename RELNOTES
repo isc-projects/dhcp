@@ -45,6 +45,9 @@ work on other platforms. Please report any problems and suggested fixes to
 - When using 'ignore client-updates;', the FQDN returned to the client
   is no longer truncated to one octet.
 
+- Manpage entries for the ia-pd and ia-prefix options were updated to
+  reflect support for prefix delegation.
+
 			Changes since 4.1.0 (new features)
 
 - Failover port configuration can now be left to defaults (port 647) as
