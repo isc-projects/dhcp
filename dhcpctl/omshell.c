@@ -32,6 +32,8 @@
  * ``http://www.nominum.com''.
  */
 
+#include "config.h"
+
 #include <time.h>
 #include <sys/time.h>
 #include <stdio.h>
