@@ -40,10 +40,12 @@ work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
 
-                        Changes since 4.2.0a1
+			Changes since 4.2.0a1
 
 - When using 'ignore client-updates;', the FQDN returned to the client
   is no longer truncated to one octet.
+
+- Cleaned up an unused hardware address variable in nak_lease().
 
 - Manpage entries for the ia-pd and ia-prefix options were updated to
   reflect support for prefix delegation.

@@ -1303,7 +1303,6 @@ void nak_lease (packet, cip)
 	struct dhcp_packet raw;
 	unsigned char nak = DHCPNAK;
 	struct packet outgoing;
-	struct hardware hto;
 	unsigned i;
 	struct option_state *options = (struct option_state *)0;
 	struct option_cache *oc = (struct option_cache *)0;
@@ -1405,20 +1404,11 @@ void nak_lease (packet, cip)
 	      ? inet_ntoa (packet -> raw -> giaddr)
 	      : packet -> interface -> name);
 
-
-
 #ifdef DEBUG_PACKET
 	dump_packet (packet);
 	dump_raw ((unsigned char *)packet -> raw, packet -> packet_length);
 	dump_packet (&outgoing);
 	dump_raw ((unsigned char *)&raw, outgoing.packet_length);
-#endif
-
-#if 0
-	hto.hbuf [0] = packet -> raw -> htype;
-	hto.hlen = packet -> raw -> hlen;
-	memcpy (&hto.hbuf [1], packet -> raw -> chaddr, hto.hlen);
-	hto.hlen++;
 #endif
 
 	/* Set up the common stuff... */
@@ -1442,10 +1432,9 @@ void nak_lease (packet, cip)
 			to.sin_port = remote_port; /* for testing. */
 
 		if (fallback_interface) {
-			result = send_packet (fallback_interface,
-					      packet, &raw,
-					      outgoing.packet_length,
-					      from, &to, &hto);
+			result = send_packet(fallback_interface, packet, &raw,
+					     outgoing.packet_length, from, &to,
+					     NULL);
 			return;
 		}
 	} else {
@@ -1454,9 +1443,8 @@ void nak_lease (packet, cip)
 	}
 
 	errno = 0;
-	result = send_packet (packet -> interface,
-			      packet, &raw, outgoing.packet_length,
-			      from, &to, (struct hardware *)0);
+	result = send_packet(packet->interface, packet, &raw,
+			     outgoing.packet_length, from, &to, NULL);
 }
 
 void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
