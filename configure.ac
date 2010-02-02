@@ -508,6 +508,8 @@ CFLAGS="$CFLAGS $STD_CWARNINGS"
 # Try to add the bind include directory
 CFLAGS="$CFLAGS -I$libbind/include"
 
+AC_C_FLEXIBLE_ARRAY_MEMBER
+
 AC_OUTPUT([
   Makefile
   client/Makefile

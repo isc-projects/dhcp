@@ -3435,7 +3435,6 @@ int find_lease (struct lease **lp,
 				  piaddr (hw_lease -> ip_addr));
 #endif
 			goto n_hw;
-			continue;
 		}
 		if (hw_lease -> subnet -> shared_network != share) {
 #if defined (DEBUG_FIND_LEASE)
@@ -3443,7 +3442,6 @@ int find_lease (struct lease **lp,
 				  piaddr (hw_lease -> ip_addr));
 #endif
 			goto n_hw;
-			continue;
 		}
 		if ((hw_lease -> pool -> prohibit_list &&
 		      permitted (packet, hw_lease -> pool -> prohibit_list)) ||

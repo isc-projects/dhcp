@@ -1355,7 +1355,7 @@ process_up6(struct packet *packet, struct stream_list *dp) {
 
 	/* Build the relay-forward header. */
 	relay = (struct dhcpv6_relay_packet *) forw_data;
-	cursor = sizeof(*relay);
+	cursor = offsetof(struct dhcpv6_relay_packet, options);
 	relay->msg_type = DHCPV6_RELAY_FORW;
 	if (packet->dhcpv6_msg_type == DHCPV6_RELAY_FORW) {
 		if (packet->dhcpv6_hop_count >= max_hop_count) {
@@ -1483,7 +1483,7 @@ process_down6(struct packet *packet) {
 	if (!evaluate_option_cache(&relay_msg, packet, NULL, NULL,
 				   packet->options, NULL,
 				   &global_scope, oc, MDL) ||
-	    (relay_msg.len < sizeof(struct dhcpv6_packet))) {
+	    (relay_msg.len < offsetof (struct dhcpv6_packet, options))) {
 		log_error("Can't evaluate relay-msg.");
 		return;
 	}

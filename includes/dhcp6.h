@@ -177,7 +177,7 @@ extern const int dhcpv6_type_name_max;
 struct dhcpv6_packet {
 	unsigned char msg_type;
 	unsigned char transaction_id[3];
-	unsigned char options[0];
+	unsigned char options[FLEXIBLE_ARRAY_MEMBER];
 };
 
 /* Offset into DHCPV6 Reply packets where Options spaces commence. */
@@ -191,7 +191,7 @@ struct dhcpv6_relay_packet {
 	unsigned char hop_count;
 	unsigned char link_address[16];
 	unsigned char peer_address[16];
-	unsigned char options[0];
+	unsigned char options[FLEXIBLE_ARRAY_MEMBER];
 };
 
 /* Leasequery query-types (RFC 5007) */

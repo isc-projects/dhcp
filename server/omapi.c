@@ -1891,7 +1891,12 @@ class_set_value (omapi_object_t *h,
 		} else
 			return DHCP_R_INVALIDARG;
 
-		return ISC_R_SUCCESS;
+		/* 
+		 * Currently no way to get here, if we update the above
+		 * code so that we do get here this return needs to be
+		 * uncommented.
+		 * return ISC_R_SUCCESS;
+		 */
 	}
 
 

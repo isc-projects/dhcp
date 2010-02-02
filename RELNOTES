@@ -39,7 +39,6 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and may not
 work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
-
 			Changes since 4.1.0 (new features)
 
 - Failover port configuration can now be left to defaults (port 647) as
@@ -82,6 +81,10 @@ work on other platforms. Please report any problems and suggested fixes to
 - The 'hardware [ethernet|etc] ...;' parameter in host records has been
   extended to attempt to match DHCPv6 clients by the last octets of a
   DUID-LL or DUID-LLT provided by the client.
+
+			Changes since 4.2.0a (bug fixes)
+
+- Cleaned up some compiler warnings
 
 			Changes since 4.1.0 (bug fixes)
 
