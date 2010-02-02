@@ -1477,7 +1477,7 @@ process_down6(struct packet *packet) {
 	if (!evaluate_option_cache(&relay_msg, packet, NULL, NULL,
 				   packet->options, NULL,
 				   &global_scope, oc, MDL) ||
-	    (relay_msg.len < offsetof (struct dhcpv6_packet, options))) {
+	    (relay_msg.len < offsetof(struct dhcpv6_packet, options))) {
 		log_error("Can't evaluate relay-msg.");
 		return;
 	}
