@@ -30,14 +30,14 @@
 #include <isc/md5.h>
 
 HASH_FUNCTIONS(ia, unsigned char *, struct ia_xx, ia_hash_t,
-	       ia_reference, ia_dereference, do_string_hash);
+	       ia_reference, ia_dereference, do_string_hash)
 
 ia_hash_t *ia_na_active;
 ia_hash_t *ia_ta_active;
 ia_hash_t *ia_pd_active;
 
 HASH_FUNCTIONS(iasubopt, struct in6_addr *, struct iasubopt, iasubopt_hash_t,
-	       iasubopt_reference, iasubopt_dereference, do_string_hash);
+	       iasubopt_reference, iasubopt_dereference, do_string_hash)
 
 struct ipv6_pool **pools;
 int num_pools;
