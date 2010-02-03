@@ -4584,6 +4584,36 @@ isc_result_t dhcp_failover_send_bind_update (dhcp_failover_state_t *state,
 
 	lease->last_xid = link->xid++;
 
+	/*
+	 * Our very next action is to transmit a binding update relating to
+	 * this lease over the wire, and although there is a BNDACK, there is
+	 * no BNDACKACK or BNDACKACKACK...the basic issue as we send a BNDUPD,
+	 * we may not receive a BNDACK.  This non-reception does not imply the
+	 * peer did not receive and process the BNDUPD.  So at this point, we
+	 * must divest any state that would be dangerous to retain under the
+	 * impression the peer has been updated.  Normally state changes like
+	 * this are processed in supersede_lease(), but in this case we need a
+	 * very late binding.
+	 *
+	 * In failover rules, a server is permitted to work forward in certain
+	 * directions from a given lease's state; active leases may be
+	 * extended, so forth.  There is an 'optimization' in the failover
+	 * draft that permits a server to 'rewind' any work they have not
+	 * informed the peer.  Since we can't know if the peer received our
+	 * update but was unable to acknowledge it, we make this change on
+	 * transmit rather than upon receiving the acknowledgement.
+	 *
+	 * XXX: Frequent lease commits are undesirable.  This should hopefully
+	 * only trigger when a server is sending a lease /state change/, and
+	 * not merely an update such as with a renewal.
+	 */
+	if (lease->rewind_binding_state != lease->binding_state) {
+		lease->rewind_binding_state = lease->binding_state;
+
+		write_lease(lease);
+		commit_leases();
+	}
+
 	/* Send the update. */
 	status = (dhcp_failover_put_message
 		  (link, link -> outer,
@@ -5296,6 +5326,12 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 	}
 	msg -> binding_status = lt -> next_binding_state;
 
+	/*
+	 * If we accept a peer's binding update, then we can't rewind a
+	 * lease behind the peer's state.
+	 */
+	lease->rewind_binding_state = lt->next_binding_state;
+
 	/* Try to install the new information. */
 	if (!supersede_lease (lease, lt, 0, 0, 0) ||
 	    !write_lease (lease)) {
@@ -5435,8 +5471,13 @@ isc_result_t dhcp_failover_process_bind_ack (dhcp_failover_state_t *state,
 			lease->next_binding_state = FTS_BACKUP;
 		else
 			lease->next_binding_state = FTS_FREE;
+
 		/* Clear this condition for the next go-round. */
 		lease->desired_binding_state = lease->next_binding_state;
+
+		/* The peer will have made this state change, so set rewind. */
+		lease->rewind_binding_state = lease->next_binding_state;
+
 		supersede_lease(lease, (struct lease *)0, 0, 0, 0);
 		write_lease(lease);
 
@@ -6158,6 +6199,12 @@ int lease_mine_to_reallocate (struct lease *lease)
 
 	if (lease && lease->pool &&
 	    (peer = lease->pool->failover_peer)) {
+		/*
+		 * In addition to the normal rules governing wether a server
+		 * is allowed to operate changes on a lease, the server is
+		 * allowed to operate on a lease from the standpoint of the
+		 * most conservative guess of the peer's state for this lease.
+		 */
 		switch (lease->binding_state) {
 		      case FTS_ACTIVE:
 			/* ACTIVE leases may not be reallocated. */
@@ -6182,23 +6229,46 @@ int lease_mine_to_reallocate (struct lease *lease)
 				(peer->me.stos + peer->mclt < cur_time) :
 				(lease->tsfp + peer->mclt < cur_time)));
 
-		      case FTS_RESET:
 		      case FTS_RELEASED:
 		      case FTS_EXPIRED:
-			/* These three lease states go onto the 'expired'
-			 * queue.  Upon entry into partner-down state, this
-			 * queue of leases has their tsfp values modified
-			 * to equal stos+mclt, the point at which the server
-			 * is allowed to remove them from these transitional
-			 * states without an acknowledgement.
+			/*
+			 * These leases are generally untouchable until the
+			 * peer acknowledges their state change.  However, as
+			 * this is impossible if the peer is offline, the
+			 * failover protocol permits an 'optimization' to
+			 * rewind the lease to a previous state that the server
+			 * is allowed to operate on, if that was the state that
+			 * was last acknowledged by the peer.
+			 *
+			 * So if a lease was free, was allocated by this
+			 * server, and expired without ever being transmitted
+			 * to the peer, it can be returned to free and given
+			 * to any new client legally.
+			 */
+			if ((peer->i_am == primary) &&
+			    (lease->rewind_binding_state == FTS_FREE))
+				return 1;
+			if ((peer->i_am == secondary) &&
+			    (lease->rewind_binding_state == FTS_BACKUP))
+				return 1;
+
+			/* FALL THROUGH (released, expired, reset) */
+		      case FTS_RESET:
+			/*
+			 * Released, expired, and reset leases go onto the
+			 * 'expired' queue all together.  Upon entry into
+			 * partner-down state, this queue of leases has their
+			 * tsfp values modified to equal stos+mclt, the point
+			 * at which the server is allowed to remove them from
+			 * these transitional states.
 			 *
 			 * Note that although tsfp has been possibly extended
 			 * past the actual tsfp we received from the peer, we
 			 * don't have to take any special action.  Since tsfp
-			 * is now in the past (or now), we can guarantee that
-			 * this server will only allocate a lease time equal
-			 * to MCLT, rather than a TSFP-optimal lease, which is
-			 * the only danger for a lease in one of these states.
+			 * will be equal to the current time when the lease
+			 * transitions to free, tsfp will not be used to grant
+			 * lease-times longer than the MCLT to clients, which
+			 * is the only danger for this sort of modification.
 			 */
 			return((peer->service_state == service_partner_down) &&
 			       (lease->tsfp < cur_time));

@@ -801,15 +801,15 @@ void new_address_range (cfile, low, high, subnet, pool, lpchain)
 						    i + min)),
 				   isc_result_totext (status));
 #endif
-		lp -> ip_addr = ip_addr (subnet -> net,
-					 subnet -> netmask, i + min);
-		lp -> starts = MIN_TIME;
-		lp -> ends = MIN_TIME;
-		subnet_reference (&lp -> subnet, subnet, MDL);
-		pool_reference (&lp -> pool, pool, MDL);
-		lp -> binding_state = FTS_FREE;
-		lp -> next_binding_state = FTS_FREE;
-		lp -> flags = 0;
+		lp->ip_addr = ip_addr(subnet->net, subnet->netmask, i + min);
+		lp->starts = MIN_TIME;
+		lp->ends = MIN_TIME;
+		subnet_reference(&lp->subnet, subnet, MDL);
+		pool_reference(&lp->pool, pool, MDL);
+		lp->binding_state = FTS_FREE;
+		lp->next_binding_state = FTS_FREE;
+		lp->rewind_binding_state = FTS_FREE;
+		lp->flags = 0;
 
 		/* Remember the lease in the IP address hash. */
 		if (find_lease_by_ip_addr (&lt, lp -> ip_addr, MDL)) {
@@ -1224,7 +1224,8 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 
       just_move_it:
 #if defined (FAILOVER_PROTOCOL)
-	/* Atsfp should be cleared upon any state change that implies
+	/*
+	 * Atsfp should be cleared upon any state change that implies
 	 * propagation whether supersede_lease was given a copy lease
 	 * structure or not (often from the pool_timer()).
 	 */
@@ -1356,6 +1357,24 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 	}
 
 	if (commit) {
+#if defined(FAILOVER_PROTOCOL)
+		/*
+		 * If commit and propogate are set, then we can save a
+		 * possible fsync later in BNDUPD socket transmission by
+		 * stepping the rewind state forward to the new state, in
+		 * case it has changed.  This is only worth doing if the
+		 * failover connection is currently connected, as in this
+		 * case it is likely we will be transmitting to the peer very
+		 * shortly.
+		 */
+		if (propogate && (comp->pool->failover_peer != NULL) &&
+		    ((comp->pool->failover_peer->service_state ==
+							    cooperating) ||
+		     (comp->pool->failover_peer->service_state ==
+							    not_responding)))
+			comp->rewind_binding_state = comp->binding_state;
+#endif
+
 		if (!write_lease (comp))
 			return 0;
 		if ((server_starting & SS_NOSYNC) == 0) {
@@ -1404,11 +1423,10 @@ void make_binding_state_transition (struct lease *lease)
 	    ((
 #if defined (FAILOVER_PROTOCOL)
 		    peer &&
-		    (lease -> binding_state == FTS_EXPIRED ||
-		     (peer -> i_am == secondary &&
-		      lease -> binding_state == FTS_ACTIVE)) &&
-		    (lease -> next_binding_state == FTS_FREE ||
-		     lease -> next_binding_state == FTS_BACKUP)) ||
+		    (lease->binding_state == FTS_EXPIRED ||
+		     lease->binding_state == FTS_ACTIVE) &&
+		    (lease->next_binding_state == FTS_FREE ||
+		     lease->next_binding_state == FTS_BACKUP)) ||
 	     (!peer &&
 #endif
 	      lease -> binding_state == FTS_ACTIVE &&
@@ -1564,7 +1582,6 @@ void make_binding_state_transition (struct lease *lease)
 		   piaddr (lease -> ip_addr),
 		   binding_state_print (lease -> next_binding_state));
 #endif
-
 }
 
 /* Copy the contents of one lease into another, correctly maintaining
@@ -1636,6 +1653,7 @@ int lease_copy (struct lease **lp,
 	lt->cltt = lease -> cltt;
 	lt->binding_state = lease->binding_state;
 	lt->next_binding_state = lease->next_binding_state;
+	lt->rewind_binding_state = lease->rewind_binding_state;
 	status = lease_reference(lp, lt, file, line);
 	lease_dereference(&lt, MDL);
 	return status == ISC_R_SUCCESS;
@@ -1690,7 +1708,20 @@ void release_lease (lease, packet)
 		lease->tstp = cur_time;
 #if defined (FAILOVER_PROTOCOL)
 		if (lease -> pool && lease -> pool -> failover_peer) {
-			lease -> next_binding_state = FTS_RELEASED;
+			dhcp_failover_state_t *peer = NULL;
+
+			if (lease->pool != NULL)
+				peer = lease->pool->failover_peer;
+
+			if ((peer->service_state == not_cooperating) &&
+			    (((peer->i_am == primary) &&
+			      (lease->rewind_binding_state == FTS_FREE)) ||
+			     ((peer->i_am == secondary) &&
+			      (lease->rewind_binding_state == FTS_BACKUP)))) {
+				lease->next_binding_state =
+						  lease->rewind_binding_state;
+			} else
+				lease -> next_binding_state = FTS_RELEASED;
 		} else {
 			lease -> next_binding_state = FTS_FREE;
 		}
@@ -1801,13 +1832,26 @@ void pool_timer (vpool)
 			continue;
 
 #if defined (FAILOVER_PROTOCOL)
-		if (pool -> failover_peer &&
-		    pool -> failover_peer -> me.state != partner_down) {
-			/* The secondary can't remove a lease from the
-			   active state except in partner_down. */
-			if (i == ACTIVE_LEASES &&
-			    pool -> failover_peer -> i_am == secondary)
+		if (pool->failover_peer &&
+		    pool->failover_peer->me.state != partner_down) {
+			/*
+			 * Normally the secondary doesn't initiate expiration
+			 * events (unless in partner-down), but rather relies
+			 * on the primary to expire the lease.  However, when
+			 * disconnected from its peer, the server is allowed to
+			 * rewind a lease to the previous state that the peer
+			 * would have recorded it.  This means there may be
+			 * opportunities for active->free or active->backup
+			 * expirations while out of contact.
+			 *
+			 * Q: Should we limit this expiration to
+			 *    comms-interrupt rather than not-normal?
+			 */
+			if ((i == ACTIVE_LEASES) &&
+			    (pool->failover_peer->i_am == secondary) &&
+			    (pool->failover_peer->me.state == normal))
 				continue;
+
 			/* Leases in an expired state don't move to
 			   free because of a timeout unless we're in
 			   partner_down. */
@@ -1837,10 +1881,29 @@ void pool_timer (vpool)
 			   state change should happen, just call
 			   supersede_lease on it to make the change
 			   happen. */
-			if (lease -> next_binding_state !=
-			    lease -> binding_state)
-				supersede_lease (lease,
-						 (struct lease *)0, 1, 1, 1);
+			if (lease->next_binding_state != lease->binding_state)
+			{
+#if defined(FAILOVER_PROTOCOL)
+				dhcp_failover_state_t *peer = NULL;
+
+				if (lease->pool != NULL)
+					peer = lease->pool->failover_peer;
+
+				/* Can we rewind the lease to a free state? */
+				if (peer != NULL &&
+				    peer->service_state == not_cooperating &&
+				    lease->next_binding_state == FTS_EXPIRED &&
+				    ((peer->i_am == primary &&
+				      lease->rewind_binding_state == FTS_FREE)
+					||
+				     (peer->i_am == secondary &&
+				      lease->rewind_binding_state ==
+								FTS_BACKUP)))
+					lease->next_binding_state =
+						   lease->rewind_binding_state;
+#endif
+				supersede_lease(lease, NULL, 1, 1, 1);
+			}
 
 			lease_dereference (&lease, MDL);
 			if (next)
@@ -2287,9 +2350,8 @@ int write_leases ()
 		for (i = FREE_LEASES; i <= RESERVED_LEASES; i++) {
 		    for (l = *(lptr [i]); l; l = l -> next) {
 #if !defined (DEBUG_DUMP_ALL_LEASES)
-			if (l -> hardware_addr.hlen ||
-			    l -> uid_len ||
-			    (l -> binding_state != FTS_FREE))
+			if (l->hardware_addr.hlen != 0 || l->uid_len != 0 ||
+			    l->tsfp != 0 || l->binding_state != FTS_FREE)
 #endif
 			{
 			    if (!write_lease (l))

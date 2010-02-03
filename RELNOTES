@@ -52,6 +52,13 @@ work on other platforms. Please report any problems and suggested fixes to
 
 - Cleaned up some compiler warnings
 
+- An optimization described in the failover protocol draft is now included,
+  which permits a DHCP server operating in communications-interrupted state
+  to 'rewind' a lease to the state most recently transmitted to its peer,
+  greatly increasing a server's endurance in communications-interrupted.
+  This is supported using a new 'rewind state' record on the dhcpd.leases
+  entry for each lease.
+
 			Changes since 4.1.0 (new features)
 
 - Failover port configuration can now be left to defaults (port 647) as

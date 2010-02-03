@@ -495,13 +495,28 @@ struct lease {
 					 RESERVED_LEASE | \
 					 BOOTP_LEASE)
 
+	/*
+	 * The lease's binding state is its current state.  The next binding
+	 * state is the next state this lease will move into by expiration,
+	 * or timers in general.  The desired binding state is used on lease
+	 * updates; the caller is attempting to move the lease to the desired
+	 * binding state (and this may either succeed or fail, so the binding
+	 * state must be preserved).
+	 *
+	 * The 'rewind' binding state is used in failover processing.  It
+	 * is used for an optimization when out of communications; it allows
+	 * the server to "rewind" a lease to the previous state acknowledged
+	 * by the peer, and progress forward from that point.
+	 */
 	binding_state_t binding_state;
 	binding_state_t next_binding_state;
 	binding_state_t desired_binding_state;
-	
+	binding_state_t rewind_binding_state;
+
 	struct lease_state *state;
 
-	/* 'tsfp' is more of an 'effective' tsfp.  It may be calculated from
+	/*
+	 * 'tsfp' is more of an 'effective' tsfp.  It may be calculated from
 	 * stos+mclt for example if it's an expired lease and the server is
 	 * in partner-down state.  'atsfp' is zeroed whenever a lease is
 	 * updated - and only set when the peer acknowledges it.  This

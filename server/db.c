@@ -168,6 +168,20 @@ int write_lease (lease)
 			  : "abandoned")) < 0)
                         ++errors;
 
+	/*
+	 * In this case, if the rewind state is not present in the lease file,
+	 * the reader will use the current binding state as the most
+	 * conservative (safest) state.  So if the in-memory rewind state is
+	 * for some reason invalid, the best thing to do is not to write a
+	 * state and let the reader take on a safe state.
+	 */
+	if ((lease->binding_state != lease->rewind_binding_state) &&
+	    (lease->rewind_binding_state > 0) &&
+	    (lease->rewind_binding_state <= FTS_LAST) &&
+	    (fprintf(db_file, "\n  rewind binding state %s;",
+		     binding_state_names[lease->rewind_binding_state-1])) < 0)
+			++errors;
+
 	if (lease->flags & RESERVED_LEASE)
 		if (fprintf(db_file, "\n  reserved;") < 0)
                         ++errors;
