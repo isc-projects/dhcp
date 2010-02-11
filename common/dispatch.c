@@ -233,6 +233,45 @@ void add_timeout (when, where, what, ref, unref)
 	q->when.tv_sec  = when->tv_sec;
 	q->when.tv_usec = when->tv_usec;
 
+#if defined (TRACING)
+	if (trace_playback()) {
+		/*
+		 * If we are doing playback we need to handle the timers
+		 * within this code rather than having the isclib handle
+		 * them for us.  We need to keep the timer list in order
+		 * to allow us to find the ones to timeout.
+		 *
+		 * By using a different timer setup in the playback we may
+		 * have variations between the orginal and the playback but
+		 * it's the best we can do for now.
+		 */
+
+		/* Beginning of list? */
+		if (!timeouts || (timeouts->when.tv_sec > q-> when.tv_sec) ||
+		    ((timeouts->when.tv_sec == q->when.tv_sec) &&
+		     (timeouts->when.tv_usec > q->when.tv_usec))) {
+			q->next = timeouts;
+			timeouts = q;
+			return;
+		}
+
+		/* Middle of list? */
+		for (t = timeouts; t->next; t = t->next) {
+			if ((t->next->when.tv_sec > q->when.tv_sec) ||
+			    ((t->next->when.tv_sec == q->when.tv_sec) &&
+			     (t->next->when.tv_usec > q->when.tv_usec))) {
+				q->next = t->next;
+				t->next = q;
+				return;
+			}
+		}
+
+		/* End of list. */
+		t->next = q;
+		q->next = (struct timeout *)0;
+		return;
+	}
+#endif
 	/*
 	 * Don't bother sorting the DHCP list, just add it to the front.
 	 * Eventually the list should be removed as we migrate the callers
@@ -323,9 +362,19 @@ void cancel_timeout (where, what)
 		t = q;
 	}
 
-	/* If we found the timeout, cancel it and put it on the free list. */
+	/*
+	 * If we found the timeout, cancel it and put it on the free list.
+	 * The TRACING stuff is ugly but we don't add a timer when doing
+	 * playback so we don't want to remove them then either.
+	 */
 	if (q) {
-		isc_timer_detach(&q->isc_timeout);
+#if defined (TRACING)
+		if (!trace_playback()) {
+#endif
+			isc_timer_detach(&q->isc_timeout);
+#if defined (TRACING)
+		}
+#endif
 
 		if (q->unref)
 			(*q->unref) (&q->what, MDL);

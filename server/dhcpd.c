@@ -488,6 +488,7 @@ main(int argc, char **argv) {
 	trace_srandom = trace_type_register ("random-seed", (void *)0,
 					     trace_seed_input,
 					     trace_seed_stop, MDL);
+	trace_ddns_init();
 #endif
 
 #if defined (PARANOIA)

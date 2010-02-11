@@ -775,75 +775,6 @@ ddns_update_lease_text(dhcp_ddns_cb_t        *ddns_cb,
 	return(ISC_R_SUCCESS);
 }
 
-
-#if 0
-isc_result_t
-ddns_get_lease(dhcp_ddns_cb_t *ddns_cb)
-{
-	isc_result_t result = ISC_R_FAILURE;
-
-	if (ddns_cb->address.len == 4) {
-		struct lease **lease = (struct lease **)(&(ddns_cb->lease));
-		if (find_lease_by_ip_addr(lease, ddns_cb->address, MDL) != 0) {
-			ddns_cb->scope  = &((*lease)->scope);
-			result = ISC_R_SUCCESS;
-		}
-	}
-	else if (ddns_cb->address.len == 16) {
-		struct ipv6_pool *pool = NULL;
-		struct iasubopt **lease = (struct iasubopt **)(&(ddns_cb->lease));
-		struct in6_addr addr;
-
-		memcpy(&addr, &ddns_cb->address.iabuf, 16);
-		if ((find_ipv6_pool(&pool, D6O_IA_TA, &addr) != 
-		     ISC_R_SUCCESS) &&
-		    (find_ipv6_pool(&pool, D6O_IA_NA, &addr) != 
-		     ISC_R_SUCCESS)) {
-			return(ISC_R_FAILURE);
-		}
-
-		if (iasubopt_hash_lookup(lease,  pool->leases,
-					 &addr, 16, MDL)) {
-			ddns_cb->scope = &((*lease)->scope);
-			result = ISC_R_SUCCESS;
-		}
-		ipv6_pool_dereference(&pool, MDL);
-	}
-	else {
-		log_fatal("Impossible condition at %s:%d.", MDL);
-	}
-
-	return(result);
-}
-
-isc_result_t
-ddns_write_lease(dhcp_ddns_cb_t *ddns_cb)
-{
-
-	if (ddns_cb->address.len == 4) {
-		struct lease **lease = (struct lease **)(&(ddns_cb->lease));
-	       
-		write_lease(*lease);
-		ddns_cb->scope = NULL;
-		lease_dereference(lease, MDL);
-	}
-	else if (ddns_cb->address.len == 16) {
-		struct iasubopt **lease = (struct iasubopt **)(&(ddns_cb->lease));
-		/*sar*/
-		/* Hmmm, this seems to be what we do elsewhere, but I'm
-		   not sure this is writing the scope info */
-		write_ia((*lease)->ia);
-		ddns_cb->scope = NULL;
-		iasubopt_dereference(lease, MDL);
-	}
-	else {
-		log_fatal("Impossible condition at %s:%d.", MDL);
-	}
-
-	return(ISC_R_SUCCESS);
-}
-#endif
-
 /*
  * Utility function to update the pointer to the DDNS control block
  * in a lease.
@@ -913,7 +844,7 @@ ddns_ptr_add(dhcp_ddns_cb_t *ddns_cb,
 	     isc_result_t    eresult)
 {
 	if (eresult == ISC_R_SUCCESS) {
-		log_info("added reverse map from %.*s to %.*s",
+		log_info("Added reverse map from %.*s to %.*s",
 			 (int)ddns_cb->rev_name.len,
 			 (const char *)ddns_cb->rev_name.data,
 			 (int)ddns_cb->fwd_name.len,
@@ -921,7 +852,7 @@ ddns_ptr_add(dhcp_ddns_cb_t *ddns_cb,
 
 		ddns_update_lease_text(ddns_cb, NULL);
 	} else {
-		log_error("unable to add reverse map from %.*s to %.*s: %s",
+		log_error("Unable to add reverse map from %.*s to %.*s: %s",
 			  (int)ddns_cb->rev_name.len,
 			  (const char *)ddns_cb->rev_name.data,
 			  (int)ddns_cb->fwd_name.len,
@@ -960,7 +891,7 @@ ddns_ptr_remove(dhcp_ddns_cb_t *ddns_cb,
 
 	switch(eresult) {
 	case ISC_R_SUCCESS:
-		log_info("removed reverse map on %.*s",
+		log_info("Removed reverse map on %.*s",
 			 (int)ddns_cb->rev_name.len,
 			 (const char *)ddns_cb->rev_name.data);
 		/* fall through */
@@ -976,7 +907,7 @@ ddns_ptr_remove(dhcp_ddns_cb_t *ddns_cb,
 		break;
 
 	default:
-		log_error("can't remove reverse map on %.*s: %s",
+		log_error("Can't remove reverse map on %.*s: %s",
 			  (int)ddns_cb->rev_name.len,
 			  (const char *)ddns_cb->rev_name.data,
 			  isc_result_totext (eresult));
@@ -1266,9 +1197,18 @@ ddns_fwd_srv_rem1(dhcp_ddns_cb_t *ddns_cb,
 		  isc_result_t    eresult)
 {
 	isc_result_t result = eresult;
+	char ddns_address[
+		sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
 
 	switch(eresult) {
 	case ISC_R_SUCCESS:
+		/* Construct a printable form of the address for logging */
+		strcpy(ddns_address, piaddr(ddns_cb->address));
+		log_info("Removed forward map from %.*s to %s",
+			 (int)ddns_cb->fwd_name.len, 
+			 (const char*)ddns_cb->fwd_name.data,
+			 ddns_address);
+
 		/* Do the second step of the FWD removal */
 		ddns_cb->state    = DDNS_STATE_REM_FW_NXRR;
 		ddns_cb->cur_func = ddns_fwd_srv_rem2;

@@ -59,6 +59,8 @@ work on other platforms. Please report any problems and suggested fixes to
   This is supported using a new 'rewind state' record on the dhcpd.leases
   entry for each lease.
 
+- Fix the trace code which was broken by the changes to the DDNS code.
+
 			Changes since 4.1.0 (new features)
 
 - Failover port configuration can now be left to defaults (port 647) as
