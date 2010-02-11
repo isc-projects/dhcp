@@ -2474,7 +2474,7 @@ dhcpv6_confirm(struct data_string *reply_ret, struct packet *packet) {
 	isc_boolean_t inappropriate, has_addrs;
 	char reply_data[65536];
 	struct dhcpv6_packet *reply = (struct dhcpv6_packet *)reply_data;
-	int reply_ofs = (int)((char *)reply->options - (char *)reply);
+	int reply_ofs = (int)(offsetof(struct dhcpv6_packet, options));
 
 	/* 
 	 * Basic client message validation.
@@ -2825,7 +2825,7 @@ iterate_over_ia_na(struct data_string *reply_ret,
 	int iaaddr_is_found;
 	char reply_data[65536];
 	struct dhcpv6_packet *reply = (struct dhcpv6_packet *)reply_data;
-	int reply_ofs = (int)((char *)reply->options - (char *)reply);
+	int reply_ofs = (int)(offsetof(struct dhcpv6_packet, options));
 	char status_msg[32];
 	struct iaaddr *lease;
 	struct ia_na *existing_ia_na;
@@ -3304,6 +3304,7 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 	char link_addr[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
 	char peer_addr[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
 	struct data_string interface_id;
+	int reply_ofs, ofs;
 
 	/* 
 	 * Initialize variables for early exit.
@@ -3365,6 +3366,7 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 	if ((msg_type == DHCPV6_RELAY_FORW) ||
 	    (msg_type == DHCPV6_RELAY_REPL)) {
 		relay = (struct dhcpv6_relay_packet *)enc_opt_data.data;
+		ofs = offsetof(struct dhcpv6_relay_packet, options);
 		enc_packet->dhcpv6_msg_type = relay->msg_type;
 
 		/* relay-specific data */
@@ -3376,7 +3378,7 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 
 		if (!parse_option_buffer(enc_packet->options,
 					 relay->options, 
-					 enc_opt_data.len-sizeof(*relay),
+					 enc_opt_data.len - ofs,
 					 &dhcpv6_universe)) {
 			/* no logging here, as parse_option_buffer() logs all
 			   cases where it fails */
@@ -3384,6 +3386,7 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 		}
 	} else {
 		msg = (struct dhcpv6_packet *)enc_opt_data.data;
+		ofs = offsetof(struct dhcpv6_packet, options);
 		enc_packet->dhcpv6_msg_type = msg->msg_type;
 
 		/* message-specific data */
@@ -3393,7 +3396,7 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 
 		if (!parse_option_buffer(enc_packet->options,
 					 msg->options, 
-					 enc_opt_data.len-sizeof(*msg),
+					 enc_opt_data.len - ofs,
 					 &dhcpv6_universe)) {
 			/* no logging here, as parse_option_buffer() logs all
 			   cases where it fails */
@@ -3443,7 +3446,8 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 	/* 
 	 * Copy our encapsulated stuff for caller.
 	 */
-	reply_ret->len = sizeof(reply) + 4 + enc_reply.len;
+	reply_ofs = (int)(offsetof(struct dhcpv6_relay_packet, options));
+	reply_ret->len = reply_ofs + 4 + enc_reply.len;
 	if (interface_id.data != NULL) {
 		reply_ret->len += 4 + interface_id.len;
 	}
@@ -3461,17 +3465,17 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 		log_fatal("No memory to store reply.");
 	}
 	reply_ret->data = reply_ret->buffer->data;
-	memcpy(reply_ret->buffer->data, &reply, sizeof(reply));
-	putShort(reply_ret->buffer->data+sizeof(reply), D6O_RELAY_MSG);
-	putShort(reply_ret->buffer->data+sizeof(reply)+2, enc_reply.len);
-	memcpy(reply_ret->buffer->data+sizeof(reply)+4, 
+	memcpy(reply_ret->buffer->data, &reply, reply_ofs);
+	putShort(reply_ret->buffer->data + reply_ofs, D6O_RELAY_MSG);
+	putShort(reply_ret->buffer->data + reply_ofs + 2, enc_reply.len);
+	memcpy(reply_ret->buffer->data + reply_ofs + 4, 
 	       enc_reply.data, enc_reply.len);
 	if (interface_id.data != NULL) {
-		putShort(reply_ret->buffer->data+sizeof(reply)+4+enc_reply.len,
+		putShort(reply_ret->buffer->data+reply_ofs+4+enc_reply.len,
 			 D6O_INTERFACE_ID);
-		putShort(reply_ret->buffer->data+sizeof(reply)+6+enc_reply.len,
+		putShort(reply_ret->buffer->data+reply_ofs+6+enc_reply.len,
 			 interface_id.len);
-		memcpy(reply_ret->buffer->data+sizeof(reply)+8+enc_reply.len,
+		memcpy(reply_ret->buffer->data+reply_ofs+8+enc_reply.len,
 		       interface_id.data, interface_id.len);
 	}
 

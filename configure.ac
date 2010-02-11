@@ -319,6 +319,8 @@ AC_CHECK_MEMBER(struct msghdr.msg_control,,
 # AC_TRY_COMPILE & etc).
 CFLAGS="$CFLAGS $STD_CWARNINGS"
 
+AC_C_FLEXIBLE_ARRAY_MEMBER
+
 AC_OUTPUT([
   Makefile
   client/Makefile

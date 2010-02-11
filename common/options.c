@@ -3760,13 +3760,13 @@ packet6_len_okay(const char *packet, int len) {
 	}
 	if ((packet[0] == DHCPV6_RELAY_FORW) || 
 	    (packet[0] == DHCPV6_RELAY_REPL)) {
-		if (len >= sizeof(struct dhcpv6_relay_packet)) {
+		if (len >= offsetof(struct dhcpv6_relay_packet, options)) {
 			return 1;
 		} else {
 			return 0;
 		}
 	} else {
-		if (len >= sizeof(struct dhcpv6_packet)) {
+		if (len >= offsetof(struct dhcpv6_packet, options)) {
 			return 1;
 		} else {
 			return 0;
@@ -3783,6 +3783,7 @@ do_packet6(struct interface_info *interface, const char *packet,
 	const struct dhcpv6_packet *msg;
 	const struct dhcpv6_relay_packet *relay; 
 	struct packet *decoded_packet;
+	int ofs;
 
 	if (!packet6_len_okay(packet, len)) {
 		log_info("do_packet6: "
@@ -3822,6 +3823,7 @@ do_packet6(struct interface_info *interface, const char *packet,
 	if ((msg_type == DHCPV6_RELAY_FORW) || 
 	    (msg_type == DHCPV6_RELAY_REPL)) {
 		relay = (const struct dhcpv6_relay_packet *)packet;
+		ofs = offsetof(struct dhcpv6_relay_packet, options);
 		decoded_packet->dhcpv6_msg_type = relay->msg_type;
 
 		/* relay-specific data */
@@ -3832,7 +3834,7 @@ do_packet6(struct interface_info *interface, const char *packet,
 		       relay->peer_address, sizeof(relay->peer_address));
 
 		if (!parse_option_buffer(decoded_packet->options, 
-					 relay->options, len-sizeof(*relay), 
+					 relay->options, len - ofs, 
 					 &dhcpv6_universe)) {
 			/* no logging here, as parse_option_buffer() logs all
 			   cases where it fails */
@@ -3841,6 +3843,7 @@ do_packet6(struct interface_info *interface, const char *packet,
 		}
 	} else {
 		msg = (const struct dhcpv6_packet *)packet;
+		ofs = offsetof(struct dhcpv6_packet, options);
 		decoded_packet->dhcpv6_msg_type = msg->msg_type;
 
 		/* message-specific data */
@@ -3849,7 +3852,7 @@ do_packet6(struct interface_info *interface, const char *packet,
 		       sizeof(decoded_packet->dhcpv6_transaction_id));
 
 		if (!parse_option_buffer(decoded_packet->options, 
-					 msg->options, len-sizeof(*msg), 
+					 msg->options, len - ofs,
 					 &dhcpv6_universe)) {
 			/* no logging here, as parse_option_buffer() logs all
 			   cases where it fails */
