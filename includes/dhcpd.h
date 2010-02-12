@@ -1829,6 +1829,9 @@ void parse_server_duid_conf(struct parse *cfile);
 int ddns_updates(struct packet *, struct lease *, struct lease *,
 		 struct iasubopt *, struct iasubopt *, struct option_state *);
 int ddns_removals(struct lease *, struct iasubopt *, struct dhcp_ddns_cb *);
+#if defined (TRACING)
+void trace_ddns_init(void);
+#endif
 
 /* parse.c */
 void add_enumeration (struct enumeration *);

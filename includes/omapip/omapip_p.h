@@ -278,8 +278,6 @@ void omapi_connection_trace_setup (void);
 void omapi_buffer_trace_setup (void);
 void omapi_connection_register (omapi_connection_object_t *,
 				const char *, int);
-void trace_mr_init (void);
-
 OMAPI_ARRAY_TYPE_DECL(omapi_listener, omapi_listener_object_t);
 OMAPI_ARRAY_TYPE_DECL(omapi_connection, omapi_connection_object_t);
 

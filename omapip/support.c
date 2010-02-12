@@ -190,7 +190,6 @@ isc_result_t omapi_init (void)
 	omapi_listener_trace_setup ();
 	omapi_connection_trace_setup ();
 	omapi_buffer_trace_setup ();
-	trace_mr_init ();
 #endif
 
 	/* This seems silly, but leave it. */

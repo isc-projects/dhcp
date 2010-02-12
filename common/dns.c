@@ -3,7 +3,8 @@
    Domain Name Service subroutines. */
 
 /*
- * Copyright (c) 2004-2007, 2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2001-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -149,6 +150,285 @@ typedef struct dhcp_ddns_rdata {
 } dhcp_ddns_data_t;
 
 #if defined (NSUPDATE)
+
+void ddns_interlude(isc_task_t  *, isc_event_t *);
+
+
+#if defined (TRACING)
+/*
+ * Code to support tracing DDNS packets.  We trace packets going to and
+ * coming from the libdns code but don't try to track the packets
+ * exchanged between the libdns code and the dns server(s) it contacts.
+ *
+ * The code is split into two sets of routines
+ *  input refers to messages received from the dns module
+ *  output refers to messages sent to the dns module
+ * Currently there are three routines in each set
+ *  write is used to write information about the message to the trace file
+ *        this routine is called directly from the proper place in the code.
+ *  read is used to read information about a message from the trace file
+ *       this routine is called from the trace loop as it reads through
+ *       the file and is registered via the trace_type_register routine.
+ *       When playing back a trace file we shall absorb records of output
+ *       messages as part of processing the write function, therefore
+ *       any output messages we encounter are flagged as errors.
+ *  stop isn't currently used in this code but is needed for the register
+ *       routine.
+ *
+ * We pass a pointer to a control block to the dns module which it returns
+ * to use as part of the result.  As the pointer may vary between traces
+ * we need to map between those from the trace file and the new ones during
+ * playback.
+ *
+ * The mapping is complicated a little as a pointer could be 4 or 8 bytes
+ * long.  We treat the old pointer as an 8 byte quantity and pad and compare
+ * as necessary.
+ */
+
+/*
+ * Structure used to map old pointers to new pointers.
+ * Old pointers are 8 bytes long as we don't know if the trace was 
+ * done on a 64 bit or 32 bit machine.  
+ */
+#define TRACE_PTR_LEN 8
+
+typedef struct dhcp_ddns_map {
+	char  old_pointer[TRACE_PTR_LEN];
+	void *new_pointer;
+	struct dhcp_ddns_map *next;
+} dhcp_ddns_map_t;
+
+/* The starting point for the map structure */
+static dhcp_ddns_map_t *ddns_map;
+
+trace_type_t *trace_ddns_input;
+trace_type_t *trace_ddns_output;
+
+/*
+ * The data written to the trace file is:
+ * 32 bits result from dns
+ * 64 bits pointer of cb
+ */
+
+void
+trace_ddns_input_write(dhcp_ddns_cb_t *ddns_cb, isc_result_t result)
+{
+	trace_iov_t iov[2];
+	u_int32_t old_result;
+	char old_pointer[TRACE_PTR_LEN];
+	
+	old_result = htonl((u_int32_t)result);
+	memset(old_pointer, 0, TRACE_PTR_LEN);
+	memcpy(old_pointer, &ddns_cb, sizeof(ddns_cb));
+
+	iov[0].len = sizeof(old_result);
+	iov[0].buf = (char *)&old_result;
+	iov[1].len = TRACE_PTR_LEN;
+	iov[1].buf = old_pointer;
+	trace_write_packet_iov(trace_ddns_input, 2, iov, MDL);
+}
+
+/*
+ * Process the result and pointer from the trace file.
+ * We use the pointer map to find the proper pointer for this instance.
+ * Then we need to construct an event to pass along to the interlude
+ * function.
+ */
+static void
+trace_ddns_input_read(trace_type_t *ttype, unsigned length,
+				  char *buf)
+{
+	u_int32_t old_result;
+	char old_pointer[TRACE_PTR_LEN];
+	dns_clientupdateevent_t *eventp;
+	void *new_pointer;
+	dhcp_ddns_map_t *ddns_map_ptr;
+
+	if (length < (sizeof(old_result) + TRACE_PTR_LEN)) {
+		log_error("trace_ddns_input_read: data too short");
+		return;
+	}
+
+	memcpy(&old_result, buf, sizeof(old_result));
+	memcpy(old_pointer, buf + sizeof(old_result), TRACE_PTR_LEN);
+
+	/* map the old pointer to a new pointer */
+	for (ddns_map_ptr = ddns_map;
+	     ddns_map_ptr != NULL;
+	     ddns_map_ptr = ddns_map_ptr->next) {
+		if ((ddns_map_ptr->new_pointer != NULL) &&
+		    memcmp(ddns_map_ptr->old_pointer,
+			   old_pointer, TRACE_PTR_LEN) == 0) {
+			new_pointer = ddns_map_ptr->new_pointer;
+			ddns_map_ptr->new_pointer = NULL;
+			memset(ddns_map_ptr->old_pointer, 0, TRACE_PTR_LEN);
+			break;
+		}
+	}
+	if (ddns_map_ptr == NULL) {
+		log_error("trace_dns_input_read: unable to map cb pointer");
+		return;
+	}		
+
+	eventp = (dns_clientupdateevent_t *)
+		isc_event_allocate(dhcp_gbl_ctx.mctx,
+				   dhcp_gbl_ctx.task,
+				   0,
+				   ddns_interlude,
+				   new_pointer,
+				   sizeof(dns_clientupdateevent_t));
+	if (eventp == NULL) {
+		log_error("trace_ddns_input_read: unable to allocate event");
+		return;
+	}
+	eventp->result = ntohl(old_result);
+
+
+	ddns_interlude(dhcp_gbl_ctx.task, (isc_event_t *)eventp);
+
+	return;
+}
+
+static void
+trace_ddns_input_stop(trace_type_t *ttype)
+{
+}
+
+/*
+ * We use the same arguments as for the dns startupdate function to
+ * allows us to choose between the two via a macro.  If tracing isn't
+ * in use we simply call the dns function directly.
+ *
+ * If we are doing playback we read the next packet from the file
+ * and compare the type.  If it matches we extract the results and pointer
+ * from the trace file.  The results are returned to the caller as if
+ * they had called the dns routine.  The pointer is used to construct a 
+ * map for when the "reply" is processed.
+ *
+ * The data written to trace file is:
+ * 32 bits result
+ * 64 bits pointer of cb (DDNS Control block)
+ * contents of cb
+ */
+
+isc_result_t
+trace_ddns_output_write(dns_client_t *client, dns_rdataclass_t rdclass,
+			dns_name_t *zonename, dns_namelist_t *prerequisites,
+			dns_namelist_t *updates, isc_sockaddrlist_t *servers,
+			dns_tsec_t *tsec, unsigned int options,
+			isc_task_t *task, isc_taskaction_t action, void *arg,
+			dns_clientupdatetrans_t **transp)
+{
+	isc_result_t result;
+	u_int32_t old_result;
+	char old_pointer[TRACE_PTR_LEN];
+	dhcp_ddns_map_t *ddns_map_ptr;
+	
+	if (trace_playback() != 0) {
+		/* We are doing playback, extract the entry from the file */
+		unsigned buflen = 0;
+		char *inbuf = NULL;
+
+		result = trace_get_packet(&trace_ddns_output,
+					  &buflen, &inbuf);
+		if (result != ISC_R_SUCCESS) {
+			log_error("trace_ddns_output_write: no input found");
+			return (ISC_R_FAILURE);
+		}
+		if (buflen < (sizeof(old_result) + TRACE_PTR_LEN)) {
+			log_error("trace_ddns_output_write: data too short");
+			dfree(inbuf, MDL);
+			return (ISC_R_FAILURE);
+		}
+		memcpy(&old_result, inbuf, sizeof(old_result));
+		result = ntohl(old_result);
+		memcpy(old_pointer, inbuf + sizeof(old_result), TRACE_PTR_LEN);
+		dfree(inbuf, MDL);
+
+		/* add the pointer to the pointer map */
+		for (ddns_map_ptr = ddns_map;
+		     ddns_map_ptr != NULL;
+		     ddns_map_ptr = ddns_map_ptr->next) {
+			if (ddns_map_ptr->new_pointer == NULL) {
+				break;
+			}
+		}
+
+		/*
+		 * If we didn't find an empty entry, allocate an entry and
+		 * link it into the list.  The list isn't ordered.
+		 */
+		if (ddns_map_ptr == NULL) {
+			ddns_map_ptr = dmalloc(sizeof(*ddns_map_ptr), MDL);
+			if (ddns_map_ptr == NULL) {
+				log_error("trace_ddns_output_write: " 
+					  "unable to allocate map entry");
+				return(ISC_R_FAILURE);
+				}
+			ddns_map_ptr->next = ddns_map;
+			ddns_map = ddns_map_ptr;
+		}
+
+		memcpy(ddns_map_ptr->old_pointer, old_pointer, TRACE_PTR_LEN);
+		ddns_map_ptr->new_pointer = arg;
+	}
+	else {
+		/* We aren't doing playback, make the actual call */
+		result = dns_client_startupdate(client, rdclass, zonename,
+						prerequisites, updates,
+						servers, tsec, options,
+						task, action, arg, transp);
+	}
+
+	if (trace_record() != 0) {
+		/* We are recording, save the information to the file */
+		trace_iov_t iov[3];
+		old_result = htonl((u_int32_t)result);
+		memset(old_pointer, 0, TRACE_PTR_LEN);
+		memcpy(old_pointer, &arg, sizeof(arg));
+		iov[0].len = sizeof(old_result);
+		iov[0].buf = (char *)&old_result;
+		iov[1].len = TRACE_PTR_LEN;
+		iov[1].buf = old_pointer;
+
+		/* Write out the entire cb, in case we want to look at it */
+		iov[2].len = sizeof(dhcp_ddns_cb_t);
+		iov[2].buf = (char *)arg;
+
+		trace_write_packet_iov(trace_ddns_output, 3, iov, MDL);
+	}
+
+	return(result);
+}
+
+static void
+trace_ddns_output_read(trace_type_t *ttype, unsigned length,
+				   char *buf)
+{
+	log_error("unaccounted for ddns output.");
+}
+
+static void
+trace_ddns_output_stop(trace_type_t *ttype)
+{
+}
+
+void
+trace_ddns_init()
+{
+	trace_ddns_output = trace_type_register("ddns-output", NULL,
+						trace_ddns_output_read,
+						trace_ddns_output_stop, MDL);
+	trace_ddns_input  = trace_type_register("ddns-input", NULL,
+						trace_ddns_input_read,
+						trace_ddns_input_stop, MDL);
+	ddns_map = NULL;
+}
+
+#define ddns_update trace_ddns_output_write
+#else
+#define ddns_update dns_client_startupdate
+#endif /* TRACING */
 
 /*
  * Code to allocate and free a dddns control block.  This block is used
@@ -955,6 +1235,11 @@ void ddns_interlude(isc_task_t  *taskp,
 	 * the event block.*/
 	isc_event_free(&eventp);
 
+#if defined (TRACING)
+	if (trace_record()) {
+		trace_ddns_input_write(ddns_cb, eresult);
+	}
+#endif
 	/* This transaction is complete, clear the value */
 	ddns_cb->transaction = NULL;
 
@@ -1165,15 +1450,15 @@ ddns_modify_fwd(dhcp_ddns_cb_t *ddns_cb)
 	ISC_LIST_APPEND(updatelist, uname, link);
 
 	/* send the message, cleanup and return the result */
-	result = dns_client_startupdate(dhcp_gbl_ctx.dnsclient,
-					dns_rdataclass_in, zname,
-					&prereqlist, &updatelist,
-					zlist, tsec_key,
-					DNS_CLIENTRESOPT_ALLOWRUN,
-					dhcp_gbl_ctx.task,
-					ddns_interlude,
-					(void *)ddns_cb,
-					&ddns_cb->transaction);
+	result = ddns_update(dhcp_gbl_ctx.dnsclient,
+			     dns_rdataclass_in, zname,
+			     &prereqlist, &updatelist,
+			     zlist, tsec_key,
+			     DNS_CLIENTRESOPT_ALLOWRUN,
+			     dhcp_gbl_ctx.task,
+			     ddns_interlude,
+			     (void *)ddns_cb,
+			     &ddns_cb->transaction);
 
  cleanup:
 	if (dataspace != NULL) {
@@ -1347,14 +1632,15 @@ ddns_modify_ptr(dhcp_ddns_cb_t *ddns_cb)
 	 * and we wanted to retry it.
 	 */
 	/* send the message, cleanup and return the result */
-	result = dns_client_startupdate((dns_client_t *)dhcp_gbl_ctx.dnsclient,
-					dns_rdataclass_in, zname,
-					NULL, &updatelist,
-					zlist, tsec_key,
-					DNS_CLIENTRESOPT_ALLOWRUN,
-					dhcp_gbl_ctx.task,
-					ddns_interlude, (void *)ddns_cb,
-					&ddns_cb->transaction);
+	result = ddns_update((dns_client_t *)dhcp_gbl_ctx.dnsclient,
+			     dns_rdataclass_in, zname,
+			     NULL, &updatelist,
+			     zlist, tsec_key,
+			     DNS_CLIENTRESOPT_ALLOWRUN,
+			     dhcp_gbl_ctx.task,
+			     ddns_interlude, (void *)ddns_cb,
+			     &ddns_cb->transaction);
+
  cleanup:
 	if (dataspace != NULL) {
 		isc_mem_put(dhcp_gbl_ctx.mctx, dataspace,

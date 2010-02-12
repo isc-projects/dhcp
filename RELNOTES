@@ -82,9 +82,11 @@ work on other platforms. Please report any problems and suggested fixes to
   extended to attempt to match DHCPv6 clients by the last octets of a
   DUID-LL or DUID-LLT provided by the client.
 
-			Changes since 4.2.0a (bug fixes)
+			Changes since 4.2.0a1 (bug fixes)
 
 - Cleaned up some compiler warnings
+
+- Fix the trace code which was broken by the changes to the DDNS code.
 
 			Changes since 4.1.0 (bug fixes)
 
