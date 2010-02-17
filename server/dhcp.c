@@ -312,12 +312,19 @@ void dhcpdiscover (packet, ms_nulltp)
 	if (lease && lease -> pool && lease -> pool -> failover_peer) {
 		peer = lease -> pool -> failover_peer;
 
-		/* If the lease is ours to allocate, then allocate it.
+		/*
+		 * If the lease is ours to (re)allocate, then allocate it.
+		 *
 		 * If the lease is active, it belongs to the client.  This
 		 * is the right lease, if we are to offer one.  We decide
 		 * whether or not to offer later on.
+		 *
+		 * If the lease was last active, and we've reached this
+		 * point, then it was last active with the same client.  We
+		 * can safely re-activate the lease with this client.
 		 */
 		if (lease->binding_state == FTS_ACTIVE ||
+		    lease->rewind_binding_state == FTS_ACTIVE ||
 		    lease_mine_to_reallocate(lease)) {
 			; /* This space intentionally left blank. */
 
@@ -521,13 +528,18 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 			goto out;
 		}
 
-		/* If the lease is in a transitional state, we can't
-		   renew it. */
-		if ((lease -> binding_state == FTS_RELEASED ||
-		     lease -> binding_state == FTS_EXPIRED) &&
-		    !lease_mine_to_reallocate (lease)) {
-			log_debug ("%s: lease in transition state %s", msgbuf,
-				   lease -> binding_state == FTS_RELEASED
+		/*
+		 * If the lease is in a transitional state, we can't
+		 * renew it unless we can rewind it to a non-transitional
+		 * state (active, free, or backup).  lease_mine_to_reallocate()
+		 * checks for free/backup, so we only need to check for active.
+		 */
+		if ((lease->binding_state == FTS_RELEASED ||
+		     lease->binding_state == FTS_EXPIRED) &&
+		    lease->rewind_binding_state != FTS_ACTIVE &&
+		    !lease_mine_to_reallocate(lease)) {
+			log_debug("%s: lease in transition state %s", msgbuf,
+				  (lease->binding_state == FTS_RELEASED)
 				   ? "released" : "expired");
 			goto out;
 		}
@@ -1303,7 +1315,6 @@ void nak_lease (packet, cip)
 	struct dhcp_packet raw;
 	unsigned char nak = DHCPNAK;
 	struct packet outgoing;
-	struct hardware hto;
 	unsigned i;
 	struct option_state *options = (struct option_state *)0;
 	struct option_cache *oc = (struct option_cache *)0;
@@ -1405,20 +1416,11 @@ void nak_lease (packet, cip)
 	      ? inet_ntoa (packet -> raw -> giaddr)
 	      : packet -> interface -> name);
 
-
-
 #ifdef DEBUG_PACKET
 	dump_packet (packet);
 	dump_raw ((unsigned char *)packet -> raw, packet -> packet_length);
 	dump_packet (&outgoing);
 	dump_raw ((unsigned char *)&raw, outgoing.packet_length);
-#endif
-
-#if 0
-	hto.hbuf [0] = packet -> raw -> htype;
-	hto.hlen = packet -> raw -> hlen;
-	memcpy (&hto.hbuf [1], packet -> raw -> chaddr, hto.hlen);
-	hto.hlen++;
 #endif
 
 	/* Set up the common stuff... */
@@ -1442,10 +1444,9 @@ void nak_lease (packet, cip)
 			to.sin_port = remote_port; /* for testing. */
 
 		if (fallback_interface) {
-			result = send_packet (fallback_interface,
-					      packet, &raw,
-					      outgoing.packet_length,
-					      from, &to, &hto);
+			result = send_packet(fallback_interface, packet, &raw,
+					     outgoing.packet_length, from, &to,
+					     NULL);
 			return;
 		}
 	} else {
@@ -1454,9 +1455,8 @@ void nak_lease (packet, cip)
 	}
 
 	errno = 0;
-	result = send_packet (packet -> interface,
-			      packet, &raw, outgoing.packet_length,
-			      from, &to, (struct hardware *)0);
+	result = send_packet(packet->interface, packet, &raw,
+			     outgoing.packet_length, from, &to, NULL);
 }
 
 void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
@@ -3327,7 +3327,8 @@ int find_lease (struct lease **lp,
 		goto out;
 	}
 
-	/* If we found leases matching the client identifier, loop through
+	/*
+	 * If we found leases matching the client identifier, loop through
 	 * the n_uid pointer looking for one that's actually valid.   We
 	 * can't do this until we get here because we depend on
 	 * packet -> known, which may be set by either the uid host
@@ -3343,14 +3344,20 @@ int find_lease (struct lease **lp,
 #endif
 
 #if defined (FAILOVER_PROTOCOL)
-		/* When failover is active, it's possible that there could
-		   be two "free" leases for the same uid, but only one of
-		   them that's available for this failover peer to allocate. */
-		if (uid_lease -> binding_state != FTS_ACTIVE &&
-		    !lease_mine_to_reallocate (uid_lease)) {
+		/*
+		 * When we lookup a lease by uid, we know the client identifier
+		 * matches the lease's record.  If it is active, or was last
+		 * active with the same client, we can trivially extend it.
+		 * If is not or was not active, we can allocate it to this
+		 * client if it matches the usual free/backup criteria (which
+		 * is contained in lease_mine_to_reallocate()).
+		 */
+		if (uid_lease->binding_state != FTS_ACTIVE &&
+		    uid_lease->rewind_binding_state != FTS_ACTIVE &&
+		    !lease_mine_to_reallocate(uid_lease)) {
 #if defined (DEBUG_FIND_LEASE)
-			log_info ("not mine to allocate: %s",
-				  piaddr (uid_lease -> ip_addr));
+			log_info("not active or not mine to allocate: %s",
+				 piaddr(uid_lease->ip_addr));
 #endif
 			goto n_uid;
 		}
@@ -3410,19 +3417,32 @@ int find_lease (struct lease **lp,
 			  piaddr (hw_lease -> ip_addr));
 #endif
 #if defined (FAILOVER_PROTOCOL)
-		/* When failover is active, it's possible that there could
-		   be two "free" leases for the same uid, but only one of
-		   them that's available for this failover peer to allocate. */
-		if (hw_lease -> binding_state != FTS_ACTIVE &&
-		    !lease_mine_to_reallocate (hw_lease)) {
+		/*
+		 * When we lookup a lease by chaddr, we know the MAC address
+		 * matches the lease record (we will check if the lease has a
+		 * client-id the client does not next).  If the lease is
+		 * currently active or was last active with this client, we can
+		 * trivially extend it.  Otherwise, there are a set of rules
+		 * that govern if we can reallocate this lease to any client
+		 * ("lease_mine_to_reallocate()") including this one.
+		 */
+		if (hw_lease->binding_state != FTS_ACTIVE &&
+		    hw_lease->rewind_binding_state != FTS_ACTIVE &&
+		    !lease_mine_to_reallocate(hw_lease)) {
 #if defined (DEBUG_FIND_LEASE)
-			log_info ("not mine to allocate: %s",
-				  piaddr (hw_lease -> ip_addr));
+			log_info("not active or not mine to allocate: %s",
+				 piaddr(hw_lease->ip_addr));
 #endif
 			goto n_hw;
 		}
 #endif
 
+		/*
+		 * This conditional skips "potentially active" leases (leases
+		 * we think are expired may be extended by the peer, etc) that
+		 * may be assigned to a differently /client-identified/ client
+		 * with the same MAC address.
+		 */
 		if (hw_lease -> binding_state != FTS_FREE &&
 		    hw_lease -> binding_state != FTS_BACKUP &&
 		    hw_lease -> uid &&
@@ -3507,8 +3527,15 @@ int find_lease (struct lease **lp,
 		lease_dereference (&ip_lease, MDL);
 	}
 
-	/* Toss ip_lease if it hasn't yet expired and doesn't belong to the
-	   client. */
+	/*
+	 * If the requested address is in use (or potentially in use) by
+	 * a different client, it can't be granted.
+	 *
+	 * This first conditional only detects if the lease is currently
+	 * identified to a different client (client-id and/or chaddr
+	 * mismatch).  In this case we may not want to give the client the
+	 * lease, if doing so may potentially be an addressing conflict.
+	 */
 	if (ip_lease &&
 	    (ip_lease -> uid ?
 	     (!have_client_identifier ||
@@ -3520,11 +3547,14 @@ int find_lease (struct lease **lp,
 	      memcmp (&ip_lease -> hardware_addr.hbuf [1],
 		      packet -> raw -> chaddr,
 		      (unsigned)(ip_lease -> hardware_addr.hlen - 1))))) {
-		/* If we're not doing failover, the only state in which
-		   we can allocate this lease to the client is FTS_FREE.
-		   If we are doing failover, things are more complicated.
-		   If the lease is free or backup, we let the caller decide
-		   whether or not to give it out. */
+		/*
+		 * A lease is unavailable for allocation to a new client if
+		 * it is not in the FREE or BACKUP state.  There may be
+		 * leases that are in the expired state with a rewinding
+		 * state that is free or backup, but these will be processed
+		 * into the free or backup states by expiration processes, so
+		 * checking for them here is superfluous.
+		 */
 		if (ip_lease -> binding_state != FTS_FREE &&
 		    ip_lease -> binding_state != FTS_BACKUP) {
 #if defined (DEBUG_FIND_LEASE)
@@ -3538,18 +3568,21 @@ int find_lease (struct lease **lp,
 		}
 	}
 
-	/* If we got an ip_lease and a uid_lease or hw_lease, and ip_lease
-	   is not active, and is not ours to reallocate, forget about it. */
+	/*
+	 * If we got an ip_lease and a uid_lease or hw_lease, and ip_lease
+	 * is/was not active, and is not ours to reallocate, forget about it.
+	 */
 	if (ip_lease && (uid_lease || hw_lease) &&
-	    ip_lease -> binding_state != FTS_ACTIVE &&
+	    ip_lease->binding_state != FTS_ACTIVE &&
+	    ip_lease->rewind_binding_state != FTS_ACTIVE &&
 #if defined(FAILOVER_PROTOCOL)
-	    !lease_mine_to_reallocate (ip_lease) &&
+	    !lease_mine_to_reallocate(ip_lease) &&
 #endif
-	    packet -> packet_type == DHCPDISCOVER) {
+	    packet->packet_type == DHCPDISCOVER) {
 #if defined (DEBUG_FIND_LEASE)
-		log_info ("ip lease not ours to offer.");
+		log_info("ip lease not active or not ours to offer.");
 #endif
-		lease_dereference (&ip_lease, MDL);
+		lease_dereference(&ip_lease, MDL);
 	}
 
 	/* If for some reason the client has more than one lease
@@ -3985,6 +4018,7 @@ int allocate_lease (struct lease **lp, struct packet *packet,
 				}
 			}
 
+			/* Try abandoned leases as a last resort. */
 			if ((candl == NULL) &&
 			    (pool->abandoned != NULL) &&
 			    lease_mine_to_reallocate(pool->abandoned))
@@ -4015,6 +4049,18 @@ int allocate_lease (struct lease **lp, struct packet *packet,
 			continue;
 		}
 
+		/*
+		 * There are tiers of lease state preference, listed here in
+		 * reverse order (least to most preferential):
+		 *
+		 *    ABANDONED
+		 *    FREE/BACKUP
+		 *
+		 * If the selected lease and candidate are both of the same
+		 * state, select the oldest (longest ago) expiration time
+		 * between the two.  If the candidate lease is of a higher
+		 * preferred grade over the selected lease, use it.
+		 */
 		if ((lease -> binding_state == FTS_ABANDONED) &&
 		    ((candl -> binding_state != FTS_ABANDONED) ||
 		     (candl -> ends < lease -> ends))) {

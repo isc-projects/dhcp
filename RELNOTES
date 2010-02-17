@@ -39,6 +39,28 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and may not
 work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
+
+			Changes since 4.2.0a1
+
+- When using 'ignore client-updates;', the FQDN returned to the client
+  is no longer truncated to one octet.
+
+- Cleaned up an unused hardware address variable in nak_lease().
+
+- Manpage entries for the ia-pd and ia-prefix options were updated to
+  reflect support for prefix delegation.
+
+- Cleaned up some compiler warnings
+
+- An optimization described in the failover protocol draft is now included,
+  which permits a DHCP server operating in communications-interrupted state
+  to 'rewind' a lease to the state most recently transmitted to its peer,
+  greatly increasing a server's endurance in communications-interrupted.
+  This is supported using a new 'rewind state' record on the dhcpd.leases
+  entry for each lease.
+
+- Fix the trace code which was broken by the changes to the DDNS code.
+
 			Changes since 4.1.0 (new features)
 
 - Failover port configuration can now be left to defaults (port 647) as
@@ -81,12 +103,6 @@ work on other platforms. Please report any problems and suggested fixes to
 - The 'hardware [ethernet|etc] ...;' parameter in host records has been
   extended to attempt to match DHCPv6 clients by the last octets of a
   DUID-LL or DUID-LLT provided by the client.
-
-			Changes since 4.2.0a1 (bug fixes)
-
-- Cleaned up some compiler warnings
-
-- Fix the trace code which was broken by the changes to the DDNS code.
 
 			Changes since 4.1.0 (bug fixes)
 

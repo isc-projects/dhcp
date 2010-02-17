@@ -589,7 +589,7 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 			 */
 			memcpy(&bp->data[5], d1.data, d1.len);
 			if (!save_option_buffer(&fqdn_universe, options,
-						bp, &bp->data[5], 1,
+						bp, &bp->data[5], d1.len,
 						FQDN_FQDN, 0))
 				goto badfqdn;
 

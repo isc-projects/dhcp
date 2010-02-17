@@ -356,7 +356,8 @@ enum dhcp_token {
 	ANYCAST_MAC = 659,
 	CONFLICT_DONE = 660,
 	AUTO_PARTNER_DOWN = 661,
-	GETHOSTNAME = 662
+	GETHOSTNAME = 662,
+	REWIND = 663
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\

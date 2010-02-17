@@ -3095,6 +3095,16 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 			}
 			goto do_binding_state;
 
+		      case REWIND:
+			seenbit = 512;
+			token = next_token(&val, NULL, cfile);
+			if (token != BINDING) {
+				parse_warn(cfile, "expecting 'binding'");
+				skip_to_semi(cfile);
+				break;
+			}
+			goto do_binding_state;
+
 		      case BINDING:
 			seenbit = 256;
 
@@ -3152,13 +3162,26 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 			if (seenbit == 256) {
 				lease -> binding_state = new_state;
 
-				/* If no next binding state is specified, it's
-				   the same as the current state. */
+				/*
+				 * Apply default/conservative next/rewind
+				 * binding states if they haven't been set
+				 * yet.  These defaults will be over-ridden if
+				 * they are set later in parsing.
+				 */
 				if (!(seenmask & 128))
-				    lease -> next_binding_state = new_state;
-			} else
+				    lease->next_binding_state = new_state;
+
+				/* The most conservative rewind state. */
+				if (!(seenmask & 512))
+				    lease->rewind_binding_state = new_state;
+			} else if (seenbit == 128)
 				lease -> next_binding_state = new_state;
-				
+			else if (seenbit == 512)
+				lease->rewind_binding_state = new_state;
+			else
+				log_fatal("Impossible condition at %s:%d.",
+					  MDL);
+
 			parse_semi (cfile);
 			break;
 
@@ -3406,6 +3429,9 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 				lease -> next_binding_state = FTS_FREE;
 		} else
 			lease -> next_binding_state = lease -> binding_state;
+
+		/* The most conservative rewind state implies no rewind. */
+		lease->rewind_binding_state = lease->binding_state;
 	}
 
 	if (!(seenmask & 65536))

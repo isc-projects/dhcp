@@ -1229,63 +1229,72 @@ intern(char *atom, enum dhcp_token dfv) {
 			return PAUSED;
 		break;
 	      case 'r':
-		if (!strcasecmp (atom + 1, "esolution-interrupted"))
-			return RESOLUTION_INTERRUPTED;
-		if (!strcasecmp (atom + 1, "ange"))
+		if (!strcasecmp(atom + 1, "ange"))
 			return RANGE;
-		if (!strcasecmp(atom + 1, "ange6")) {
+		if (!strcasecmp(atom + 1, "ange6"))
 			return RANGE6;
+		if (isascii(atom[1]) && (tolower(atom[1]) == 'e')) {
+			if (!strcasecmp(atom + 2, "bind"))
+				return REBIND;
+			if (!strcasecmp(atom + 2, "boot"))
+				return REBOOT;
+			if (!strcasecmp(atom + 2, "contact-interval"))
+				return RECONTACT_INTERVAL;
+			if (!strncasecmp(atom + 2, "cover", 5)) {
+				if (atom[7] == '\0')
+					return RECOVER;
+				if (!strcasecmp(atom + 7, "-done"))
+					return RECOVER_DONE;
+				if (!strcasecmp(atom + 7, "-wait"))
+					return RECOVER_WAIT;
+				break;
+			}
+			if (!strcasecmp(atom + 2, "fresh"))
+				return REFRESH;
+			if (!strcasecmp(atom + 2, "fused"))
+				return NS_REFUSED;
+			if (!strcasecmp(atom + 2, "ject"))
+				return REJECT;
+			if (!strcasecmp(atom + 2, "lease"))
+				return RELEASE;
+			if (!strcasecmp(atom + 2, "leased"))
+				return TOKEN_RELEASED;
+			if (!strcasecmp(atom + 2, "move"))
+				return REMOVE;
+			if (!strcasecmp(atom + 2, "new"))
+				return RENEW;
+			if (!strcasecmp(atom + 2, "quest"))
+				return REQUEST;
+			if (!strcasecmp(atom + 2, "quire"))
+				return REQUIRE;
+			if (isascii(atom[2]) && (tolower(atom[2]) == 's')) {
+				if (!strcasecmp(atom + 3, "erved"))
+					return TOKEN_RESERVED;
+				if (!strcasecmp(atom + 3, "et"))
+					return TOKEN_RESET;
+				if (!strcasecmp(atom + 3,
+						"olution-interrupted"))
+					return RESOLUTION_INTERRUPTED;
+				break;
+			}
+			if (!strcasecmp(atom + 2, "try"))
+				return RETRY;
+			if (!strcasecmp(atom + 2, "turn"))
+				return RETURN;
+			if (!strcasecmp(atom + 2, "verse"))
+				return REVERSE;
+			if (!strcasecmp(atom + 2, "wind"))
+				return REWIND;
+			break;
 		}
-		if (!strcasecmp (atom + 1, "ecover"))
-			return RECOVER;
-		if (!strcasecmp (atom + 1, "ecover-done"))
-			return RECOVER_DONE;
-		if (!strcasecmp (atom + 1, "ecover-wait"))
-			return RECOVER_WAIT;
-		if (!strcasecmp (atom + 1, "econtact-interval"))
-			return RECONTACT_INTERVAL;
-		if (!strcasecmp (atom + 1, "equest"))
-			return REQUEST;
-		if (!strcasecmp (atom + 1, "equire"))
-			return REQUIRE;
-		if (!strcasecmp (atom + 1, "equire"))
-			return REQUIRE;
-		if (!strcasecmp (atom + 1, "etry"))
-			return RETRY;
-		if (!strcasecmp (atom + 1, "eturn"))
-			return RETURN;
-		if (!strcasecmp (atom + 1, "enew"))
-			return RENEW;
-		if (!strcasecmp (atom + 1, "ebind"))
-			return REBIND;
-		if (!strcasecmp (atom + 1, "eboot"))
-			return REBOOT;
-		if (!strcasecmp (atom + 1, "eject"))
-			return REJECT;
-		if (!strcasecmp (atom + 1, "everse"))
-			return REVERSE;
-		if (!strcasecmp (atom + 1, "elease"))
-			return RELEASE;
-		if (!strcasecmp (atom + 1, "efused"))
-			return NS_REFUSED;
-		if (!strcasecmp (atom + 1, "eleased"))
-			return TOKEN_RELEASED;
-		if (!strcasecmp (atom + 1, "eset"))
-			return TOKEN_RESET;
-		if (!strcasecmp (atom + 1, "eserved"))
-			return TOKEN_RESERVED;
-		if (!strcasecmp (atom + 1, "emove"))
-			return REMOVE;
-		if (!strcasecmp (atom + 1, "efresh"))
-			return REFRESH;
 		break;
 	      case 's':
-                if (!strcasecmp(atom + 1, "cript"))
-                        return SCRIPT;
+		if (!strcasecmp(atom + 1, "cript"))
+			return SCRIPT;
 		if (isascii(atom[1]) && 
 		    tolower((unsigned char)atom[1]) == 'e') {
-                        if (!strcasecmp(atom + 2, "arch"))
-                                return SEARCH;
+			if (!strcasecmp(atom + 2, "arch"))
+				return SEARCH;
 			if (isascii(atom[2]) && 
 			    tolower((unsigned char)atom[2]) == 'c') {
 				if (!strncasecmp(atom + 3, "ond", 3)) {
