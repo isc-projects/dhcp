@@ -1,5 +1,5 @@
 	      Internet Systems Consortium DHCP Distribution
-			      Version 4.2.0a1
+			      Version 4.2.0a2
 			      2 December 2009
 
 			      README FILE
@@ -94,7 +94,8 @@ directory, it may not have up-to-date information).
 
 			    RELEASE STATUS
 
-This is ISC DHCP 4.2.0a1, which modifies the DDNS code to be asynchronous.
+This is ISC DHCP 4.2.0a2, an ALPHA quality release containing new
+features.
 
 In this release, the DHCPv6 server should be fully functional on Linux,
 Solaris, or any BSD.  The DHCPv6 client should be similarly functional
@@ -130,12 +131,12 @@ information.   On Digital Unix, type ``man pfilt''.
 To build the DHCP Distribution, unpack the compressed tar file using
 the tar utility and the gzip command - type something like:
 
-	gunzip dhcp-4.2.0a1.tar.gz
-	tar xvf dhcp-4.2.0a1.tar
+	gunzip dhcp-4.2.0a2.tar.gz
+	tar xvf dhcp-4.2.0a2.tar
 
 			    CONFIGURING IT
 
-Now, cd to the dhcp-4.2.0a1 subdirectory that you've just created and
+Now, cd to the dhcp-4.2.0a2 subdirectory that you've just created and
 configure the source tree by typing:
 
 	./configure
