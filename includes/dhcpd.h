@@ -3,7 +3,7 @@
    Definitions for dhcpd... */
 
 /*
- * Copyright (c) 2004-2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2010 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -665,6 +665,10 @@ struct lease_state {
 
 #if !defined (DEFAULT_ACK_DELAY_USECS)
 # define DEFAULT_ACK_DELAY_USECS 250000 /* 1/4 of a second */
+#endif
+
+#if !defined (DEFAULT_MIN_ACK_DELAY_USECS)
+# define DEFAULT_MIN_ACK_DELAY_USECS 10000 /* 1/100 second */
 #endif
 
 #if !defined (DEFAULT_DEFAULT_LEASE_TIME)
