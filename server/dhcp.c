@@ -45,11 +45,13 @@ int outstanding_pings;
 
 struct leasequeue *ackqueue_head, *ackqueue_tail;
 static struct leasequeue *free_ackqueue;
-static struct timeval next_fsync;
+static struct timeval max_fsync;
+
 int outstanding_acks;
 int max_outstanding_acks = DEFAULT_DELAYED_ACK;
 int max_ack_delay_secs = DEFAULT_ACK_DELAY_SECS;
 int max_ack_delay_usecs = DEFAULT_ACK_DELAY_USECS;
+int min_ack_delay_usecs = DEFAULT_MIN_ACK_DELAY_USECS;
 
 static char dhcp_message [256];
 static int site_code_min;
@@ -2836,11 +2838,13 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 	}
 }
 
-/* CC: queue single ACK:
-   - write the lease (but do not fsync it yet)
-   - add to double linked list
-   - commit if more than xx ACKs pending
-   - Not yet: schedule a fsync at the next interval (1 second?)
+/*
+ * CC: queue single ACK:
+ * - write the lease (but do not fsync it yet)
+ * - add to double linked list
+ * - commit if more than xx ACKs pending
+ * - if necessary set the max timer and bump the next timer
+ *   but only up to the max timer value.
  */
 
 void
@@ -2870,33 +2874,44 @@ delayed_ack_enqueue(struct lease *lease)
 		q->next->prev = q;
 
 	outstanding_acks++;
-	if (outstanding_acks > max_outstanding_acks) 
+	if (outstanding_acks > max_outstanding_acks) {
 		commit_leases();
 
-	/* If next_fsync is not set, schedule an fsync. */
-	if (next_fsync.tv_sec == 0 && next_fsync.tv_usec == 0) {
-		next_fsync.tv_sec = cur_tv.tv_sec + max_ack_delay_secs;
-		next_fsync.tv_usec = cur_tv.tv_usec + max_ack_delay_usecs;
+		/* Reset max_fsync and cancel any pending timeout. */
+		memset(&max_fsync, 0, sizeof(max_fsync));
+		cancel_timeout(commit_leases_ackout, NULL);
+	} else {
+		struct timeval next_fsync;
 
+		if (max_fsync.tv_sec == 0 && max_fsync.tv_usec == 0) {
+			/* set the maximum time we'll wait */
+			max_fsync.tv_sec = cur_tv.tv_sec + max_ack_delay_secs;
+			max_fsync.tv_usec = cur_tv.tv_usec +
+				max_ack_delay_usecs;
+
+			if (max_fsync.tv_usec >= 1000000) {
+				max_fsync.tv_sec++;
+				max_fsync.tv_usec -= 1000000;
+			}
+		}
+
+		/* Set the timeout */
+		next_fsync.tv_sec = cur_tv.tv_sec;
+		next_fsync.tv_usec = cur_tv.tv_usec + min_ack_delay_usecs;
 		if (next_fsync.tv_usec >= 1000000) {
 			next_fsync.tv_sec++;
 			next_fsync.tv_usec -= 1000000;
 		}
+		/* but not more than the max */
+		if ((next_fsync.tv_sec > max_fsync.tv_sec) ||
+		    ((next_fsync.tv_sec == max_fsync.tv_sec) &&
+		     (next_fsync.tv_usec > max_fsync.tv_usec))) {
+			next_fsync.tv_sec = max_fsync.tv_sec;
+			next_fsync.tv_usec = max_fsync.tv_usec;
+		}
 
 		add_timeout(&next_fsync, commit_leases_ackout, NULL,
 			    (tvref_t) NULL, (tvunref_t) NULL);
-	}
-}
-
-void
-commit_leases_readerdry(void *foo) 
-{
-	if (outstanding_acks) {
-		commit_leases();
-
-		/* Reset next_fsync and cancel any pending timeout. */
-		memset(&next_fsync, 0, sizeof(next_fsync));
-		cancel_timeout(commit_leases_ackout, NULL);
 	}
 }
 
@@ -2906,7 +2921,7 @@ commit_leases_ackout(void *foo)
 	if (outstanding_acks) {
 		commit_leases();
 
-		memset(&next_fsync, 0, sizeof(next_fsync));
+		memset(&max_fsync, 0, sizeof(max_fsync));
 	}
 }
 

@@ -667,6 +667,10 @@ struct lease_state {
 # define DEFAULT_ACK_DELAY_USECS 250000 /* 1/4 of a second */
 #endif
 
+#if !defined (DEFAULT_MIN_ACK_DELAY_USECS)
+# define DEFAULT_MIN_ACK_DELAY_USECS 10000 /* 1/100 second */
+#endif
+
 #if !defined (DEFAULT_DEFAULT_LEASE_TIME)
 # define DEFAULT_DEFAULT_LEASE_TIME 43200
 #endif

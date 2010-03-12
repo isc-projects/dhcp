@@ -836,8 +836,6 @@ main(int argc, char **argv) {
 	omapi_set_int_value ((omapi_object_t *)dhcp_control_object,
 			     (omapi_object_t *)0, "state", server_running);
 
-	register_eventhandler(&rw_queue_empty,commit_leases_readerdry);
-	
 	/* Receive packets and dispatch them... */
 	dispatch ();
 
