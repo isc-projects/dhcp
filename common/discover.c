@@ -3,6 +3,7 @@
    Network input dispatcher... */
 
 /*
+ * Copyright (c) 2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
@@ -34,7 +35,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.51.2.3 2009/10/15 18:50:55 sar Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.51.2.4 2010/03/17 23:20:59 sar Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
