@@ -39,11 +39,15 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and may not
 work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
-
 			Changes since 4.2.0a2
 
 - Update the fsync code to work with the changes to the DDNS code.  It now
   uses a timer instead of noticing if there are no more packets to process.
+
+- When constructing the DNS name structure from a text string append
+  the root to relative names.  This satisfies a requirement in the DNS
+  library that names be absolute instead of relative and prevents DHCP
+  from crashing.  Bug ticket 21054.
 
 			Changes since 4.2.0a1
 
