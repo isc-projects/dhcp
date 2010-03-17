@@ -3,7 +3,7 @@
    DHCP Server Daemon. */
 
 /*
- * Copyright (c) 2004-2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2010 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,14 +34,14 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.121.42.8 2009/09/01 20:32:28 dhankins Exp $ Copyright 2004-2009 Internet Systems Consortium.";
+"$Id: dhcpd.c,v 1.121.42.9 2010/03/17 19:32:13 sar Exp $ Copyright 2004-2009 Internet Systems Consortium.";
 #endif
 
-static char copyright[] =
-	"Copyright 2004-2009 Internet Systems Consortium.";
-static char arr [] = "All rights reserved.";
-static char message [] = "Internet Systems Consortium DHCP Server";
-static char url [] =
+static const char copyright[] =
+	"Copyright 2004-2010 Internet Systems Consortium.";
+static const char arr[] = "All rights reserved.";
+static const char message[] = "Internet Systems Consortium DHCP Server";
+static const char url[] =
 "For info, please visit https://www.isc.org/software/dhcp/";
 
 #include "dhcpd.h"
@@ -553,7 +553,7 @@ int main (argc, argv, envp)
         /* Write new pid file. */
         if ((i = open(path_dhcpd_pid, O_WRONLY|O_CREAT|O_TRUNC, 0644)) >= 0) {
                 sprintf(pbuf, "%d\n", (int) getpid());
-                write(i, pbuf, strlen(pbuf));
+                IGNORE_RET(write(i, pbuf, strlen(pbuf)));
                 close(i);
         } else {
                 log_error("Can't create PID file %s: %m.", path_dhcpd_pid);

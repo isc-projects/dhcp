@@ -51,6 +51,9 @@ the README file.
 - When using 'ignore client-updates;', the FQDN returned to the client
   is no longer truncated to one octet.
 
+- Clean up some compiler warnings - ticket 19054.
+
+
 			Changes since 3.1.3rc1
 
 - None.

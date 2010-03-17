@@ -3,7 +3,8 @@
    Turn data structures into printable text. */
 
 /*
- * Copyright (c) 2004-2007,2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +35,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.61.12.7 2009/09/01 20:32:27 dhankins Exp $ Copyright (c) 2004-2007,2009 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.61.12.8 2010/03/17 19:32:13 sar Exp $ Copyright (c) 2004-2007,2009 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -313,7 +314,7 @@ void dump_raw (buf, len)
 			lbuf[54]=' ';
 			lbuf[55]=' ';
 			lbuf[73]='\0';
-			log_info (lbuf);
+			log_info("%s", lbuf);
 		  }
 		  memset(lbuf, ' ', 79);
 		  lbuf [79] = 0;
@@ -337,7 +338,7 @@ void dump_raw (buf, len)
 	lbuf[54]=' ';
 	lbuf[55]=' ';
 	lbuf[73]='\0';
-	log_info (lbuf);
+	log_info("%s", lbuf);
 }
 
 void hash_dump (table)

@@ -4,6 +4,7 @@
 
 /*
  * Copyright (c) 1995 RadioMail Corporation.
+ * Copyright (c) 2010 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
@@ -33,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: errwarn.c,v 1.10.140.1 2009/07/23 21:43:35 sar Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: errwarn.c,v 1.10.140.2 2010/03/17 19:32:13 sar Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include <omapip/omapip_p.h>
@@ -72,8 +73,8 @@ void log_fatal (const char * fmt, ... )
 
   /* Also log it to stderr? */
   if (log_perror) {
-	  write (STDERR_FILENO, mbuf, strlen (mbuf));
-	  write (STDERR_FILENO, "\n", 1);
+	  IGNORE_RET(write(STDERR_FILENO, mbuf, strlen (mbuf)));
+	  IGNORE_RET(write(STDERR_FILENO, "\n", 1));
   }
 
 #if !defined (NOMINUM)
@@ -120,8 +121,8 @@ int log_error (const char * fmt, ...)
 #endif
 
   if (log_perror) {
-	  write (STDERR_FILENO, mbuf, strlen (mbuf));
-	  write (STDERR_FILENO, "\n", 1);
+	  IGNORE_RET(write(STDERR_FILENO, mbuf, strlen (mbuf)));
+	  IGNORE_RET(write(STDERR_FILENO, "\n", 1));
   }
 
   return 0;
@@ -147,8 +148,8 @@ int log_info (const char *fmt, ...)
 #endif
 
   if (log_perror) {
-	  write (STDERR_FILENO, mbuf, strlen (mbuf));
-	  write (STDERR_FILENO, "\n", 1);
+	  IGNORE_RET(write(STDERR_FILENO, mbuf, strlen (mbuf)));
+	  IGNORE_RET(write(STDERR_FILENO, "\n", 1));
   }
 
   return 0;
@@ -174,8 +175,8 @@ int log_debug (const char *fmt, ...)
 #endif
 
   if (log_perror) {
-	  write (STDERR_FILENO, mbuf, strlen (mbuf));
-	  write (STDERR_FILENO, "\n", 1);
+	  IGNORE_RET(write(STDERR_FILENO, mbuf, strlen (mbuf)));
+	  IGNORE_RET(write(STDERR_FILENO, "\n", 1));
   }
 
   return 0;

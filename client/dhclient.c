@@ -3,7 +3,7 @@
    DHCP Client. */
 
 /*
- * Copyright (c) 2004-2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2010 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.143.2.14 2009/09/01 20:32:27 dhankins Exp $ Copyright (c) 2004-2009 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.143.2.15 2010/03/17 19:32:12 sar Exp $ Copyright (c) 2004-2009 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -61,11 +61,11 @@ struct in_addr giaddr;
    assert (state_is == state_shouldbe). */
 #define ASSERT_STATE(state_is, state_shouldbe) {}
 
-static char copyright[] =
-	"Copyright 2004-2009 Internet Systems Consortium.";
-static char arr [] = "All rights reserved.";
-static char message [] = "Internet Systems Consortium DHCP Client";
-static char url [] =
+static const char copyright[] =
+	"Copyright 2004-2010 Internet Systems Consortium.";
+static const char arr[] = "All rights reserved.";
+static const char message[] = "Internet Systems Consortium DHCP Client";
+static const char url[] =
 "For info, please visit https://www.isc.org/software/dhcp/";
 
 u_int16_t local_port=0;
