@@ -157,7 +157,15 @@ dhcp_context_create(void) {
 	return(result);
 }
 
-/* Convert a string name into the proper structure for the isc routines */
+/*
+ * Convert a string name into the proper structure for the isc routines
+ *
+ * Previously we allowed names without a trailing '.' however the current
+ * dns and dst code requires the names to end in a period.  If the
+ * name doesn't have a trailing period add one as part of creating
+ * the dns name.
+ */
+
 isc_result_t
 dhcp_isc_name(unsigned char   *namestr,
 	      dns_fixedname_t *namefix,
@@ -166,13 +174,13 @@ dhcp_isc_name(unsigned char   *namestr,
 	size_t namelen;
 	isc_buffer_t b;
 	isc_result_t result;
-	
+
 	namelen = strlen((char *)namestr); 
 	isc_buffer_init(&b, namestr, namelen);
 	isc_buffer_add(&b, namelen);
 	dns_fixedname_init(namefix);
 	*name = dns_fixedname_name(namefix);
-	result = dns_name_fromtext(*name, &b, NULL, 0, NULL);
+	result = dns_name_fromtext(*name, &b, dns_rootname, 0, NULL);
 	isc_buffer_invalidate(&b);
 	return(result);
 }
@@ -188,7 +196,6 @@ isclib_make_dst_key(char          *inname,
 	dns_name_t *name;
 	dns_fixedname_t name0;
 	isc_buffer_t b;
-	int namelen;
 
 	isc_buffer_init(&b, secret, length);
 	isc_buffer_add(&b, length);
@@ -198,29 +205,7 @@ isclib_make_dst_key(char          *inname,
 		return(DHCP_R_INVALIDARG);
 	}
 
-	/*
-	 * Previously we allowed key names without a trailing '.'
-	 * however the current dst code requires the names to end
-	 * in a period.  If the name doesn't have a trailing period
-	 * add one before sending it to the dst code.
-	 */
-	namelen = strlen(inname);
-	if (inname[namelen-1] != '.') {
-		char *newname = NULL;
-		newname = (char *)dmalloc(namelen + 2, MDL);
-		if (newname == NULL) {
-			log_error("unable to allocate memory for key name");
-			return(ISC_R_NOMEMORY);
-		}
-		strcpy(newname, inname);
-		newname[namelen] = '.';
-		newname[namelen+1] = 0;
-		result = dhcp_isc_name((unsigned char *)newname, &name0, &name);
-		dfree(newname, MDL);
-	} else {
-		result = dhcp_isc_name((unsigned char *)inname, &name0, &name);
-	}
-
+	result = dhcp_isc_name((unsigned char *)inname, &name0, &name);
 	if (result != ISC_R_SUCCESS) {
 		return(result);
 	}
