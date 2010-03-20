@@ -1,10 +1,16 @@
 	      Internet Systems Consortium DHCP Distribution
-			      Version 3.1.3
-			     October 5, 2009
+			      Version 3.1-ESV
+			      March 17, 2010
 
 			      Release Notes
 
 			      NEW FEATURES
+
+Version 3.1-ESV is an extended support version (ESV) release.  ESVs are
+intended for users who have longer upgrade constraints and only critical
+bug and security fixes will be added to future ESV releases.  Please see
+our web page http://www.isc.org/downloads/extended-support for more
+information on ESVs.
 
 Version 3.1.x of the ISC DHCP Distribution includes the following major
 new features compared to its 3.0.x derivative:
