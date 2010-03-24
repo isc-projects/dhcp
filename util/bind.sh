@@ -14,7 +14,7 @@
 # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 
-# $Id: bind.sh,v 1.7 2009/12/02 20:43:52 sar Exp $
+# $Id: bind.sh,v 1.8 2010/03/24 17:30:49 dhankins Exp $
 
 # Get the bind distribution for the libraries
 # This script is used to build the DHCP distribution and shouldn't be shipped
@@ -29,7 +29,8 @@ binddir=$topdir/bind
 case $# in 
     1)
 	case "$1" in 
-	4.2.0a2|4.2.0a1|4.2.0) BINDTAG=v9_7_0b3 ;;
+	4.2.0b1|4.2.0) BINDTAG=v9_7_0 ;;
+	4.2.0a2|4.2.0a1) BINDTAG=v9_7_0b3 ;;
 	*) echo "bind.sh: unsupported version: $1" >&2
 	   exit 1
 	   ;;
