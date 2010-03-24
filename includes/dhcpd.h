@@ -104,6 +104,11 @@ typedef time_t TIME;
 
 #include <omapip/omapip_p.h>
 
+#if defined(LDAP_CONFIGURATION)
+# include <ldap.h>
+# include <sys/utsname.h> /* for uname() */
+#endif
+
 #if !defined (BYTE_NAME_HASH_SIZE)
 # define BYTE_NAME_HASH_SIZE	401	/* Default would be ridiculous. */
 #endif
@@ -293,6 +298,16 @@ struct parse {
 	size_t bufsiz;
 
 	struct parse *saved_state;
+
+#if defined(LDAP_CONFIGURATION)
+	/*
+	 * LDAP configuration uses a call-back to iteratively read config
+	 * off of the LDAP repository.
+	 * XXX: The token stream can not be rewound reliably, so this must
+	 * be addressed for DHCPv6 support.
+	 */
+	int (*read_function)(struct parse *);
+#endif
 };
 
 /* Variable-length array of data. */
@@ -423,6 +438,32 @@ struct hardware {
 	u_int8_t hlen;
 	u_int8_t hbuf [17];
 };
+
+#if defined(LDAP_CONFIGURATION)
+# define LDAP_BUFFER_SIZE		8192
+# define LDAP_METHOD_STATIC		0
+# define LDAP_METHOD_DYNAMIC	1
+#if defined (LDAP_USE_SSL)
+# define LDAP_SSL_OFF			0
+# define LDAP_SSL_ON			1
+# define LDAP_SSL_TLS			2
+# define LDAP_SSL_LDAPS			3
+#endif
+
+/* This is a tree of the current configuration we are building from LDAP */
+struct ldap_config_stack {
+	LDAPMessage * res;	/* Pointer returned from ldap_search */
+	LDAPMessage * ldent;	/* Current item in LDAP that we're processing.
+							in res */
+	int close_brace;	/* Put a closing } after we're through with
+						this item */
+	int processed;	/* We set this flag if this base item has been
+					processed. After this base item is processed,
+					we can start processing the children */
+	struct ldap_config_stack *children;
+	struct ldap_config_stack *next;
+};
+#endif
 
 typedef enum {
 	server_startup = 0,
@@ -669,6 +710,29 @@ struct lease_state {
 
 #if !defined (DEFAULT_MIN_ACK_DELAY_USECS)
 # define DEFAULT_MIN_ACK_DELAY_USECS 10000 /* 1/100 second */
+#endif
+
+#if defined(LDAP_CONFIGURATION)
+# define SV_LDAP_SERVER			60
+# define SV_LDAP_PORT			61
+# define SV_LDAP_USERNAME		62
+# define SV_LDAP_PASSWORD		63
+# define SV_LDAP_BASE_DN		64
+# define SV_LDAP_METHOD			65
+# define SV_LDAP_DEBUG_FILE		66
+# define SV_LDAP_DHCP_SERVER_CN		67
+# define SV_LDAP_REFERRALS		68
+#if defined (LDAP_USE_SSL)
+# define SV_LDAP_SSL			69
+# define SV_LDAP_TLS_REQCERT		70
+# define SV_LDAP_TLS_CA_FILE		71
+# define SV_LDAP_TLS_CA_DIR		72
+# define SV_LDAP_TLS_CERT		73
+# define SV_LDAP_TLS_KEY		74
+# define SV_LDAP_TLS_CRLCHECK		75
+# define SV_LDAP_TLS_CIPHERS		76
+# define SV_LDAP_TLS_RANDFILE		77
+#endif
 #endif
 
 #if !defined (DEFAULT_DEFAULT_LEASE_TIME)
@@ -2220,7 +2284,7 @@ extern int db_time_format;
 char *quotify_string (const char *, const char *, int);
 char *quotify_buf (const unsigned char *, unsigned, const char *, int);
 char *print_base64 (const unsigned char *, unsigned, const char *, int);
-char *print_hw_addr PROTO ((int, int, unsigned char *));
+char *print_hw_addr PROTO ((const int, const int, const unsigned char *));
 void print_lease PROTO ((struct lease *));
 void dump_raw PROTO ((const unsigned char *, unsigned));
 void dump_packet_option (struct option_cache *, struct packet *,
@@ -3349,6 +3413,20 @@ OMAPI_OBJECT_ALLOC_DECL (dhcp_failover_link, dhcp_failover_link_t,
 
 const char *binding_state_print (enum failover_state);
 
+/* ldap.c */
+#if defined(LDAP_CONFIGURATION)
+extern struct enumeration ldap_methods;
+#if defined (LDAP_USE_SSL)
+extern struct enumeration ldap_ssl_usage_enum;
+extern struct enumeration ldap_tls_reqcert_enum;
+extern struct enumeration ldap_tls_crlcheck_enum;
+#endif
+isc_result_t ldap_read_config (void);
+int find_haddr_in_ldap (struct host_decl **, int, unsigned,
+                        const unsigned char *, const char *, int);
+int find_subclass_in_ldap (struct class *, struct class **,
+                           struct data_string *);
+#endif
 
 /* mdb6.c */
 HASH_FUNCTIONS_DECL(ia, unsigned char *, struct ia_xx, ia_hash_t)

@@ -10,7 +10,8 @@ EXTRA_DIST = RELNOTES LICENSE \
 	     contrib/3.0b1-lease-convert contrib/dhclient-tz-exithook.sh \
 	     contrib/dhcp.spec contrib/sethostname.sh contrib/solaris.init \
 	     contrib/ms2isc/Registry.pm contrib/ms2isc/ms2isc.pl \
-	     contrib/ms2isc/readme.txt \
+	     contrib/ms2isc/readme.txt contrib/ldap/dhcpd-conf-to-ldap \
+	     contrib/ldap/dhcp.schema contrib/ldap/README.ldap \
 	     doc/IANA-arp-parameters doc/Makefile doc/References.html \
 	     doc/References.txt doc/References.xml doc/api+protocol \
 	     doc/ja_JP.eucJP/dhclient-script.8 doc/ja_JP.eucJP/dhclient.8 \

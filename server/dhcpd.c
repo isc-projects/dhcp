@@ -600,6 +600,14 @@ main(int argc, char **argv) {
 	/* Add the ddns update style enumeration prior to parsing. */
 	add_enumeration (&ddns_styles);
 	add_enumeration (&syslog_enum);
+#if defined (LDAP_CONFIGURATION)
+	add_enumeration (&ldap_methods);
+#if defined (LDAP_USE_SSL)
+	add_enumeration (&ldap_ssl_usage_enum);
+	add_enumeration (&ldap_tls_reqcert_enum);
+	add_enumeration (&ldap_tls_crlcheck_enum);
+#endif
+#endif
 
 	if (!group_allocate (&root_group, MDL))
 		log_fatal ("Can't allocate root group!");
