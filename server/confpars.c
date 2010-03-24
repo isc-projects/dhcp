@@ -61,7 +61,17 @@ void parse_trace_setup ()
 
 isc_result_t readconf ()
 {
-	return read_conf_file (path_dhcpd_conf, root_group, ROOT_GROUP, 0);
+	isc_result_t res;
+
+	res = read_conf_file (path_dhcpd_conf, root_group, ROOT_GROUP, 0);
+#if defined(LDAP_CONFIGURATION)
+	if (res != ISC_R_SUCCESS)
+		return (res);
+
+	return ldap_read_config ();
+#else
+	return (res);
+#endif
 }
 
 isc_result_t read_conf_file (const char *filename, struct group *group,

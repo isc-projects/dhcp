@@ -244,8 +244,86 @@ static struct option server_options[] = {
 	{ "delayed-ack", "S",			&server_universe,  58, 1 },
 	{ "max-ack-delay", "L",			&server_universe,  59, 1 },
 #endif
+#if defined(LDAP_CONFIGURATION)
+	{ "ldap-server", "t",			&server_universe,  60, 1 },
+	{ "ldap-port", "d",			&server_universe,  61, 1 },
+	{ "ldap-username", "t",			&server_universe,  62, 1 },
+	{ "ldap-password", "t",			&server_universe,  63, 1 },
+	{ "ldap-base-dn", "t",			&server_universe,  64, 1 },
+	{ "ldap-method", "Nldap-methods.",	&server_universe,  65, 1 },
+	{ "ldap-debug-file", "t",		&server_universe,  66, 1 },
+	{ "ldap-dhcp-server-cn", "t",		&server_universe,  67, 1 },
+	{ "ldap-referrals", "f",		&server_universe,  68, 1 },
+#if defined(LDAP_USE_SSL)
+	{ "ldap-ssl", "Nldap-ssl-usage.",	&server_universe,  69, 1 },
+	{ "ldap-tls-reqcert", "Nldap-tls-reqcert.",	&server_universe,  70, 1 },
+	{ "ldap-tls-ca-file", "t",		&server_universe,  71, 1 },
+	{ "ldap-tls-ca-dir", "t",		&server_universe,  72, 1 },
+	{ "ldap-tls-cert", "t",			&server_universe,  73, 1 },
+	{ "ldap-tls-key", "t",			&server_universe,  74, 1 },
+	{ "ldap-tls-crlcheck", "Nldap-tls-crlcheck.",	&server_universe,  75, 1 },
+	{ "ldap-tls-ciphers", "t",		&server_universe,  76, 1 },
+	{ "ldap-tls-randfile", "t",		&server_universe,  77, 1 },
+#endif /* LDAP_USE_SSL */
+#endif /* LDAP_CONFIGURATION */
 	{ NULL, NULL, NULL, 0, 0 }
 };
+
+#if defined(LDAP_CONFIGURATION)
+struct enumeration_value ldap_values [] = {
+	{ "static", LDAP_METHOD_STATIC },
+	{ "dynamic", LDAP_METHOD_DYNAMIC },
+	{ (char *) 0, 0 }
+};
+
+struct enumeration ldap_methods = {
+	(struct enumeration *)0,
+	"ldap-methods", 1,
+	ldap_values
+};
+
+#if defined(LDAP_USE_SSL)
+struct enumeration_value ldap_ssl_usage_values [] = {
+	{ "off", LDAP_SSL_OFF },
+	{ "on",LDAP_SSL_ON },
+	{ "ldaps", LDAP_SSL_LDAPS },
+	{ "start_tls", LDAP_SSL_TLS },
+	{ (char *) 0, 0 }
+};
+
+struct enumeration ldap_ssl_usage_enum = {
+	(struct enumeration *)0,
+	"ldap-ssl-usage", 1,
+	ldap_ssl_usage_values
+};
+
+struct enumeration_value ldap_tls_reqcert_values [] = {
+	{ "never", LDAP_OPT_X_TLS_NEVER },
+	{ "hard", LDAP_OPT_X_TLS_HARD  },
+	{ "demand", LDAP_OPT_X_TLS_DEMAND},
+	{ "allow", LDAP_OPT_X_TLS_ALLOW },
+	{ "try", LDAP_OPT_X_TLS_TRY   },
+	{ (char *) 0, 0 }
+};
+struct enumeration ldap_tls_reqcert_enum = {
+	(struct enumeration *)0,
+	"ldap-tls-reqcert", 1,
+	ldap_tls_reqcert_values
+};
+
+struct enumeration_value ldap_tls_crlcheck_values [] = {
+	{ "none", LDAP_OPT_X_TLS_CRL_NONE},
+	{ "peer", LDAP_OPT_X_TLS_CRL_PEER},
+	{ "all",  LDAP_OPT_X_TLS_CRL_ALL },
+	{ (char *) 0, 0 }
+};
+struct enumeration ldap_tls_crlcheck_enum = {
+	(struct enumeration *)0,
+	"ldap-tls-crlcheck", 1,
+	ldap_tls_crlcheck_values
+};
+#endif
+#endif
 
 struct enumeration_value ddns_styles_values [] = {
 	{ "none", 0 },

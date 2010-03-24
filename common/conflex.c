@@ -177,9 +177,16 @@ static int get_char (cfile)
 	/* My kingdom for WITH... */
 	int c;
 
-	if (cfile->bufix == cfile->buflen)
+	if (cfile->bufix == cfile->buflen) {
+#if !defined(LDAP_CONFIGURATION)
 		c = EOF;
-	else {
+#else /* defined(LDAP_CONFIGURATION) */
+		if (cfile->read_function != NULL)
+			c = cfile->read_function(cfile);
+		else
+			c = EOF;
+#endif
+	} else {
 		c = cfile->inbuf [cfile->bufix];
 		cfile->bufix++;
 	}
@@ -1502,3 +1509,4 @@ intern(char *atom, enum dhcp_token dfv) {
 	}
 	return dfv;
 }
+

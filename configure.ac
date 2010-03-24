@@ -501,6 +501,34 @@ no)
 	;;
 esac
 
+# OpenLDAP support.
+AC_ARG_WITH(ldap,
+    AC_HELP_STRING([--with-ldap],
+                   [enable OpenLDAP support in dhcpd (default is no)]),
+    [ldap=$withval],
+    [ldap=no])
+
+# OpenLDAP with SSL support.
+AC_ARG_WITH(ldapcrypto,
+    AC_HELP_STRING([--with-ldapcrypto],
+                   [enable OpenLDAP crypto support in dhcpd (default is no)]),
+    [ldapcrypto=$withval],
+    [ldapcrypto=no])
+
+# OpenLDAP support is disabled by default, if enabled then SSL support is an
+# extra optional that is also disabled by default.  Enabling LDAP SSL support
+# implies enabling LDAP support.
+if test x$ldap = xyes || test x$ldapcrypto = xyes ; then
+    AC_SEARCH_LIBS(ldap_initialize, [ldap], ,
+		   AC_MSG_FAILURE([*** Cannot find ldap_initialize with -lldap - do you need to install an OpenLDAP2 Devel package?]))
+
+    if test x$ldapcrypto = xyes ; then
+	AC_SUBST(LDAP_CFLAGS, ["-DLDAP_CONFIGURATION -DLDAP_USE_SSL"])
+    else
+	AC_SUBST(LDAP_CFLAGS, ["-DLDAP_CONFIGURATION"])
+    fi
+fi
+
 # Append selected warning levels to CFLAGS before substitution (but after
 # AC_TRY_COMPILE & etc).
 CFLAGS="$CFLAGS $STD_CWARNINGS"

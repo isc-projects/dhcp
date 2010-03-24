@@ -49,6 +49,16 @@ work on other platforms. Please report any problems and suggested fixes to
   library that names be absolute instead of relative and prevents DHCP
   from crashing.  Bug ticket 21054.
 
+- "The LDAP Patch" that has been circulating for some time, written by
+  Brian Masney and S.Kalyanasundraram and maintained for application to
+  the DHCP-4 sources by David Cantrell has been included.  Please be
+  advised that these sources were contributed, and do not yet meet the
+  high standards we place on production sources we include by default.
+  As a result, the LDAP features are only included by using a compile-time
+  option which defaults off, and if you enable it you do so under your
+  own recognizance.  We will be improving this software over time.
+  [ISC-Bugs #17741]
+
 			Changes since 4.2.0a1
 
 - When using 'ignore client-updates;', the FQDN returned to the client

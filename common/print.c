@@ -163,9 +163,9 @@ char *print_base64 (const unsigned char *buf, unsigned len,
 }
 
 char *print_hw_addr (htype, hlen, data)
-	int htype;
-	int hlen;
-	unsigned char *data;
+	const int htype;
+	const int hlen;
+	const unsigned char *data;
 {
 	static char habuf [49];
 	char *s;
