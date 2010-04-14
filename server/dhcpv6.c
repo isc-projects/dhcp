@@ -1655,7 +1655,7 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 	 *
 	 * Guidelines:
 	 *
-	 * The client leaves unchanged any infomation about addresses
+	 * The client leaves unchanged any information about addresses
 	 * it has recorded but are not included ("cancel/break" below).
 	 * A not included IA ("cleanup" below) could give a Renew/Rebind.
 	 */
