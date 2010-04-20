@@ -1204,6 +1204,13 @@ void dhcpinform (packet, ms_nulltp)
 		}
 	}
 
+	/*
+	 * Remove any time options, per section 3.4 RFC 2131
+	 */
+	delete_option(&dhcp_universe, options, DHO_DHCP_LEASE_TIME);
+	delete_option(&dhcp_universe, options, DHO_DHCP_RENEWAL_TIME);
+	delete_option(&dhcp_universe, options, DHO_DHCP_REBINDING_TIME);
+
 	/* Set up the option buffer... */
 	outgoing.packet_length =
 		cons_options (packet, outgoing.raw, (struct lease *)0,

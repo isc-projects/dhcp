@@ -51,6 +51,9 @@ work on other platforms. Please report any problems and suggested fixes to
 
 - Cleaned up some compiler warnings
 
+- Prohibit including lease time information in a response to a DHCP INFORM
+  Bug ticket 21092.
+
                         Changes since 4.1.1rc1
 
 - When using 'ignore client-updates;', the FQDN returned to the client
