@@ -3,7 +3,7 @@
    DHCP Protocol engine. */
 
 /*
- * Copyright (c) 2004-2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2010 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -1188,6 +1188,13 @@ void dhcpinform (packet, ms_nulltp)
 			data_string_forget (&d1, MDL);
 		}
 	}
+
+	/*
+	 * Remove any time options, per section 3.4 RFC 2131
+	 */
+	delete_option(&dhcp_universe, options, DHO_DHCP_LEASE_TIME);
+	delete_option(&dhcp_universe, options, DHO_DHCP_RENEWAL_TIME);
+	delete_option(&dhcp_universe, options, DHO_DHCP_REBINDING_TIME);
 
 	/* Set up the option buffer... */
 	outgoing.packet_length =

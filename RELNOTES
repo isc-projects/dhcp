@@ -56,6 +56,9 @@ suggested fixes to <dhcp-users@isc.org>.
 
 - Cleaned up some compiler warnings
 
+- Prohibit including lease time information in a response to a DHCP INFORM
+  Bug ticket 21092.
+
 			Changes since 4.0.2rc1
 
 - None
