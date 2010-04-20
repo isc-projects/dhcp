@@ -637,6 +637,8 @@ cons_options(struct packet *inpacket, struct dhcp_packet *outpacket,
 	/*
 	 * Preload the option priority list with protocol-mandatory options.
 	 * This effectively gives these options the highest priority.
+ 	 * This provides the order for any available options, the option
+ 	 * must be in the option cache in order to actually be included.
 	 */
 	priority_len = 0;
 	priority_list[priority_len++] = DHO_DHCP_MESSAGE_TYPE;
