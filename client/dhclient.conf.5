@@ -1,4 +1,4 @@
-.\"	$Id: dhclient.conf.5,v 1.27 2010/04/26 21:17:32 sar Exp $
+.\"	$Id: dhclient.conf.5,v 1.28 2010/04/27 22:13:53 sar Exp $
 .\"
 .\" Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
@@ -185,11 +185,12 @@ are called \fIDHCP Options\fR.  DHCP Options are defined in
 The request statement causes the client to request that any server
 responding to the client send the client its values for the specified
 options.   Only the option names should be specified in the request
-statement - not option parameters.   By default, the DHCP server
+statement - not option parameters.   By default, the DHCPv4 client
 requests the subnet-mask, broadcast-address, time-offset, routers,
-domain-name, domain-name-servers and host-name options.  Note that if
-you enter a 'request' statement, you over-ride this default and these
-options will not be requested.
+domain-name, domain-name-servers and host-name options while the DHCPv6
+client requests the dhcp6 name-servers and domain-search options.  Note
+that if you enter a 'request' statement, you over-ride these defaults
+and these options will not be requested.
 .PP
 In some cases, it may be desirable to send no parameter request list
 at all.   To do this, simply write the request statement but specify
@@ -240,17 +241,6 @@ than the default requested lease time, which is two hours.  The other
 obvious use for this statement is to send information to the server
 that will allow it to differentiate between this client and other
 clients or kinds of clients.
-.SH DHCPV6 OPERATION
-The client does not yet have a default DHCPv6 Option Request Option (ORO),
-nor has it been integrated with the 'request' and 'require' syntax above.
-It is neccessary to configure an ORO then.
-.PP
-.nf
-  send dhcp6.oro 1, 2, 7, 12, 13, 23, 24, 39;
-.fi
-.PP
-The above ORO will request both identifiers (server, client), the preference,
-unicast, nameservers, domain-search, and FQDN(v6) options.
 .SH DYNAMIC DNS
 The client now has some very limited support for doing DNS updates
 when a lease is acquired.   This is prototypical, and probably doesn't
