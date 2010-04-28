@@ -1,4 +1,4 @@
-.\"	$Id: dhcp-options.5,v 1.31.14.5 2009/07/23 21:43:33 sar Exp $
+.\"	$Id: dhcp-options.5,v 1.31.14.6 2010/04/28 18:40:30 dhankins Exp $
 .\"
 .\" Copyright (c) 2004-2008 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
@@ -92,10 +92,8 @@ a text option.
 .PP
 The
 .B domain-list
-data type specifies a list of domain names, a space between each name and
-the entire string enclosed in double quotes.  These types of data are used
-for the domain-search option for example, and encodes an RFC1035 compressed
-DNS label list on the wire.
+data type specifies a list of domain names, enclosed in double quotes
+and separated by commas ("example.com", "foo.example.com").
 .PP
 The
 .B flag
