@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-			     Version 4.1.1
-			     7 January 2010
+			     Version 4.1.1-P1
+				4 May 2010
 
 			      Release Notes
 
@@ -47,6 +47,13 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and may not
 work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
+                        Changes since 4.1.1
+
+- A bug was fixed that could cause the DHCPv6 server to advertise/assign a
+  previously allocated (active) lease to a client that has changed subnets,
+  despite being on different shared networks.  Dynamic prefixes specifically
+  allocated in shared networks also now are not offered if the client has
+  moved.  [ISC-Bugs #21152]
 
                         Changes since 4.1.1rc1
 
