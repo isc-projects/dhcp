@@ -3,7 +3,8 @@
    Routines for manipulating hash tables... */
 
 /*
- * Copyright (c) 2004-2007,2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -49,8 +50,13 @@ find_length(const void *key,
 	if (do_hash == do_ip4_hash)
 		return 4;
 
-	log_fatal("Impossible condition at %s:%d.", MDL);
-	return 0; /* Silence compiler warnings. */
+	log_debug("Unexpected hash function at %s:%d.", MDL);
+	/*
+	 * If we get a hash function we don't specifically expect
+	 * return a length of 0, this covers the case where a client
+	 * id has a length of 0.
+	 */
+	return 0;
 }
 
 int new_hash_table (tp, count, file, line)
