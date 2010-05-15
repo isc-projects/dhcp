@@ -58,6 +58,10 @@ suggested fixes to <dhcp-users@isc.org>.
   previously allocated (active) lease to a client that has changed subnets,
   despite being on different shared networks.  [ISC-Bugs #21152]
 
+! Accept a client id of length 0 while hashing.  Previously the server would
+  exit if it attempted to hash a zero length client id, providing attackers
+  with a simple denial of service attack.  [ISC-Bugs 21253]
+
 			Changes since 4.0.2rc1
 
 - None
