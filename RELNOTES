@@ -55,6 +55,10 @@ work on other platforms. Please report any problems and suggested fixes to
   allocated in shared networks also now are not offered if the client has
   moved.  [ISC-Bugs #21152]
 
+! Accept a client id of length 0 while hashing.  Previously the server would
+  exit if it attempted to hash a zero length client id, providing attackers
+  with a simple denial of service attack.  [ISC-Bugs #21253]
+
                         Changes since 4.1.1rc1
 
 - When using 'ignore client-updates;', the FQDN returned to the client
