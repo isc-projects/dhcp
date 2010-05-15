@@ -59,6 +59,10 @@ suggested fixes to <dhcp-users@isc.org>.
 - Prohibit including lease time information in a response to a DHCP INFORM
   Bug ticket 21092.
 
+! Accept a client id of length 0 while hashing.  Previously the server would
+  exit if it attempted to hash a zero length client id, providing attackers
+  with a simple denial of service attack.  Bug ticket 21253.
+
 			Changes since 4.0.2rc1
 
 - None
