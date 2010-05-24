@@ -462,6 +462,11 @@ ddns_cb_free(dhcp_ddns_cb_t *ddns_cb, const char *file, int line)
 		forget_zone((struct dns_zone **)&ddns_cb->zone);
 	}
 
+	/* Should be freed by now, check just in case. */
+	if (ddns_cb->transaction != NULL)
+		log_error("Impossible memory leak at %s:%d (attempt to free "
+			  "DDNS Control Block before transaction).", MDL);
+
 	dfree(ddns_cb, file, line);
 }
 
@@ -1241,7 +1246,7 @@ void ddns_interlude(isc_task_t  *taskp,
 	}
 #endif
 	/* This transaction is complete, clear the value */
-	ddns_cb->transaction = NULL;
+	dns_client_destroyupdatetrans(&ddns_cb->transaction);
 
 	/* If we cancelled or tried to cancel the operation we just
 	 * need to clean up. */
