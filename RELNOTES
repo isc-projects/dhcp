@@ -48,6 +48,8 @@ work on other platforms. Please report any problems and suggested fixes to
   exit if it attempted to hash a zero length client id, providing attackers
   with a simple denial of service attack.  Bug ticket 21253.
 
+- A memory leak in ddns processing was closed.  [ISC-Bugs #21377]
+
 			Changes since 4.2.0a2
 
 - Update the fsync code to work with the changes to the DDNS code.  It now
