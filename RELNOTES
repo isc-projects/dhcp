@@ -39,6 +39,7 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and may not
 work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
+
 			Changes since 4.2.0b1
 
 - Prohibit including lease time information in a response to a DHCP INFORM.
@@ -55,6 +56,12 @@ work on other platforms. Please report any problems and suggested fixes to
   when the cleanup required part of the context that wasn't available.  It
   also didn't do much as we exited afterwards anyway.   Now we simply log
   the error and exit. [ISC-Bugs #21093]
+
+- A bug was fixed that could cause the DHCPv6 server to advertise/assign a
+  previously allocated (active) lease to a client that has changed subnets,
+  despite being on different shared networks.  Dynamic prefixes specifically
+  allocated in shared networks also now are not offered if the client has
+  moved.  [ISC-Bugs #21152]
 
 			Changes since 4.2.0a2
 

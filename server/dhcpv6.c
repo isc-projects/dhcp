@@ -2760,9 +2760,18 @@ find_client_address(struct reply_state *reply) {
 
 	if (reply->old_ia != NULL)  {
 		for (i = 0 ; i < reply->old_ia->num_iasubopt ; i++) {
-			lease = reply->old_ia->iasubopt[i];
+			struct shared_network *candidate_shared;
 
-			best_lease = lease_compare(lease, best_lease);
+			lease = reply->old_ia->iasubopt[i];
+			candidate_shared = lease->ipv6_pool->shared_network;
+
+			/*
+			 * Look for the best lease on the client's shared
+			 * network.
+			 */
+			if (candidate_shared == reply->shared) {
+				best_lease = lease_compare(lease, best_lease);
+			}
 		}
 	}
 
@@ -3746,10 +3755,21 @@ find_client_prefix(struct reply_state *reply) {
 
 	if (reply->old_ia != NULL)  {
 		for (i = 0 ; i < reply->old_ia->num_iasubopt ; i++) {
-			prefix = reply->old_ia->iasubopt[i];
+			struct shared_network *candidate_shared;
 
-			best_prefix = prefix_compare(reply, prefix,
-						     best_prefix);
+			prefix = reply->old_ia->iasubopt[i];
+			candidate_shared = prefix->ipv6_pool->shared_network;
+
+			/*
+			 * Consider this prefix if it is in a global pool or
+			 * if it is scoped in a pool under the client's shared
+			 * network.
+			 */
+			if (candidate_shared == NULL ||
+			    candidate_shared == reply->shared) {
+				best_prefix = prefix_compare(reply, prefix,
+							     best_prefix);
+			}
 		}
 	}
 
