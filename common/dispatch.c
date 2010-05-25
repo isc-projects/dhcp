@@ -112,8 +112,6 @@ dispatch(void)
 
 	status = isc_app_ctxrun(dhcp_gbl_ctx.actx);
 
-	isclib_cleanup();
-
 	log_fatal ("Dispatch routine failed: %s -- exiting",
 		   isc_result_totext (status));
 }

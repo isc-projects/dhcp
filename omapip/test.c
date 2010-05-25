@@ -3,8 +3,8 @@
    Test code for omapip... */
 
 /*
- * Copyright (c) 2004,2009-2010
- *				by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -51,7 +51,12 @@ int main (int argc, char **argv)
 	omapi_object_t *connection = (omapi_object_t*)0;
 	isc_result_t status;
 
-	dhcp_context_create();
+	status = dhcp_context_create();
+	if (status != ISC_R_SUCCESS) {
+		fprintf(stderr, "Can't initialize context: %s\n",
+			isc_result_totext(status));
+		exit(1);
+	}
 
 	omapi_init ();
 
