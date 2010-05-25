@@ -47,6 +47,7 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and may not
 work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
+
                         Changes since 4.1.1
 
 - Cleaned up some compiler warnings
@@ -57,6 +58,12 @@ work on other platforms. Please report any problems and suggested fixes to
 ! Accept a client id of length 0 while hashing.  Previously the server would
   exit if it attempted to hash a zero length client id, providing attackers
   with a simple denial of service attack.  Bug ticket 21253.
+
+- A bug was fixed that could cause the DHCPv6 server to advertise/assign a
+  previously allocated (active) lease to a client that has changed subnets,
+  despite being on different shared networks.  Dynamic prefixes specifically
+  allocated in shared networks also now are not offered if the client has
+  moved.  [ISC-Bugs #21152]
 
                         Changes since 4.1.1rc1
 
