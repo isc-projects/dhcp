@@ -63,6 +63,12 @@ suggested fixes to <dhcp-users@isc.org>.
   exit if it attempted to hash a zero length client id, providing attackers
   with a simple denial of service attack.  Bug ticket 21253.
 
+- A bug was fixed that could cause the DHCPv6 server to advertise/assign a
+  previously allocated (active) lease to a client that has changed subnets,
+  despite being on different shared networks.  Dynamic prefixes specifically
+  allocated in shared networks also now are not offered if the client has
+  moved.  [ISC-Bugs #21152]
+
 			Changes since 4.0.2rc1
 
 - None

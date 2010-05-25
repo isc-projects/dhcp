@@ -2002,9 +2002,18 @@ find_client_address(struct reply_state *reply) {
 
 	if (reply->old_ia != NULL)  {
 		for (i = 0 ; i < reply->old_ia->num_iaaddr ; i++) {
-			lease = reply->old_ia->iaaddr[i];
+			struct shared_network *candidate_shared;
 
-			best_lease = lease_compare(lease, best_lease);
+			lease = reply->old_ia->iaaddr[i];
+			candidate_shared = lease->ipv6_pool->shared_network;
+
+			/*
+			 * Look for the best lease on the client's shared
+			 * network.
+			 */
+			if (candidate_shared == reply->shared) {
+				best_lease = lease_compare(lease, best_lease);
+			}
 		}
 	}
 
