@@ -1,5 +1,5 @@
 /*
- * Copyright(c) 2009 by Internet Systems Consortium, Inc.("ISC")
+ * Copyright(c) 2009-2010 by Internet Systems Consortium, Inc.("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -40,7 +40,6 @@ isclib_cleanup(void)
 #endif
 
 	if (dhcp_gbl_ctx.task != NULL) {
-//		isc_task_destroy(&dhcp_gbl_ctx.task);
 		isc_task_shutdown(dhcp_gbl_ctx.task);
 		isc_task_detach(&dhcp_gbl_ctx.task);
 	}
@@ -152,7 +151,10 @@ dhcp_context_create(void) {
 	return(ISC_R_SUCCESS);
 
  cleanup:
-	isclib_cleanup();
+	/*
+	 * Currently we don't try and cleanup, just return an error
+	 * expecting that our caller will log the error and exit.
+	 */
 
 	return(result);
 }

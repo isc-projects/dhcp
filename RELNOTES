@@ -41,14 +41,20 @@ work on other platforms. Please report any problems and suggested fixes to
 
 			Changes since 4.2.0b1
 
-- Prohibit including lease time information in a response to a DHCP INFORM
-  Bug ticket 21092.
+- Prohibit including lease time information in a response to a DHCP INFORM.
+  [ISC-Bugs #21092]
 
 ! Accept a client id of length 0 while hashing.  Previously the server would
   exit if it attempted to hash a zero length client id, providing attackers
-  with a simple denial of service attack.  Bug ticket 21253.
+  with a simple denial of service attack.  [ISC-Bugs #21253]
 
 - A memory leak in ddns processing was closed.  [ISC-Bugs #21377]
+
+- Modify the exception handling for initial context creation.  Previously
+  we would try and clean up before exiting.  This could present problems
+  when the cleanup required part of the context that wasn't available.  It
+  also didn't do much as we exited afterwards anyway.   Now we simply log
+  the error and exit. [ISC-Bugs #21093]
 
 			Changes since 4.2.0a2
 
@@ -58,7 +64,7 @@ work on other platforms. Please report any problems and suggested fixes to
 - When constructing the DNS name structure from a text string append
   the root to relative names.  This satisfies a requirement in the DNS
   library that names be absolute instead of relative and prevents DHCP
-  from crashing.  Bug ticket 21054.
+  from crashing.  [ISC-Bugs #21054]
 
 - "The LDAP Patch" that has been circulating for some time, written by
   Brian Masney and S.Kalyanasundraram and maintained for application to

@@ -3,7 +3,7 @@
    Network input dispatcher... */
 
 /*
- * Copyright (c) 2004-2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2010 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -111,8 +111,6 @@ dispatch(void)
 	isc_result_t status;
 
 	status = isc_app_ctxrun(dhcp_gbl_ctx.actx);
-
-	isclib_cleanup();
 
 	log_fatal ("Dispatch routine failed: %s -- exiting",
 		   isc_result_totext (status));

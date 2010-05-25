@@ -1464,6 +1464,10 @@ ddns_modify_fwd(dhcp_ddns_cb_t *ddns_cb)
 			     ddns_interlude,
 			     (void *)ddns_cb,
 			     &ddns_cb->transaction);
+	if (result == ISC_R_FAMILYNOSUPPORT) {
+		log_info("Unable to perform DDNS update, "
+			 "address family not supported");
+	}
 
  cleanup:
 	if (dataspace != NULL) {
@@ -1645,6 +1649,10 @@ ddns_modify_ptr(dhcp_ddns_cb_t *ddns_cb)
 			     dhcp_gbl_ctx.task,
 			     ddns_interlude, (void *)ddns_cb,
 			     &ddns_cb->transaction);
+	if (result == ISC_R_FAMILYNOSUPPORT) {
+		log_info("Unable to perform DDNS update, "
+			 "address family not supported");
+	}
 
  cleanup:
 	if (dataspace != NULL) {
