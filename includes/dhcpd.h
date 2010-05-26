@@ -1538,6 +1538,12 @@ struct ipv6_pool {
 #define DDNS_STATE_REM_FW_NXRR     18
 #define DDNS_STATE_REM_PTR         19
 
+/*
+ * Flags for the dns print function
+ */
+#define DDNS_PRINT_INBOUND  1
+#define DDNS_PRINT_OUTBOUND 0
+
 struct dhcp_ddns_cb;
 
 typedef void (*ddns_action_t)(struct dhcp_ddns_cb *ddns_cb,
@@ -2308,9 +2314,7 @@ int token_print_indent (FILE *, int, int,
 			const char *, const char *, const char *);
 void indent_spaces (FILE *, int);
 #if defined (NSUPDATE)
-#if 0
-void print_dns_status (int, ns_updque *);
-#endif
+void print_dns_status (int, struct dhcp_ddns_cb *, isc_result_t);
 #endif
 const char *print_time(TIME);
 

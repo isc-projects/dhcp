@@ -3,7 +3,8 @@
    Turn data structures into printable text. */
 
 /*
- * Copyright (c) 2004-2007,2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -1208,10 +1209,178 @@ void indent_spaces (FILE *file, int indent)
 }
 
 #if defined (NSUPDATE)
+#if defined (DEBUG_DNS_UPDATES)
 /*
- * Place holder for debug information for ddns.
+ * direction outbound (messages to the dns server)
+ *           inbound  (messages from the dns server)
+ * ddns_cb is the control block associated with the message
+ * result is the result from the dns code.  For outbound calls
+ * it is from the call to pass the message to the dns library.
+ * For inbound calls it is from the event returned by the library.
  *
+ * For outbound messages we print whatever we think is interesting
+ * from the control block.
+ * For inbound messages we only print the transaction id pointer
+ * and the result and expect that the user will match them up as
+ * necessary.  Note well: the transaction information is opaque to
+ * us so we simply print the pointer to it.  This should be sufficient
+ * to match requests and replys in a short sequence but is awkward
+ * when trying to use it for longer sequences.
  */
+void
+print_dns_status (int direction,
+		  struct dhcp_ddns_cb *ddns_cb,
+		  isc_result_t result)
+{
+	char obuf[1024];
+	char *s = obuf, *end = &obuf[sizeof(obuf)-2];
+	char *en;
+	const char *result_str;
+	char ddns_address[
+		sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
+
+	if (direction == DDNS_PRINT_INBOUND) {
+		log_info("DDNS reply: id ptr %p, result: %s",
+			 ddns_cb->transaction, isc_result_totext(result));
+		return;
+	}
+
+	/* 
+	 * To avoid having to figure out if any of the strings
+	 * aren't NULL terminated, just 0 the whole string
+	 */
+	memset(obuf, 0, 1024);
+
+	en = "DDNS request: id ptr ";
+	if (s + strlen(en) + 16 < end) {
+		sprintf(s, "%s%p", en, ddns_cb->transaction);
+		s += strlen(s);
+	} else {
+		goto bailout;
+	}
+
+	switch (ddns_cb->state) {
+	case DDNS_STATE_ADD_FW_NXDOMAIN:
+		en = " add forward ";
+		break;
+	case DDNS_STATE_ADD_FW_YXDHCID:
+		en = " modify forward ";
+		break;
+
+	case DDNS_STATE_ADD_PTR:
+		en = " add reverse ";
+		break;
+
+	case DDNS_STATE_REM_FW_YXDHCID:
+		en = " remove forward ";
+		break;
+
+	case DDNS_STATE_REM_FW_NXRR:
+		en = " remove rrset ";
+		break;
+
+	case DDNS_STATE_REM_PTR:
+		en = " remove reverse ";
+		break;
+
+	case DDNS_STATE_CLEANUP:
+		en = " cleanup ";
+		break;
+
+	default:
+		en = " unknown state ";
+		break;
+	}
+
+	switch (ddns_cb->state) {
+	case DDNS_STATE_ADD_FW_NXDOMAIN:
+	case DDNS_STATE_ADD_FW_YXDHCID:
+	case DDNS_STATE_REM_FW_YXDHCID:
+	case DDNS_STATE_REM_FW_NXRR:
+		strcpy(ddns_address, piaddr(ddns_cb->address));
+		if (s + strlen(en) + strlen(ddns_address) +
+		    ddns_cb->fwd_name.len + 5 < end) {
+			sprintf(s, "%s%s for %.*s", en, ddns_address,
+				ddns_cb->fwd_name.len,
+				ddns_cb->fwd_name.data);
+			s += strlen(s);
+		} else {
+			goto bailout;
+		}
+		break;
+
+	case DDNS_STATE_ADD_PTR:
+	case DDNS_STATE_REM_PTR:
+		if (s + strlen(en) + ddns_cb->fwd_name.len +
+		    ddns_cb->rev_name.len + 5 < end) {
+			sprintf(s, "%s%.*s for %.*s", en,
+				ddns_cb->fwd_name.len,
+				ddns_cb->fwd_name.data,
+				ddns_cb->rev_name.len,
+				ddns_cb->rev_name.data);
+			s += strlen(s);
+		} else {
+			goto bailout;
+		}
+		break;
+
+	case DDNS_STATE_CLEANUP:
+	default:
+		if (s + strlen(en) < end) {
+			sprintf(s, "%s", en);
+			s += strlen(s);
+		} else {
+			goto bailout;
+		}
+		break;
+	}
+
+	en = " zone: ";
+	if (s + strlen(en) + strlen((char *)ddns_cb->zone_name) < end) {
+		sprintf(s, "%s%s", en, ddns_cb->zone_name);
+		s += strlen(s);
+	} else {
+		goto bailout;
+	}
+
+	en = " dhcid: ";
+	if (s + strlen(en) + ddns_cb->dhcid.len < end) {
+		strcpy(s, en);
+		s += strlen(s);
+		strncpy(s, (char *)ddns_cb->dhcid.data + 1,
+			ddns_cb->dhcid.len - 1);
+		s += strlen(s);
+	} else {
+		goto bailout;
+	}
+
+	en = " ttl: ";
+	if (s + strlen(en) + 10 < end) {
+		sprintf(s, "%s%ld", en, ddns_cb->ttl);
+		s += strlen(s);
+	} else {
+		goto bailout;
+	}
+		
+	en = " result: ";
+	result_str = isc_result_totext(result);
+	if (s + strlen(en) + strlen(result_str) < end) {
+		sprintf(s, "%s%s", en, result_str);
+		s += strlen(s);
+	} else {
+		goto bailout;
+	}
+
+ bailout:
+	/*
+	 * We either finished building the string or ran out
+	 * of space, print whatever we have in case it is useful
+	 */
+	log_info("%s", obuf);
+
+	return;
+}
+#endif
 #endif /* NSUPDATE */
 
 /* Format the given time as "A; # B", where A is the format

@@ -103,6 +103,11 @@
 
 /* #define DEBUG_DUMP_ALL_LEASES */
 
+/* Define this if you want to see the requests and replies between the
+   DHCP code and the DNS library code. */
+
+/* #define DEBUG_DNS_UPDATES */
+
 /* Define this if you want DHCP failover protocol support in the DHCP
    server. */
 
