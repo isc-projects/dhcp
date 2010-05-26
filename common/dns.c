@@ -1245,6 +1245,11 @@ void ddns_interlude(isc_task_t  *taskp,
 		trace_ddns_input_write(ddns_cb, eresult);
 	}
 #endif
+
+#if defined (DEBUG_DNS_UPDATES)
+	print_dns_status(DDNS_PRINT_INBOUND, ddns_cb, eresult);
+#endif
+
 	/* This transaction is complete, clear the value */
 	dns_client_destroyupdatetrans(&ddns_cb->transaction);
 
@@ -1469,6 +1474,10 @@ ddns_modify_fwd(dhcp_ddns_cb_t *ddns_cb)
 			 "address family not supported");
 	}
 
+#if defined (DEBUG_DNS_UPDATES)
+	print_dns_status(DDNS_PRINT_OUTBOUND, ddns_cb, result);
+#endif
+
  cleanup:
 	if (dataspace != NULL) {
 		isc_mem_put(dhcp_gbl_ctx.mctx, dataspace,
@@ -1653,6 +1662,10 @@ ddns_modify_ptr(dhcp_ddns_cb_t *ddns_cb)
 		log_info("Unable to perform DDNS update, "
 			 "address family not supported");
 	}
+
+#if defined (DEBUG_DNS_UPDATES)
+	print_dns_status(DDNS_PRINT_OUTBOUND, ddns_cb, result);
+#endif
 
  cleanup:
 	if (dataspace != NULL) {

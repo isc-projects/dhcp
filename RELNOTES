@@ -63,6 +63,8 @@ work on other platforms. Please report any problems and suggested fixes to
   allocated in shared networks also now are not offered if the client has
   moved.  [ISC-Bugs #21152]
 
+- Add some debugging output for use with the DDNS code. [ISC-Bugs #20916]
+
 			Changes since 4.2.0a2
 
 - Update the fsync code to work with the changes to the DDNS code.  It now
