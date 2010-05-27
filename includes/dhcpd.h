@@ -750,6 +750,9 @@ struct lease_state {
 #if !defined (DEFAULT_DDNS_TTL)
 # define DEFAULT_DDNS_TTL 3600
 #endif
+#if !defined (MAX_DEFAULT_DDNS_TTL)
+# define MAX_DEFAULT_DDNS_TTL 3600
+#endif
 
 /* Client option names */
 

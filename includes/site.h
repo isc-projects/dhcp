@@ -200,3 +200,15 @@
    traces. */
 
 /* #define TRACING */
+
+/* Define this if you want the server to use the previous behavior
+   when determining the DDNS TTL.  If the user has specified a ddns-ttl
+   option that is used to detemine the ttl.  (If the user specifies
+   an option that references the lease structure it is only usable
+   for v4.  In that case v6 will use the default.) Otherwise when
+   defined the defaults are: v4 - 1/2 the lease time,
+   v6 - DEFAULT_DDNS_TTL.  When undefined the defaults are 1/2 the
+   (preferred) lease time for both but with a cap on the maximum. */
+
+/* #define USE_OLD_DDNS_TTL */
+

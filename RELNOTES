@@ -66,7 +66,14 @@ work on other platforms. Please report any problems and suggested fixes to
 - Add some debugging output for use with the DDNS code. [ISC-Bugs #20916]
 
 - Fix the trace code to handle timing events better and to truncate a file
-  before using instead of overwriting it.  [ISC-Bugs 20969]
+  before using instead of overwriting it.  [ISC-Bugs #20969]
+
+- Modify the determination of the default TTL to use for DDNS updates.
+  The user may still configure the ttl via ddns-ttl.  The default for
+  both v4 and v6 is now 1/2 the (preferred) lease time with a limit.  The
+  previous defaults (1/2 lease time without a limit for v4 and a default
+  value for v6) may be used by defining USE_OLD_DDNS_TTL in site.h
+  [ISC-Bugs #21126]
 
 			Changes since 4.2.0a2
 

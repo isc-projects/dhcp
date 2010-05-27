@@ -3,7 +3,9 @@
    Dynamic DNS updates. */
 
 /*
- * Copyright (c) 2004-2007,2009 by Internet Systems Consortium, Inc. ("ISC")
+ * 
+ * Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2000-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -328,17 +330,49 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 
 	/*
 	 * Compute the RR TTL.
+	 *
+	 * We have two ways of computing the TTL.
+	 * The old behavior was to allow for the customer to set up
+	 * the option or to default things.  For v4 this was 1/2
+	 * of the lease time, for v6 this was DEFAULT_DDNS_TTL.
+	 * The new behavior continues to allow the customer to set
+	 * up an option but the defaults are a little different.
+	 * We now use 1/2 of the (preferred) lease time for both
+	 * v4 and v6 and cap them at a maximum value. 
+	 * If the customer chooses to use an experession that references
+	 * part of the lease the v6 value will be the default as there
+	 * isn't a lease available for v6.
 	 */
+
 	ddns_ttl = DEFAULT_DDNS_TTL;
+	if (lease != NULL) {
+		if (lease->ends <= cur_time) {
+			ddns_ttl = 0;
+		} else {
+			ddns_ttl = (lease->ends - cur_time)/2;
+		}
+	}
+#ifndef USE_OLD_DDNS_TTL
+	else if (lease6 != NULL) {
+		ddns_ttl = lease6->prefer/2;
+	}
+
+	if (ddns_ttl > MAX_DEFAULT_DDNS_TTL) {
+		ddns_ttl = MAX_DEFAULT_DDNS_TTL;
+	}
+#endif 		
+
 	if ((oc = lookup_option(&server_universe, options, SV_DDNS_TTL))) {
 		if (evaluate_option_cache(&d1, packet, lease, NULL,
-					  packet->options, options, scope,
-					  oc, MDL)) {
+					  packet->options, options,
+					  scope, oc, MDL)) {
 			if (d1.len == sizeof (u_int32_t))
-				ddns_cb->ttl = getULong (d1.data);
+				ddns_ttl = getULong (d1.data);
 			data_string_forget (&d1, MDL);
 		}
 	}
+
+	ddns_cb->ttl = ddns_ttl;
 
 	/*
 	 * Compute the reverse IP name, starting with the domain name.
