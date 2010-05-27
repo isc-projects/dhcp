@@ -72,7 +72,6 @@ char std_nsupdate [] = "						    \n\
 option server.ddns-hostname =						    \n\
   pick (option fqdn.hostname, option host-name);			    \n\
 option server.ddns-domainname =	config-option domain-name;		    \n\
-option server.ddns-ttl = encode-int(lease-time / 2, 32);		    \n\
 option server.ddns-rev-domainname = \"in-addr.arpa.\";";
 
 /* This is the old-style name service updater that is executed
