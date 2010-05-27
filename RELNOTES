@@ -65,6 +65,9 @@ work on other platforms. Please report any problems and suggested fixes to
 
 - Add some debugging output for use with the DDNS code. [ISC-Bugs #20916]
 
+- Fix the trace code to handle timing events better and to truncate a file
+  before using instead of overwriting it.  [ISC-Bugs 20969]
+
 			Changes since 4.2.0a2
 
 - Update the fsync code to work with the changes to the DDNS code.  It now
