@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-			     Version 4.2.0b1
-			      30 March 2010
+			     Version 4.2.0b2
+			       1 June 2010
 
 			      Release Notes
 
@@ -74,6 +74,18 @@ work on other platforms. Please report any problems and suggested fixes to
   previous defaults (1/2 lease time without a limit for v4 and a default
   value for v6) may be used by defining USE_OLD_DDNS_TTL in site.h
   [ISC-Bugs #21126]
+
+- libisc/libdns is now brought up to version 9.7.1rc1.  This corrects
+  three reported flaws in ISC DHCP;
+
+  o DHCP processes (dhcpd, dhclient) fail to start if one of either the
+    IPv4 or IPv6 address families is not present.  [ISC-Bugs #21122]
+
+  o Assertion failure when attempting to cancel a previously running DDNS
+    update.  [ISC-Bugs #21133]
+
+  o Compilation failure of libisc/libdns due to the use of a flexible
+    array member.  [ISC-Bugs #21316]
 
 			Changes since 4.2.0a2
 
