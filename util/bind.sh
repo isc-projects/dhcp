@@ -14,7 +14,7 @@
 # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 
-# $Id: bind.sh,v 1.10 2010/06/01 17:29:36 dhankins Exp $
+# $Id: bind.sh,v 1.11 2010/06/02 22:18:41 dhankins Exp $
 
 # Get the bind distribution for the libraries
 # This script is used to build the DHCP distribution and shouldn't be shipped
@@ -29,6 +29,17 @@ binddir=$topdir/bind
 case $# in 
     1)
 	case "$1" in 
+	###
+	### Robie calls this script with the building branch name so we can
+	### build with BIND9 HEAD for the relevant branch we would release
+	### with.
+	###
+	v4_2) SNAP=snapshot BINDTAG=v9_7 ;;
+	HEAD|v[0-9]_[0-9].*) SNAP=snapshot BINDTAG=HEAD ;;
+	###
+	### For ease of use, this records the sticky tag of versions
+	### released with each point release.
+	###
 	4.2.0b2|4.2.0) BINDTAG=v9_7_1rc1 ;;
 	4.2.0b1) BINDTAG=v9_7_0_P1 ;;
 	4.2.0a2|4.2.0a1) BINDTAG=v9_7_0b3 ;;
@@ -37,7 +48,7 @@ case $# in
 	   ;;
 	esac
 	;;
-    *) echo "usage: sh bind.sh <version>" >&2
+    *) echo "usage: sh bind.sh [<branch>|<version>]" >&2
        exit 1
        ;;
 esac
@@ -56,7 +67,7 @@ cvs checkout -p -r $BINDTAG bind9/util/kit.sh > kit.sh
 # Create the bind tarball, which has the side effect of
 # setting up the bind directory we will use for building
 # the export libraries
-sh kit.sh $BINDTAG $binddir
+sh kit.sh $SNAP $BINDTAG $binddir
 
 . ./version.tmp
 
