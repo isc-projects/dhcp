@@ -14,7 +14,7 @@
 # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 
-# $Id: bind.sh,v 1.6.2.6 2010/06/02 22:19:43 dhankins Exp $
+# $Id: bind.sh,v 1.6.2.7 2010/06/03 16:23:44 dhankins Exp $
 
 # Get the bind distribution for the libraries
 # This script is used to build the DHCP distribution and shouldn't be shipped
@@ -34,8 +34,13 @@ case $# in
 	### build with BIND9 HEAD for the relevant branch we would release
 	### with.
 	###
-	v4_2) SNAP=snapshot BINDTAG=v9_7 ;;
-	HEAD|v[0-9]_[0-9].*) SNAP=snapshot BINDTAG=HEAD ;;
+	### XXX: We can't actually use the 'snapshot' syntax because kit.sh
+	### checks out the version.tmp on the branch name, but creates a tar
+	### ball which unpacks with a different name.  So the version.tmp can
+	### not inform us where to chdir down into anymore.
+	###
+	v4_2) noSNAP=snapshot BINDTAG=v9_7 ;;
+	HEAD|v[0-9]_[0-9].*) noSNAP=snapshot BINDTAG=HEAD ;;
 	###
 	### For ease of use, this records the sticky tag of versions
 	### released with each point release.
