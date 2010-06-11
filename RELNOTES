@@ -47,7 +47,6 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and may not
 work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
-
                         Changes since 4.1.1
 
 - Cleaned up some compiler warnings
@@ -64,6 +63,8 @@ work on other platforms. Please report any problems and suggested fixes to
   despite being on different shared networks.  Dynamic prefixes specifically
   allocated in shared networks also now are not offered if the client has
   moved.  [ISC-Bugs #21152]
+
+- Add declaration for variable in debug code in alloc.c.  [ISC-Bugs #21472]
 
                         Changes since 4.1.1rc1
 
