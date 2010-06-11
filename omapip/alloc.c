@@ -4,7 +4,8 @@
    protocol... */
 
 /*
- * Copyright (c) 2004-2007,2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -257,6 +258,7 @@ void dmalloc_dump_outstanding ()
 	struct dmalloc_preamble *dp;
 #if defined(DEBUG_MALLOC_POOL)
 	unsigned char *foo;
+	int i;
 #endif
 
 	if (!dmalloc_cutoff_point)
