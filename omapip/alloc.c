@@ -257,6 +257,7 @@ void dmalloc_dump_outstanding ()
 	struct dmalloc_preamble *dp;
 #if defined(DEBUG_MALLOC_POOL)
 	unsigned char *foo;
+	int i;
 #endif
 
 	if (!dmalloc_cutoff_point)
