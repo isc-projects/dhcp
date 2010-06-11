@@ -39,6 +39,9 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and may not
 work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
+			Changes since 4.2.0b2
+
+- Add declaration for variable in debug code in alloc.c.  [ISC-Bugs #21472]
 
 			Changes since 4.2.0b1
 
