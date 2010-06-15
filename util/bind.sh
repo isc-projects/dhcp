@@ -14,7 +14,7 @@
 # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 
-# $Id: bind.sh,v 1.6.2.7 2010/06/03 16:23:44 dhankins Exp $
+# $Id: bind.sh,v 1.6.2.8 2010/06/15 18:42:34 dhankins Exp $
 
 # Get the bind distribution for the libraries
 # This script is used to build the DHCP distribution and shouldn't be shipped
@@ -45,7 +45,8 @@ case $# in
 	### For ease of use, this records the sticky tag of versions
 	### released with each point release.
 	###
-	4.2.0b2|4.2.0) BINDTAG=v9_7_1rc1 ;;
+	4.2.0rc1|4.2.0) BINDTAG=v9_7_1 ;;
+	4.2.0b2) BINDTAG=v9_7_1rc1 ;;
 	4.2.0b1) BINDTAG=v9_7_0_P1 ;;
 	4.2.0a2|4.2.0a1) BINDTAG=v9_7_0b3 ;;
 	*) echo "bind.sh: unsupported version: $1" >&2
