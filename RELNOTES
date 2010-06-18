@@ -60,7 +60,8 @@ suggested fixes to <dhcp-users@isc.org>.
 
 ! Accept a client id of length 0 while hashing.  Previously the server would
   exit if it attempted to hash a zero length client id, providing attackers
-  with a simple denial of service attack.  Bug ticket 21253.
+  with a simple denial of service attack.  [ISC-Bugs #21253]
+  CERT: VU#541921 - CVE: CVE-2010-2156
 
 - A bug was fixed that could cause the DHCPv6 server to advertise/assign a
   previously allocated (active) lease to a client that has changed subnets,
