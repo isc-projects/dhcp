@@ -14,7 +14,7 @@
 # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 
-# $Id: bind.sh,v 1.13 2010/06/15 18:41:51 dhankins Exp $
+# $Id: bind.sh,v 1.14 2010/06/18 03:23:04 marka Exp $
 
 # Get the bind distribution for the libraries
 # This script is used to build the DHCP distribution and shouldn't be shipped
@@ -79,9 +79,10 @@ sh kit.sh $SNAP $BINDTAG $binddir
 
 version=${MAJORVER}.${MINORVER}.${PATCHVER}${RELEASETYPE}${RELEASEVER}
 bindsrcdir=bind-$version
+mm=${MAJORVER}.${MINORVER}
 
 # move the tar file to a known place for use by the make dist command
-mv bind-9.7*.tar.gz bind.tar.gz
+mv bind-${mm}*.tar.gz bind.tar.gz
 
 # temporary hack to allow testing when using snapshots
 #mv $binddir/bind-9.7* $binddir/$bindsrcdir
