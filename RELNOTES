@@ -51,6 +51,7 @@ work on other platforms. Please report any problems and suggested fixes to
 ! Accept a client id of length 0 while hashing.  Previously the server would
   exit if it attempted to hash a zero length client id, providing attackers
   with a simple denial of service attack.  [ISC-Bugs #21253]
+  CERT: VU#541921 - CVE: CVE-2010-2156
 
 - A memory leak in ddns processing was closed.  [ISC-Bugs #21377]
 
