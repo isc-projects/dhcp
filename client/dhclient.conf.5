@@ -1,4 +1,4 @@
-.\"	$Id: dhclient.conf.5,v 1.28 2010/04/27 22:13:53 sar Exp $
+.\"	$Id: dhclient.conf.5,v 1.29 2010/07/02 23:09:14 sar Exp $
 .\"
 .\" Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
@@ -24,10 +24,9 @@
 .\"
 .\" This software has been written for Internet Software Consortium
 .\" by Ted Lemon in cooperation with Vixie Enterprises and Nominum, Inc.
-.\" To learn more about Internet Software Consortium, see
-.\" ``https://www.isc.org/''.  To learn more about Vixie Enterprises,
-.\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
-.\" ``http://www.nominum.com''.
+.\" 
+.\" Support and other services are available for ISC products - see
+.\" https://www.isc.org for more information or to learn more about ISC.
 .\"
 .TH dhclient.conf 5
 .SH NAME
@@ -189,7 +188,7 @@ statement - not option parameters.   By default, the DHCPv4 client
 requests the subnet-mask, broadcast-address, time-offset, routers,
 domain-name, domain-name-servers and host-name options while the DHCPv6
 client requests the dhcp6 name-servers and domain-search options.  Note
-that if you enter a 'request' statement, you over-ride these defaults
+that if you enter a \'request\' statement, you over-ride these defaults
 and these options will not be requested.
 .PP
 In some cases, it may be desirable to send no parameter request list
@@ -202,7 +201,7 @@ no parameters:
 .PP
 In most cases, it is desirable to simply add one option to the request
 list which is of interest to the client in question.  In this case, it
-is best to 'also request' the additional options:
+is best to \'also request\' the additional options:
 .PP
 .nf
 	also request domain-search, dhcp6.sip-servers-addresses;
@@ -658,7 +657,7 @@ statement defines the hardware MAC address to use for this interface,
 for DHCP servers or relays to direct their replies.  dhclient will determine
 the interface's MAC address automatically, so use of this parameter
 is not recommended.  The \fIlink-type\fR corresponds to the interface's
-link layer type (example: 'ethernet'), while the \fImac-address\fR is
+link layer type (example: \'ethernet\'), while the \fImac-address\fR is
 a string of colon-separated hexadecimal values for octets.
 .PP
  \fBanycast-mac\fR \fIlink-type mac-address\fR\fB;\fR

@@ -1,6 +1,6 @@
-.\"	$Id: dhcp-options.5,v 1.47 2010/01/21 22:17:17 dhankins Exp $
+.\"	$Id: dhcp-options.5,v 1.48 2010/07/02 23:09:14 sar Exp $
 .\"
-.\" Copyright (c) 2004-2009 by Internet Systems Consortium, Inc. ("ISC")
+.\" Copyright (c) 2004-2010 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
@@ -23,10 +23,10 @@
 .\"
 .\" This software has been written for Internet Systems Consortium
 .\" by Ted Lemon in cooperation with Vixie Enterprises and Nominum, Inc.
-.\" To learn more about Internet Systems Consortium, see
-.\" ``https://www.isc.org/''.  To learn more about Vixie Enterprises,
-.\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
-.\" ``http://www.nominum.com''.
+.\"
+.\" Support and other services are available for ISC products - see
+.\" https://www.isc.org for more information or to learn more about ISC.
+.\"
 .TH dhcpd-options 5
 .SH NAME
 dhcp-options - Dynamic Host Configuration Protocol options
@@ -320,7 +320,7 @@ This option is not user configurable.
 .B option \fBdhcp-option-overload\fR \fIuint8\fR\fB;\fR
 .RS 0.25i
 .PP
-This option is used to indicate that the DHCP 'sname' or 'file'
+This option is used to indicate that the DHCP \'sname\' or \'file\'
 fields are being overloaded by using them to carry DHCP options. A
 DHCP server inserts this option if the returned parameters will
 exceed the usual space allotted for options.
@@ -332,8 +332,8 @@ option fields.
 Legal values for this option are:
 .PP
 .nf
-             1     the 'file' field is used to hold options
-             2     the 'sname' field is used to hold options
+             1     the \'file\' field is used to hold options
+             2     the \'sname\' field is used to hold options
              3     both fields are used to hold options                        
 .fi
 .PP
@@ -403,7 +403,7 @@ This option is used in DHCPOFFER and DHCPREQUEST messages, and may
 optionally be included in the DHCPACK and DHCPNAK messages.  DHCP
 servers include this option in the DHCPOFFER in order to allow the
 client to distinguish between lease offers.  DHCP clients use the
-contents of the 'server identifier' field as the destination address
+contents of the \'server identifier\' field as the destination address
 for any DHCP messages unicast to the DHCP server.  DHCP clients also
 indicate which of several lease offers is being accepted by including
 this option in a DHCPREQUEST message.
@@ -435,7 +435,7 @@ should be listed in order of preference.
 .B option \fBdomain-search\fR \fIdomain-list\fR\fB;\fR
 .RS 0.25i
 .PP
-The domain-search option specifies a 'search list' of Domain Names to be
+The domain-search option specifies a \'search list\' of Domain Names to be
 used by the client to locate not-fully-qualified domain names.  The difference
 between this option and historic use of the domain-name option for the same
 ends is that this option is encoded in RFC1035 compressed labels on the wire.
@@ -1238,7 +1238,7 @@ The values of these fields are those defined in the DNS protocol specification.
 .PP
 Specifies the domain name that the client wishes to use.   This can be a
 fully-qualified domain name, or a single label.   If there is no trailing
-'.' character in the name, it is not fully-qualified, and the server will
+\'.\' character in the name, it is not fully-qualified, and the server will
 generally update that name in some locally-defined domain.
 .RE
 .PP
@@ -1404,7 +1404,7 @@ should be used instead.
 .RS 0.25i
 .PP
 The \fBpreference\fR option informs a DHCPv6 client which server is
-'preferred' for use on a given subnet.  This preference is only
+\'preferred\' for use on a given subnet.  This preference is only
 applied during the initial stages of configuration - once a client
 is bound to an IA, it will remain bound to that IA until it is no
 longer valid or has expired.  This value may be configured on the
@@ -1720,7 +1720,7 @@ might define an option, "local-host-name", feeling some confidence
 that no official DHCP option name will ever start with "local".
 .PP
 Once you have chosen a name, you must choose a code.  All codes between
-224 and 254 are reserved as 'site-local' DHCP options, so you can pick
+224 and 254 are reserved as \'site-local\' DHCP options, so you can pick
 any one of these for your site (not for your product/application).  In
 RFC3942, site-local space was moved from starting at 128 to starting at
 224.  In practice, some vendors have interpreted the protocol rather
