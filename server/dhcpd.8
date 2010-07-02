@@ -1,6 +1,7 @@
 .\"	dhcpd.8
 .\"
-.\" Copyright (c) 2004-2007,2009 by Internet Systems Consortium, Inc. ("ISC")
+.\" Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
+.\" Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
@@ -23,12 +24,11 @@
 .\"
 .\" This software has been written for Internet Systems Consortium
 .\" by Ted Lemon in cooperation with Vixie Enterprises and Nominum, Inc.
-.\" To learn more about Internet Systems Consortium, see
-.\" ``https://www.isc.org/''.  To learn more about Vixie Enterprises,
-.\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
-.\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.8,v 1.29.32.2 2009/07/24 22:04:53 sar Exp $
+.\" Support and other services are available for ISC products - see
+.\" https://www.isc.org for more information or to learn more about ISC.
+.\"
+.\" $Id: dhcpd.8,v 1.29.32.3 2010/07/02 23:37:07 sar Exp $
 .\"
 .TH dhcpd 8
 .SH NAME
@@ -98,16 +98,6 @@ Protocol (BOOTP).  DHCP allows hosts on a TCP/IP network to request
 and be assigned IP addresses, and also to discover information about
 the network to which they are attached.  BOOTP provides similar
 functionality, with certain restrictions.
-.SH CONTRIBUTIONS
-.PP
-This software is free software.  At various times its development has
-been underwritten by various organizations, including the ISC and
-Vixie Enterprises.  The development of 3.0 has been funded almost
-entirely by Nominum, Inc.
-.PP
-At this point development is being shepherded by Ted Lemon, and hosted
-by the ISC, but the future of this project depends on you.  If you
-have features you want, please consider implementing them.
 .SH OPERATION
 .PP
 The DHCP protocol allows a host which is unknown to the network
@@ -309,7 +299,7 @@ being served.
 .PP
 For example, in an office environment where systems are added from
 time to time and removed from time to time, but move relatively
-infrequently, it might make sense to allow lease times of a month of
+infrequently, it might make sense to allow lease times of a month or
 more.   In a final test environment on a manufacturing floor, it may
 make more sense to assign a maximum lease length of 30 minutes -
 enough time to go through a simple test procedure on a network
@@ -779,4 +769,3 @@ Funding for this project was provided by Internet Systems
 Consortium.   Version 3 of the DHCP server was funded by Nominum, Inc.
 Information about Internet Systems Consortium is available at
 .B https://www.isc.org/\fR.
-Information about Nominum can be found at \fBhttp://www.nominum.com/\fR.

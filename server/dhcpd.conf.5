@@ -1,6 +1,6 @@
 .\"	dhcpd.conf.5
 .\"
-.\" Copyright (c) 2004-2009 by Internet Systems Consortium, Inc. ("ISC")
+.\" Copyright (c) 2004-2010 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
@@ -23,12 +23,11 @@
 .\"
 .\" This software has been written for Internet Systems Consortium
 .\" by Ted Lemon in cooperation with Vixie Enterprises and Nominum, Inc.
-.\" To learn more about Internet Systems Consortium, see
-.\" ``https://www.isc.org/''.  To learn more about Vixie Enterprises,
-.\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
-.\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.99.10.3 2009/07/23 19:02:10 sar Exp $
+.\" Support and other services are available for ISC products - see
+.\" https://www.isc.org for more information or to learn more about ISC.
+.\"
+.\" $Id: dhcpd.conf.5,v 1.99.10.4 2010/07/02 23:37:07 sar Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -414,7 +413,7 @@ allocation using the same method described here, and will typically
 try a new IP address.
 .SH DHCP FAILOVER
 This version of the ISC DHCP server supports the DHCP failover
-protocol as documented in draft-ietf-dhc-failover-07.txt.   This is
+protocol as documented in draft-ietf-dhc-failover-12.txt.   This is
 not a final protocol document, and we have not done interoperability
 testing with other vendors' implementations of this protocol, so you
 must not assume that this implementation conforms to the standard.
@@ -437,10 +436,9 @@ server into the PARTNER-DOWN state.
 .PP
 You can put the server into the PARTNER-DOWN state either by using the
 .B omshell (1)
-command or by stopping the server, editing the last peer state
+command or by stopping the server, editing the last failover state
 declaration in the lease file, and restarting the server.   If you use
-this last method, be sure to leave the date and time of the start of
-the state blank:
+this last method, change the "my state" line to:
 .PP
 .nf
 .B failover peer "\fIname\fB" state {
@@ -448,6 +446,8 @@ the state blank:
 .B   peer state \fIstate\fB at \fIdate\fB;
 .B }
 .fi
+.PP
+It is only required to change "my state" as shown above.
 .PP
 When the other server comes back online, it should automatically
 detect that it has been offline and request a complete update from the
@@ -758,22 +758,23 @@ saturation...when any server ran out of leases to assign, it also lost
 its ability to notice it had run dry.
 .PP
 In order to understand pool balance, some elements of its operation
-first need to be defined.  First, there are 'free' and 'backup' leases.
-Both of these are referred to as 'free state leases'.  'free' and 'backup'
-are 'the free states' for the purpose of this document.  The difference
-is that only the primary may allocate from 'free' leases unless under
-special circumstances, and only the secondary may allocate 'backup' leases.
+first need to be defined.  First, there are \'free\' and \'backup\' leases.
+Both of these are referred to as \'free state leases\'.  \'free\' and
+\'backup\'
+are \'the free states\' for the purpose of this document.  The difference
+is that only the primary may allocate from \'free\' leases unless under
+special circumstances, and only the secondary may allocate \'backup\' leases.
 .PP
 When pool balance is performed, the only plausible expectation is to
 provide a 50/50 split of the free state leases between the two servers.
 This is because no one can predict which server will fail, regardless
 of the relative load placed upon the two servers, so giving each server
-half the leases gives both servers the same amount of 'failure endurance'.
+half the leases gives both servers the same amount of \'failure endurance\'.
 Therefore, there is no way to configure any different behaviour, outside of
 some very small windows we will describe shortly.
 .PP
 The first thing calculated on any pool balance run is a value referred to
-as 'lts', or "Leases To Send".  This, simply, is the difference in the
+as \'lts\', or "Leases To Send".  This, simply, is the difference in the
 count of free and backup leases, divided by two.  For the secondary,
 it is the difference in the backup and free leases, divided by two.
 The resulting value is signed: if it is positive, the local server is
@@ -799,7 +800,7 @@ by this time, and fit into the schedule if it falls within
 the \fBmin-balance\fR and \fBmax-balance\fR configured values.  The
 scheduled pool check time is only moved in a downwards direction, it is
 never increased.  Lastly, if the lts is more than double this number in
-the negative direction, the local server will 'panic' and transmit a
+the negative direction, the local server will \'panic\' and transmit a
 Failover protocol POOLREQ message, in the hopes that the remote system
 will be woken up into action.
 .PP
@@ -817,10 +818,10 @@ the \fBmax-lease-ownership\fR percentage.  So it is through this value that
 you can permit a small misbalance of the lease pools - for the purpose of
 giving the peer more than a 50/50 share of leases in the hopes that their
 clients might some day return and be allocated by the peer (operating
-normally).  This process is referred to as 'MAC Address Affinity', but this
+normally).  This process is referred to as \'MAC Address Affinity\', but this
 is somewhat misnamed: it applies equally to DHCP Client Identifier options.
 Note also that affinity is applied to leases when they enter the state
-'free' from 'expired' or 'released'.  In this case also, leases will not
+\'free\' from \'expired\' or \'released\'.  In this case also, leases will not
 be moved from free to backup if the secondary already has more than its
 share.
 .PP
@@ -1029,7 +1030,7 @@ class "jr-cable-modems" {
 }
 
 class "dv-dsl-modems" {
-  match if opton dhcp-vendor-identifier = "dvdsl";
+  match if option dhcp-vendor-identifier = "dvdsl";
   spawn with option agent.circuit-id;
   lease limit 16;
 }
@@ -1905,7 +1906,7 @@ set the broadcast bit in the flags field of the BOOTP message header.
 Unfortunately, some DHCP and BOOTP clients do not do this, and
 therefore may not receive responses from the DHCP server.   The DHCP
 server can be made to always broadcast its responses to clients by
-setting this flag to 'on' for the relevant scope; relevant scopes would be
+setting this flag to \'on\' for the relevant scope; relevant scopes would be
 inside a conditional statement, as a parameter for a class, or as a parameter
 for a host declaration.   To avoid creating excess broadcast traffic on your
 network, we recommend that you restrict the use of this option to as few
@@ -2084,6 +2085,7 @@ should be the length in seconds that will be assigned to a lease if
 the client requesting the lease does not ask for a specific expiration
 time.  This is used for both DHCPv4 and DHCPv6 leases (it is also known
 as the "valid lifetime" in DHCPv6).
+The default is 43200 seconds.
 .RE
 .PP
 The
@@ -2114,7 +2116,7 @@ a second).
 .PP
 Please note that as delayed-ack is currently experimental, the delayed-ack
 feature is not compiled in by default, but must be enabled at compile time
-with './configure --enable-delayed-ack'.
+with \'./configure --enable-delayed-ack\'.
 .RE
 .PP
 The
@@ -2299,7 +2301,7 @@ statement
 .PP
 .B infinite-is-reserved \fIflag\fB;\fR
 .PP
-ISC DHCP now supports 'reserved' leases.  See the section on RESERVED LEASES
+ISC DHCP now supports \'reserved\' leases.  See the section on RESERVED LEASES
 below.  If this \fIflag\fR is on, the server will automatically reserve leases
 allocated to clients which requested an infinite (0xffffffff) lease-time.
 .PP
@@ -2457,7 +2459,9 @@ statement
 .PP
 .I Time
 should be the maximum length in seconds that will be assigned to a
-lease.   The only exception to this is that Dynamic BOOTP lease
+lease.
+If not defined, the default maximum lease time is 86400.
+The only exception to this is that Dynamic BOOTP lease
 lengths, which are not specified by the client, are not limited by
 this maximum.
 .RE
@@ -2472,6 +2476,8 @@ statement
 .I Time
 should be the minimum length in seconds that will be assigned to a
 lease.
+The default is the minimum of 300 seconds or 
+\fBmax-lease-time\fR.
 .RE
 .PP
 The
@@ -2633,7 +2639,7 @@ statement
 .B preferred-lifetime
 .I seconds\fR\fB;\fR
 .PP
-IPv6 addresses have 'valid' and 'preferred' lifetimes.  The valid lifetime
+IPv6 addresses have \'valid\' and \'preferred\' lifetimes.  The valid lifetime
 determines at what point at lease might be said to have expired, and is no
 longer useable.  A preferred lifetime is an advisory condition to help
 applications move off of the address and onto currently valid addresses
@@ -2912,13 +2918,13 @@ For example:
 It's often useful to allocate a single address to a single client, in
 approximate perpetuity.  Host statements with \fBfixed-address\fR clauses
 exist to a certain extent to serve this purpose, but because host statements
-are intended to approximate 'static configuration', they suffer from not being
-referenced in a littany of other Server Services, such as dynamic DNS,
-failover, 'on events' and so forth.
+are intended to approximate \'static configuration\', they suffer from not 
+being referenced in a littany of other Server Services, such as dynamic DNS,
+failover, \'on events\' and so forth.
 .PP
-If a standard dynamic lease, as from any range statement, is marked 'reserved',
-then the server will only allocate this lease to the client it is identified
-by (be that by client identifier or hardware address).
+If a standard dynamic lease, as from any range statement, is marked
+\'reserved\', then the server will only allocate this lease to the client it
+is identified by (be that by client identifier or hardware address).
 .PP
 In practice, this means that the lease follows the normal state engine, enters
 ACTIVE state when the client is bound to it, expires, or is released, and any
@@ -2927,18 +2933,18 @@ processed normally, as with any other dynamic lease.  The only difference
 is that failover servers treat reserved leases as special when they enter
 the FREE or BACKUP states - each server applies the lease into the state it
 may allocate from - and the leases are not placed on the queue for allocation
-to other clients.  Instead they may only be 'found' by client identity.  The
+to other clients.  Instead they may only be \'found\' by client identity.  The
 result is that the lease is only offered to the returning client.
 .PP
 Care should probably be taken to ensure that the client only has one lease
 within a given subnet that it is identified by.
 .PP
-Leases may be set 'reserved' either through OMAPI, or through the
-\'infinite-is-reserved' configuration option (if this is applicable to your
+Leases may be set \'reserved\' either through OMAPI, or through the
+\'infinite-is-reserved\' configuration option (if this is applicable to your
 environment and mixture of clients).
 .PP
-It should also be noted that leases marked 'reserved' are effectively treated
-the same as leases marked 'bootp'.
+It should also be noted that leases marked \'reserved\' are effectively treated
+the same as leases marked \'bootp\'.
 .RE
 .SH REFERENCE: OPTION STATEMENTS
 DHCP option statements are documented in the

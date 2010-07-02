@@ -1,6 +1,7 @@
 .\"	dhclient-script.8
 .\"
-.\" Copyright (c) 2004-2005,2009 by Internet Systems Consortium, Inc. ("ISC")
+.\" Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
+.\" Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
@@ -23,12 +24,11 @@
 .\"
 .\" This software has been written for Internet Systems Consortium
 .\" by Ted Lemon in cooperation with Vixie Enterprises and Nominum, Inc.
-.\" To learn more about Internet Systems Consortium, see
-.\" ``https://www.isc.org/''.  To learn more about Vixie Enterprises,
-.\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
-.\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhclient-script.8,v 1.11.762.2 2009/07/24 22:04:51 sar Exp $
+.\" Support and other services are available for ISC products - see
+.\" https://www.isc.org for more information or to learn more about ISC.
+.\"
+.\" $Id: dhclient-script.8,v 1.11.762.3 2010/07/02 23:37:06 sar Exp $
 .\"
 .TH dhclient-script 8
 .SH NAME
@@ -70,7 +70,7 @@ On after defining the make_resolv_conf function, the client script checks
 for the presence of an executable
 .B ETCDIR/dhclient-enter-hooks
 script, and if present, it invokes the script inline, using the Bourne
-shell '.' command.   The entire environment documented under OPERATION
+shell \'.\' command.   The entire environment documented under OPERATION
 is available to this script, which may modify the environment if needed
 to change the behaviour of the script.   If an error occurs during the
 execution of the script, it can set the exit_status variable to a nonzero
@@ -82,7 +82,7 @@ After all processing has completed,
 .B CLIENTBINDIR/dhclient-script
 checks for the presence of an executable
 .B ETCDIR/dhclient-exit-hooks
-script, which if present is invoked using the '.' command.  The exit
+script, which if present is invoked using the \'.\' command.  The exit
 status of dhclient-script will be passed to dhclient-exit-hooks in the
 exit_status shell variable, and will always be zero if the script
 succeeded at the task for which it was invoked.   The rest of the
@@ -122,8 +122,8 @@ The DHCP client has done an initial binding to a new address.   The
 new ip address is passed in $new_ip_address, and the interface name is
 passed in $interface.   The media type is passed in $medium.   Any
 options acquired from the server are passed using the option name
-described in \fBdhcp-options\fR, except that dashes ('-') are replaced
-by underscores ('_') in order to make valid shell variables, and the
+described in \fBdhcp-options\fR, except that dashes (\'-\') are replaced
+by underscores (\'_\') in order to make valid shell variables, and the
 variable names start with new_.   So for example, the new subnet mask
 would be passed in $new_subnet_mask.
 .PP
