@@ -71,6 +71,15 @@ suggested fixes to <dhcp-users@isc.org>.
 
 - Add declaration for variable in debug code in alloc.c.  [ISC-Bugs #21472]
 
+- Documentation cleanup covering multiple tickets
+  [ISC-Bugs #20265] [ISC-Bugs #20259] [ISC-Bugs #19536] minor cleanup
+  [ISC-Bugs #20263] add text describing some default values
+  [ISC-Bugs #20193] single quotes at the start of a line indicate a control
+  line to nroff, escape them if we actually want a quote.
+  [ISC-Bugs #18916] sync the pointer to web pages amongst the different docs
+  [ISC-Bugs #20245] clarify editing the failover state in a lease file to put
+  a server into the PARTNER-DOWN state.
+
 			Changes since 4.0.2rc1
 
 - None
