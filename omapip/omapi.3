@@ -1,6 +1,7 @@
 .\"	omapi.3
 .\"
-.\" Copyright (c) 2004,2009 by Internet Systems Consortium, Inc. ("ISC")
+.\" Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
+.\" Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 2000-2003 by Internet Software Consortium
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
@@ -23,10 +24,10 @@
 .\"
 .\" This software has been written for Internet Systems Consortium
 .\" by Ted Lemon in cooperation with Vixie Enterprises and Nominum, Inc.
-.\" To learn more about Internet Systems Consortium, see
-.\" ``https://www.isc.org/''.  To learn more about Vixie Enterprises,
-.\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
-.\" ``http://www.nominum.com''.
+.\"
+.\" Support and other services are available for ISC products - see
+.\" https://www.isc.org for more information or to learn more about ISC.
+.\"
 .TH omapi 3
 .SH NAME
 OMAPI - Object Management Application Programming Interface
@@ -37,7 +38,7 @@ applications, and for querying them for their state. It is currently
 used by the ISC DHCP server and this outline addresses the parts of
 OMAPI appropriate to the clients of DHCP server. It does this by also
 describing the use of a thin API layered on top of OMAPI called
-'dhcpctl'
+\'dhcpctl\'
 .PP
 OMAPI uses TCP/IP as the transport for server communication, and
 security can be imposed by having the client and server
@@ -220,7 +221,7 @@ the connection the user must call dhcpctl_new_authenticator.
 .fi
 .PP
 The keyname, algorithm and must all match what is specified in the server's
-dhcpd.conf file, excepting that the secret should appear in 'raw' form, not
+dhcpd.conf file, excepting that the secret should appear in \'raw\' form, not
 in base64 as it would in dhcpd.conf:
 .PP
 .nf
@@ -242,7 +243,5 @@ with the given secret string using the specified algorithm.
 dhcpctl(3), omshell(1), dhcpd(8), dhclient(8), dhcpd.conf(5), dhclient.conf(5).
 .SH AUTHOR
 .B omapi
-was created by Ted Lemon of Nominum, Inc.  Information about Nominum
-and support contracts for DHCP and BIND can be found at
-.B http://www.nominum.com.   This documentation was written by James
-Brister of Nominum, Inc. 
+was created by Ted Lemon of Nominum, Inc. This documentation was
+written by James Brister of Nominum, Inc. 
