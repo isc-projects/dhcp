@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-			    Version 4.2.0rc1
-			      25 June 2010
+			     Version 4.2.0
+			      9 July 2010
 
 			      Release Notes
 
@@ -9,7 +9,7 @@
 ISC DHCP 4.2.x includes features that were not included in DHCP 4.1.x.
 These include:
 
-Processing the DHCP to DNS server transactions in an asyncrhonous fashion.
+Processing the DHCP to DNS server transactions in an asynchronous fashion.
 The DHCP server or client can now continue with it's processing while
 awaiting replies from the DNS server.
 
@@ -20,7 +20,7 @@ release, which will be addressed in the future:
 
 - DHCPv6 includes human-readable text in status code messages, in
   English.  A method to reconfigure or support other languages would
-  be preferrable.
+  be preferable.
 
 - The "host-identifier" option is limited to a simple token.
 
@@ -47,7 +47,6 @@ work on other platforms. Please report any problems and suggested fixes to
   [ISC-Bugs #20193] single quotes at the start of a line indicate a control
   line to nroff, escape them if we actually want a quote.
   [ISC-Bugs #18916] sync the pointer to web pages amongst the different docs
-  
 
 			Changes since 4.2.0b2
 
