@@ -83,6 +83,10 @@ work on other platforms. Please report any problems and suggested fixes to
   reverse lookup of the lease address.  Thanks to a patch from Wilco Baan
   Hofman supplied to us by the Debian package maintenance team.
   [ISC-Bugs #21691] {Debian Bug#509445}
+
+- The .TH tag for the dhcp-options manpage was typo repaired
+  thanks to a report from jidanni and the Debian package maintenance
+  team.  [ISC-Bugs #21676] {Debian Bug#563613}
  
                         Changes since 4.1.1rc1
 
