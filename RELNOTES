@@ -80,6 +80,13 @@ suggested fixes to <dhcp-users@isc.org>.
   [ISC-Bugs #20245] clarify editing the failover state in a lease file to put
   a server into the PARTNER-DOWN state.
 
+- 'get-host-names true;' now also works even if 'use-host-decl-names true;'
+  was also configured.  The nature of this repair also fixes another
+  error; the host-name supplied by a client is no longer overridden by a
+  reverse lookup of the lease address.  Thanks to a patch from Wilco Baan
+  Hofman supplied to us by the Debian package maintenance team.
+  [ISC-Bugs #21691] {Debian Bug#509445}
+
 			Changes since 4.0.2rc1
 
 - None
