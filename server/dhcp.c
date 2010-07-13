@@ -2677,12 +2677,13 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 
 	/* If we don't have a hostname yet, and we've been asked to do
 	   a reverse lookup to find the hostname, do it. */
+	i = DHO_HOST_NAME;
 	j = SV_GET_LEASE_HOSTNAMES;
-	if (!lookup_option (&server_universe, state -> options, i) &&
-	    (evaluate_boolean_option_cache
-	     (&ignorep, packet, lease, (struct client_state *)0,
-	      packet -> options, state -> options, &lease -> scope,
-	      lookup_option (&server_universe, state -> options, j), MDL))) {
+	if (!lookup_option(&dhcp_universe, state->options, i) &&
+	    evaluate_boolean_option_cache
+	     (&ignorep, packet, lease, NULL,
+	      packet->options, state->options, &lease->scope,
+	      lookup_option (&server_universe, state->options, j), MDL)) {
 		struct in_addr ia;
 		struct hostent *h;
 		
