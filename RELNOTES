@@ -76,7 +76,14 @@ work on other platforms. Please report any problems and suggested fixes to
   [ISC-Bugs #20107] clarify description of ia-pd and ia-prefix.
   [ISC-Bugs #20245] clarify editing the failover state in a lease file to put
   a server into the PARTNER-DOWN state.
-  
+ 
+- 'get-host-names true;' now also works even if 'use-host-decl-names true;'
+  was also configured.  The nature of this repair also fixes another
+  error; the host-name supplied by a client is no longer overridden by a
+  reverse lookup of the lease address.  Thanks to a patch from Wilco Baan
+  Hofman supplied to us by the Debian package maintenance team.
+  [ISC-Bugs #21691] {Debian Bug#509445}
+ 
                         Changes since 4.1.1rc1
 
 - When using 'ignore client-updates;', the FQDN returned to the client
