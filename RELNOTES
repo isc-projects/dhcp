@@ -87,6 +87,10 @@ suggested fixes to <dhcp-users@isc.org>.
   Hofman supplied to us by the Debian package maintenance team.
   [ISC-Bugs #21691] {Debian Bug#509445}
 
+- The .TH tag for the dhcp-options manpage was typo repaired
+  thanks to a report from jidanni and the Debian package maintenance
+  team.  [ISC-Bugs #21676] {Debian Bug#563613}
+
 			Changes since 4.0.2rc1
 
 - None
