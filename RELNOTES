@@ -52,6 +52,11 @@ work on other platforms. Please report any problems and suggested fixes to
   thanks to a report from jidanni and the Debian package maintenance
   team.  [ISC-Bugs #21676] {Debian Bug#563613}
 
+- More documentation changes - primarily to put the options in the dhclient
+  and dhcpd man pages into the standard form.  Thanks in part to a patch
+  from David Cantrell at Red Hat.
+  [ISC-Bugs #20264] and parts of [ISC-Bugs #17744] dhclient.8 changes
+
 			Changes since 4.2.0rc1
 
 - Documentation cleanup covering multiple tickets
