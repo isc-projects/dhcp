@@ -1,4 +1,4 @@
-.\"	$Id: dhclient.8,v 1.34 2010/07/02 23:09:14 sar Exp $
+.\"	$Id: dhclient.8,v 1.35 2010/07/14 20:01:14 sar Exp $
 .\"
 .\" Copyright (c) 2004,2007-2010 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
@@ -99,11 +99,11 @@ dhclient - Dynamic Host Configuration Protocol Client
 ]
 [
 .B -s
-server
+.I server
 ]
 [
 .B -g
-relay
+.I relay
 ]
 [
 .B -n
@@ -127,7 +127,7 @@ relay
 ]
 ]
 .SH DESCRIPTION
-The Internet Systems Consortium DHCP Client, dhclient, provides a
+The Internet Systems Consortium DHCP Client, \fBdhclient\fR, provides a
 means for configuring one or more network interfaces using the Dynamic
 Host Configuration Protocol, BOOTP protocol, or if these protocols
 fail, by statically assigning an address.
@@ -142,69 +142,35 @@ important details about the network to which it is attached, such as
 the location of a default router, the location of a name server, and
 so on.
 .PP
-If given the 
+There are two versions of the DHCP protocol DHCPv4 and DHCPv6.  At
+startup the client may be started for one or the other via the
 .B -4
-command line argument (default), dhclient will use the
-DHCPv4 protocol to obtain an IPv4 address and configuration parameters.
-.PP
-If given the
+or 
 .B -6
-command line argument, dhclient will use the DHCPv6
-protocol to obtain whatever IPv6 addresses are available along with
-configuration parameters. But with
-.B -S
-it uses Information-request to get only (i.e., without address)
-stateless configuration parameters.
+options.
 .PP
-The default DHCPv6 behavior is modified too with
-.B -T
-which asks for IPv6 temporary addresses, one set per
-.B -T
-flag.
-.B -P
-enables the IPv6 prefix delegation.
-As temporary addresses or prefix delegation disables the normal
-address query,
-.B -N
-restores it. Note it is not recommended to mix queries of different types
-together, or even to share the lease file between them.
-.PP
-By default, DHCPv6 dhclient creates an identifier based on the
-link-layer address (DUID-LL) if it is running in stateless mode (with
--S, not requesting an address), or it creates an identifier based on
-the link-layer address plus a timestamp (DUID-LLT) if it is running in
-stateful mode (without -S, requesting an address).
-.B -D
-overrides this default, with a value of either "LL" or "LLT".
-.PP
-If given the 
-.B --version
-command line argument, dhclient will print its
-version number and exit.
-.PP
-On startup, dhclient reads the
-.IR dhclient.conf
+On startup, \fBdhclient\fR reads the dhclient.conf
 for configuration instructions.   It then gets a list of all the
 network interfaces that are configured in the current system.   For
 each interface, it attempts to configure the interface using the DHCP
 protocol.
 .PP
 In order to keep track of leases across system reboots and server
-restarts, dhclient keeps a list of leases it has been assigned in the
-dhclient.leases(5) file.   On startup, after reading the dhclient.conf
-file, dhclient reads the dhclient.leases file to refresh its memory
+restarts, \fBdhclient\fR keeps a list of leases it has been assigned in the
+dhclient.leases file.   On startup, after reading the dhclient.conf
+file, \fBdhclient\fR reads the dhclient.leases file to refresh its memory
 about what leases it has been assigned.
 .PP
 When a new lease is acquired, it is appended to the end of the
 dhclient.leases file.   In order to prevent the file from becoming
-arbitrarily large, from time to time dhclient creates a new
+arbitrarily large, from time to time \fBdhclient\fR creates a new
 dhclient.leases file from its in-core lease database.  The old version
 of the dhclient.leases file is retained under the name
 .IR dhclient.leases~
-until the next time dhclient rewrites the database.
+until the next time \fBdhclient\fR rewrites the database.
 .PP
 Old leases are kept around in case the DHCP server is unavailable when
-dhclient is first invoked (generally during the initial system boot
+\fBdhclient\fR is first invoked (generally during the initial system boot
 process).   In that event, old leases from the dhclient.leases file
 which have not yet expired are tested, and if they are determined to
 be valid, they are used until either they expire or the DHCP server
@@ -213,7 +179,7 @@ becomes available.
 A mobile host which may sometimes need to access a network on which no
 DHCP server exists may be preloaded with a lease for a fixed
 address on that network.   When all attempts to contact a DHCP server
-have failed, dhclient will try to validate the static lease, and if it
+have failed, \fBdhclient\fR will try to validate the static lease, and if it
 succeeds, will use that lease until it is restarted.
 .PP
 A mobile host may also travel to some networks on which DHCP is not
@@ -223,60 +189,17 @@ database, so that the host can boot quickly on that network rather
 than cycling through the list of old leases.
 .SH COMMAND LINE
 .PP
-The names of the network interfaces that dhclient should attempt to
+The names of the network interfaces that \fBdhclient\fR should attempt to
 configure may be specified on the command line.  If no interface names
-are specified on the command line dhclient will normally identify all
+are specified on the command line \fBdhclient\fR will normally identify all
 network interfaces, eliminating non-broadcast interfaces if
 possible, and attempt to configure each interface.
 .PP
-It is also possible to specify interfaces by name in the
-.B dhclient.conf(5)
+It is also possible to specify interfaces by name in the dhclient.conf
 file.   If interfaces are specified in this way, then the client will
 only configure interfaces that are either specified in the
 configuration file or on the command line, and will ignore all other
 interfaces.
-.PP
-If the DHCP client should listen and transmit on a port other than the
-standard (port 68), the
-.B -p
-flag may used.  It should be followed by the udp port number that
-dhclient should use.  This is mostly useful for debugging purposes.
-If a different port is specified for the client to listen on and
-transmit on, the client will also use a different destination port -
-one less than the specified port.
-.PP
-The DHCP client normally transmits any protocol messages it sends
-before acquiring an IP address to, 255.255.255.255, the IP limited
-broadcast address.   For debugging purposes, it may be useful to have
-the server transmit these messages to some other address.   This can
-be specified with the 
-.B -s
-flag, followed by the IP address or domain name of the destination.
-This feature is not supported by DHCPv6.
-.PP
-For testing purposes, the giaddr field of all packets that the client
-sends can be set using the
-.B -g
-flag, followed by the IP address to send.   This is only useful for testing,
-and should not be expected to work in any consistent or useful way.
-.PP
-The DHCP client will normally run in the foreground until it has
-configured an interface, and then will revert to running in the
-background.   To run force dhclient to always run as a foreground
-process, the
-.B -d
-flag should be specified.  This is useful when running the client
-under a debugger, or when running it out of inittab on System V
-systems.
-.PP
-The dhclient daemon creates its own environment when executing the
-dhclient-script to do the grunt work of interface configuration.
-To define extra environment variables and their values, use the
-.B -e
-flag, followed by the environment variable name and value assignment,
-just as one would assign a variable in a shell.  Eg:
-.B -e
-.I IF_METRIC=1
 .PP
 The client normally prints no output during its startup sequence.  It
 can be made to emit verbose messages displaying the startup sequence events
@@ -284,94 +207,191 @@ until it has acquired an address by supplying the
 .B -v
 command line argument.  In either case, the client logs messages using
 the
-.B syslog (3)
-facility.  A
-.B -q
-command line argument is provided for backwards compatibility, but since
-dhclient is quiet by default, it has no effect.
-.PP
-The client normally doesn't release the current lease as it is not
-required by the DHCP protocol.  Some cable ISPs require their clients
-to notify the server if they wish to release an assigned IP address.
-The
-.B -r
-flag explicitly releases the current lease, and once the lease has been
-released, the client exits.
-.PP
-The
-.B -x
-flag tells any currently running client to exit gracefully without
-releasing leases first.
-.PP
-If the client is killed by a signal (for example at shutdown or reboot)
-it won't execute the
-.B dhclient-script (8)
-at exit. However if you shut the client down gracefully with
-.B -r
-or
-.B -x
-it will execute
-.B dhclient-script (8)
-at shutdown with the specific reason for calling the script set.
-.PP
-The
-.B -1
-flag will cause dhclient to try once to get a lease.  If it fails, dhclient
-exits with exit code two. In DHCPv6 the
-.B -1
-flag sets the max duration of the initial exchange to
+.B syslog(3)
+facility.
+.SH OPTIONS
+.TP
+.BI \-4
+Use the DHCPv4 protocol to obtain an IPv4 address and configuration
+parameters.  This is the default and cannot be combined with
+\fB\-6\fR.
+.TP
+.BI \-6
+Use the DHCPv6 protocol to obtain whatever IPv6 addresses are available
+along with configuration parameters.  It cannot be combined with
+\fB\-4\fR.  The \fB\-S -T -P -N\fR and
+\fB\-D\fR arguments provide more control over aspects of the DHCPv6
+processing.  Note: it is not recommended to mix queries of different
+types together or even to share the lease file between them.
+.TP
+.BI \-1
+Try to get a lease once.  On failure exit with code 2.  In DHCPv6 this
+sets the maximum duration of the initial exchange to
 .I timeout
-(from
-.IR dhclient.conf ,
-default sixty seconds).
-.PP
-The DHCP client normally gets its configuration information from
-.B ETCDIR/dhclient.conf,
-its lease database from
-.B DBDIR/dhclient.leases,
-stores its process ID in a file called
-.B RUNDIR/dhclient.pid,
-and configures the network interface using
-.B CLIENTBINDIR/dhclient-script
-To specify different names and/or locations for these files, use the
-.B -cf,
-.B -lf,
-.B -pf
-and
-.B -sf
-flags, respectively, followed by the name of the file.   This can be
-particularly useful if, for example,
-.B DBDIR
-or
-.B RUNDIR
-has not yet been mounted when the DHCP client is started.
-.PP
-The DHCP client normally exits if it isn't able to identify any
-network interfaces to configure.   On laptop computers and other
-computers with hot-swappable I/O buses, it is possible that a
-broadcast interface may be added after system startup.   The
-.B -w
-flag can be used to cause the client not to exit when it doesn't find
-any such interfaces.   The
-.B omshell (1)
+(from 
+.IR dhclient.conf(5)
+with a default of sixty seconds).
+.TP
+.BI \-d
+.\" This is not intuitive.
+Force
+.B dhclient
+to run as a foreground process.  Normally the DHCP client will run
+in the foreground until is has configured an interface at which time
+it will revert to running in the background.  This option is useful
+when running the client under a debugger, or when running it out of
+inittab on System V systems.  This implies \fB-v\fR.
+.TP
+.BI \-nw
+Become a daemon immediately (nowait) rather than waiting until an
+an IP address has been acquired.
+.TP
+.BI \-q
+Be quiet at startup, this is the default.
+.TP
+.BI \-v
+Enable verbose log messages.
+.\" This prints the version, copyright and URL.
+.TP
+.BI \-w
+Continue running even if no broadcast interfaces were found.  Normally
+DHCP client will exit if it isn't able to identify any network interfaces
+to configure.  On laptop computers and other computers with
+hot-swappable I/O buses, it is possible that a broadcast interface may
+be added after system startup.  This flag can be used to cause the client
+not to exit when it doesn't find any such interfaces.   The
+.B omshell(1)
 program can then be used to notify the client when a network interface
 has been added or removed, so that the client can attempt to configure an IP
 address on that interface.
-.PP
-The DHCP client can be directed not to attempt to configure any interfaces
-using the
-.B -n
-flag.   This is most likely to be useful in combination with the
+.TP
+.BI \-n
+Do not configure any interfaces.  This is most likely to be useful in
+combination with the
 .B -w
 flag.
+.TP
+.BI \-e \ VAR=val
+Define additional environment variables for the environment where 
+.B dhclient-script(8)
+executes.  You may specify multiple 
+.B \-e
+options on the command line.
+.TP
+.BI \-r
+Release the current lease and stop the running DHCP client as previously
+recorded in the PID file.  When shutdown via this method 
+.B dhclient-script(8)
+will be executed with the specific reason for calling the script set.
+The client normally doesn't release the current lease as this is not
+required by the DHCP protocol but some cable ISPs require their clients
+to notify the server if they wish to release an assigned IP address.
+.\" TODO what dhclient-script argument?
+.\" When released,
+.TP
+.BI \-x
+Stop the running DHCP client without releasing the current lease.
+Kills existing \fBdhclient\fR process as previously recorded in the
+PID file.  When shutdown via this method 
+.B dhclient-script(8)
+will be executed with the specific reason for calling the script set.
+.TP
+.BI \-p \ port
+The UDP port number on which the DHCP client should listen and transmit.
+If unspecified,
+.B dhclient
+uses the default port of 68.  This is mostly useful for debugging purposes.
+If a different port is specified on which the client should listen and
+transmit, the client will also use a different destination port -
+one less than the specified port.
+.TP
+.BI \-s \ server
+Specify the server IP address or fully qualified domain name to use as
+a destination for DHCP protocol messages before 
+.B dhclient
+has acquired an IP address.  Normally,
+.B dhclient
+transmits these messages to 255.255.255.255 (the IP limited broadcast
+address).  Overriding this is mostly useful for debugging purposes.  This
+feature is not supported in DHCPv6 (\fB-6\fR) mode.
+.TP
+.BI \-g \ relay
+.\" mockup relay
+Set the giaddr field of all packets to the \fIrelay\fR IP address
+simulating a relay agent.  This is for testing pruposes only and
+should not be expected to work in any consistent or useful way.
+.TP
+.BI \--version
+Print version number and exit.
 .PP
-The client can also be instructed to become a daemon immediately, rather
-than waiting until it has acquired an IP address.   This can be done by
-supplying the
-.B -nw
-flag.
+.I Options available for DHCPv6 mode:
+.TP
+.BI \-S
+.\" TODO: mention DUID?
+Use Information-request to get only stateless configuration parameters
+(i.e., without address).  This implies \fB\-6\fR.  It also doesn't
+rewrite the lease database.
+.\" TODO: May not be used with -N -P or -T. ??
+.TP
+.BI \-T
+.\" TODO wanted_ia_ta++
+Ask for IPv6 temporary addresses, one set per \fB\-T\fR flag.  This
+implies \fB\-6\fR and also disables the normal address query.
+See \fB\-N\fR to restore it.
+.TP
+.BI \-P
+Enable IPv6 prefix delegation.  This implies \fB\-6\fR and also
+disables the normal address query.  See \fB\-N\fR to restore it.
+Note only one requested interface is allowed.
+.TP
+.BI \-D \ LL\ or\ LLT
+Override the default when selecting the type of DUID to use.  By default,
+DHCPv6 \fBdhclient\fR creates an identifier based on the link-layer address
+(DUID-LL) if it is running in stateless mode (with \fB\-S\fR, not
+requesting an address), or it creates an identifier based on the
+link-layer address plus a timestamp (DUID-LLT) if it is running in
+stateful mode (without \fB\-S\fR, requesting an address).  \fB\-D\fR
+overrides this default, with a value of either \fILL\fR or \fILLT\fR.
+.TP
+.BI \-N
+.\" TODO: is this for telling an already running dhclient?
+Restore normal address query for IPv6. This implies \fB-6\fR.
+It is used to restore normal operation after using \fB-T\fR or \fB-P\fR.
+.PP
+.I Modifying default file locations:
+The following options can be used to modify the locations a client uses
+for it's files.  They can be particularly useful if, for example,
+.B DBDIR
+or
+.B RUNDIR
+have not been mounted when the DHCP client is started.
+.TP
+.BI \-cf \ config-file
+Path to the client configuration file.  If unspecified, the default
+.B ETCDIR/dhclient.conf
+is used.  See \fBdhclient.conf(5)\fR for a description of this file.
+.TP
+.BI \-lf \ lease-file
+Path to the lease database file.  If unspecified, the default
+.B DBDIR/dhclient.leases
+is used.  See \fBdhclient.leases(5)\fR for a descriptionof this file.
+.TP
+.BI \-pf \ pid-file
+Path to the process ID file.  If unspecified, the default
+.B RUNDIR/dhclient.pid
+is used.
+.TP
+.BI \-sf \ script-file
+Path to the network configuration script invoked by
+.B dhclient
+when it gets a lease.  If unspecified, the default
+.B CLIENTBINDIR/dhclient-script
+is used.  See \fBdhclient-script(8)\fR for a description of this file.
+
+
+.PP
 .SH CONFIGURATION
-The syntax of the dhclient.conf(5) file is discussed separately.
+The syntax of the \fBdhclient.conf(5)\fR file is discussed separately.
 .SH OMAPI
 The DHCP client provides some ability to control it while it is
 running, without stopping it.  This capability is provided using OMAPI,
@@ -382,7 +402,8 @@ current status and make changes to it.
 Rather than implementing the underlying OMAPI protocol directly, user
 programs should use the dhcpctl API or OMAPI itself.   Dhcpctl is a
 wrapper that handles some of the housekeeping chores that OMAPI does
-not do automatically.   Dhcpctl and OMAPI are documented in \fBdhcpctl(3)\fR
+not do automatically.   Dhcpctl and OMAPI are documented in
+\fBdhcpctl(3)\fR
 and \fBomapi(3)\fR.   Most things you'd want to do with the client can
 be done directly using the \fBomshell(1)\fR command, rather than
 having to write a special program.
@@ -402,6 +423,25 @@ The control object has one attribute - the state attribute.   To shut
 the client down, set its state attribute to 2.   It will automatically
 do a DHCPRELEASE.   To pause it, set its state attribute to 3.   To
 resume it, set its state attribute to 4.
+.PP
+.SH ENVIRONMENT VARIABLES
+.PP
+The following environment variables may be defined
+to override the builtin defaults for file locations.
+Note that use of the related command-line options
+will ignore the corresponding environment variable settings.
+.TP
+.B PATH_DHCLIENT_CONF
+The dhclient.conf configuration file.
+.TP
+.B PATH_DHCLIENT_DB
+The dhclient.leases database.
+.TP
+.B PATH_DHCLIENT_PID
+The dhclient PID file.
+.TP
+.B PATH_DHCLIENT_SCRIPT
+The dhclient-script file.
 .PP
 .SH FILES
 .B CLIENTBINDIR/dhclient-script,

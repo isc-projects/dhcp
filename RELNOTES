@@ -55,6 +55,11 @@ work on other platforms. Please report any problems and suggested fixes to
   Hofman supplied to us by the Debian package maintenance team.
   [ISC-Bugs #21691] {Debian Bug#509445}
 
+- More documentation changes - primarily to put the options in the dhclient
+  and dhcpd man pages into the standard form.  Thanks in part to a patch
+  from David Cantrell at Red Hat.
+  [ISC-Bugs #20264] and parts of [ISC-Bugs #17744] dhclient.8 changes
+
 			Changes since 4.2.0b2
 
 - Add declaration for variable in debug code in alloc.c.  [ISC-Bugs #21472]
