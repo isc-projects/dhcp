@@ -39,14 +39,7 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and may not
 work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
-			Changes since 4.2.0rc1
-
-- Documentation cleanup covering multiple tickets
-  [ISC-Bugs #20265] [ISC-Bugs #20259] minor cleanup
-  [ISC-Bugs #20263] add text describing some default values
-  [ISC-Bugs #20193] single quotes at the start of a line indicate a control
-  line to nroff, escape them if we actually want a quote.
-  [ISC-Bugs #18916] sync the pointer to web pages amongst the different docs
+			Changes since 4.2.0
 
 - 'get-host-names true;' now also works even if 'use-host-decl-names true;'
   was also configured.  The nature of this repair also fixes another
@@ -58,6 +51,15 @@ work on other platforms. Please report any problems and suggested fixes to
 - The .TH tag for the dhcp-options manpage was typo repaired
   thanks to a report from jidanni and the Debian package maintenance
   team.  [ISC-Bugs #21676] {Debian Bug#563613}
+
+			Changes since 4.2.0rc1
+
+- Documentation cleanup covering multiple tickets
+  [ISC-Bugs #20265] [ISC-Bugs #20259] minor cleanup
+  [ISC-Bugs #20263] add text describing some default values
+  [ISC-Bugs #20193] single quotes at the start of a line indicate a control
+  line to nroff, escape them if we actually want a quote.
+  [ISC-Bugs #18916] sync the pointer to web pages amongst the different docs
 
 			Changes since 4.2.0b2
 
