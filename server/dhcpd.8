@@ -28,7 +28,7 @@
 .\" Support and other services are available for ISC products - see
 .\" https://www.isc.org for more information or to learn more about ISC.
 .\"
-.\" $Id: dhcpd.8,v 1.29.32.3 2010/07/02 23:37:07 sar Exp $
+.\" $Id: dhcpd.8,v 1.29.32.4 2010/07/14 20:57:49 sar Exp $
 .\"
 .TH dhcpd 8
 .SH NAME
@@ -106,6 +106,13 @@ pool of IP addresses for its network.   In order for this to work, the
 network administrator allocates address pools in each subnet and
 enters them into the dhcpd.conf(5) file.
 .PP
+There are two versions of the DHCP protocol DHCPv4 and DHCPv6.  At
+startup the server  may be started for one or the other via the
+.B -4
+or 
+.B -6
+arguments.
+.PP
 On startup, dhcpd reads the
 .IR dhcpd.conf
 file and stores a list of available addresses on each subnet in
@@ -177,87 +184,106 @@ are specified on the command line dhcpd will identify all network
 interfaces which are up, eliminating non-broadcast interfaces if
 possible, and listen for DHCP broadcasts on each interface.
 .PP
-The server either operates as a DHCPv6 server or a DHCP server, but
-not both at the same time. To run as a DHCPv6 server, use the
-.B -6
-flag. To run as a DHCP server, use the
-.B -4
-flag. If neither is used, the default is to run as a DHCPv6 server.
-.PP
-If dhcpd should listen on a port other than the standard (port 67),
-the
-.B -p
-flag may used.  It should be followed by the udp port number on which
-dhcpd should listen.  This is mostly useful for debugging purposes.
-.PP
-If dhcpd should send replies to an address other than the broadcast
-address (255.255.255.255), the 
-.B -s
-flag may be used. It is followed by either the IP address or the host 
-name to send replies to. This option is only supported in IPv4.
-.PP
-To run dhcpd as a foreground process, rather than allowing it to run
-as a daemon in the background, the
-.B -f
-flag should be specified.  This is useful when running dhcpd under a
-debugger, or when running it out of inittab on System V systems.
-.PP
-To have dhcpd log to the standard error descriptor, specify the
-.B -d
-flag.  This can be useful for debugging, and also at sites where a
+.SH COMMAND LINE OPTIONS
+.TP
+.BI \-4
+Run as a DHCP server.  This cannot be combined with \fB\-6\fR.
+.TP
+.BI \-6
+Run as a DHCPv6 server.  This is the default and cannot be combined
+with \fB\-4\fR.
+.TP
+.BI \-p \ port
+The udp port number on which 
+.B dhcpd
+should listen.  If unspecified
+.B dhcpd
+uses the default port of 67.  This is mostly useful for debugging
+purposes.
+.TP
+.BI \-s \ address
+Specify an address or host name to which 
+.B dhcpd
+should send replies rather than the broadcast address (255.255.255.255).
+This option is only supported in IPv4.
+.TP
+.BI \-f
+Force
+.B dhcpd
+to run as a foreground process instead of as a daemon in the background.
+This is useful when running 
+.B dhcpd 
+under a debugger, or when running it
+out of inittab on System V systems.
+.TP
+.BI \-d
+Send log messages to the standard error descriptor.
+This can be useful for debugging, and also at sites where a
 complete log of all dhcp activity must be kept but syslogd is not
-reliable or otherwise cannot be used.   Normally, dhcpd will log all
-output using the syslog(3) function with the log facility set to
-LOG_DAEMON.  Note that -d implies -f (the daemon will not fork
-itself into the background).
-.PP
-Dhcpd can be made to use an alternate configuration file with the
-.B -cf
-flag, an alternate lease file with the
-.B -lf
-flag, or an alternate pid file with the
-.B -pf
-flag.   Because of the importance of using the same lease database at
-all times when running dhcpd in production, these options should be
-used \fBonly\fR for testing lease files or database files in a
-non-production environment.
-.PP
-When starting dhcpd up from a system startup script (e.g., /etc/rc),
-it may not be desirable to print out the entire copyright message on
-startup.   To avoid printing this message, the
-.B -q
-flag may be specified.
-.PP
-The DHCP server reads two files on startup: a configuration file, and
-a lease database.   If the
-.B -t
-flag is specified, the server will simply test the configuration file
+reliable or otherwise cannot be used.   Normally, 
+.B dhcpd
+will log all
+output using the \fBsyslog(3)\fR function with the log facility set to
+LOG_DAEMON.  Note that \fB\-d\fR implies \fB\-f\fR (the daemon will
+not fork itself into the background).
+.TP
+.BI \-q 
+Be quiet at startup.  This suppresses the printing of the entire
+copyright message during startup.  This might be desirable when
+starting
+.B dhcpd
+from a system startup script (e.g., /etc/rc).
+.TP
+.BI \-t
+Test the configuration file.  The server tests the configuration file
 for correct syntax, but will not attempt to perform any network
-operations.   This can be used to test the a new configuration file
+operations.   This can be used to test a new configuration file
 automatically before installing it.
-.PP
-The
-.B -T
-flag can be used to test the lease database file in a similar way.
-.PP
-The \fB-tf\fR and \fB-play\fR options allow you to specify a file into
-which the entire startup state of the server and all the transactions
-it processes are either logged or played back from.  This can be
+.TP
+.BI \-T
+Test the lease file.  The server tests the lease file
+for correct syntax, but will not attempt to perform any network
+operations.   This can be used to test a new leaes file
+automatically before installing it.
+.TP
+.BI \-tf \ tracefile
+Specify a file into which the entire startup state of the server and
+all the transactions it processes are logged.  This can be
 useful in submitting bug reports - if you are getting a core dump
 every so often, you can start the server with the \fB-tf\fR option and
 then, when the server dumps core, the trace file will contain all the
 transactions that led up to it dumping core, so that the problem can
 be easily debugged with \fB-play\fR.
-.PP
-The \fB-play\fR option must be specified with an alternate lease file,
+.TP
+.BI \-play \ playfile
+Specify a file from which the entire startup state of the server and
+all the transactions it processed are read.  The \fB-play\fR option
+must be specified with an alternate lease file,
 using the \fB-lf\fR switch, so that the DHCP server doesn't wipe out
 your existing lease file with its test data.  The DHCP server will
 refuse to operate in playback mode unless you specify an alternate
 lease file.
+.TP
+.BI --version
+Print version number and exit.
 .PP
-To find the version of dhcpd that will run, use the
-.B --version
-argument. Instead of running, the version will be printed.
+.I Modifying default file locations:
+The following options can be used to modify the locations 
+.B dhcpd
+uses for it's files.  Because of the importance of using the same
+lease database at all times when running dhcpd in production, these
+options should be used \fBonly\fR for testing lease files or database
+files in a non-production environment.
+.TP
+.BI \-cf \ config-file
+Path to alternate configuration file.
+.TP
+.BI \-lf \ lease-file
+Path to alternate lease file.
+.TP
+.BI \-pf \ pid-file
+Path to alternate pid file.
+.PP
 .SH CONFIGURATION
 The syntax of the dhcpd.conf(5) file is discussed separately.   This
 section should be used as an overview of the configuration process,
