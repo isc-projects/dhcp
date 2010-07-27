@@ -93,6 +93,9 @@ work on other platforms. Please report any problems and suggested fixes to
   from David Cantrell at Red Hat.
   [ISC-Bugs #20264] and parts of [ISC-Bugs #17744] dhclient.8 changes
 
+- Minor compilation errors - type mismatches, extra semi-colons after macros
+  [ISC-Bugs #20884] [ISC-Bugs #20953] [ISC-Bugs #20955]
+
                         Changes since 4.1.1rc1
 
 - When using 'ignore client-updates;', the FQDN returned to the client

@@ -1,9 +1,10 @@
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_findzonecut.c,v 1.16.786.2 2009/07/24 22:04:52 sar Exp $";
+static const char rcsid[] = "$Id: res_findzonecut.c,v 1.16.786.3 2010/07/27 21:23:34 sar Exp $";
 #endif /* not lint */
 
 /*
- * Copyright (c) 2004,2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -67,7 +68,7 @@ typedef ISC_LIST(rr_ns) rrset_ns;
 static int	satisfy(res_state,
 			const char *, rrset_ns *, struct in_addr *, int);
 static int	add_addrs(res_state, rr_ns *, struct in_addr *, int);
-static ns_rcode	get_soa(res_state, const char *, ns_class,
+static isc_result_t get_soa(res_state, const char *, ns_class,
 			char *, size_t, char *, size_t,
 			rrset_ns *);
 static isc_result_t get_ns(res_state, const char *, ns_class, rrset_ns *);
@@ -240,7 +241,7 @@ add_addrs(res_state statp, rr_ns *nsrr, struct in_addr *addrs, int naddrs) {
 	return (n);
 }
 
-static ns_rcode
+static isc_result_t
 get_soa(res_state statp, const char *dname, ns_class class,
 	char *zname, size_t zsize, char *mname, size_t msize,
 	rrset_ns *nsrrsp)
@@ -250,17 +251,16 @@ get_soa(res_state statp, const char *dname, ns_class class,
 	int n, i, ancount, nscount;
 	ns_sect sect;
 	ns_msg msg;
-	u_int rcode;
-	isc_result_t status;
+	isc_result_t rcode;
 
 	/*
 	 * Find closest enclosing SOA, even if it's for the root zone.
 	 */
 
 	/* First canonicalize dname (exactly one unescaped trailing "."). */
-	status = ns_makecanon(dname, tname, sizeof tname);
-	if (status != ISC_R_SUCCESS)
-		return status;
+	rcode = ns_makecanon(dname, tname, sizeof tname);
+	if (rcode != ISC_R_SUCCESS)
+		return rcode;
 	dname = tname;
 
 	/* Now grovel the subdomains, hunting for an SOA answer or auth. */

@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2004,2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -22,7 +23,7 @@
  */
 
 #ifndef lint
-static const char rcsid[] = "$Id: ns_parse.c,v 1.3.786.2 2009/07/24 22:04:52 sar Exp $";
+static const char rcsid[] = "$Id: ns_parse.c,v 1.3.786.3 2010/07/27 21:23:34 sar Exp $";
 #endif
 
 /* Import. */
@@ -126,7 +127,7 @@ ns_initparse(const u_char *msg, unsigned msglen, ns_msg *handle) {
 					  handle->_counts[i], &b);
 
 			if (status != ISC_R_SUCCESS)
-				return STATUS;
+				return status;
 			handle->_sections[i] = msg;
 			msg += b;
 		}

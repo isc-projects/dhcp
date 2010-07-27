@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004,2007-2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004,2007-2010 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2001-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -209,7 +209,7 @@ isc_result_t ns_verify_tcp (unsigned char *, unsigned *,
 			    ns_tcp_tsig_state *, int);
 int b64_ntop (unsigned char const *, size_t, char *, size_t);
 
-ns_rcode find_cached_zone (const char *, ns_class, char *,
+isc_result_t find_cached_zone (const char *, ns_class, char *,
 			   size_t, struct in_addr *, int, int *, void *);
 int find_tsig_key (ns_tsig_key **, const char *, void *);
 int forget_zone (void *);
