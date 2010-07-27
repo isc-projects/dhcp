@@ -1,7 +1,7 @@
 /* dhc6.c - DHCPv6 client routines. */
 
 /*
- * Copyright (c) 2006-2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2006-2010 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -1483,7 +1483,7 @@ dhc6_select_action(struct client_state *client, isc_result_t rval,
 	struct dhc6_lease *lease;
 
 	if (client == NULL)
-		return ISC_R_INVALIDARG;
+		return ISC_FALSE;
 
 	if (rval == ISC_R_SUCCESS)
 		return ISC_FALSE;
@@ -1602,7 +1602,7 @@ dhc6_reply_action(struct client_state *client, isc_result_t rval,
 {
 
 	if (client == NULL)
-		return ISC_R_INVALIDARG;
+		return ISC_FALSE;
 
 	if (rval == ISC_R_SUCCESS)
 		return ISC_FALSE;

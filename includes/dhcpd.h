@@ -3,7 +3,7 @@
    Definitions for dhcpd... */
 
 /*
- * Copyright (c) 2004-2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2010 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -3168,8 +3168,8 @@ const char *binding_state_print (enum failover_state);
 
 
 /* mdb6.c */
-HASH_FUNCTIONS_DECL(ia_na, unsigned char *, struct ia_na, ia_na_hash_t);
-HASH_FUNCTIONS_DECL(iaaddr, struct in6_addr *, struct iaaddr, iaaddr_hash_t);
+HASH_FUNCTIONS_DECL(ia_na, unsigned char *, struct ia_na, ia_na_hash_t)
+HASH_FUNCTIONS_DECL(iaaddr, struct in6_addr *, struct iaaddr, iaaddr_hash_t)
 
 isc_result_t iaaddr_allocate(struct iaaddr **iaaddr,
 			     const char *file, int line);

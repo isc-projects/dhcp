@@ -96,6 +96,9 @@ suggested fixes to <dhcp-users@isc.org>.
   from David Cantrell at Red Hat.
   [ISC-Bugs #20264] and parts of [ISC-Bugs #17744] dhclient.8 changes
 
+- Minor compilation errors - type mismatches, extra semi-colons after macros
+  [ISC-Bugs #20884] [ISC-Bugs #20953] [ISC-Bugs #20955]
+
 			Changes since 4.0.2rc1
 
 - None
