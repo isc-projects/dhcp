@@ -684,6 +684,13 @@ isc_result_t omapi_object_dereference (omapi_object_t **h,
 /*			if (!hp -> type -> freer) */
 				rc_register (file, line, h, hp,
 					     0, 1, hp -> type -> rc_flag);
+			if (handle_reference) {
+				if (omapi_handle_clear(hp->handle) != 
+				    ISC_R_SUCCESS) {
+					log_debug("Attempt to clear null "
+						  "handle pointer");
+				}
+			}
 			if (hp -> type -> destroy)
 				(*(hp -> type -> destroy)) (hp, file, line);
 			if (hp -> type -> freer)
