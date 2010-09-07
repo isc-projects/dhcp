@@ -99,6 +99,10 @@ work on other platforms. Please report any problems and suggested fixes to
 - Add code to clear the pointer to an object in an OMAPI handle when the
   object is freed due to a dereference.  [ISC-Bugs #21306]
 
+- Fixed a bug that leaks host record references onto lease structures,
+  causing the server to apply configuration intended for one host to any
+  other innocent clients that come along later.  [ISC-Bugs #22018]
+
                         Changes since 4.1.1rc1
 
 - When using 'ignore client-updates;', the FQDN returned to the client

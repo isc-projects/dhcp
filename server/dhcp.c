@@ -3794,26 +3794,46 @@ int find_lease (struct lease **lp,
 		lease_dereference (&hw_lease, MDL);
 	}
 
-	/* If we found a host_decl but no matching address, try to
-	   find a host_decl that has no address, and if there is one,
-	   hang it off the lease so that we can use the supplied
-	   options. */
-	if (lease && host && !lease -> host) {
-		struct host_decl *p = (struct host_decl *)0;
-		struct host_decl *n = (struct host_decl *)0;
-		host_reference (&p, host, MDL);
-		while (p) {
-			if (!p -> fixed_addr) {
-				host_reference (&lease -> host, p, MDL);
-				host_dereference (&p, MDL);
+	/*
+	 * If we found a host_decl but no matching address, try to
+	 * find a host_decl that has no address, and if there is one,
+	 * hang it off the lease so that we can use the supplied
+	 * options.
+	 */
+	if (lease && host && !lease->host) {
+		struct host_decl *p = NULL;
+		struct host_decl *n = NULL;
+
+		host_reference(&p, host, MDL);
+		while (p != NULL) {
+			if (!p->fixed_addr) {
+				/*
+				 * If the lease is currently active, then it
+				 * must be allocated to the present client.
+				 * We store a reference to the host record on
+				 * the lease to save a lookup later (in
+				 * ack_lease()).  We mustn't refer to the host
+				 * record on non-active leases because the
+				 * client may be denied later.
+				 *
+				 * XXX: Not having this reference (such as in
+				 * DHCPDISCOVER/INIT) means ack_lease will have
+				 * to perform this lookup a second time.  This
+				 * hopefully isn't a problem as DHCPREQUEST is
+				 * more common than DHCPDISCOVER.
+				 */
+				if (lease->binding_state == FTS_ACTIVE)
+					host_reference(&lease->host, p, MDL);
+
+				host_dereference(&p, MDL);
 				break;
 			}
-			if (p -> n_ipaddr)
-				host_reference (&n, p -> n_ipaddr, MDL);
-			host_dereference (&p, MDL);
-			if (n) {
-				host_reference (&p, n, MDL);
-				host_dereference (&n, MDL);
+			if (p->n_ipaddr != NULL)
+				host_reference(&n, p->n_ipaddr, MDL);
+			host_dereference(&p, MDL);
+			if (n != NULL) {
+				host_reference(&p, n, MDL);
+				host_dereference(&n, MDL);
 			}
 		}
 	}
@@ -4037,10 +4057,23 @@ int allocate_lease (struct lease **lp, struct packet *packet,
 			lease = candl;
 	}
 
-	if (lease) {
-		if (lease -> binding_state == FTS_ABANDONED)
-			log_error ("Reclaiming abandoned lease %s.",
-				   piaddr (lease -> ip_addr));
+	if (lease != NULL) {
+		if (lease->binding_state == FTS_ABANDONED)
+			log_error("Reclaiming abandoned lease %s.",
+				  piaddr(lease->ip_addr));
+
+		/*
+		 * XXX: For reliability, we go ahead and remove the host
+		 * record and try to move on.  For correctness, if there
+		 * are any other stale host vectors, we want to find them.
+		 */
+		if (lease->host != NULL) {
+			log_debug("soft impossible condition (%s:%d): stale "
+				  "host \"%s\" found on lease %s", MDL,
+				  lease->host->name,
+				  piaddr(lease->ip_addr));
+			host_dereference(&lease->host, MDL);
+		}
 
 		lease_reference (lp, lease, MDL);
 		return 1;
