@@ -99,6 +99,9 @@ suggested fixes to <dhcp-users@isc.org>.
 - Minor compilation errors - type mismatches, extra semi-colons after macros
   [ISC-Bugs #20884] [ISC-Bugs #20953] [ISC-Bugs #20955]
 
+- Add code to clear the pointer to an object in an OMAPI handle when the
+  object is freed due to a dereference.  [ISC-Bugs #21306]
+
 			Changes since 4.0.2rc1
 
 - None

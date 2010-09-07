@@ -3,7 +3,8 @@
    Private master include file for the OMAPI library. */
 
 /*
- * Copyright (c) 2004,2007,2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC") 
+ * Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -273,6 +274,8 @@ void trace_mr_init (void);
 
 OMAPI_ARRAY_TYPE_DECL(omapi_listener, omapi_listener_object_t);
 OMAPI_ARRAY_TYPE_DECL(omapi_connection, omapi_connection_object_t);
+
+isc_result_t omapi_handle_clear(omapi_handle_t);
 
 extern int log_priority;
 extern int log_perror;
