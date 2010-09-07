@@ -4,7 +4,8 @@
    protocol... */
 
 /*
- * Copyright (c) 2004-2007,2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -683,6 +684,13 @@ isc_result_t omapi_object_dereference (omapi_object_t **h,
 /*			if (!hp -> type -> freer) */
 				rc_register (file, line, h, hp,
 					     0, 1, hp -> type -> rc_flag);
+			if (handle_reference) {
+				if (omapi_handle_clear(hp->handle) != 
+				    ISC_R_SUCCESS) {
+					log_debug("Attempt to clear null "
+						  "handle pointer");
+				}
+			}
 			if (hp -> type -> destroy)
 				(*(hp -> type -> destroy)) (hp, file, line);
 			if (hp -> type -> freer)

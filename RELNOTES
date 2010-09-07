@@ -64,6 +64,9 @@ work on other platforms. Please report any problems and suggested fixes to
   from David Cantrell at Red Hat.
   [ISC-Bugs #20264] and parts of [ISC-Bugs #17744] dhclient.8 changes
 
+- Add code to clear the pointer to an object in an OMAPI handle when the
+  object is freed due to a dereference.  [ISC-Bugs #21306]
+
 			Changes since 4.2.0b2
 
 - Add declaration for variable in debug code in alloc.c.  [ISC-Bugs #21472]
