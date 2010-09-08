@@ -543,7 +543,7 @@ main(int argc, char **argv) {
 					    sizeof seed], sizeof seed);
 		seed += junk;
 	}
-	srandom(seed + cur_time);
+	srandom(seed + cur_time + (unsigned)getpid());
 
 	/* Start a configuration state machine for each interface. */
 #ifdef DHCPv6

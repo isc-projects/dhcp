@@ -64,6 +64,20 @@ work on other platforms. Please report any problems and suggested fixes to
   causing the server to apply configuration intended for one host to any
   other innocent clients that come along later.  [ISC-Bugs #22018]
 
+- Minor code fixes
+  [ISC-Bugs #19566] When trying to find the zone for a name for ddns allow
+  the name to be at the apex of the zone.
+  [ISC-Bugs #19617] Restrict length of interface name read from command line
+  in dhcpd - based on a patch from David Cantrell at Red Hat.
+  [ISC-Bugs #20039] Correct some error messages in dhcpd.c
+  [ISC-Bugs #20070] Better range check on values when creating a DHCID.
+  [ISC-Bugs #20198] Avoid writing past the end of the field when adding 
+  overly long file or server names to a packet and add a log message
+  if the configuration supplied overly long names for these fields.
+  Thanks to Martin Pala.
+  [ISC-Bugs #21497] Add a little more randomness to rng seed in client
+  thanks to a patch from Jeremiah Jinno.
+
 			Changes since 4.2.0rc1
 
 - Documentation cleanup covering multiple tickets

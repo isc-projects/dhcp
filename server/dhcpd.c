@@ -404,6 +404,10 @@ main(int argc, char **argv) {
 		} else {
 			struct interface_info *tmp =
 				(struct interface_info *)0;
+			if (strlen(argv[i]) >= sizeof(tmp->name))
+				log_fatal("%s: interface name too long "
+					  "(is %ld)",
+					  argv[i], (long)strlen(argv[i]));
 			result = interface_allocate (&tmp, MDL);
 			if (result != ISC_R_SUCCESS)
 				log_fatal ("Insufficient memory to %s %s: %s",
@@ -1014,7 +1018,7 @@ void postconf_initialization (int quiet)
 		if (db.len == 4) {
 			memcpy (&limited_broadcast, db.data, 4);
 		} else
-			log_fatal ("invalid remote port data length");
+			log_fatal ("invalid broadcast address data length");
 		data_string_forget (&db, MDL);
 	}
 
@@ -1028,7 +1032,7 @@ void postconf_initialization (int quiet)
 		if (db.len == 4) {
 			memcpy (&local_address, db.data, 4);
 		} else
-			log_fatal ("invalid remote port data length");
+			log_fatal ("invalid local address data length");
 		data_string_forget (&db, MDL);
 	}
 

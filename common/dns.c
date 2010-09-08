@@ -658,13 +658,16 @@ find_cached_zone(dhcp_ddns_cb_t *ddns_cb, int direction)
 
 	/*
 	 * For each subzone, try to find a cached zone.
-	 * Skip the first zone as that shouldn't work.
 	 */
-	for (np = strchr(np, '.'); np != NULL; np = strchr(np, '.')) {
-		np++;
+	for (;;) {
 		status = dns_zone_lookup (&zone, np);
 		if (status == ISC_R_SUCCESS)
 			break;
+
+		np = strchr(np, '.');
+		if (np == NULL)
+			break;
+		np++;
 	}
 
 	if (status != ISC_R_SUCCESS)
@@ -805,7 +808,11 @@ int get_dhcid (struct data_string *id,
 	id->buffer->data[0] = ISC_MD5_DIGESTLENGTH * 2 + 2;
 
 	/* Put the type in the next two bytes. */
-	id->buffer->data[1] = "0123456789abcdef"[type >> 4];
+	id->buffer->data[1] = "0123456789abcdef"[(type >> 4) & 0xf];
+	/* This should have been [type & 0xf] but now that
+	 * it is in use we need to leave it this way in order
+	 * to avoid disturbing customer's lease files
+	 */
 	id->buffer->data[2] = "0123456789abcdef"[type % 15];
   
 	/* Mash together an MD5 hash of the identifier. */
