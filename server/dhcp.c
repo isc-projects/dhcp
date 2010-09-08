@@ -1051,10 +1051,13 @@ void dhcpinform (packet, ms_nulltp)
 				   packet -> options, (struct option_state *)0,
 				   &global_scope, oc, MDL)) {
 		i = d1.len;
-		if (i > sizeof raw.file)
-			i = sizeof raw.file;
-		else
-			raw.file [i] = 0;
+		if (i >= sizeof(raw.file)) {
+			log_info("file name longer than packet field "
+				 "truncated - field: %d name: %d %.*s", 
+				 sizeof(raw.file), i, i, d1.data);
+			i = sizeof(raw.file);
+		} else
+			raw.file[i] = 0;
 		memcpy (raw.file, d1.data, i);
 		data_string_forget (&d1, MDL);
 	}
@@ -1067,10 +1070,13 @@ void dhcpinform (packet, ms_nulltp)
 				   packet -> options, (struct option_state *)0,
 				   &global_scope, oc, MDL)) {
 		i = d1.len;
-		if (i > sizeof raw.sname)
-			i = sizeof raw.sname;
-		else
-			raw.sname [i] = 0;
+		if (i >= sizeof(raw.sname)) {
+			log_info("server name longer than packet field "
+				 "truncated - field: %d name: %d %.*s", 
+				 sizeof(raw.sname), i, i, d1.data);
+			i = sizeof(raw.sname);
+		} else
+			raw.sname[i] = 0;
 		memcpy (raw.sname, d1.data, i);
 		data_string_forget (&d1, MDL);
 	}
@@ -2848,6 +2854,11 @@ void dhcp_reply (lease)
 		if (sizeof raw.file > state -> filename.len)
 			memset (&raw.file [state -> filename.len], 0,
 				(sizeof raw.file) - state -> filename.len);
+		else 
+			log_info("file name longer than packet field "
+				 "truncated - field: %d name: %d %.*s", 
+				 sizeof(raw.file), state->filename.len,
+				 state->filename.len, state->filename.data);
 	} else
 		bufs |= 1;
 
@@ -2861,6 +2872,12 @@ void dhcp_reply (lease)
 		if (sizeof raw.sname > state -> server_name.len)
 			memset (&raw.sname [state -> server_name.len], 0,
 				(sizeof raw.sname) - state -> server_name.len);
+		else 
+			log_info("server name longer than packet field "
+				 "truncated - field: %d name: %d %.*s", 
+				 sizeof(raw.sname), state->server_name.len,
+				 state->server_name.len,
+				 state->server_name.data);
 	} else
 		bufs |= 2; /* XXX */
 
