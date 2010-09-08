@@ -3,7 +3,8 @@
    Domain Name Service subroutines. */
 
 /*
- * Copyright (c) 2004-2007,2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2001-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -292,12 +293,18 @@ isc_result_t find_cached_zone (const char *dname, ns_class class,
 	if (!dname || !*dname)
 		return ISC_R_INVALIDARG;
 
-	/* For each subzone, try to find a cached zone. */
-	for (np = dname; np; np = strchr (np, '.')) {
-		np++;
+	/*
+	 * For each subzone, try to find a cached zone.
+	 */
+	for (np = dname;;) {
 		status = dns_zone_lookup (&zone, np);
 		if (status == ISC_R_SUCCESS)
 			break;
+
+		np = strchr(np, '.');
+		if (np == NULL)
+			break;
+		np++;
 	}
 
 	if (status != ISC_R_SUCCESS)
@@ -483,7 +490,11 @@ int get_dhcid (struct data_string *id,
 	 */
 
 	/* Put the type in the first two bytes. */
-	id -> buffer -> data [0] = "0123456789abcdef" [type >> 4];
+	id->buffer->data[0] = "0123456789abcdef"[(type >> 4) & 0xf];
+	/* This should have been [type & 0xf] but now that
+	 * it is in use we need to leave it this way in order
+	 * to avoid disturbing customer's lease files
+	 */
 	id -> buffer -> data [1] = "0123456789abcdef" [type % 15];
 
 	/* Mash together an MD5 hash of the identifier. */
