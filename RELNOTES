@@ -117,6 +117,17 @@ work on other platforms. Please report any problems and suggested fixes to
   [ISC-Bugs #21497] Add a little more randomness to rng seed in client
   thanks to a patch from Jeremiah Jinno.
 
+- Correct error handling in DLPI [ISC-Bugs #20378]
+
+- Remove __sun__ and __hpux__ typedefs in osdep.h as they are now being
+  checked in configure.  [ISC-Bugs #20443]
+
+- Modify how the cmsg header is allocated the v6 send and received routines
+  to compile on more compilers.  [ISC-Bugs #20524]
+
+- When parsing a domain name free the memory for the name after we are
+  done with it.  [ISC-Bugs #20824]
+
                         Changes since 4.1.1rc1
 
 - When using 'ignore client-updates;', the FQDN returned to the client
