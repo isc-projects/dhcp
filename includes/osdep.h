@@ -3,7 +3,7 @@
    Operating system dependencies... */
 
 /*
- * Copyright (c) 2004-2005,2007-2009 by Internet Systems Consortium,
+ * Copyright (c) 2004-2005,2007-2010 by Internet Systems Consortium,
  *                                      Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
@@ -41,14 +41,6 @@
 #include "config.h"
 
 #include <inttypes.h>
-/* XXX: now that we have a nice autoconf, we should sense this in
- * ./configure.
- */
-#if defined(__sun__) || defined(__hpux__)
-typedef uint8_t u_int8_t;
-typedef uint16_t u_int16_t;
-typedef uint32_t u_int32_t;
-#endif
 
 #ifndef LITTLE_ENDIAN
 #define LITTLE_ENDIAN 1234
