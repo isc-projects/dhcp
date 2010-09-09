@@ -3,7 +3,8 @@
    Data Link Provider Interface (DLPI) network interface code. */
 
 /*
- * Copyright (c) 2004,2007,2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -978,7 +979,7 @@ static int dlpibindack (fd, bufp)
 	
 	dlp = (union DL_primitives *)ctl.buf;
 	
-	if (!expected (DL_BIND_ACK, dlp, flags) < 0) {
+	if (expected (DL_BIND_ACK, dlp, flags) == -1) {
 		return -1;
 	}
 	
@@ -1012,7 +1013,7 @@ static int dlpiokack (fd, bufp)
 	
 	dlp = (union DL_primitives *)ctl.buf;
 	
-	if (!expected (DL_OK_ACK, dlp, flags) < 0) {
+	if (expected (DL_OK_ACK, dlp, flags) == -1) {
 		return -1;
 	}
 	
@@ -1046,7 +1047,7 @@ static int dlpiinfoack (fd, bufp)
 	
 	dlp = (union DL_primitives *) ctl.buf;
 	
-	if (!expected (DL_INFO_ACK, dlp, flags) < 0) {
+	if (expected (DL_INFO_ACK, dlp, flags) == -1) {
 		return -1;
 	}
 	
@@ -1080,7 +1081,7 @@ int dlpiphysaddrack (fd, bufp)
 
 	dlp = (union DL_primitives *)ctl.buf;
 	
-	if (!expected (DL_PHYS_ADDR_ACK, dlp, flags) < 0) {
+	if (expected (DL_PHYS_ADDR_ACK, dlp, flags) == -1) {
 		return -1;
 	}
 
@@ -1222,15 +1223,15 @@ static int expected (prim, dlp, msgflags)
 {
 	if (msgflags != RS_HIPRI) {
 		/* Message was not M_PCPROTO */
-		return 0;
+		return -1;
 	}
 
-	if (dlp -> dl_primitive != prim) {
+	if (dlp->dl_primitive != prim) {
 		/* Incorrect/unexpected return message */
-		return 0;
+		return -1;
 	}
 	
-	return 1;
+	return 0;
 }
 
 /*

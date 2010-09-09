@@ -3,7 +3,7 @@
    Common parser code for dhcpd and dhclient. */
 
 /*
- * Copyright (c) 2004-2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2010 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -5004,6 +5004,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 	unsigned len;
 	struct iaddr addr;
 	int compress;
+	isc_boolean_t freeval = ISC_FALSE;
 	const char *f, *g;
 	struct enumeration_value *e;
 
@@ -5087,6 +5088,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 			return 0;
 		}
 		len = strlen (val);
+		freeval = ISC_TRUE;
 		goto make_string;
 
 	      case 't': /* Text string... */
@@ -5103,6 +5105,10 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 		if (!make_const_data (&t, (const unsigned char *)val,
 				      len, 1, 1, MDL))
 			log_fatal ("No memory for concatenation");
+		if (freeval == ISC_TRUE) {
+			dfree((char *)val, MDL);
+			freeval = ISC_FALSE;
+		}
 		break;
 		
 	      case 'N':
