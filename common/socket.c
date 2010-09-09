@@ -720,7 +720,8 @@ receive_packet6(struct interface_info *interface,
 	if (control_buf == NULL) {
 		allocate_cmsg_cbuf();
 		if (control_buf == NULL) {
-			log_error("send_packet6: unable to allocate cmsg header");
+			log_error("receive_packet6: unable to allocate cmsg "
+				  "header");
 			return(ENOMEM);
 		}
 	}
