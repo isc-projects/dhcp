@@ -988,11 +988,11 @@ int commit_leases ()
 	   We need to do this even if we're rewriting the file below,
 	   just in case the rewrite fails. */
 	if (fflush (db_file) == EOF) {
-		log_info ("commit_leases: unable to commit: %m");
+		log_info ("commit_leases: unable to commit, fflush(): %m");
 		return 0;
 	}
 	if (fsync (fileno (db_file)) < 0) {
-		log_info ("commit_leases: unable to commit: %m");
+		log_info ("commit_leases: unable to commit, fsync(): %m");
 		return 0;
 	}
 

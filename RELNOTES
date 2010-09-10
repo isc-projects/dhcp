@@ -100,6 +100,9 @@ work on other platforms. Please report any problems and suggested fixes to
   code to move most of the common code to a single routine.
   [ISC-Bugs #21171].
 
+- Two identical log messages for commit_leases() have been disambiguated.
+  [ISC-Bugs #18915]
+
 			Changes since 4.2.0b2
 
 - Add declaration for variable in debug code in alloc.c.  [ISC-Bugs #21472]
