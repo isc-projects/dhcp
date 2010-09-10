@@ -1,7 +1,7 @@
 /* dhc6.c - DHCPv6 client routines. */
 
 /*
- * Copyright (c) 2006-2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2006-2010 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -109,6 +109,10 @@ static void script_write_params6(struct client_state *client,
 				 const char *prefix,
 				 struct option_state *options);
 static isc_boolean_t active_prefix(struct client_state *client);
+
+static int check_timing6(struct client_state *client, u_int8_t msg_type, 
+		         char *msg_str, struct dhc6_lease *lease,
+		         struct data_string *ds);
 
 extern int onetry;
 extern int stateless;
@@ -1453,6 +1457,81 @@ start_confirm6(struct client_state *client)
 }
 
 /*
+ * check_timing6() check on the timing for sending a v6 message
+ * and then do the basic initialization for a v6 message.
+ */
+#define CHK_TIM_SUCCESS		0
+#define CHK_TIM_MRC_EXCEEDED	1
+#define CHK_TIM_MRD_EXCEEDED	2
+#define CHK_TIM_ALLOC_FAILURE	3
+
+int
+check_timing6 (struct client_state *client, u_int8_t msg_type, 
+	       char *msg_str, struct dhc6_lease *lease,
+	       struct data_string *ds)
+{
+	struct timeval elapsed;
+
+	/*
+	 * Start_time starts at the first transmission.
+	 */
+	if (client->txcount == 0) {
+		client->start_time.tv_sec = cur_tv.tv_sec;
+		client->start_time.tv_usec = cur_tv.tv_usec;
+	} else if ((client->MRC != 0) && (client->txcount > client->MRC)) {
+		log_info("Max retransmission count exceeded.");
+		return(CHK_TIM_MRC_EXCEEDED);
+	}
+
+	/* elapsed = cur - start */
+	elapsed.tv_sec = cur_tv.tv_sec - client->start_time.tv_sec;
+	elapsed.tv_usec = cur_tv.tv_usec - client->start_time.tv_usec;
+	if (elapsed.tv_usec < 0) {
+		elapsed.tv_sec -= 1;
+		elapsed.tv_usec += 1000000;
+	}
+
+	/* Check if finished (-1 argument). */
+	if ((client->MRD != 0) && (elapsed.tv_sec > client->MRD)) {
+		log_info("Max retransmission duration exceeded.");
+		return(CHK_TIM_MRD_EXCEEDED);
+	}
+
+	memset(ds, 0, sizeof(*ds));
+	if (!buffer_allocate(&(ds->buffer), 4, MDL)) {
+		log_error("Unable to allocate memory for %s.", msg_str);
+		return(CHK_TIM_ALLOC_FAILURE);
+	}
+	ds->data = ds->buffer->data;
+	ds->len = 4;
+
+	ds->buffer->data[0] = msg_type;
+	memcpy(ds->buffer->data + 1, client->dhcpv6_transaction_id, 3);
+
+	/* Form an elapsed option. */
+	/* Maximum value is 65535 1/100s coded as 0xffff. */
+	if ((elapsed.tv_sec < 0) || (elapsed.tv_sec > 655) ||
+	    ((elapsed.tv_sec == 655) && (elapsed.tv_usec > 350000))) {
+		client->elapsed = 0xffff;
+	} else {
+		client->elapsed = elapsed.tv_sec * 100;
+		client->elapsed += elapsed.tv_usec / 10000;
+	}
+
+	if (client->elapsed == 0)
+		log_debug("XMT: Forming %s, 0 ms elapsed.", msg_str);
+	else
+		log_debug("XMT: Forming %s, %u0 ms elapsed.", msg_str,
+			  (unsigned)client->elapsed);
+
+	client->elapsed = htons(client->elapsed);
+
+	make_client6_options(client, &client->sent_options, lease, msg_type);
+
+	return(CHK_TIM_SUCCESS);
+}
+
+/*
  * do_init6() marshals and transmits a solicit.
  */
 void
@@ -1464,7 +1543,7 @@ do_init6(void *input)
 	struct data_string ds;
 	struct data_string ia;
 	struct data_string addr;
-	struct timeval elapsed, tv;
+	struct timeval tv;
 	u_int32_t t1, t2;
 	int i, idx, len, send_ret;
 
@@ -1479,29 +1558,11 @@ do_init6(void *input)
 		return;
 	}
 
-	if ((client->MRC != 0) && (client->txcount > client->MRC)) {
-		log_info("Max retransmission count exceeded.");
+	switch(check_timing6(client, DHCPV6_SOLICIT, "Solicit", NULL, &ds)) {
+	      case CHK_TIM_MRC_EXCEEDED:
+	      case CHK_TIM_ALLOC_FAILURE:
 		return;
-	}
-
-	/*
-	 * Start_time starts at the first transmission.
-	 */
-	if (client->txcount == 0) {
-		client->start_time.tv_sec = cur_tv.tv_sec;
-		client->start_time.tv_usec = cur_tv.tv_usec;
-	}
-
-	/* elapsed = cur - start */
-	elapsed.tv_sec = cur_tv.tv_sec - client->start_time.tv_sec;
-	elapsed.tv_usec = cur_tv.tv_usec - client->start_time.tv_usec;
-	if (elapsed.tv_usec < 0) {
-		elapsed.tv_sec -= 1;
-		elapsed.tv_usec += 1000000;
-	}
-	/* Check if finished (-1 argument). */
-	if ((client->MRD != 0) && (elapsed.tv_sec > client->MRD)) {
-		log_info("Max retransmission duration exceeded.");
+	      case CHK_TIM_MRD_EXCEEDED:
 		client->state = S_STOPPED;
 		if (client->active_lease != NULL) {
 			dhc6_lease_destroy(&client->active_lease, MDL);
@@ -1512,38 +1573,6 @@ do_init6(void *input)
 			exit(2);
 		return;
 	}
-
-	memset(&ds, 0, sizeof(ds));
-	if (!buffer_allocate(&ds.buffer, 4, MDL)) {
-		log_error("Unable to allocate memory for SOLICIT.");
-		return;
-	}
-	ds.data = ds.buffer->data;
-	ds.len = 4;
-
-	ds.buffer->data[0] = DHCPV6_SOLICIT;
-	memcpy(ds.buffer->data + 1, client->dhcpv6_transaction_id, 3);
-
-	/* Form an elapsed option. */
-	/* Maximum value is 65535 1/100s coded as 0xffff. */
-	if ((elapsed.tv_sec < 0) || (elapsed.tv_sec > 655) ||
-	    ((elapsed.tv_sec == 655) && (elapsed.tv_usec > 350000))) {
-		client->elapsed = 0xffff;
-	} else {
-		client->elapsed = elapsed.tv_sec * 100;
-		client->elapsed += elapsed.tv_usec / 10000;
-	}
-
-	if (client->elapsed == 0)
-		log_debug("XMT: Forming Solicit, 0 ms elapsed.");
-	else
-		log_debug("XMT: Forming Solicit, %u0 ms elapsed.",
-			  (unsigned)client->elapsed);
-
-	client->elapsed = htons(client->elapsed);
-
-	make_client6_options(client, &client->sent_options, NULL,
-			     DHCPV6_SOLICIT);
 
 	/*
 	 * Fetch any configured 'sent' options (includes DUID) in wire format.
@@ -1894,68 +1923,21 @@ do_info_request6(void *input)
 {
 	struct client_state *client;
 	struct data_string ds;
-	struct timeval elapsed, tv;
+	struct timeval tv;
 	int send_ret;
 
 	client = input;
 
-	if ((client->MRC != 0) && (client->txcount > client->MRC)) {
-		log_info("Max retransmission count exceeded.");
+	switch(check_timing6(client, DHCPV6_INFORMATION_REQUEST,
+			     "Info-Request", NULL, &ds)) {
+	      case CHK_TIM_MRC_EXCEEDED:
+	      case CHK_TIM_ALLOC_FAILURE:
 		return;
-	}
-
-	/*
-	 * Start_time starts at the first transmission.
-	 */
-	if (client->txcount == 0) {
-		client->start_time.tv_sec = cur_tv.tv_sec;
-		client->start_time.tv_usec = cur_tv.tv_usec;
-	}
-
-	/* elapsed = cur - start */
-	elapsed.tv_sec = cur_tv.tv_sec - client->start_time.tv_sec;
-	elapsed.tv_usec = cur_tv.tv_usec - client->start_time.tv_usec;
-	if (elapsed.tv_usec < 0) {
-		elapsed.tv_sec -= 1;
-		elapsed.tv_usec += 1000000;
-	}
-	/* Check if finished (-1 argument). */
-	if ((client->MRD != 0) && (elapsed.tv_sec > client->MRD)) {
-		log_info("Max retransmission duration exceeded.");
+	      case CHK_TIM_MRD_EXCEEDED:
 		exit(2);
+	      case CHK_TIM_SUCCESS:
+		break;
 	}
-
-	memset(&ds, 0, sizeof(ds));
-	if (!buffer_allocate(&ds.buffer, 4, MDL)) {
-		log_error("Unable to allocate memory for INFO-REQUEST.");
-		return;
-	}
-	ds.data = ds.buffer->data;
-	ds.len = 4;
-
-	ds.buffer->data[0] = DHCPV6_INFORMATION_REQUEST;
-	memcpy(ds.buffer->data + 1, client->dhcpv6_transaction_id, 3);
-
-	/* Form an elapsed option. */
-	/* Maximum value is 65535 1/100s coded as 0xffff. */
-	if ((elapsed.tv_sec < 0) || (elapsed.tv_sec > 655) ||
-	    ((elapsed.tv_sec == 655) && (elapsed.tv_usec > 350000))) {
-		client->elapsed = 0xffff;
-	} else {
-		client->elapsed = elapsed.tv_sec * 100;
-		client->elapsed += elapsed.tv_usec / 10000;
-	}
-
-	if (client->elapsed == 0)
-		log_debug("XMT: Forming Info-Request, 0 ms elapsed.");
-	else
-		log_debug("XMT: Forming Info-Request, %u0 ms elapsed.",
-			  (unsigned)client->elapsed);
-
-	client->elapsed = htons(client->elapsed);
-
-	make_client6_options(client, &client->sent_options, NULL,
-			     DHCPV6_INFORMATION_REQUEST);
 
 	/* Fetch any configured 'sent' options (includes DUID) in wire format.
 	 */
@@ -1999,7 +1981,7 @@ do_confirm6(void *input)
 	struct client_state *client;
 	struct data_string ds;
 	int send_ret;
-	struct timeval elapsed, tv;
+	struct timeval tv;
 
 	client = input;
 
@@ -2020,64 +2002,17 @@ do_confirm6(void *input)
 	 * stick there until we get a reply?
 	 */
 
-	if ((client->MRC != 0) && (client->txcount > client->MRC))  {
-		log_info("Max retransmission count exceeded.");
+	switch(check_timing6(client, DHCPV6_CONFIRM, "Confirm",
+			     client->active_lease, &ds)) {
+	      case CHK_TIM_MRC_EXCEEDED:
+	      case CHK_TIM_MRD_EXCEEDED:
 		start_bound(client);
 		return;
-	}
-
-	/*
-	 * Start_time starts at the first transmission.
-	 */
-	if (client->txcount == 0) {
-		client->start_time.tv_sec = cur_tv.tv_sec;
-		client->start_time.tv_usec = cur_tv.tv_usec;
-	}
-
-	/* elapsed = cur - start */
-	elapsed.tv_sec = cur_tv.tv_sec - client->start_time.tv_sec;
-	elapsed.tv_usec = cur_tv.tv_usec - client->start_time.tv_usec;
-	if (elapsed.tv_usec < 0) {
-		elapsed.tv_sec -= 1;
-		elapsed.tv_usec += 1000000;
-	}
-	if ((client->MRD != 0) && (elapsed.tv_sec > client->MRD)) {
-		log_info("Max retransmission duration exceeded.");
-		start_bound(client);
+	      case CHK_TIM_ALLOC_FAILURE:
 		return;
+	      case CHK_TIM_SUCCESS:
+		break;
 	}
-
-	memset(&ds, 0, sizeof(ds));
-	if (!buffer_allocate(&ds.buffer, 4, MDL)) {
-		log_error("Unable to allocate memory for Confirm.");
-		return;
-	}
-	ds.data = ds.buffer->data;
-	ds.len = 4;
-
-	ds.buffer->data[0] = DHCPV6_CONFIRM;
-	memcpy(ds.buffer->data + 1, client->dhcpv6_transaction_id, 3);
-
-	/* Form an elapsed option. */
-	/* Maximum value is 65535 1/100s coded as 0xffff. */
-	if ((elapsed.tv_sec < 0) || (elapsed.tv_sec > 655) ||
-	    ((elapsed.tv_sec == 655) && (elapsed.tv_usec > 350000))) {
-		client->elapsed = 0xffff;
-	} else {
-		client->elapsed = elapsed.tv_sec * 100;
-		client->elapsed += elapsed.tv_usec / 10000;
-	}
-
-	if (client->elapsed == 0)
-		log_debug("XMT: Forming Confirm, 0 ms elapsed.");
-	else
-		log_debug("XMT: Forming Confirm, %u0 ms elapsed.",
-			  (unsigned)client->elapsed);
-
-	client->elapsed = htons(client->elapsed);
-
-	make_client6_options(client, &client->sent_options,
-			     client->active_lease, DHCPV6_CONFIRM);
 
 	/* Fetch any configured 'sent' options (includes DUID') in wire format.
 	 */
@@ -2179,17 +2114,14 @@ do_release6(void *input)
 	if ((client->active_lease == NULL) || !active_prefix(client))
 		return;
 
-	if ((client->MRC != 0) && (client->txcount > client->MRC))  {
-		log_info("Max retransmission count exceeded.");
+	switch(check_timing6(client, DHCPV6_RELEASE, "Release", 
+			     client->active_lease, &ds)) {
+	      case CHK_TIM_MRC_EXCEEDED:
+	      case CHK_TIM_ALLOC_FAILURE:
+	      case CHK_TIM_MRD_EXCEEDED:
 		goto release_done;
-	}
-
-	/*
-	 * Start_time starts at the first transmission.
-	 */
-	if (client->txcount == 0) {
-		client->start_time.tv_sec = cur_tv.tv_sec;
-		client->start_time.tv_usec = cur_tv.tv_usec;
+	      case CHK_TIM_SUCCESS:
+		break;
 	}
 
 	/*
@@ -2197,20 +2129,6 @@ do_release6(void *input)
 	 * available address with enough scope.
 	 */
 
-	memset(&ds, 0, sizeof(ds));
-	if (!buffer_allocate(&ds.buffer, 4, MDL)) {
-		log_error("Unable to allocate memory for Release.");
-		goto release_done;
-	}
-
-	ds.data = ds.buffer->data;
-	ds.len = 4;
-	ds.buffer->data[0] = DHCPV6_RELEASE;
-	memcpy(ds.buffer->data + 1, client->dhcpv6_transaction_id, 3);
-
-	log_debug("XMT: Forming Release.");
-	make_client6_options(client, &client->sent_options,
-			     client->active_lease, DHCPV6_RELEASE);
 	dhcpv6_universe.encapsulate(&ds, NULL, NULL, client, NULL,
 				    client->sent_options, &global_scope,
 				    &dhcpv6_universe);
@@ -3251,8 +3169,7 @@ do_select6(void *input)
 	struct client_state *client;
 	struct dhc6_lease *lease;
 	struct data_string ds;
-	struct timeval elapsed, tv;
-	int abort = ISC_FALSE;
+	struct timeval tv;
 	int send_ret;
 
 	client = input;
@@ -3265,32 +3182,9 @@ do_select6(void *input)
 		return;
 	}
 
-	if ((client->MRC != 0) && (client->txcount > client->MRC)) {
-		log_info("Max retransmission count exceeded.");
-		abort = ISC_TRUE;
-	}
-
-	/*
-	 * Start_time starts at the first transmission.
-	 */
-	if (client->txcount == 0) {
-		client->start_time.tv_sec = cur_tv.tv_sec;
-		client->start_time.tv_usec = cur_tv.tv_usec;
-	}
-
-	/* elapsed = cur - start */
-	elapsed.tv_sec = cur_tv.tv_sec - client->start_time.tv_sec;
-	elapsed.tv_usec = cur_tv.tv_usec - client->start_time.tv_usec;
-	if (elapsed.tv_usec < 0) {
-		elapsed.tv_sec -= 1;
-		elapsed.tv_usec += 1000000;
-	}
-	if ((client->MRD != 0) && (elapsed.tv_sec > client->MRD)) {
-		log_info("Max retransmission duration exceeded.");
-		abort = ISC_TRUE;
-	}
-
-	if (abort) {
+	switch(check_timing6(client, DHCPV6_REQUEST, "Request", lease, &ds)) {
+	      case CHK_TIM_MRC_EXCEEDED:
+	      case CHK_TIM_MRD_EXCEEDED:
 		log_debug("PRC: Lease %s failed.",
 			  print_hex_1(lease->server_id.len,
 				      lease->server_id.data, 56));
@@ -3304,8 +3198,11 @@ do_select6(void *input)
 			start_selecting6(client);
 		else
 			start_init6(client);
-
 		return;
+	      case CHK_TIM_ALLOC_FAILURE:
+		return;
+	      case CHK_TIM_SUCCESS:
+		break;
 	}
 
 	/* Now make a packet that looks suspiciously like the one we
@@ -3318,37 +3215,6 @@ do_select6(void *input)
 	 * construct for the iaid, then we can delve into this matter
 	 * more properly.  In the time being, this will work.
 	 */
-	memset(&ds, 0, sizeof(ds));
-	if (!buffer_allocate(&ds.buffer, 4, MDL)) {
-		log_error("Unable to allocate memory for REQUEST.");
-		return;
-	}
-	ds.data = ds.buffer->data;
-	ds.len = 4;
-
-	ds.buffer->data[0] = DHCPV6_REQUEST;
-	memcpy(ds.buffer->data + 1, client->dhcpv6_transaction_id, 3);
-
-	/* Form an elapsed option. */
-	/* Maximum value is 65535 1/100s coded as 0xffff. */
-	if ((elapsed.tv_sec < 0) || (elapsed.tv_sec > 655) ||
-	    ((elapsed.tv_sec == 655) && (elapsed.tv_usec > 350000))) {
-		client->elapsed = 0xffff;
-	} else {
-		client->elapsed = elapsed.tv_sec * 100;
-		client->elapsed += elapsed.tv_usec / 10000;
-	}
-
-	if (client->elapsed == 0)
-		log_debug("XMT: Forming Request, 0 ms elapsed.");
-	else
-		log_debug("XMT: Forming Request, %u0 ms elapsed.",
-			  (unsigned)client->elapsed);
-
-	client->elapsed = htons(client->elapsed);
-
-	make_client6_options(client, &client->sent_options, lease,
-			     DHCPV6_REQUEST);
 
 	/* Fetch any configured 'sent' options (includes DUID) in wire format.
 	 */
