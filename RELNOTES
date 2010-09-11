@@ -131,6 +131,10 @@ suggested fixes to <dhcp-users@isc.org>.
 - When parsing a domain name free the memory for the name after we are
   done with it.  [ISC-Bugs #20824]
 
+- Add an elapsed time option to the release message and refactor the
+  code to move most of the common code to a single routine.
+  [ISC-Bugs #21171].
+
 			Changes since 4.0.2rc1
 
 - None
