@@ -93,6 +93,10 @@ work on other platforms. Please report any problems and suggested fixes to
   code to move most of the common code to a single routine.
   [ISC-Bugs #21171].
 
+- Parse date strings more properly - the code now handles semi-colons in
+  date strings correctly.  Thanks to a patch from Jiri Popelka at Red Hat.
+  [ISC-Bugs #21501, #20598]
+
 			Changes since 4.2.0rc1
 
 - Documentation cleanup covering multiple tickets
