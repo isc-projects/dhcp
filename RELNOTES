@@ -135,6 +135,10 @@ suggested fixes to <dhcp-users@isc.org>.
   code to move most of the common code to a single routine.
   [ISC-Bugs #21171].
 
+- Parse date strings more properly - the code now handles semi-colons in
+  date strings correctly.  Thanks to a patch from Jiri Popelka at Red Hat.
+  [ISC-Bugs #21501, #20598]
+
 			Changes since 4.0.2rc1
 
 - None

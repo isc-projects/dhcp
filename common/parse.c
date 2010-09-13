@@ -848,9 +848,10 @@ void convert_num (cfile, buf, str, base, size)
 
 /*
  * date :== NUMBER NUMBER SLASH NUMBER SLASH NUMBER 
- *		NUMBER COLON NUMBER COLON NUMBER SEMI |
+ *		NUMBER COLON NUMBER COLON NUMBER |
  *          NUMBER NUMBER SLASH NUMBER SLASH NUMBER 
- *		NUMBER COLON NUMBER COLON NUMBER NUMBER SEMI |
+ *		NUMBER COLON NUMBER COLON NUMBER NUMBER |
+ *          EPOCH NUMBER |
  *	    NEVER
  *
  * Dates are stored in UTC or with a timezone offset; first number is day
@@ -859,7 +860,10 @@ void convert_num (cfile, buf, str, base, size)
  * optional.
  */
 
-/* just parse the date */
+/*
+ * just parse the date
+ * any trailing semi must be consumed by the caller of this routine
+ */
 TIME 
 parse_date_core(cfile)
 	struct parse *cfile;
@@ -868,157 +872,171 @@ parse_date_core(cfile)
 	int tzoff, wday, year, mon, mday, hour, min, sec;
 	const char *val;
 	enum dhcp_token token;
-	static int months [11] = { 31, 59, 90, 120, 151, 181,
-					  212, 243, 273, 304, 334 };
+	static int months[11] = { 31, 59, 90, 120, 151, 181,
+				  212, 243, 273, 304, 334 };
 
-	/* Day of week, or "never"... */
-	token = next_token (&val, (unsigned *)0, cfile);
+	/* "never", "epoch" or day of week */
+	token = peek_token(&val, NULL, cfile);
 	if (token == NEVER) {
-		if (!parse_semi (cfile))
-			return 0;
-		return MAX_TIME;
+		token = next_token(&val, NULL, cfile); /* consume NEVER */
+		return(MAX_TIME);
 	}
 
 	/* This indicates 'local' time format. */
 	if (token == EPOCH) {
-		token = next_token(&val, NULL, cfile);
+		token = next_token(&val, NULL, cfile); /* consume EPOCH */
+		token = peek_token(&val, NULL, cfile);
 
 		if (token != NUMBER) {
-			parse_warn(cfile, "Seconds since epoch expected.");
 			if (token != SEMI)
-				skip_to_semi(cfile);
-			return (TIME)0;
+				token = next_token(&val, NULL, cfile);
+			parse_warn(cfile, "Seconds since epoch expected.");
+			return((TIME)0);
 		}
 
+		token = next_token(&val, NULL, cfile); /* consume number */
 		guess = atoi(val);
 
-		if (!parse_semi(cfile))
-			return (TIME)0;
-
-		return guess;
+		return((TIME)guess);
 	}
 
 	if (token != NUMBER) {
-		parse_warn (cfile, "numeric day of week expected.");
 		if (token != SEMI)
-			skip_to_semi (cfile);
-		return (TIME)0;
+			token = next_token(&val, NULL, cfile);
+		parse_warn(cfile, "numeric day of week expected.");
+		return((TIME)0);
 	}
-	wday = atoi (val);
+	token = next_token(&val, NULL, cfile); /* consume day of week */
+	wday = atoi(val);
 
 	/* Year... */
-	token = next_token (&val, (unsigned *)0, cfile);
+	token = peek_token(&val, NULL, cfile);
 	if (token != NUMBER) {
-		parse_warn (cfile, "numeric year expected.");
 		if (token != SEMI)
-			skip_to_semi (cfile);
-		return (TIME)0;
+			token = next_token(&val, NULL, cfile);
+		parse_warn(cfile, "numeric year expected.");
+		return((TIME)0);
 	}
+	token = next_token(&val, NULL, cfile); /* consume year */
 
 	/* Note: the following is not a Y2K bug - it's a Y1.9K bug.   Until
 	   somebody invents a time machine, I think we can safely disregard
 	   it.   This actually works around a stupid Y2K bug that was present
 	   in a very early beta release of dhcpd. */
-	year = atoi (val);
+	year = atoi(val);
 	if (year > 1900)
 		year -= 1900;
 
 	/* Slash separating year from month... */
-	token = next_token (&val, (unsigned *)0, cfile);
+	token = peek_token(&val, NULL, cfile);
 	if (token != SLASH) {
-		parse_warn (cfile,
-			    "expected slash separating year from month.");
 		if (token != SEMI)
-			skip_to_semi (cfile);
-		return (TIME)0;
+			token = next_token(&val, NULL, cfile);
+		parse_warn(cfile,
+			   "expected slash separating year from month.");
+		return((TIME)0);
 	}
+	token = next_token(&val, NULL, cfile); /* consume SLASH */
 
 	/* Month... */
-	token = next_token (&val, (unsigned *)0, cfile);
+	token = peek_token(&val, NULL, cfile);
 	if (token != NUMBER) {
-		parse_warn (cfile, "numeric month expected.");
 		if (token != SEMI)
-			skip_to_semi (cfile);
-		return (TIME)0;
+			token = next_token(&val, NULL, cfile);
+		parse_warn(cfile, "numeric month expected.");
+		return((TIME)0);
 	}
-	mon = atoi (val) - 1;
+	token = next_token(&val, NULL, cfile); /* consume month */	
+	mon = atoi(val) - 1;
 
 	/* Slash separating month from day... */
-	token = next_token (&val, (unsigned *)0, cfile);
+	token = peek_token(&val, NULL, cfile);
 	if (token != SLASH) {
-		parse_warn (cfile,
-			    "expected slash separating month from day.");
 		if (token != SEMI)
-			skip_to_semi (cfile);
-		return (TIME)0;
+			token = next_token(&val, NULL, cfile);
+		parse_warn(cfile,
+			   "expected slash separating month from day.");
+		return((TIME)0);
 	}
+	token = next_token(&val, NULL, cfile); /* consume SLASH */
 
 	/* Day of month... */
-	token = next_token (&val, (unsigned *)0, cfile);
+	token = peek_token(&val, NULL, cfile);
 	if (token != NUMBER) {
-		parse_warn (cfile, "numeric day of month expected.");
 		if (token != SEMI)
-			skip_to_semi (cfile);
-		return (TIME)0;
+			token = next_token(&val, NULL, cfile);
+		parse_warn(cfile, "numeric day of month expected.");
+		return((TIME)0);
 	}
-	mday = atoi (val);
+	token = next_token(&val, NULL, cfile); /* consume day of month */
+	mday = atoi(val);
 
 	/* Hour... */
-	token = next_token (&val, (unsigned *)0, cfile);
+	token = peek_token(&val, NULL, cfile);
 	if (token != NUMBER) {
-		parse_warn (cfile, "numeric hour expected.");
 		if (token != SEMI)
-			skip_to_semi (cfile);
-		return (TIME)0;
+			token = next_token(&val, NULL, cfile);
+		parse_warn(cfile, "numeric hour expected.");
+		return((TIME)0);
 	}
-	hour = atoi (val);
+	token = next_token(&val, NULL, cfile); /* consume hour */
+	hour = atoi(val);
 
 	/* Colon separating hour from minute... */
-	token = next_token (&val, (unsigned *)0, cfile);
+	token = peek_token(&val, NULL, cfile);
 	if (token != COLON) {
-		parse_warn (cfile,
-			    "expected colon separating hour from minute.");
 		if (token != SEMI)
-			skip_to_semi (cfile);
-		return (TIME)0;
+			token = next_token(&val, NULL, cfile);
+		parse_warn(cfile,
+			   "expected colon separating hour from minute.");
+		return((TIME)0);
 	}
+	token = next_token(&val, NULL, cfile); /* consume colon */
 
 	/* Minute... */
-	token = next_token (&val, (unsigned *)0, cfile);
+	token = peek_token(&val, NULL, cfile);
 	if (token != NUMBER) {
-		parse_warn (cfile, "numeric minute expected.");
 		if (token != SEMI)
-			skip_to_semi (cfile);
-		return (TIME)0;
+			token = next_token(&val, NULL, cfile);
+		parse_warn(cfile, "numeric minute expected.");
+		return((TIME)0);
 	}
-	min = atoi (val);
+	token = next_token(&val, NULL, cfile); /* consume minute */
+	min = atoi(val);
 
 	/* Colon separating minute from second... */
-	token = next_token (&val, (unsigned *)0, cfile);
+	token = peek_token(&val, NULL, cfile);
 	if (token != COLON) {
-		parse_warn (cfile,
-			    "expected colon separating minute from second.");
 		if (token != SEMI)
-			skip_to_semi (cfile);
-		return (TIME)0;
+			token = next_token(&val, NULL, cfile);
+		parse_warn(cfile,
+			   "expected colon separating minute from second.");
+		return((TIME)0);
 	}
+	token = next_token(&val, NULL, cfile); /* consume colon */
 
 	/* Second... */
-	token = next_token (&val, (unsigned *)0, cfile);
+	token = peek_token(&val, NULL, cfile);
 	if (token != NUMBER) {
-		parse_warn (cfile, "numeric second expected.");
 		if (token != SEMI)
-			skip_to_semi (cfile);
-		return (TIME)0;
+			token = next_token(&val, NULL, cfile);
+		parse_warn(cfile, "numeric second expected.");
+		return((TIME)0);
 	}
-	sec = atoi (val);
+	token = next_token(&val, NULL, cfile); /* consume second */
+	sec = atoi(val);
 
-	token = peek_token (&val, (unsigned *)0, cfile);
+	tzoff = 0;
+	token = peek_token(&val, NULL, cfile);
 	if (token == NUMBER) {
-		token = next_token (&val, (unsigned *)0, cfile);
-		tzoff = atoi (val);
-	} else
-		tzoff = 0;
+		token = next_token(&val, NULL, cfile); /* consume tzoff */
+		tzoff = atoi(val);
+	} else if (token != SEMI) {
+		token = next_token(&val, NULL, cfile);
+		parse_warn(cfile,
+			   "Time zone offset or semicolon expected.");
+		return((TIME)0);
+	}
 
 	/* Guess the time value... */
 	guess = ((((((365 * (year - 70) +	/* Days in years since '70 */
@@ -1041,21 +1059,25 @@ parse_date_core(cfile)
 	   is reread), the error could accumulate into something
 	   significant. */
 
-	return guess;
+	return((TIME)guess);
 }
 
-/* Wrapper to consume the semicolon after the date */
+/*
+ * Wrapper to consume the semicolon after the date
+ * :== date semi
+ */
+
 TIME 
 parse_date(cfile)
        struct parse *cfile;
 {
-       int guess;
+       TIME guess;
        guess = parse_date_core(cfile);
 
        /* Make sure the date ends in a semicolon... */
        if (!parse_semi(cfile))
-               return 0;
-       return guess;
+	       return((TIME)0);
+       return(guess);
 }
 
 
