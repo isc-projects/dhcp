@@ -358,44 +358,118 @@ void hash_dump (table)
 	}
 }
 
-#define HBLEN 60
+/*
+ * print a string as hex.  This only outputs
+ * colon separated hex list no matter what
+ * the input looks like.  See print_hex
+ * for a function that prints either cshl
+ * or a string if all bytes are printible
+ * It only uses limit characters from buf
+ * and doesn't do anything if buf == NULL
+ *
+ * len - length of data
+ * data - input data
+ * limit - length of buf to use
+ * buf - output buffer
+ */
+void print_hex_only (len, data, limit, buf)
+	unsigned len;
+	const u_int8_t *data;
+	unsigned limit;
+	char *buf;
+{
+	unsigned i;
 
-#define DECLARE_HEX_PRINTER(x)						      \
-char *print_hex##x (len, data, limit)					      \
-	unsigned len;							      \
-	const u_int8_t *data;						      \
-	unsigned limit;							      \
-{									      \
-									      \
-	static char hex_buf##x [HBLEN + 1];				      \
-	unsigned i;							      \
-									      \
-	if (limit > HBLEN)						      \
-		limit = HBLEN;						      \
-									      \
-	for (i = 0; i < (limit - 2) && i < len; i++) {			      \
-		if (!isascii (data [i]) || !isprint (data [i])) {	      \
-			for (i = 0; i < limit / 3 && i < len; i++) {	      \
-				sprintf (&hex_buf##x [i * 3],		      \
-					 "%02x:", data [i]);		      \
-			}						      \
-			hex_buf##x [i * 3 - 1] = 0;			      \
-			return hex_buf##x;				      \
-		}							      \
-	}								      \
-	hex_buf##x [0] = '"';						      \
-	i = len;							      \
-	if (i > limit - 2)						      \
-		i = limit - 2;						      \
-	memcpy (&hex_buf##x [1], data, i);				      \
-	hex_buf##x [i + 1] = '"';					      \
-	hex_buf##x [i + 2] = 0;						      \
-	return hex_buf##x;						      \
+	if ((buf == NULL) || (limit < 3))
+		return;
+
+	for (i = 0; (i < limit / 3) && (i < len); i++) {
+		sprintf(&buf[i*3], "%02x:", data[i]);
+	}
+	buf[(i * 3) - 1] = 0;
+	return;
 }
 
-DECLARE_HEX_PRINTER (_1)
-DECLARE_HEX_PRINTER (_2)
-DECLARE_HEX_PRINTER (_3)
+/*
+ * print a string as either text if all the characters
+ * are printable or colon separated hex if they aren't
+ *
+ * len - length of data
+ * data - input data
+ * limit - length of buf to use
+ * buf - output buffer
+ */
+void print_hex_or_string (len, data, limit, buf)
+	unsigned len;
+	const u_int8_t *data;
+	unsigned limit;
+	char *buf;
+{
+	unsigned i;
+	if ((buf == NULL) || (limit < 3))
+		return;
+
+	for (i = 0; (i < (limit - 3)) && (i < len); i++) {
+		if (!isascii(data[i]) || !isprint(data[i])) {
+			print_hex_only(len, data, limit, buf);
+			return;
+		}
+	}
+
+	buf[0] = '"';
+	i = len;
+	if (i > (limit - 3))
+		i = limit - 3;
+	memcpy(&buf[1], data, i);
+	buf[i + 1] = '"';
+	buf[i + 2] = 0;
+	return;
+}
+
+/*
+ * print a string as either hex or text
+ * using static buffers to hold the output
+ * 
+ * len - length of data
+ * data - input data
+ * limit - length of buf
+ * buf_num - the output buffer to use
+ */
+#define HBLEN 60
+char *print_hex(len, data, limit, buf_num)
+	unsigned len;
+	const u_int8_t *data;
+	unsigned limit;
+	unsigned buf_num;
+{
+	static char hex_buf_1[HBLEN + 1];
+	static char hex_buf_2[HBLEN + 1];
+	static char hex_buf_3[HBLEN + 1];
+	char *hex_buf;
+
+	switch(buf_num) {
+	  case 0:
+		hex_buf = hex_buf_1;
+		if (limit >= sizeof(hex_buf_1))
+			limit = sizeof(hex_buf_1);
+		break;
+	  case 1:
+		hex_buf = hex_buf_2;
+		if (limit >= sizeof(hex_buf_2))
+			limit = sizeof(hex_buf_2);
+		break;
+	  case 2:
+		hex_buf = hex_buf_3;
+		if (limit >= sizeof(hex_buf_3))
+			limit = sizeof(hex_buf_3);
+		break;
+	  default:
+		return(NULL);
+	}
+
+	print_hex_or_string(len, data, limit, hex_buf);
+	return(hex_buf);
+}
 
 #define DQLEN	80
 
@@ -1391,6 +1465,8 @@ print_time(TIME t)
 {
 	static char buf[sizeof("epoch 9223372036854775807; "
 			       "# Wed Jun 30 21:49:08 2147483647")];
+	static char buf1[sizeof("# Wed Jun 30 21:49:08 2147483647")];
+	time_t since_epoch;
 	/* The string: 	       "6 2147483647/12/31 23:59:60;"
 	 * is smaller than the other, used to declare the buffer size, so
 	 * we can use one buffer for both.
@@ -1412,10 +1488,14 @@ print_time(TIME t)
 #endif
 
 	if (db_time_format == LOCAL_TIME_FORMAT) {
-		if (strftime(buf, sizeof(buf),
-			     "epoch %s; # %a %b %d %H:%M:%S %Y",
-			     localtime(&t)) == 0)
+		since_epoch = mktime(localtime(&t));
+		if ((strftime(buf1, sizeof(buf1),
+			      "# %a %b %d %H:%M:%S %Y",
+			      localtime(&t)) == 0) ||
+		    (snprintf(buf, sizeof(buf), "epoch %u; %s",
+			      since_epoch, buf1) >= sizeof(buf)))
 			return NULL;
+
 	} else {
 		/* No bounds check for the year is necessary - in this case,
 		 * strftime() will run out of space and assert an error.

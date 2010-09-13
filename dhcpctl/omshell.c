@@ -3,8 +3,8 @@
    Examine and modify omapi objects. */
 
 /*
- * Copyright (c) 2004-2007,2009-2010
- *				by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2001-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -99,6 +99,7 @@ main(int argc, char **argv) {
 	char buf[1024];
 	char s1[1024];
 	int connected = 0;
+	char hex_buf[61];
 
 	for (i = 1; i < argc; i++) {
 		usage(argv[0]);
@@ -160,10 +161,10 @@ main(int argc, char **argv) {
 			    break;
 				
 			  case omapi_datatype_data:
-			    printf ("%s\n",
-				    print_hex_1 (v -> value -> u.buffer.len,
-						 v -> value -> u.buffer.value,
-						 60));
+			    print_hex_only(v->value->u.buffer.len,
+					   v->value->u.buffer.value,
+					   sizeof(hex_buf), hex_buf);
+			    printf("%s\n", hex_buf);
 			    break;
 			    
 			  case omapi_datatype_object:

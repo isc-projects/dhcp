@@ -594,11 +594,11 @@ write_ia(const struct ia_xx *ia) {
 			    binding_state) < 0) {
 			goto error_exit;
 		}
-		if (fprintf(db_file, "    preferred-life %u\n",
+		if (fprintf(db_file, "    preferred-life %u;\n",
 			    (unsigned)iasubopt->prefer) < 0) {
 			goto error_exit;
 		}
-		if (fprintf(db_file, "    max-life %u\n",
+		if (fprintf(db_file, "    max-life %u;\n",
 			    (unsigned)iasubopt->valid) < 0) {
 			goto error_exit;
 		}
