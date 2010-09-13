@@ -136,6 +136,14 @@ work on other platforms. Please report any problems and suggested fixes to
   date strings correctly.  Thanks to a patch from Jiri Popelka at Red Hat.
   [ISC-Bugs #21501, #20598]
 
+- Fixes to lease input and output.
+  [ISC-Bugs #20418] - Some systems don't support the "%s" argument to
+  strftime, paste together the same string using mktime instead.
+  [ISC-Bugs #19596] - When parsing iaid values accept printable
+  characters.
+  [ISC-Bugs #21585] - Always print time values in omshell as hex
+  instead of ascii if the values happen to be printable characters.
+
                         Changes since 4.1.1rc1
 
 - When using 'ignore client-updates;', the FQDN returned to the client
