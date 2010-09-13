@@ -103,6 +103,10 @@ work on other platforms. Please report any problems and suggested fixes to
 - Two identical log messages for commit_leases() have been disambiguated.
   [ISC-Bugs #18915]
 
+- Parse date strings more properly - the code now handles semi-colons in
+  date strings correctly.  Thanks to a patch from Jiri Popelka at Red Hat.
+  [ISC-Bugs #21501, #20598]
+
 			Changes since 4.2.0b2
 
 - Add declaration for variable in debug code in alloc.c.  [ISC-Bugs #21472]
