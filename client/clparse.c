@@ -3,7 +3,8 @@
    Parser for dhclient config and lease files... */
 
 /*
- * Copyright (c) 2004-2007,2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -1481,12 +1482,12 @@ parse_client6_lease_statement(struct parse *cfile)
 static struct dhc6_ia *
 parse_client6_ia_statement(struct parse *cfile)
 {
-	struct data_string id;
 	struct option_cache *oc = NULL;
 	struct dhc6_ia *ia;
 	struct dhc6_addr **addr;
 	const char *val;
-	int token, no_semi;
+	int token, no_semi, len;
+	u_int8_t buf[5];
 
 	ia = dmalloc(sizeof(*ia), MDL);
 	if (ia == NULL) {
@@ -1496,20 +1497,11 @@ parse_client6_ia_statement(struct parse *cfile)
 	}
 
 	/* Get IAID. */
-	memset(&id, 0, sizeof(id));
-	if (parse_cshl(&id, cfile)) {
-		if (id.len == 4)
-			memcpy(ia->iaid, id.data, 4);
-		else {
-			parse_warn(cfile, "Expecting IAID of length 4, got %d.",
-				   id.len);
-			skip_to_semi(cfile);
-			dfree(ia, MDL);
-			return NULL;
-		}
-		data_string_forget(&id, MDL);
+	len = parse_X(cfile, buf, 5);
+	if (len == 4) {
+		memcpy(ia->iaid, buf, 4);
 	} else {
-		parse_warn(cfile, "Expecting IAID.");
+		parse_warn(cfile, "Expecting IAID of length 4, got %d.", len);
 		skip_to_semi(cfile);
 		dfree(ia, MDL);
 		return NULL;
