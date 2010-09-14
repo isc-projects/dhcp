@@ -33,9 +33,9 @@ if [ x$reason = xBOUND ] || [ x$reason = xRENEW ] || \
   fi
   if [ x"$new_domain_name_servers" != x ]; then
     cat /dev/null > /etc/resolv.conf.dhclient
-    if [ "x$new_domain_search != x ]; then
+    if [ "x$new_domain_search" != x ]; then
       echo search $new_domain_search >> /etc/resolv.conf.dhclient
-    elif [ "x$new_domain_name != x ]; then
+    elif [ "x$new_domain_name" != x ]; then
       # Note that the DHCP 'Domain Name Option' is really just a domain
       # name, and that this practice of using the domain name option as
       # a search path is both nonstandard and deprecated.

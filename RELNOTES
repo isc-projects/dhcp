@@ -147,6 +147,15 @@ suggested fixes to <dhcp-users@isc.org>.
   [ISC-Bugs #21585] - Always print time values in omshell as hex
   instead of ascii if the values happen to be printable characters.
 
+- Minor changes for scripts, configure.ac and Makefiles
+  [ISC-Bugs #19147] Use domain-search instead of domain-name in manual and
+                    example conf file.  Thanks to a patch from David Cantrell
+                    at Red Hat.
+  [ISC-Bugs #19761] Restore address when doing a rebind in DHCPv6
+  [ISC-Bugs #19945] Properly close the quote on some arguments.
+  [ISC-Bugs #20952] Add 64 bit types to configure.ac
+  [ISC-Bugs #21308] Add "PATH=" to CLIENT_PATH envrionment variable
+
 			Changes since 4.0.2rc1
 
 - None
