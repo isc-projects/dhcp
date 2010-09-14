@@ -1492,8 +1492,8 @@ print_time(TIME t)
 		if ((strftime(buf1, sizeof(buf1),
 			      "# %a %b %d %H:%M:%S %Y",
 			      localtime(&t)) == 0) ||
-		    (snprintf(buf, sizeof(buf), "epoch %u; %s",
-			      since_epoch, buf1) >= sizeof(buf)))
+		    (snprintf(buf, sizeof(buf), "epoch %lu; %s",
+			      (unsigned long)since_epoch, buf1) >= sizeof(buf)))
 			return NULL;
 
 	} else {
