@@ -10,9 +10,9 @@ man_MANS = dhclient.8 dhclient-script.8 dhclient.conf.5 dhclient.leases.5
 EXTRA_DIST = $(man_MANS)
 
 dhclient.o: dhclient.c
-	$(COMPILE) -DCLIENT_PATH='"$(sbindir)"' \
+	$(COMPILE) -DCLIENT_PATH='"PATH=$(sbindir):/sbin:/bin:/usr/sbin:/usr/bin"' \
 		   -DLOCALSTATEDIR='"$(localstatedir)"' -c dhclient.c
 
 dhc6.o: dhc6.c
-	$(COMPILE) -DCLIENT_PATH='"$(sbindir)"' \
+	$(COMPILE) -DCLIENT_PATH='"PATH=$(sbindir):/sbin:/bin:/usr/sbin:/usr/bin"' \
 		   -DLOCALSTATEDIR='"$(localstatedir)"' -c dhc6.c
