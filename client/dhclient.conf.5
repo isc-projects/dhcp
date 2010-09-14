@@ -1,4 +1,4 @@
-.\"	$Id: dhclient.conf.5,v 1.25.24.5 2010/09/14 22:32:36 sar Exp $
+.\"	$Id: dhclient.conf.5,v 1.25.24.6 2010/09/14 23:03:56 sar Exp $
 .\"
 .\" Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
@@ -694,7 +694,7 @@ interface "ep0" {
     hardware ethernet 00:a0:24:ab:fb:9c;
     send dhcp-client-identifier 1:0:a0:24:ab:fb:9c;
     send dhcp-lease-time 3600;
-    supersede domain-search "fugue.com rc.vix.com home.vix.com";
+    supersede domain-search "fugue.com", "rc.vix.com", "home.vix.com";
     prepend domain-name-servers 127.0.0.1;
     request subnet-mask, broadcast-address, time-offset, routers,
 	    domain-name, domain-name-servers, host-name;
