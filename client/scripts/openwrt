@@ -216,6 +216,12 @@ if [ x$reason = xBOUND6 ]; then
 fi
 
 if [ x$reason = xRENEW6 ] || [ x$reason = xREBIND6 ]; then
+  if [ x${new_ip6_address} = x ] || [ x${new_ip6_prefixlen} = x ] ; then
+    exit_with_hooks 2;
+  fi
+
+  ifconfig ${interface} inet6 ${new_ip6_address}/${new_ip6_prefixlen} alias
+
   # Make sure nothing has moved around on us.
 
   # Nameservers/domains/etc.

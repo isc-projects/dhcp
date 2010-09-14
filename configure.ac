@@ -322,6 +322,7 @@ AC_ARG_WITH(relay-pid-file,
 AC_TYPE_INT8_T
 AC_TYPE_INT16_T
 AC_TYPE_INT32_T
+AC_TYPE_INT64_T
 
 # Some systems need the u_intX_t types defined across.
 AC_CHECK_TYPE([u_int8_t], [], [
@@ -337,6 +338,11 @@ AC_CHECK_TYPE([u_int16_t], [], [
 AC_CHECK_TYPE([u_int32_t], [], [
   AC_TYPE_UINT32_T
   AC_DEFINE(u_int32_t, [uint32_t], [Define a type for 32-bit unsigned
+				    integers.])
+])
+AC_CHECK_TYPE([u_int64_t], [], [
+  AC_TYPE_UINT64_T
+  AC_DEFINE(u_int64_t, [uint64_t], [Define a type for 64-bit unsigned
 				    integers.])
 ])
 
