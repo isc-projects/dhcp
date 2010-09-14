@@ -549,11 +549,11 @@ uninstall-man: uninstall-man5 uninstall-man8
 
 
 dhclient.o: dhclient.c
-	$(COMPILE) -DCLIENT_PATH='"$(sbindir)"' \
+	$(COMPILE) -DCLIENT_PATH='"PATH=$(sbindir):/sbin:/bin:/usr/sbin:/usr/bin"' \
 		   -DLOCALSTATEDIR='"$(localstatedir)"' -c dhclient.c
 
 dhc6.o: dhc6.c
-	$(COMPILE) -DCLIENT_PATH='"$(sbindir)"' \
+	$(COMPILE) -DCLIENT_PATH='"PATH=$(sbindir):/sbin:/bin:/usr/sbin:/usr/bin"' \
 		   -DLOCALSTATEDIR='"$(localstatedir)"' -c dhc6.c
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
