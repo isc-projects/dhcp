@@ -4971,7 +4971,7 @@ struct option *option;
 			fmt = option->format;
 
 		/* 'a' means always uniform */
-		if ((fmt[0] != 'Z') && (tolower((int)fmt[1]) == 'a')) 
+		if ((fmt[0] != 'Z') && (tolower((unsigned char)fmt[1]) == 'a')) 
 			uniform = 1;
 
 		do {
