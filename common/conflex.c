@@ -726,12 +726,14 @@ intern(char *atom, enum dhcp_token dfv) {
 		}
 		if (!strcasecmp(atom + 1, "fter"))
 			return AFTER;
-		if (isascii(atom[1]) && (tolower(atom[1]) == 'l')) {
+		if (isascii(atom[1]) &&
+		    (tolower((unsigned char)atom[1]) == 'l')) {
 			if (!strcasecmp(atom + 2, "gorithm"))
 				return ALGORITHM;
 			if (!strcasecmp(atom + 2, "ias"))
 				return ALIAS;
-			if (isascii(atom[2]) && (tolower(atom[2]) == 'l')) {
+			if (isascii(atom[2]) &&
+			    (tolower((unsigned char)atom[2]) == 'l')) {
 				if (atom[3] == '\0')
 					return ALL;
 				else if (!strcasecmp(atom + 3, "ow"))
@@ -742,7 +744,8 @@ intern(char *atom, enum dhcp_token dfv) {
 				return TOKEN_ALSO;
 			break;
 		}
-		if (isascii(atom[1]) && (tolower(atom[1]) == 'n')) {
+		if (isascii(atom[1]) &&
+		    (tolower((unsigned char)atom[1]) == 'n')) {
 			if (!strcasecmp(atom + 2, "d"))
 				return AND;
 			if (!strcasecmp(atom + 2, "ycast-mac"))
@@ -753,7 +756,8 @@ intern(char *atom, enum dhcp_token dfv) {
 			return APPEND;
 		if (!strcasecmp(atom + 1, "rray"))
 			return ARRAY;
-		if (isascii(atom[1]) && (tolower(atom[1]) == 't')) {
+		if (isascii(atom[1]) &&
+		    (tolower((unsigned char)atom[1]) == 't')) {
 			if (atom[2] == '\0')
 				return AT;
 			if (!strcasecmp(atom + 2, "sfp"))
@@ -761,7 +765,8 @@ intern(char *atom, enum dhcp_token dfv) {
 			break;
 		}
 		if (!strncasecmp(atom + 1, "ut", 2)) {
-			if (isascii(atom[3] && (tolower(atom[3]) == 'h'))) {
+			if (isascii(atom[3] &&
+			    (tolower((unsigned char)atom[3]) == 'h'))) {
 				if (!strncasecmp(atom + 4, "enticat", 7)) {
 					if (!strcasecmp(atom + 11, "ed"))
 						return AUTHENTICATED;
@@ -1240,7 +1245,8 @@ intern(char *atom, enum dhcp_token dfv) {
 			return RANGE;
 		if (!strcasecmp(atom + 1, "ange6"))
 			return RANGE6;
-		if (isascii(atom[1]) && (tolower(atom[1]) == 'e')) {
+		if (isascii(atom[1]) &&
+		    (tolower((unsigned char)atom[1]) == 'e')) {
 			if (!strcasecmp(atom + 2, "bind"))
 				return REBIND;
 			if (!strcasecmp(atom + 2, "boot"))
@@ -1274,7 +1280,8 @@ intern(char *atom, enum dhcp_token dfv) {
 				return REQUEST;
 			if (!strcasecmp(atom + 2, "quire"))
 				return REQUIRE;
-			if (isascii(atom[2]) && (tolower(atom[2]) == 's')) {
+			if (isascii(atom[2]) &&
+			    (tolower((unsigned char)atom[2]) == 's')) {
 				if (!strcasecmp(atom + 3, "erved"))
 					return TOKEN_RESERVED;
 				if (!strcasecmp(atom + 3, "et"))
