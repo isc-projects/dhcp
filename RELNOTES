@@ -156,6 +156,26 @@ suggested fixes to <dhcp-users@isc.org>.
   [ISC-Bugs #20952] Add 64 bit types to configure.ac
   [ISC-Bugs #21308] Add "PATH=" to CLIENT_PATH envrionment variable
 
+! Handle pipe failures more gracefully.  Some OSes pass a SIGPIPE
+  signal to a process and will kill the process if the signal isn't
+  caught.  This patch adds code to turn off the SIGPIPE signal via
+  a setsockopt() call and to ignore the SIGPIPE signal in case the
+  OS doesn't support the necessary setsockopt() option.  This problem
+  was found during internal testing when the two servers in a failover
+  pair were repeatedly unable to communicate for longer than the
+  max-response-delay value.  Eventually one of the pair attempted a
+  write() call at just the same time as the other server killed the
+  connection and caused an uncaught SIGPIPE signal which caused the
+  OS to kill the server.
+  This is a minor security issue.  It is a security issue as it can 
+  cause a server to stop.  It is minor as the attacker would need to
+  be able to interrupt traffic between the partners in a failover 
+  pair for max-response-delay seconds at will - in which case the 
+  defender has bigger problems than the DHCP server being killed.
+  Using the NIST CVSS security vulnerability rating system this
+  issue scored 1.2, meaning it is not a major risk for users.
+  [ISC-Bugs #22269]
+
 			Changes since 4.0.2rc1
 
 - None
