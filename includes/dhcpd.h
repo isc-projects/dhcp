@@ -2201,6 +2201,7 @@ ssize_t receive_packet6(struct interface_info *interface,
 			unsigned int *if_index);
 void if_deregister6(struct interface_info *info);
 
+isc_result_t dhcp_handle_signal(int sig, void (*handler)(int));
 
 /* bpf.c */
 #if defined (USE_BPF_SEND) || defined (USE_BPF_RECEIVE)

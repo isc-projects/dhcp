@@ -3,7 +3,8 @@
    Subroutines for dealing with connections. */
 
 /*
- * Copyright (c) 2004,2007,2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -208,6 +209,19 @@ isc_result_t omapi_connect_list (omapi_object_t *c,
 			omapi_connection_dereference (&obj, MDL);
 			return ISC_R_UNEXPECTED;
 		}
+
+#ifdef SO_NOSIGPIPE
+		/*
+		 * If available stop the OS from killing our
+		 * program on a SIGPIPE failure
+		 */
+		flag = 1;
+		if (setsockopt(obj->socket, SOL_SOCKET, SO_NOSIGPIPE,
+			       (char *)&flag, sizeof(flag)) < 0) {
+			omapi_connection_dereference (&obj, MDL);
+			return ISC_R_UNEXPECTED;
+		}			
+#endif
 
 		status = (omapi_register_io_object
 			  ((omapi_object_t *)obj,

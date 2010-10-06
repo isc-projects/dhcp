@@ -45,6 +45,7 @@
 #include <sys/ioctl.h>
 #include <sys/uio.h>
 #include <sys/uio.h>
+#include <signal.h>
 
 #ifdef USE_SOCKET_FALLBACK
 # if !defined (USE_SOCKET_SEND)
@@ -876,3 +877,26 @@ void maybe_setup_fallback ()
 #endif
 }
 #endif /* USE_SOCKET_SEND */
+
+/*
+ * Code to set a handler for signals.  This
+ * exists to allow us to ignore SIGPIPE signals
+ * but could be used for other purposes in the
+ * future.
+ */
+
+isc_result_t
+dhcp_handle_signal(int sig, void (*handler)(int)) {
+	struct sigaction sa;
+
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = handler;
+
+	if (sigfillset(&sa.sa_mask) != 0 ||
+	    sigaction(sig, &sa, NULL) < 0) {
+		log_error("Unable to set up signal handler for %d, %m", sig);
+		return (ISC_R_UNEXPECTED);
+	}
+
+	return (ISC_R_SUCCESS);
+}

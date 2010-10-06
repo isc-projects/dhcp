@@ -280,6 +280,14 @@ main(int argc, char **argv) {
 	/* Set up the client classification system. */
 	classification_setup ();
 
+	/*
+	 * Set up the signal handlers, currently we only
+	 * have one to ignore sigpipe.
+	 */
+	if (dhcp_handle_signal(SIGPIPE, SIG_IGN) != ISC_R_SUCCESS) {
+		log_fatal("Can't set up signal handler");
+	}
+
 	/* Initialize the omapi system. */
 	result = omapi_init ();
 	if (result != ISC_R_SUCCESS)
