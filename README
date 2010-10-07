@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
 			    Version 4.0.3b1
-			   16 September 2010
+			    7 October 2010
 
 			      README FILE
 
@@ -92,10 +92,8 @@ directory, it may not have up-to-date information).
 
 			    RELEASE STATUS
 
-This is ISC DHCP 4.0.3b1, the production release of a maintenance
-release that addresses bugs in ISC DHCP versions 4.0.1 and prior.  A
-correction for a security vulnerability in ISC DHCP Client ('dhclient')
-is included in this release.
+This is ISC DHCP 4.0.3b1, th FIRST BETA release of a maintenance
+release that addresses bugs in ISC DHCP versions 4.0.2 and prior.
 
 In this release, the DHCPv6 server should be fully functional on Linux,
 Solaris, or any BSD.  The DHCPv6 client should be similarly functional
