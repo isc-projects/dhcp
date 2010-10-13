@@ -3,7 +3,7 @@
    Parser for dhcpd config file... */
 
 /*
- * Copyright (c) 2004-2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2010 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -4290,6 +4290,21 @@ parse_ia_na_declaration(struct parse *cfile) {
 					continue;
 				}
 				prefer = atoi (val);
+
+				/*
+				 * Currently we peek for the semi-colon to 
+				 * allow processing of older lease files that
+				 * don't have the semi-colon.  Eventually we
+				 * should remove the peeking code.
+				 */
+				token = peek_token(&val, NULL, cfile);
+				if (token == SEMI) {
+					token = next_token(&val, NULL, cfile);
+				} else {
+					parse_warn(cfile,
+						   "corrupt lease file; "
+						   "expecting semicolon.");
+				}
 				break;
 
 				/* Lease valid lifetime. */
@@ -4303,6 +4318,21 @@ parse_ia_na_declaration(struct parse *cfile) {
 					continue;
 				}
 				valid = atoi (val);
+
+				/*
+				 * Currently we peek for the semi-colon to 
+				 * allow processing of older lease files that
+				 * don't have the semi-colon.  Eventually we
+				 * should remove the peeking code.
+				 */
+				token = peek_token(&val, NULL, cfile);
+				if (token == SEMI) {
+					token = next_token(&val, NULL, cfile);
+				} else {
+					parse_warn(cfile,
+						   "corrupt lease file; "
+						   "expecting semicolon.");
+				}
 				break;
 
 				/* Lease expiration time. */
@@ -4623,6 +4653,21 @@ parse_ia_ta_declaration(struct parse *cfile) {
 					continue;
 				}
 				prefer = atoi (val);
+
+				/*
+				 * Currently we peek for the semi-colon to 
+				 * allow processing of older lease files that
+				 * don't have the semi-colon.  Eventually we
+				 * should remove the peeking code.
+				 */
+				token = peek_token(&val, NULL, cfile);
+				if (token == SEMI) {
+					token = next_token(&val, NULL, cfile);
+				} else {
+					parse_warn(cfile,
+						   "corrupt lease file; "
+						   "expecting semicolon.");
+				}
 				break;
 
 				/* Lease valid lifetime. */
@@ -4636,6 +4681,21 @@ parse_ia_ta_declaration(struct parse *cfile) {
 					continue;
 				}
 				valid = atoi (val);
+
+				/*
+				 * Currently we peek for the semi-colon to 
+				 * allow processing of older lease files that
+				 * don't have the semi-colon.  Eventually we
+				 * should remove the peeking code.
+				 */
+				token = peek_token(&val, NULL, cfile);
+				if (token == SEMI) {
+					token = next_token(&val, NULL, cfile);
+				} else {
+					parse_warn(cfile,
+						   "corrupt lease file; "
+						   "expecting semicolon.");
+				}
 				break;
 
 				/* Lease expiration time. */
@@ -4957,6 +5017,21 @@ parse_ia_pd_declaration(struct parse *cfile) {
 					continue;
 				}
 				prefer = atoi (val);
+
+				/*
+				 * Currently we peek for the semi-colon to 
+				 * allow processing of older lease files that
+				 * don't have the semi-colon.  Eventually we
+				 * should remove the peeking code.
+				 */
+				token = peek_token(&val, NULL, cfile);
+				if (token == SEMI) {
+					token = next_token(&val, NULL, cfile);
+				} else {
+					parse_warn(cfile,
+						   "corrupt lease file; "
+						   "expecting semicolon.");
+				}
 				break;
 
 				/* Lease valid lifetime. */
@@ -4970,6 +5045,21 @@ parse_ia_pd_declaration(struct parse *cfile) {
 					continue;
 				}
 				valid = atoi (val);
+
+				/*
+				 * Currently we peek for the semi-colon to 
+				 * allow processing of older lease files that
+				 * don't have the semi-colon.  Eventually we
+				 * should remove the peeking code.
+				 */
+				token = peek_token(&val, NULL, cfile);
+				if (token == SEMI) {
+					token = next_token(&val, NULL, cfile);
+				} else {
+					parse_warn(cfile,
+						   "corrupt lease file; "
+						   "expecting semicolon.");
+				}
 				break;
 
 				/* Prefix expiration time. */
