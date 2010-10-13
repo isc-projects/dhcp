@@ -114,6 +114,11 @@ work on other platforms. Please report any problems and suggested fixes to
   [ISC-Bugs #20952] Add 64 bit types to configure.ac
   [ISC-Bugs #21308] Add "PATH=" to CLIENT_PATH envrionment variable
 
+- Update the code to parse dhcpv6 lease files to accept a semi-colon at
+  the end of the max-life and preferred-life clauses.  In order to be
+  backwards compatible with older lease files not finding a semi-colon
+  is also accepted.  [ISC-Bugs #22303].
+
 			Changes since 4.2.0rc1
 
 - Documentation cleanup covering multiple tickets
