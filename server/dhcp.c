@@ -1073,9 +1073,9 @@ void dhcpinform (packet, ms_nulltp)
 		i = d1.len;
 		if (i >= sizeof(raw.sname)) {
 			log_info("server name longer than packet field "
-				 "truncated - field: %lu name: %d %.*s", 
-				 (unsigned long)sizeof(raw.sname), i, i,
-				 d1.data);
+				 "truncated - field: %lu name: %u %.*s", 
+				 (unsigned long)sizeof(raw.sname), i,
+				 (int)i, d1.data);
 			i = sizeof(raw.sname);
 		} else
 			raw.sname[i] = 0;
@@ -2858,9 +2858,9 @@ void dhcp_reply (lease)
 				(sizeof raw.file) - state -> filename.len);
 		else 
 			log_info("file name longer than packet field "
-				 "truncated - field: %lu name: %d %.*s", 
+				 "truncated - field: %lu name: %u %.*s", 
 				 (unsigned long)sizeof(raw.file),
-				 state->filename.len, state->filename.len,
+				 state->filename.len, (int)state->filename.len,
 				 state->filename.data);
 	} else
 		bufs |= 1;
