@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-			    Version 4.0.3b1
-			    7 October 2010
+			    Version 4.0.3rc1
+			    19 October 2010
 
 			     Release Notes
 
@@ -50,6 +50,11 @@ available.
 The system has only been tested on Linux, FreeBSD, and Solaris, and 
 may not work on other platforms. Please report any problems and 
 suggested fixes to <dhcp-users@isc.org>.
+
+
+			Changes since 4.0.3b1
+
+- None.
 
 			Changes since 4.0.2
 
