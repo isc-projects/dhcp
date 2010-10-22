@@ -128,6 +128,11 @@ work on other platforms. Please report any problems and suggested fixes to
   line to nroff, escape them if we actually want a quote.
   [ISC-Bugs #18916] sync the pointer to web pages amongst the different docs
 
+! Handle a relay forward message with an unspecified address in the
+  link address field.  Previously such a message would cause the
+  server to crash.  [ISC-Bugs #21992]
+  CERT: TBA CVE: TBA
+
 			Changes since 4.2.0b2
 
 - Add declaration for variable in debug code in alloc.c.  [ISC-Bugs #21472]
