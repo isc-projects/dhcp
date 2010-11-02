@@ -131,8 +131,9 @@ work on other platforms. Please report any problems and suggested fixes to
 
 ! Handle a relay forward message with an unspecified address in the
   link address field.  Previously such a message would cause the
-  server to crash.  [ISC-Bugs #21992]
-  CERT: TBA CVE: TBA
+  server to crash.  Thanks to a report from John Gibbons.  [ISC-Bugs #21992]
+  CERT: VU#102047 CVE: CVE-2010-3611
+
 
 			Changes since 4.2.0b2
 
