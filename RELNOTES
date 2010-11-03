@@ -134,6 +134,9 @@ work on other platforms. Please report any problems and suggested fixes to
   server to crash.  Thanks to a report from John Gibbons.  [ISC-Bugs #21992]
   CERT: VU#102047 CVE: CVE-2010-3611
 
+- ./configure on longer searches for -lcrypto to explicitly link against.
+  This fixes a bug where 'dhclient' would have shared library dependencies
+  on '/usr/lib'.  [ISC-Bugs #21967]
 
 			Changes since 4.2.0b2
 

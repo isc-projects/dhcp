@@ -425,10 +425,6 @@ AC_TRY_LINK(
 # Look for optional headers.
 AC_CHECK_HEADERS(sys/socket.h net/if_dl.h net/if6.h regex.h)
 
-# find an MD5 library
-AC_SEARCH_LIBS(MD5_Init, [crypto])
-AC_SEARCH_LIBS(MD5Init, [crypto])
-
 # Solaris needs some libraries for functions
 AC_SEARCH_LIBS(socket, [socket])
 AC_SEARCH_LIBS(inet_ntoa, [nsl])
