@@ -208,6 +208,19 @@ isc_result_t omapi_connect_list (omapi_object_t *c,
 			return ISC_R_UNEXPECTED;
 		}
 
+#ifdef SO_NOSIGPIPE
+		/*
+		 * If available stop the OS from killing our
+		 * program on a SIGPIPE failure
+		 */
+		flag = 1;
+		if (setsockopt(obj->socket, SOL_SOCKET, SO_NOSIGPIPE,
+			       (char *)&flag, sizeof(flag)) < 0) {
+			omapi_connection_dereference (&obj, MDL);
+			return ISC_R_UNEXPECTED;
+		}			
+#endif
+
 		status = (omapi_register_io_object
 			  ((omapi_object_t *)obj,
 			   0, omapi_connection_writefd,

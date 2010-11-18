@@ -128,6 +128,12 @@ work on other platforms. Please report any problems and suggested fixes to
   This fixes a bug where 'dhclient' would have shared library dependencies
   on '/usr/lib'.  [ISC-Bugs #21967]
 
+- Handle pipe failures more gracefully.  Some OSes pass a SIGPIPE
+  signal to a process and will kill the process if the signal isn't
+  caught.  This patch adds code to turn off the SIGPIPE signal via
+  a setsockopt() call.  The signal is already being ignored as part
+  of the ISC library.  [ISC-Bugs #22269]
+
 			Changes since 4.2.0rc1
 
 - Documentation cleanup covering multiple tickets
