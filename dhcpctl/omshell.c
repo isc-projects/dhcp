@@ -161,9 +161,9 @@ main(int argc, char **argv) {
 			    break;
 				
 			  case omapi_datatype_data:
-			    print_hex_only(v->value->u.buffer.len,
-					   v->value->u.buffer.value,
-					   sizeof(hex_buf), hex_buf);
+			    print_hex_or_string(v->value->u.buffer.len,
+						v->value->u.buffer.value,
+						sizeof(hex_buf), hex_buf);
 			    printf("%s\n", hex_buf);
 			    break;
 			    
