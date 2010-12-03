@@ -2304,6 +2304,7 @@ void dump_packet PROTO ((struct packet *));
 void hash_dump PROTO ((struct hash_table *));
 char *print_hex PROTO ((unsigned, const u_int8_t *, unsigned, unsigned));
 void print_hex_only PROTO ((unsigned, const u_int8_t *, unsigned, char *));
+void print_hex_or_string PROTO ((unsigned, const u_int8_t *, unsigned, char *));
 #define print_hex_1(len, data, limit) print_hex(len, data, limit, 0)
 #define print_hex_2(len, data, limit) print_hex(len, data, limit, 1)
 #define print_hex_3(len, data, limit) print_hex(len, data, limit, 2)
