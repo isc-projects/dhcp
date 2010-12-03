@@ -134,6 +134,12 @@ work on other platforms. Please report any problems and suggested fixes to
   a setsockopt() call.  The signal is already being ignored as part
   of the ISC library.  [ISC-Bugs #22269]
 
+- Restore printing of values in omshell to the style pre 21585.  For
+  21585 we changed the print routines to always display time values
+  as a hex list.  This had a side effect of printing all data strings
+  as a hex list.  We shall investigate other ways of displaying time
+  values more usefully.  [ISC-Bugs #22626]
+
 			Changes since 4.2.0rc1
 
 - Documentation cleanup covering multiple tickets
@@ -2348,12 +2354,6 @@ work on other platforms. Please report any problems and suggested fixes to
   using omapi to manipulate leases.
 
 - Fix some bugs and omissions in omshell.
-
-- Restore printing of values in omshell to the style pre 21518.  For
-  21518 we changed the print routines to always display time values
-  as a hex list.  This had a side effect of printing all data strings
-  as a hex list.  We shall investigate other ways of displaying time
-  values more usefully.  [ISC-Bugs #22626]
 
 		Changes since 3.0 Release Candidate 5
 
