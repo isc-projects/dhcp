@@ -114,7 +114,7 @@ isc_result_t omapi_auth_key_enter (omapi_auth_key_t *a)
 				     &dstkey);
 	if (status == ISC_R_SUCCESS) {
 		status = dns_tsec_create(dhcp_gbl_ctx.mctx, dns_tsectype_tsig,
-					 dstkey, &a->tsec_key);
+					 &dstkey, &a->tsec_key);
 	}
 	if (status != ISC_R_SUCCESS) {
 		if (dstkey != NULL) {
