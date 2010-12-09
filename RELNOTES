@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-			    Version 4.2.0-P1
-			     25 October 2010
+			    Version 4.2.0-P2
+			    9 December 2010
 
 			      Release Notes
 
@@ -38,6 +38,14 @@ output of "./configure --help" to see what options are available.
 The system has only been tested on Linux, FreeBSD, and Solaris, and may not
 work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
+
+			Changes since 4.2.0-P1
+
+! Fix the handling of connection requests on the failover port.
+  Previously a connection request from a source that wasn't
+  listed as a failover peer would cause the server to become
+  non-responsive.  [ISC-Bugs #22679]
+  CERT: VU#159528 CVE: CVE-2010-3616 
 
 			Changes since 4.2.0
 
