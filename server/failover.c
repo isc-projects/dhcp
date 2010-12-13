@@ -3,7 +3,7 @@
    Failover protocol support code... */
 
 /*
- * Copyright (c) 2004-2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2010 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -1101,7 +1101,8 @@ isc_result_t dhcp_failover_listener_signal (omapi_object_t *o,
 	}		
 	if (!state) {
 		log_info ("failover: listener: no matching state");
-		return omapi_disconnect ((omapi_object_t *)c, 1);
+		omapi_disconnect ((omapi_object_t *)c, 1);
+		return(ISC_R_NOTFOUND);
 	}
 
 	obj = (dhcp_failover_link_t *)0;
