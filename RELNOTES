@@ -140,6 +140,12 @@ work on other platforms. Please report any problems and suggested fixes to
   as a hex list.  We shall investigate other ways of displaying time
   values more usefully.  [ISC-Bugs #22626]
 
+! Fix the handling of connection requests on the failover port.
+  Previously a connection request from a source that wasn't
+  listed as a failover peer would cause the server to become
+  non-responsive.  [ISC-Bugs #22679]
+  CERT: VU#159528 CVE: CVE-2010-3616 
+
 			Changes since 4.2.0rc1
 
 - Documentation cleanup covering multiple tickets
