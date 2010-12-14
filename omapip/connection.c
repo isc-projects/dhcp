@@ -3,7 +3,8 @@
    Subroutines for dealing with connections. */
 
 /*
- * Copyright (c) 2004,2007,2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -597,17 +598,20 @@ isc_result_t omapi_connection_connect (omapi_object_t *h)
 {
 	isc_result_t status;
 
-	status = omapi_connection_connect_internal (h);
-	if (status != ISC_R_SUCCESS)
-		omapi_signal (h, "status", status);
-
 	/*
-	 * Currently we use the INPROGRESS error to indicate that
-	 * we want more from the socket.  In this case we have now connected
-	 * and are trying to write to the socket for the first time.
+	 * We use the INPROGRESS status to indicate that
+	 * we want more from the socket.  In this case we
+	 * have now connected and are trying to write to
+	 * the socket for the first time.  For the signaling
+	 * code this is the same as a SUCCESS so we don't
+	 * pass it on as a signal.
 	 */
+	status = omapi_connection_connect_internal (h);
 	if (status == ISC_R_INPROGRESS) 
 		return ISC_R_INPROGRESS;
+
+	if (status != ISC_R_SUCCESS)
+		omapi_signal (h, "status", status);
 
 	return ISC_R_SUCCESS;
 }

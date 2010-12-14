@@ -3,7 +3,7 @@
    Lexical scanner for dhcpd config file... */
 
 /*
- * Copyright (c) 2004-2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2010 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -765,8 +765,8 @@ intern(char *atom, enum dhcp_token dfv) {
 			break;
 		}
 		if (!strncasecmp(atom + 1, "ut", 2)) {
-			if (isascii(atom[3] &&
-			    (tolower((unsigned char)atom[3]) == 'h'))) {
+			if (isascii(atom[3]) &&
+			    (tolower((unsigned char)atom[3]) == 'h')) {
 				if (!strncasecmp(atom + 4, "enticat", 7)) {
 					if (!strcasecmp(atom + 11, "ed"))
 						return AUTHENTICATED;

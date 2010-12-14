@@ -156,6 +156,14 @@ work on other platforms. Please report any problems and suggested fixes to
   non-responsive.  [ISC-Bugs #22679]
   CERT: VU#159528 CVE: CVE-2010-3616 
 
+- Don't pass the ISC_R_INPROGRESS status to the omapi signal handlers.
+  Passing it through to the handlers caused the omshell program to fail
+  to connect to the server.  [ISC-Bugs #21839]
+
+- Fix the paranthesis in the code to process configuration statements
+  beginning with "auth".  The previous arrangement caused
+  "auto-partner-down" to be processed incorrectly.  [ISC-Bugs #21854]
+
 			Changes since 4.2.0b2
 
 - Add declaration for variable in debug code in alloc.c.  [ISC-Bugs #21472]
