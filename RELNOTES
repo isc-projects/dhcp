@@ -153,7 +153,8 @@ work on other platforms. Please report any problems and suggested fixes to
 ! Fix the handling of connection requests on the failover port.
   Previously a connection request from a source that wasn't
   listed as a failover peer would cause the server to become
-  non-responsive.  [ISC-Bugs #22679]
+  non-responsive.  Thanks to a report from Brad Bendily, brad@bendily.com.
+  [ISC-Bugs #22679]
   CERT: VU#159528 CVE: CVE-2010-3616 
 
 - Don't pass the ISC_R_INPROGRESS status to the omapi signal handlers.
