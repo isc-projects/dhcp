@@ -165,6 +165,10 @@ work on other platforms. Please report any problems and suggested fixes to
   beginning with "auth".  The previous arrangement caused
   "auto-partner-down" to be processed incorrectly.  [ISC-Bugs #21854]
 
+- Limit the timeout period allowed in the dispatch code to 2^^32-1 seconds.
+  Thanks to a report from Jiri Popelka at Red Hat.
+  [ISC-Bugs #22033], [Red Hat Bug #628258]
+
 			Changes since 4.2.0b2
 
 - Add declaration for variable in debug code in alloc.c.  [ISC-Bugs #21472]
@@ -2370,7 +2374,6 @@ work on other platforms. Please report any problems and suggested fixes to
   using omapi to manipulate leases.
 
 - Fix some bugs and omissions in omshell.
-
 
 		Changes since 3.0 Release Candidate 5
 

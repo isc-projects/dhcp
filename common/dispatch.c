@@ -174,6 +174,7 @@ isclib_timer_callback(isc_task_t  *taskp,
 
 /* maximum value for usec */
 #define USEC_MAX 1000000
+#define DHCP_SEC_MAX  0xFFFFFFFF
 
 void add_timeout (when, where, what, ref, unref)
 	struct timeval *when;
@@ -185,7 +186,8 @@ void add_timeout (when, where, what, ref, unref)
 	struct timeout *t, *q;
 	int usereset = 0;
 	isc_result_t status;
-	int sec, usec;
+	int64_t sec;
+	int usec;
 	isc_interval_t interval;
 	isc_time_t expires;
 
@@ -227,9 +229,48 @@ void add_timeout (when, where, what, ref, unref)
 			q->what = what;
 	}
 
-	/* We don't really need this, but keep it for now */
-	q->when.tv_sec  = when->tv_sec;
-	q->when.tv_usec = when->tv_usec;
+	/*
+	 * The value passed in is a time from an epoch but we need a relative
+	 * time so we need to do some math to try and recover the period.
+	 * This is complicated by the fact that not all of the calls cared
+	 * about the usec value, if it's zero we assume the caller didn't care.
+	 *
+	 * The ISC timer library doesn't seem to like negative values
+	 * and can't accept any values above 4G-1 seconds so we limit
+	 * the values to 0 <= value < 4G-1.  We do it before
+	 * checking the trace option so that both the trace code and
+	 * the working code use the same values.
+	 */
+
+	sec  = when->tv_sec - cur_tv.tv_sec;
+	usec = when->tv_usec - cur_tv.tv_usec;
+	
+	if ((when->tv_usec != 0) && (usec < 0)) {
+		sec--;
+		usec += USEC_MAX;
+	}
+
+	if (sec < 0) {
+		sec  = 0;
+		usec = 0;
+	} else if (sec > DHCP_SEC_MAX) {
+		log_error("Timeout requested too large %lld "
+			  "reducing to 2^^32-1", sec);
+		sec = DHCP_SEC_MAX;
+		usec = 0;
+	} else if (usec < 0) {
+		usec = 0;
+	} else if (usec >= USEC_MAX) {
+		usec = USEC_MAX - 1;
+	}
+
+	/* 
+	 * This is necessary for the tracing code but we put it
+	 * here in case we want to compare timing information
+	 * for some reason, like debugging.
+	 */
+	q->when.tv_sec  = cur_tv.tv_sec + (sec & DHCP_SEC_MAX);
+	q->when.tv_usec = usec;
 
 #if defined (TRACING)
 	if (trace_playback()) {
@@ -279,38 +320,7 @@ void add_timeout (when, where, what, ref, unref)
 	q->next  = timeouts;
 	timeouts = q;
 
-	/*
-	 * Set up the interval values -  The previous timers allowed
-	 * negative values to be set, the ISC timer library doesn't like
-	 * that so we make any negative values 0 which sould amount to
-	 * the same thing.
-	 */
-
-	/*
-	 * The value passed in is a time from an epoch but we need a relative
-	 * time so we need to do some math to try and recover the period.
-	 * This is complicated by the fact that not all of the calls cared
-	 * about the usec value, if it's zero we assume the caller didn't care.
-	 */
-
-	sec  = when->tv_sec - cur_tv.tv_sec;
-	usec = when->tv_usec - cur_tv.tv_usec;
-	
-	if ((when->tv_usec != 0) && (usec < 0)) {
-		sec--;
-		usec += USEC_MAX;
-	}
-
-	if (sec < 0) {
-		sec  = 0;
-		usec = 0;
-	} else if (usec < 0) {
-		usec = 0;
-	} else if (usec >= USEC_MAX) {
-		usec = USEC_MAX - 1;
-	}
-
-	isc_interval_set(&interval, sec, usec * 1000);
+	isc_interval_set(&interval, sec & DHCP_SEC_MAX, usec * 1000);
 	status = isc_time_nowplusinterval(&expires, &interval);
 	if (status != ISC_R_SUCCESS) {
 		/*
