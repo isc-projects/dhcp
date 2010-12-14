@@ -765,8 +765,8 @@ intern(char *atom, enum dhcp_token dfv) {
 			break;
 		}
 		if (!strncasecmp(atom + 1, "ut", 2)) {
-			if (isascii(atom[3] &&
-			    (tolower((unsigned char)atom[3]) == 'h'))) {
+			if (isascii(atom[3]) &&
+			    (tolower((unsigned char)atom[3]) == 'h')) {
 				if (!strncasecmp(atom + 4, "enticat", 7)) {
 					if (!strcasecmp(atom + 11, "ed"))
 						return AUTHENTICATED;
