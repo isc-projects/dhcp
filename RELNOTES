@@ -155,6 +155,10 @@ work on other platforms. Please report any problems and suggested fixes to
   beginning with "auth".  The previous arrangement caused
   "auto-partner-down" to be processed incorrectly.  [ISC-Bugs #21854]
 
+- Limit the timeout period allowed in the dispatch code to 2^^32-1 seconds.
+  Thanks to a report from Jiri Popelka at Red Hat.
+  [ISC-Bugs #22033], [Red Hat Bug #628258]
+
 			Changes since 4.2.0rc1
 
 - Documentation cleanup covering multiple tickets
@@ -2712,7 +2716,6 @@ work on other platforms. Please report any problems and suggested fixes to
 
 - Fix a bug in the DHCP client initial startup backoff interval, which
   would cause two DHCPDISCOVERS to be sent back-to-back on startup.
-
 
 		Changes since 3.0 Beta 2 Patchlevel 15
 
