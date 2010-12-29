@@ -254,8 +254,8 @@ void add_timeout (when, where, what, ref, unref)
 		sec  = 0;
 		usec = 0;
 	} else if (sec > DHCP_SEC_MAX) {
-		log_error("Timeout requested too large %lld "
-			  "reducing to 2^^32-1", sec);
+		log_error("Timeout requested too large "
+			  "reducing to 2^^32-1");
 		sec = DHCP_SEC_MAX;
 		usec = 0;
 	} else if (usec < 0) {
