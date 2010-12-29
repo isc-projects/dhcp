@@ -159,6 +159,12 @@ work on other platforms. Please report any problems and suggested fixes to
   Thanks to a report from Jiri Popelka at Red Hat.
   [ISC-Bugs #22033], [Red Hat Bug #628258]
 
+- When processing the format flags for a given option consume the
+  flag indicating an optional value correctly.  A symptom of this
+  bug was an infinite loop when trying to parse the slp-service-scope
+  option.  Thanks to a patch from Marius Tomaschewski.
+  [ISC-Bugs #22055]
+
 			Changes since 4.2.0rc1
 
 - Documentation cleanup covering multiple tickets
