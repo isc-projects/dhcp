@@ -1,12 +1,12 @@
 	      Internet Systems Consortium DHCP Distribution
-			      Version 4.1-ESV
-			      6 December 2010
+			    Version 4.1-ESV-R1
+			     25 January 2011
 
 			      Release Notes
 
 			      NEW FEATURES
 
-Version 4.1-ESV is an extended support version (ESV) release.  ESVs are
+Version 4.1-ESV-R1 is an extended support version (ESV) release.  ESVs are
 intended for users who have longer upgrade constraints and only critical
 bug and security fixes will be added to future ESV releases.  Please see
 our web page http://www.isc.org/downloads/extended-support for more
@@ -56,7 +56,7 @@ work on other platforms. Please report any problems and suggested fixes to
 			Changes since 4.1-ESV
 
 ! When processing a request in the DHCPv6 server code that specifies
-  an address that is tagged as abondened (meaning we received a
+  an address that is tagged as abandoned (meaning we received a
   decline request for it previously) don't attempt to move it from
   the inactive to active pool as doing so can result in the server
   crshing on an assert failure.  Also retag the lease as active
