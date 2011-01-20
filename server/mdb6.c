@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2010-2011 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2007-2008 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -1009,7 +1009,7 @@ move_lease_to_active(struct ipv6_pool *pool, struct iasubopt *lease) {
  * Renew an lease in the pool.
  *
  * To do this, first set the new hard_lifetime_end_time for the resource,
- * and then invoke renew_lease() on it.
+ * and then invoke renew_lease6() on it.
  *
  * WARNING: lease times must only be extended, never reduced!!!
  */
@@ -1019,12 +1019,24 @@ renew_lease6(struct ipv6_pool *pool, struct iasubopt *lease) {
 	 * If we're already active, then we can just move our expiration
 	 * time down the heap. 
 	 *
+	 * If we're abandoned then we are already on the active list
+	 * but we need to retag the lease and move our expiration
+	 * from infinite to the current value
+	 *
 	 * Otherwise, we have to move from the inactive heap to the 
 	 * active heap.
 	 */
 	if (lease->state == FTS_ACTIVE) {
 		isc_heap_decreased(pool->active_timeouts, lease->heap_index);
 		return ISC_R_SUCCESS;
+	} else if (lease->state == FTS_ABANDONED) {
+		char tmp_addr[INET6_ADDRSTRLEN];
+                lease->state = FTS_ACTIVE;
+                isc_heap_increased(pool->active_timeouts, lease->heap_index);
+		log_info("Reclaiming previously abandoned address %s",
+			 inet_ntop(AF_INET6, &(lease->addr), tmp_addr,
+				   sizeof(tmp_addr)));
+                return ISC_R_SUCCESS;
 	} else {
 		return move_lease_to_active(pool, lease);
 	}
@@ -1112,7 +1124,8 @@ isc_result_t
 decline_lease6(struct ipv6_pool *pool, struct iasubopt *lease) {
 	isc_result_t result;
 
-	if (lease->state != FTS_ACTIVE) {
+	if ((lease->state != FTS_ACTIVE) &&
+	    (lease->state != FTS_ABANDONED)) {
 		result = move_lease_to_active(pool, lease);
 		if (result != ISC_R_SUCCESS) {
 			return result;

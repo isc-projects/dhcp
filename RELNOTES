@@ -47,6 +47,16 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and may not
 work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
+			Changes since 4.1.2
+
+! When processing a request in the DHCPv6 server code that specifies
+  an address that is tagged as abondened (meaning we received a
+  decline request for it previously) don't attempt to move it from
+  the inactive to active pool as doing so can result in the server
+  crashing on an assert failure.  Also retag the lease as active
+  and reset it's timeout value.
+  [ISC-Bugs #21921]
+
 			Changes since 4.1.2rc1
 
 ! Handle a relay forward message with an unspecified address in the
