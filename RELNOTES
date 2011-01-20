@@ -184,7 +184,7 @@ work on other platforms. Please report any problems and suggested fixes to
   an address that is tagged as abondened (meaning we received a
   decline request for it previously) don't attempt to move it from
   the inactive to active pool as doing so can result in the server
-  crshing on an assert failure.  Also retag the lease as active
+  crashing on an assert failure.  Also retag the lease as active
   and reset it's timeout value.
   [ISC-Bugs #21921]
  
