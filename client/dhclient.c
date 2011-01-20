@@ -3,7 +3,7 @@
    DHCP Client. */
 
 /*
- * Copyright (c) 2004-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2011 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -63,7 +63,7 @@ struct data_string default_duid;
 #define ASSERT_STATE(state_is, state_shouldbe) {}
 
 static const char copyright[] = 
-"Copyright 2004-2010 Internet Systems Consortium.";
+"Copyright 2004-2011 Internet Systems Consortium.";
 static const char arr [] = "All rights reserved.";
 static const char message [] = "Internet Systems Consortium DHCP Client";
 static const char url [] = 
