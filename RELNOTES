@@ -170,6 +170,14 @@ work on other platforms. Please report any problems and suggested fixes to
   use all available cpu if the program daemonized itself.
   [ISC-Bugs #21911]
 
+! When processing a request in the DHCPv6 server code that specifies
+  an address that is tagged as abandoned (meaning we received a
+  decline request for it previously) don't attempt to move it from
+  the inactive to active pool as doing so can result in the server
+  crashing on an assert failure.  Also retag the lease as active
+  and reset it's timeout value.
+  [ISC-Bugs #21921]
+ 
 			Changes since 4.2.0rc1
 
 - Documentation cleanup covering multiple tickets
@@ -179,14 +187,6 @@ work on other platforms. Please report any problems and suggested fixes to
   line to nroff, escape them if we actually want a quote.
   [ISC-Bugs #18916] sync the pointer to web pages amongst the different docs
 
-! When processing a request in the DHCPv6 server code that specifies
-  an address that is tagged as abondened (meaning we received a
-  decline request for it previously) don't attempt to move it from
-  the inactive to active pool as doing so can result in the server
-  crashing on an assert failure.  Also retag the lease as active
-  and reset it's timeout value.
-  [ISC-Bugs #21921]
- 
 			Changes since 4.2.0b2
 
 - Add declaration for variable in debug code in alloc.c.  [ISC-Bugs #21472]
