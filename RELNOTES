@@ -207,6 +207,9 @@ work on other platforms. Please report any problems and suggested fixes to
   [ISC-Bugs #22888] - Enable the ldap code when buidling common
   The above fixes are from Jiri Popelka at Red Hat.
 
+- Modify the dlpi code to accept getmsg() returning a positive value.
+  [ISC-Bugs #22824]
+
 			Changes since 4.2.0b2
 
 - Add declaration for variable in debug code in alloc.c.  [ISC-Bugs #21472]
