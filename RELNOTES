@@ -41,15 +41,6 @@ work on other platforms. Please report any problems and suggested fixes to
 
 			Changes since 4.2.0
 
-- Removed the restriction on using IPv6 address in IPv4 mode.  This allows
-  IPv4 options which contain IPv6 address to be specified.  For example
-  the 6rd option can be specified and used like this:
-
-	option 6rd code 212 = { integer 8, integer 8,
-				ip6-address, array of ip-address };
-	option 6rd 16 10 2001:: 1.2.3.4, 5.6.7.8;
-
-
 - Documentation cleanup covering multiple tickets
   [ISC-Bugs #20265] [ISC-Bugs #20259] minor cleanup
   [ISC-Bugs #20263] add text describing some default values
@@ -197,6 +188,16 @@ work on other platforms. Please report any problems and suggested fixes to
   and reset it's timeout value.
   [ISC-Bugs #21921]
  
+- Removed the restriction on using IPv6 addresses in IPv4 mode.  This
+  allows IPv4 options which contain IPv6 addresses to be specified.  For
+  example the 6rd option can be specified and used like this:
+  [ISC-Bugs #23039]
+
+	option 6rd code 212 = { integer 8, integer 8,
+				ip6-address, array of ip-address };
+	option 6rd 16 10 2001:: 1.2.3.4, 5.6.7.8;
+
+
 			Changes since 4.2.0b2
 
 - Add declaration for variable in debug code in alloc.c.  [ISC-Bugs #21472]
