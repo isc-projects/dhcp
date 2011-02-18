@@ -197,11 +197,15 @@ work on other platforms. Please report any problems and suggested fixes to
 				ip6-address, array of ip-address };
 	option 6rd 16 10 2001:: 1.2.3.4, 5.6.7.8;
 
-
 - Handle some DDNS corner cases better.  Maintain the DDNS transaction
   information when updating a lease and cancel any existing transactions
   when removing the ddns information.  
   [ISC-Bugs #23103]
+
+- Some fixes for LDAP
+  [ISC-Bugs #21783] - Include lber library when building ldap
+  [ISC-Bugs #22888] - Enable the ldap code when buidling common
+  The above fixes are from Jiri Popelka at Red Hat.
 
 			Changes since 4.2.0b2
 

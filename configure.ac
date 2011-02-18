@@ -523,6 +523,8 @@ AC_ARG_WITH(ldapcrypto,
 if test x$ldap = xyes || test x$ldapcrypto = xyes ; then
     AC_SEARCH_LIBS(ldap_initialize, [ldap], ,
 		   AC_MSG_FAILURE([*** Cannot find ldap_initialize with -lldap - do you need to install an OpenLDAP2 Devel package?]))
+    AC_SEARCH_LIBS(ber_pvt_opt_on, [lber], ,
+		   AC_MSG_FAILURE([*** Cannot find ber_pvt_opt_on with -llber - do you need to install an OpenLDAP2 Devel package?]))
 
     if test x$ldapcrypto = xyes ; then
 	AC_SUBST(LDAP_CFLAGS, ["-DLDAP_CONFIGURATION -DLDAP_USE_SSL"])
