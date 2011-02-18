@@ -373,13 +373,6 @@ parse_ip6_addr(struct parse *cfile, struct iaddr *addr) {
 	char v6[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
 	int v6_len;
 
-        if (local_family != AF_INET6) {
-                parse_warn(cfile, "IPv6 addresses are only available "
-				  "in DHCPv6 mode.");
-                skip_to_semi(cfile);
-                return 0;
-        }
-
 	/*
 	 * First token is non-raw. This way we eat any whitespace before 
 	 * our IPv6 address begins, like one would expect.
