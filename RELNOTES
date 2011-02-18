@@ -55,6 +55,11 @@ work on other platforms. Please report any problems and suggested fixes to
   when removing the ddns information.  
   [ISC-Bugs #23103]
 
+- Some fixes for LDAP
+  [ISC-Bugs #21783] - Include lber library when building ldap
+  [ISC-Bugs #22888] - Enable the ldap code when buidling common
+  The above fixes are from Jiri Popelka at Red Hat.
+
 			Changes since 4.2.0
 
 - 'get-host-names true;' now also works even if 'use-host-decl-names true;'
