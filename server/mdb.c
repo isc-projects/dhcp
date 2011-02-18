@@ -3,7 +3,7 @@
    Server-specific in-memory database support. */
 
 /*
- * Copyright (c) 2004-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2011 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -1225,8 +1225,15 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 	comp->ends = lease->ends;
 	comp->next_binding_state = lease->next_binding_state;
 
-	/* move the ddns control block information */
-	comp->ddns_cb = lease->ddns_cb;
+	/*
+	 * If we have a control block pointer copy it in.
+	 * We don't zero out an older ponter as it is still
+	 * in use.  We shouldn't need to overwrite an
+	 * old pointer with a new one as the old transaction
+	 * should have been cancelled before getting here.
+	 */
+	if (lease->ddns_cb != NULL)
+		comp->ddns_cb = lease->ddns_cb;
 
       just_move_it:
 #if defined (FAILOVER_PROTOCOL)

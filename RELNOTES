@@ -50,6 +50,11 @@ work on other platforms. Please report any problems and suggested fixes to
 				ip6-address, array of ip-address };
 	option 6rd 16 10 2001:: 1.2.3.4, 5.6.7.8;
 
+- Handle some DDNS corner cases better.  Maintain the DDNS transaction
+  information when updating a lease and cancel any existing transactions
+  when removing the ddns information.  
+  [ISC-Bugs #23103]
+
 			Changes since 4.2.0
 
 - 'get-host-names true;' now also works even if 'use-host-decl-names true;'

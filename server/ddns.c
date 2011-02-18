@@ -3,7 +3,7 @@
    Dynamic DNS updates. */
 
 /*
- * Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2011 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2000-2003 by Internet Software Consortium
  *
@@ -108,7 +108,7 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 		}
 	} else if (lease6 != NULL) {
 		if ((old6 != NULL) && (old6->ddns_cb != NULL)) {
-			ddns_cancel(old->ddns_cb);
+			ddns_cancel(old6->ddns_cb);
 			old6->ddns_cb = NULL;
 		}
 	} else {
@@ -1303,8 +1303,23 @@ ddns_removals(struct lease    *lease,
 	isc_result_t rcode, execute_add = ISC_R_FAILURE;
 	struct binding_scope **scope = NULL;
 	int result = 0;
-	dhcp_ddns_cb_t        *ddns_cb;
+	dhcp_ddns_cb_t        *ddns_cb = NULL;
 	struct data_string     leaseid;
+
+	/*
+	 * Cancel any outstanding requests.  When called
+	 * from within the DNS code we probably will have
+	 * already done the cancel but if called from outside
+	 * - for example as part of a lease expiry - we won't.
+	 */
+	if ((lease != NULL) && (lease->ddns_cb != NULL)) {
+		ddns_cancel(lease->ddns_cb);
+		lease->ddns_cb = NULL;
+	} else if ((lease6 != NULL) && (lease6->ddns_cb != NULL)) {
+		ddns_cancel(lease6->ddns_cb);
+		lease6->ddns_cb = NULL;
+	} else
+		goto cleanup;
 
 	/* allocate our control block */
 	ddns_cb = ddns_cb_alloc(MDL);
@@ -1466,7 +1481,8 @@ ddns_removals(struct lease    *lease,
 	 * we allocated here.
 	 */
 	ddns_fwd_srv_connector(lease, lease6, scope, add_ddns_cb, execute_add);
-	ddns_cb_free(ddns_cb, MDL);
+	if (ddns_cb != NULL) 
+		ddns_cb_free(ddns_cb, MDL);
 
 	return(result);
 }
