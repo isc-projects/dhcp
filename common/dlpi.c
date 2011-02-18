@@ -3,7 +3,7 @@
    Data Link Provider Interface (DLPI) network interface code. */
 
 /*
- * Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2011 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
@@ -1165,16 +1165,7 @@ static int dlpiunitdataind (fd, daddr, daddrlen,
 
 	result = getmsg (fd, &ctl, &data, &flags);
 
-	/*
-	 * The getmsg() manpage says:
-	 *
-	 * "On successful completion, a non-negative value is returned."
-	 *
-	 * This suggests that if MOREDATA or MORECTL are set, we error?
-	 * This seems to be safe as it never seems to happen.  Still,
-	 * set a log message, so we know if it ever starts happening.
-	 */
-	if (result != 0) {
+	if (result < 0) {
 		log_debug("dlpiunitdataind: %m");
 		return -1;
 	}
