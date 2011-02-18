@@ -198,6 +198,11 @@ work on other platforms. Please report any problems and suggested fixes to
 	option 6rd 16 10 2001:: 1.2.3.4, 5.6.7.8;
 
 
+- Handle some DDNS corner cases better.  Maintain the DDNS transaction
+  information when updating a lease and cancel any existing transactions
+  when removing the ddns information.  
+  [ISC-Bugs #23103]
+
 			Changes since 4.2.0b2
 
 - Add declaration for variable in debug code in alloc.c.  [ISC-Bugs #21472]
