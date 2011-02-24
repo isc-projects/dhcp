@@ -410,6 +410,31 @@ must install this extension in order to get dhcpd or dhclient to work.
 
 			       SOLARIS
 
+There are two known issues seen when compiling using the Sun compiler.
+
+The first is that older Sun compilers generate an error on some of
+our uses of the flexible array option.  Newer versions only generate
+a warning, which can be safely ignored.  If you run into this error
+("type of struct member "buf" can not be derived from structure with
+flexible array member"), upgrade your tools to  Sun Studio 12 or
+something newer.
+
+The second is the interaction between the configure script and the
+makefiles for the Bind libraries.  Currently we don't pass all
+environment variables between the DHCP configure and the Bind configure.
+
+If you attempt to specify the compiler you wish to use like this:
+
+	CC=/opt/SUNWspro/bin/cc ./configure
+
+"make" may not build the Bind libraries with that compiler.
+
+In order to use the same compiler for Bind and DHCP we suggest the
+following commands:
+
+	CC=/opt/SUNWspro/bin/cc ./configure
+	CC=/opt/SUNWspro/bin/cc make
+
 One problem which has been observed and is not fixed in this
 patchlevel has to do with using DLPI on Solaris machines.  The symptom
 of this problem is that the DHCP server never receives any requests.
