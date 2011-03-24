@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.98.2.21 2009/09/01 20:32:27 dhankins Exp $ Copyright (c) 2004-2009 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.98.2.22 2011/03/24 22:43:32 sar Exp $ Copyright (c) 2004-2009 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -2947,7 +2947,9 @@ pretty_escape(char **dst, char *dend, const unsigned char **src,
 				count += 4;
 			}
 		} else if (**src == '"' || **src == '\'' || **src == '$' ||
-			   **src == '`' || **src == '\\') {
+			   **src == '`' || **src == '\\' || **src == '|' ||
+			   **src == '&') {
+
 			if (*dst + 2 > dend)
 				return -1;
 
