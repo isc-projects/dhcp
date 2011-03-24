@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.143.2.16 2011/03/24 22:43:32 sar Exp $ Copyright (c) 2004-2009 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.143.2.17 2011/03/24 22:51:52 sar Exp $ Copyright (c) 2004-2011 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"

@@ -3,7 +3,7 @@
    DHCP Server Daemon. */
 
 /*
- * Copyright (c) 2004-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2011 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.121.42.9 2010/03/17 19:32:13 sar Exp $ Copyright 2004-2009 Internet Systems Consortium.";
+"$Id: dhcpd.c,v 1.121.42.10 2011/03/24 22:51:53 sar Exp $ Copyright 2004-2011 Internet Systems Consortium.";
 #endif
 
 static const char copyright[] =
