@@ -1,12 +1,12 @@
 	      Internet Systems Consortium DHCP Distribution
-			    Version 4.1-ESV-R1
-			     25 January 2011
+			    Version 4.1-ESV-R2
+			      25 March 2011
 
 			      Release Notes
 
 			      NEW FEATURES
 
-Version 4.1-ESV-R1 is an extended support version (ESV) release.  ESVs are
+Version 4.1-ESV-R2 is an extended support version (ESV) release.  ESVs are
 intended for users who have longer upgrade constraints and only critical
 bug and security fixes will be added to future ESV releases.  Please see
 our web page http://www.isc.org/downloads/extended-support for more
