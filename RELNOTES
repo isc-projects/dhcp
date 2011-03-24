@@ -39,6 +39,14 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and may not
 work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
+			Changes since 4.2.1
+
+! In dhclient check the data for some string options for
+  reasonableness before passing it along to the script that
+  interfaces with the OS.
+  [ISC-Bugs #23722]
+  CVE: CVE-2011-0997
+  
 			Changes since 4.2.0
 
 - Documentation cleanup covering multiple tickets
