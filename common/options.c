@@ -3909,7 +3909,8 @@ pretty_escape(char **dst, char *dend, const unsigned char **src,
 				count += 4;
 			}
 		} else if (**src == '"' || **src == '\'' || **src == '$' ||
-			   **src == '`' || **src == '\\') {
+			   **src == '`' || **src == '\\' || **src == '|' ||
+			   **src == '&') {
 			if (*dst + 2 > dend)
 				return -1;
 
