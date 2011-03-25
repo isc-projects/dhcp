@@ -95,8 +95,8 @@ directory, it may not have up-to-date information).
 			    RELEASE STATUS
 
 This is ISC DHCP 4.1-ESV-R2, an extended support (ESV) release that
-fixes a bug which could cause a server to crash after processing a
-DHCPv6 decline message.  ESVs are intended for users who have longer
+adds code to sanity check some strings before passing them from a client
+to the client scripts.  ESVs are intended for users who have longer
 upgrade constraints and only critical bug and security fixes will be
 added to future ESV releases.  Please see our web page
 http://www.isc.org/downloads/extended-support for more information on
