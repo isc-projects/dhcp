@@ -3041,10 +3041,11 @@ void client_option_envadd (struct option_cache *oc,
 			if (dhcp_option_ev_name (name, sizeof name,
 						 oc->option)) {
 				const char *value;
+				size_t length;
 				value = pretty_print_option(oc->option,
 							    data.data,
 							    data.len, 0, 0);
-				size_t length = strlen(value);
+				length = strlen(value);
 
 				if (check_option_values(oc->option->universe,
 							oc->option->code,
