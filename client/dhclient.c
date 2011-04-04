@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.143.2.17 2011/03/24 22:51:52 sar Exp $ Copyright (c) 2004-2011 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.143.2.18 2011/04/04 23:03:13 marka Exp $ Copyright (c) 2004-2011 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2511,10 +2511,11 @@ void client_option_envadd (struct option_cache *oc,
 			if (dhcp_option_ev_name (name, sizeof name,
 						 oc->option)) {
 				const char *value;
+				size_t length;
 				value = pretty_print_option(oc->option,
 							    data.data,
 							    data.len, 0, 0);
-				size_t length = strlen(value);
+				length = strlen(value);
 
 				if (check_option_values(oc->option->universe,
 							oc->option->code,
