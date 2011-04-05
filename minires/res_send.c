@@ -76,7 +76,7 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static const char sccsid[] = "@(#)res_send.c	8.1 (Berkeley) 6/4/93";
-static const char rcsid[] = "$Id: res_send.c,v 1.8.140.4 2009/07/23 21:43:35 sar Exp $";
+static const char rcsid[] = "$Id: res_send.c,v 1.8.140.5 2011/04/05 06:41:46 marka Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 /*
@@ -108,7 +108,7 @@ static const char rcsid[] = "$Id: res_send.c,v 1.8.140.4 2009/07/23 21:43:35 sar
 
 ssize_t trace_mr_send(int, const void *, size_t, int);
 ssize_t trace_mr_recvfrom(int s, void *, size_t, int,
-                          struct sockaddr *, socklen_t *);
+                          struct sockaddr *, SOCKLEN_T *);
 ssize_t trace_mr_read(int, void *, size_t);
 int trace_mr_connect(int s, struct sockaddr *, socklen_t);
 int trace_mr_socket(int, int, int);
