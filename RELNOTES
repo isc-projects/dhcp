@@ -46,6 +46,9 @@ work on other platforms. Please report any problems and suggested fixes to
   interfaces with the OS.
   [ISC-Bugs #23722]
   CVE: CVE-2011-0997
+
+- DHCPv6 server now responds properly if client asks for a prefix that
+  is already assigned to a different client. [ISC-Bugs #23948]
   
 			Changes since 4.2.1rc1
 
