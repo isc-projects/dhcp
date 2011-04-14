@@ -53,6 +53,15 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and may not
 work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
+			Changes since 4.1-ESV-R2
+
+- DHCPv6 server now responds properly if client asks for a prefix that
+  is already assigned to a different client. [ISC-Bugs #23948]
+
+- Fix the handling of connection requests on the failover port.
+  This was a security issue in 4.2.0 but is not in  4.1.x.
+  [ISC-Bugs #22679]
+
 			Changes since 4.1-ESV-R1
 
 ! In dhclient check the data for some string options for
@@ -60,9 +69,6 @@ work on other platforms. Please report any problems and suggested fixes to
   interfaces with the OS.
   [ISC-Bugs #23722]
   CVE: CVE-2011-0997
-
-- DHCPv6 server now responds properly if client asks for a prefix that
-  is already assigned to a different client. [ISC-Bugs #23948]
 
 			Changes since 4.1-ESV
 
