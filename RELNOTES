@@ -68,6 +68,9 @@ work on other platforms. Please report any problems and suggested fixes to
   option.  Thanks to a patch from Marius Tomaschewski.
   [ISC-Bugs #22055]
 
+- Modify the dlpi code to accept getmsg() returning a positive value.
+  [ISC-Bugs #22824]
+
 			Changes since 4.1-ESV-R1
 
 ! In dhclient check the data for some string options for
