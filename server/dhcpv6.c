@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2006-2011 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -3697,7 +3697,9 @@ reply_process_try_prefix(struct reply_state *reply,
 			continue;
 		status = try_client_v6_prefix(&reply->lease, pool,
 					      &data_pref);
-		if (status == ISC_R_SUCCESS)
+                /* If we found it in this pool (either in use or available), 
+                   there is no need to look further. */
+		if ( (status == ISC_R_SUCCESS) || (status == ISC_R_ADDRINUSE) )
 			break;
 	}
 
