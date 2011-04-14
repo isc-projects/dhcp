@@ -4953,8 +4953,28 @@ struct option *option;
 		do {
 			if ((*fmt == 'A') || (*fmt == 'a'))
 				break;
-			if (*fmt == 'o')
+			if (*fmt == 'o') {
+				/* consume the optional flag */
+				fmt++;
 				continue;
+			}
+
+			if (fmt[1] == 'o') {
+				/*
+				 * A value for the current format is
+				 * optional - check to see if the next
+				 * token is a semi-colon if so we don't
+				 * need to parse it and doing so would
+				 * consume the semi-colon which our
+				 * caller is expecting to parse
+				 */
+				token = peek_token(&val, (unsigned *)0,
+						   cfile);
+				if (token == SEMI) {
+					fmt++;
+					continue;
+				}
+			}
 
 			tmp = *expr;
 			*expr = NULL;

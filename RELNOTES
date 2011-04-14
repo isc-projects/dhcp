@@ -62,6 +62,12 @@ work on other platforms. Please report any problems and suggested fixes to
   This was a security issue in 4.2.0 but is not in  4.1.x.
   [ISC-Bugs #22679]
 
+- When processing the format flags for a given option consume the
+  flag indicating an optional value correctly.  A symptom of this
+  bug was an infinite loop when trying to parse the slp-service-scope
+  option.  Thanks to a patch from Marius Tomaschewski.
+  [ISC-Bugs #22055]
+
 			Changes since 4.1-ESV-R1
 
 ! In dhclient check the data for some string options for
@@ -2652,7 +2658,6 @@ work on other platforms. Please report any problems and suggested fixes to
 
 - Fix a bug in the DHCP client initial startup backoff interval, which
   would cause two DHCPDISCOVERS to be sent back-to-back on startup.
-
 
 	        Changes since 3.0 Beta 2 Patchlevel 15
 
