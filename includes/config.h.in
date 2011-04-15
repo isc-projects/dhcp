@@ -175,6 +175,9 @@
 /* File for dhcpd process information. */
 #undef _PATH_DHCPD_PID
 
+/* File for dhcrelay6 process information. */
+#undef _PATH_DHCRELAY6_PID
+
 /* File for dhcrelay process information. */
 #undef _PATH_DHCRELAY_PID
 
