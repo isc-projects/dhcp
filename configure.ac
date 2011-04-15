@@ -317,6 +317,12 @@ AC_ARG_WITH(relay-pid-file,
 		        (default is LOCALSTATEDIR/run/dhcrelay.pid)]),
 	AC_DEFINE_UNQUOTED([_PATH_DHCRELAY_PID], ["$withval"],
 			   [File for dhcrelay process information.]))
+AC_ARG_WITH(relay6-pid-file,
+	AC_HELP_STRING([--with-relay6-pid-file=PATH],
+		       [File for dhcrelay6 process information
+		        (default is LOCALSTATEDIR/run/dhcrelay6.pid)]),
+	AC_DEFINE_UNQUOTED([_PATH_DHCRELAY6_PID], ["$withval"],
+			   [File for dhcrelay6 process information.]))
 
 # Check basic types.
 AC_TYPE_INT8_T

@@ -1,6 +1,6 @@
-.\"	$Id: dhclient.8,v 1.35 2010/07/14 20:01:14 sar Exp $
+.\"	$Id: dhclient.8,v 1.36 2011/04/15 21:58:12 sar Exp $
 .\"
-.\" Copyright (c) 2004,2007-2010 by Internet Systems Consortium, Inc. ("ISC")
+.\" Copyright (c) 2004,2007-2011 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
@@ -90,6 +90,9 @@ dhclient - Dynamic Host Configuration Protocol Client
 .I pid-file
 ]
 [
+.B --no-pid
+]
+[
 .B -cf
 .I config-file
 ]
@@ -99,7 +102,7 @@ dhclient - Dynamic Host Configuration Protocol Client
 ]
 [
 .B -s
-.I server
+.I server-addr
 ]
 [
 .B -g
@@ -305,7 +308,7 @@ If a different port is specified on which the client should listen and
 transmit, the client will also use a different destination port -
 one less than the specified port.
 .TP
-.BI \-s \ server
+.BI \-s \ server-addr
 Specify the server IP address or fully qualified domain name to use as
 a destination for DHCP protocol messages before 
 .B dhclient
@@ -380,6 +383,12 @@ is used.  See \fBdhclient.leases(5)\fR for a descriptionof this file.
 Path to the process ID file.  If unspecified, the default
 .B RUNDIR/dhclient.pid
 is used.
+.TP
+.BI \--no-pid
+Option to disable writing pid files.  By default the program
+will write a pid file.  If the program is invoked with this
+option it will not attempt to kill any existing client processes
+even if invoked with \fB-r\fR or \fB-x\fR.
 .TP
 .BI \-sf \ script-file
 Path to the network configuration script invoked by
