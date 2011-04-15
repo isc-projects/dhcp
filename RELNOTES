@@ -49,6 +49,14 @@ work on other platforms. Please report any problems and suggested fixes to
 
 - DHCPv6 server now responds properly if client asks for a prefix that
   is already assigned to a different client. [ISC-Bugs #23948]
+
+- Add the option "--no-pid" to the client, relay and server code,
+  to disable writing a pid file.  Add the option "-pf pidfile"
+  to the relay to allow the user to supply the pidfile name at
+  runtime.  Add the "with-relay6-pid-file" option to configure
+  to allow the user to supply the pidfile name for the relay
+  in v6 mode at configure time.
+  [ISC-Bugs #23351] [ISC-Bugs #17541]
   
 			Changes since 4.2.1rc1
 
