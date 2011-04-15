@@ -80,6 +80,14 @@ work on other platforms. Please report any problems and suggested fixes to
 				ip6-address, array of ip-address };
 	option 6rd 16 10 2001:: 1.2.3.4, 5.6.7.8;
 
+- Add the option "--no-pid" to the client, relay and server code,
+  to disable writing a pid file.  Add the option "-pf pidfile"
+  to the relay to allow the user to supply the pidfile name at
+  runtime.  Add the "with-relay6-pid-file" option to configure
+  to allow the user to supply the pidfile name for the relay
+  in v6 mode at configure time.
+  [ISC-Bugs #23351] [ISC-Bugs #17541]
+
 			Changes since 4.1-ESV-R1
 
 ! In dhclient check the data for some string options for

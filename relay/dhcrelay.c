@@ -50,6 +50,9 @@ char *token_line;
 char *tlname;
 
 const char *path_dhcrelay_pid = _PATH_DHCRELAY_PID;
+isc_boolean_t no_dhcrelay_pid = ISC_FALSE;
+/* False (default) => we write and use a pid file */
+isc_boolean_t no_pid_file = ISC_FALSE;
 
 int bogus_agent_drops = 0;	/* Packets dropped because agent option
 				   field was specified and we're not relaying
@@ -139,10 +142,12 @@ static const char url[] =
 #define DHCRELAY_USAGE \
 "Usage: dhcrelay [-4] [-d] [-q] [-a] [-D]\n"\
 "                     [-A <length>] [-c <hops>] [-p <port>]\n" \
+"                     [-pf <pid-file>] [--no-pid]\n"\
 "                     [-m append|replace|forward|discard]\n" \
 "                     [-i interface0 [ ... -i interfaceN]\n" \
 "                     server0 [ ... serverN]\n\n" \
 "       dhcrelay -6   [-d] [-q] [-I] [-c <hops>] [-p <port>]\n" \
+"                     [-pf <pid-file>] [--no-pid]\n"\
 "                     -l lower0 [ ... -l lowerN]\n" \
 "                     -u upper0 [ ... -u upperN]\n" \
 "       lower (client link): [address%%]interface[#index]\n" \
@@ -150,6 +155,7 @@ static const char url[] =
 #else
 #define DHCRELAY_USAGE \
 "Usage: dhcrelay [-d] [-q] [-a] [-D] [-A <length>] [-c <hops>] [-p <port>]\n" \
+"                [-pf <pid-file>] [--no-pid]\n"\
 "                [-m append|replace|forward|discard]\n" \
 "                [-i interface0 [ ... -i interfaceN]\n" \
 "                server0 [ ... serverN]\n\n"
@@ -353,6 +359,13 @@ main(int argc, char **argv) {
 			sl->next = upstreams;
 			upstreams = sl;
 #endif
+		} else if (!strcmp(argv[i], "-pf")) {
+			if (++i == argc)
+				usage();
+			path_dhcrelay_pid = argv[i];
+			no_dhcrelay_pid = ISC_TRUE;
+		} else if (!strcmp(argv[i], "--no-pid")) {
+			no_pid_file = ISC_TRUE;
 		} else if (!strcmp(argv[i], "--version")) {
 			log_info("isc-dhcrelay-%s", PACKAGE_VERSION);
 			exit(0);
@@ -397,18 +410,24 @@ main(int argc, char **argv) {
  		}
 	}
 
-	if (local_family == AF_INET) {
-		path_dhcrelay_pid = getenv("PATH_DHCRELAY_PID");
-		if (path_dhcrelay_pid == NULL)
-			path_dhcrelay_pid = _PATH_DHCRELAY_PID;
-	}
+	/*
+	 * If the user didn't specify a pid file directly
+	 * find one from environment variables or defaults
+	 */
+	if (no_dhcrelay_pid == ISC_FALSE) {
+		if (local_family == AF_INET) {
+			path_dhcrelay_pid = getenv("PATH_DHCRELAY_PID");
+			if (path_dhcrelay_pid == NULL)
+				path_dhcrelay_pid = _PATH_DHCRELAY_PID;
+		}
 #ifdef DHCPv6
-	else {
-		path_dhcrelay_pid = getenv("PATH_DHCRELAY6_PID");
-		if (path_dhcrelay_pid == NULL)
-			path_dhcrelay_pid = _PATH_DHCRELAY6_PID;
-	}
+		else {
+			path_dhcrelay_pid = getenv("PATH_DHCRELAY6_PID");
+			if (path_dhcrelay_pid == NULL)
+				path_dhcrelay_pid = _PATH_DHCRELAY6_PID;
+		}
 #endif
+	}
 
 	if (!quiet) {
 		log_info("%s %s", message, PACKAGE_VERSION);
@@ -522,20 +541,23 @@ main(int argc, char **argv) {
 		else if (pid)
 			exit(0);
 
-		pfdesc = open(path_dhcrelay_pid,
-			       O_CREAT | O_TRUNC | O_WRONLY, 0644);
+		if (no_pid_file == ISC_FALSE) {
+			pfdesc = open(path_dhcrelay_pid,
+				      O_CREAT | O_TRUNC | O_WRONLY, 0644);
 
-		if (pfdesc < 0) {
-			log_error("Can't create %s: %m", path_dhcrelay_pid);
-		} else {
-			pf = fdopen(pfdesc, "w");
-			if (!pf)
-				log_error("Can't fdopen %s: %m",
-				      path_dhcrelay_pid);
-			else {
-				fprintf(pf, "%ld\n",(long)getpid());
-				fclose(pf);
-			}	
+			if (pfdesc < 0) {
+				log_error("Can't create %s: %m",
+					  path_dhcrelay_pid);
+			} else {
+				pf = fdopen(pfdesc, "w");
+				if (!pf)
+					log_error("Can't fdopen %s: %m",
+						  path_dhcrelay_pid);
+				else {
+					fprintf(pf, "%ld\n",(long)getpid());
+					fclose(pf);
+				}	
+			}
 		}
 
 		close(0);

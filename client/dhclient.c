@@ -47,6 +47,9 @@ const char *path_dhclient_pid = NULL;
 static char path_dhclient_script_array[] = _PATH_DHCLIENT_SCRIPT;
 char *path_dhclient_script = path_dhclient_script_array;
 
+/* False (default) => we write and use a pid file */
+isc_boolean_t no_pid_file = ISC_FALSE;
+
 int dhcp_max_agent_option_packet_length = 0;
 
 int interfaces_requested = 0;
@@ -198,6 +201,8 @@ main(int argc, char **argv) {
 				usage();
 			path_dhclient_pid = argv[i];
 			no_dhclient_pid = 1;
+		} else if (!strcmp(argv[i], "--no-pid")) {
+			no_pid_file = ISC_TRUE;
 		} else if (!strcmp(argv[i], "-cf")) {
 			if (++i == argc)
 				usage();
@@ -372,8 +377,13 @@ main(int argc, char **argv) {
 			log_fatal("%s: %s", path, strerror(errno));
 	}
 
-	/* first kill off any currently running client */
-	if (release_mode || exit_mode) {
+	/*
+	 * See if we should  kill off any currently running client
+	 * we don't try to kill it off if the user told us not
+	 * to write a pid file - we assume they are controlling
+	 * the process in some other fashion.
+	 */
+	if ((release_mode || exit_mode) && (no_pid_file == ISC_FALSE)) {
 		FILE *pidfd;
 		pid_t oldpid;
 		long temp;
@@ -664,16 +674,17 @@ static void usage()
 	log_info(arr);
 	log_info(url);
 
-	log_error("Usage: dhclient %s %s",
+
+	log_fatal("Usage: dhclient "
 #ifdef DHCPv6
-		  "[-4|-6] [-SNTP1dvrx] [-nw] [-p <port>]",
+		  "[-4|-6] [-SNTP1dvrx] [-nw] [-p <port>]\n"
 #else /* DHCPv6 */
-		  "[-1dvrx] [-nw] [-p <port>]",
+		  "[-1dvrx] [-nw] [-p <port>]\n"
 #endif /* DHCPv6 */
-		  "[-s server]");
-	log_error("                [-cf config-file] [-lf lease-file]%s",
-		  "[-pf pid-file] [-e VAR=val]");
-	log_fatal("                [-sf script-file] [interface]");
+		  "                [-s server-addr] [-cf config-file] "
+		  "[-lf lease-file]\n"
+		  "                [-pf pid-file] [--no-pid] [-e VAR=val]\n"
+		  "                [-sf script-file] [interface]");
 }
 
 void run_stateless(int exit_mode)
@@ -3354,6 +3365,11 @@ void write_client_pid_file ()
 {
 	FILE *pf;
 	int pfdesc;
+
+	/* nothing to do if the user doesn't want a pid file */
+	if (no_pid_file == ISC_TRUE) {
+		return;
+	}
 
 	pfdesc = open (path_dhclient_pid, O_CREAT | O_TRUNC | O_WRONLY, 0644);
 

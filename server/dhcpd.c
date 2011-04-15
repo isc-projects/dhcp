@@ -161,6 +161,8 @@ int ddns_update_style;
 const char *path_dhcpd_conf = _PATH_DHCPD_CONF;
 const char *path_dhcpd_db = _PATH_DHCPD_DB;
 const char *path_dhcpd_pid = _PATH_DHCPD_PID;
+/* False (default) => we write and use a pid file */
+isc_boolean_t no_pid_file = ISC_FALSE;
 
 int dhcp_max_agent_option_packet_length = DHCP_MTU_MAX;
 
@@ -352,6 +354,8 @@ main(int argc, char **argv) {
 				usage ();
 			path_dhcpd_pid = argv [i];
 			no_dhcpd_pid = 1;
+		} else if (!strcmp(argv[i], "--no-pid")) {
+			no_pid_file = ISC_TRUE;
                 } else if (!strcmp (argv [i], "-t")) {
 			/* test configurations only */
 #ifndef DEBUG
@@ -775,33 +779,41 @@ main(int argc, char **argv) {
 	}
 #endif /* PARANOIA */
 
-	/* Read previous pid file. */
-	if ((i = open (path_dhcpd_pid, O_RDONLY)) >= 0) {
-		status = read(i, pbuf, (sizeof pbuf) - 1);
-		close (i);
-		if (status > 0) {
-			pbuf[status] = 0;
-			pid = atoi(pbuf);
+	/*
+	 * Deal with pid files.  If the user told us
+	 * not to write a file we don't read one either
+	 */
+	if (no_pid_file == ISC_FALSE) {
+		/*Read previous pid file. */
+		if ((i = open (path_dhcpd_pid, O_RDONLY)) >= 0) {
+			status = read(i, pbuf, (sizeof pbuf) - 1);
+			close (i);
+			if (status > 0) {
+				pbuf[status] = 0;
+				pid = atoi(pbuf);
 
-			/*
-                         * If there was a previous server process and it's
-                         * is still running, abort
-                         */
-			if (!pid || (pid != getpid() && kill(pid, 0) == 0))
-				log_fatal("There's already a "
-                                          "DHCP server running.");
+				/*
+				 * If there was a previous server process and
+				 * it is still running, abort
+				 */
+				if (!pid ||
+				    (pid != getpid() && kill(pid, 0) == 0))
+					log_fatal("There's already a "
+						  "DHCP server running.");
+			}
+		}
+
+		/* Write new pid file. */
+		i = open(path_dhcpd_pid, O_WRONLY|O_CREAT|O_TRUNC, 0644);
+		if (i >= 0) {
+			sprintf(pbuf, "%d\n", (int) getpid());
+			IGNORE_RET (write(i, pbuf, strlen(pbuf)));
+			close(i);
+		} else {
+			log_error("Can't create PID file %s: %m.",
+				  path_dhcpd_pid);
 		}
 	}
-
-        /* Write new pid file. */
-        if ((i = open(path_dhcpd_pid, O_WRONLY|O_CREAT|O_TRUNC, 0644)) >= 0) {
-                sprintf(pbuf, "%d\n", (int) getpid());
-                IGNORE_RET (write(i, pbuf, strlen(pbuf)));
-                close(i);
-        } else {
-                log_error("Can't create PID file %s: %m.", path_dhcpd_pid);
-        }
-
 
 	/* If we were requested to log to stdout on the command line,
 	   keep doing so; otherwise, stop. */
@@ -894,7 +906,7 @@ void postconf_initialization (int quiet)
 				   &global_scope, oc, MDL)) {
 		s = dmalloc (db.len + 1, MDL);
 		if (!s)
-			log_fatal ("no memory for lease db filename.");
+			log_fatal ("no memory for pid filename.");
 		memcpy (s, db.data, db.len);
 		s [db.len] = 0;
 		data_string_forget (&db, MDL);
@@ -930,7 +942,7 @@ void postconf_initialization (int quiet)
                                           oc, MDL)) {
                         s = dmalloc (db.len + 1, MDL);
                         if (!s)
-                                log_fatal ("no memory for lease db filename.");
+                                log_fatal ("no memory for pid filename.");
                         memcpy (s, db.data, db.len);
                         s [db.len] = 0;
                         data_string_forget (&db, MDL);
@@ -1191,7 +1203,8 @@ usage(void) {
 		  "             [-tf trace-output-file]\n"
 		  "             [-play trace-input-file]\n"
 #endif /* TRACING */
-		  "             [-pf pid-file] [-s server] [if0 [...ifN]]");
+		  "             [-pf pid-file] [--no-pid] [-s server]\n"
+		  "             [if0 [...ifN]]");
 }
 
 void lease_pinged (from, packet, length)
