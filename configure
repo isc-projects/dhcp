@@ -1327,6 +1327,9 @@ Optional Packages:
   --with-relay-pid-file=PATH
                           File for dhcrelay process information (default is
                           LOCALSTATEDIR/run/dhcrelay.pid)
+  --with-relay6-pid-file=PATH
+                          File for dhcrelay6 process information (default is
+                          LOCALSTATEDIR/run/dhcrelay6.pid)
 
 Some influential environment variables:
   CC          C compiler command
@@ -5051,6 +5054,16 @@ if test "${with_relay_pid_file+set}" = set; then
   withval=$with_relay_pid_file;
 cat >>confdefs.h <<_ACEOF
 #define _PATH_DHCRELAY_PID "$withval"
+_ACEOF
+
+fi
+
+
+# Check whether --with-relay6-pid-file was given.
+if test "${with_relay6_pid_file+set}" = set; then
+  withval=$with_relay6_pid_file;
+cat >>confdefs.h <<_ACEOF
+#define _PATH_DHCRELAY6_PID "$withval"
 _ACEOF
 
 fi
