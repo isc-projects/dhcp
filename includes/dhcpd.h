@@ -754,6 +754,10 @@ struct lease_state {
 # define MAX_DEFAULT_DDNS_TTL 3600
 #endif
 
+#if !defined (MIN_LEASE_WRITE)
+# define MIN_LEASE_WRITE 15
+#endif
+
 /* Client option names */
 
 #define	CL_TIMEOUT		1
@@ -1082,6 +1086,8 @@ struct client_config {
 	TIME timeout;			/* Start to panic if we don't get a
 					   lease in this time period when
 					   SELECTING. */
+	TIME initial_delay; 		/* Set initial delay before first
+                                   transmission. */
 	TIME initial_interval;		/* All exponential backoff intervals
 					   start here. */
 	TIME retry_interval;		/* If the protocol failed to produce
@@ -1134,7 +1140,7 @@ struct client_state {
         int envc;			/* Number of entries in environment. */
 	struct option_state *sent_options;		 /* Options we sent. */
 	enum dhcp_state state;          /* Current state for this interface. */
-
+	TIME last_write;		/* Last time this state was written. */
 
 	/* DHCPv4 values. */
 	struct client_lease *active;		  /* Currently active lease. */
