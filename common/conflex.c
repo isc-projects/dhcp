@@ -999,6 +999,8 @@ intern(char *atom, enum dhcp_token dfv) {
 		if (!strncasecmp(atom + 1, "et", 2)) {
 			if (!strcasecmp(atom + 3, "-lease-hostnames"))
 				return GET_LEASE_HOSTNAMES;
+			if (!strcasecmp(atom + 3, "hostbyname"))
+				return GETHOSTBYNAME;
 			if (!strcasecmp(atom + 3, "hostname"))
 				return GETHOSTNAME;
 			break;

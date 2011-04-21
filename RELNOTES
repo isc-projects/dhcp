@@ -89,6 +89,14 @@ work on other platforms. Please report any problems and suggested fixes to
   client now adds the server to the reject list ACL and returns to INIT
   state to hopefully find an RFC 2131 compliant server (or retry in INIT
   forever). [ISC-Bugs #19660]
+
+- Parameters configured to evaluate from user defined function calls can
+  now be correctly written to dhcpd.leases (as on 'on events' or dynamic
+  host records inserted via OMAPI).  [ISC-Bugs #22266]
+
+- If a 'next-server' parameter is configured in a dynamic host record via
+  OMAPI as a domain name, the syntax written to disk is now correctly parsed
+  upon restart.  [ISC-Bugs #22266]
   
   
 			Changes since 4.2.1rc1

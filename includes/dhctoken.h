@@ -358,7 +358,8 @@ enum dhcp_token {
 	AUTO_PARTNER_DOWN = 661,
 	GETHOSTNAME = 662,
 	REWIND = 663,
-	INITIAL_DELAY = 664
+	INITIAL_DELAY = 664,
+	GETHOSTBYNAME = 665
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
