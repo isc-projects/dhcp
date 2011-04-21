@@ -3,7 +3,7 @@
    Parser for dhclient config and lease files... */
 
 /*
- * Copyright (c) 2004-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2011 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -128,6 +128,16 @@ isc_result_t read_client_conf ()
 	top_level_config.retry_interval = 300;
 	top_level_config.backoff_cutoff = 15;
 	top_level_config.initial_interval = 3;
+
+	/*
+	 * RFC 2131, section 4.4.1 specifies that the client SHOULD wait a
+	 * random time between 1 and 10 seconds. However, we choose to not
+	 * implement this default. If user is inclined to really have that
+	 * delay, he is welcome to do so, using 'initial-delay X;' parameter
+	 * in config file.
+	 */
+	top_level_config.initial_delay = 0;
+
 	top_level_config.bootp_policy = P_ACCEPT;
 	top_level_config.script_name = path_dhclient_script;
 	top_level_config.requested_options = default_requested_options;
@@ -209,7 +219,7 @@ int read_client_conf_file (const char *name, struct interface_info *ip,
 	const char *val;
 	int token;
 	isc_result_t status;
-	
+
 	if ((file = open (name, O_RDONLY)) < 0)
 		return uerr2isc (errno);
 
@@ -632,6 +642,11 @@ void parse_client_statement (cfile, ip, config)
 	      case INITIAL_INTERVAL:
 		token = next_token (&val, (unsigned *)0, cfile);
 		parse_lease_time (cfile, &config -> initial_interval);
+		return;
+
+	      case INITIAL_DELAY:
+		token = next_token (&val, (unsigned *)0, cfile);
+		parse_lease_time (cfile, &config -> initial_delay);
 		return;
 
 	      case SCRIPT:
@@ -2207,4 +2222,3 @@ int parse_allow_deny (oc, cfile, flag)
 	skip_to_semi (cfile);
 	return 0;
 }
-

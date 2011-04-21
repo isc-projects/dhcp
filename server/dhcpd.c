@@ -202,8 +202,8 @@ static void omapi_listener_start (void *foo)
 	if (result != ISC_R_SUCCESS) {
 		log_error ("Can't start OMAPI protocol: %s",
 			   isc_result_totext (result));
-		tv.tv_sec = cur_time + 5;
-		tv.tv_usec = 0;
+		tv.tv_sec = cur_tv.tv_sec + 5;
+		tv.tv_usec = cur_tv.tv_usec;
 		add_timeout (&tv, omapi_listener_start, 0, 0, 0);
 	}
 	omapi_object_dereference (&listener, MDL);

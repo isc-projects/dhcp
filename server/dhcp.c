@@ -2847,8 +2847,14 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		log_debug ("Ping timeout: %ld", (long)ping_timeout);
 #endif
 
-		tv . tv_sec = cur_time + ping_timeout;
-		tv . tv_usec = 0;
+		/*
+		 * Set a timeout for 'ping-timeout' seconds from NOW, including
+		 * current microseconds.  As ping-timeout defaults to 1, the
+		 * exclusion of current microseconds causes a value somewhere
+		 * /between/ zero and one.
+		 */
+		tv.tv_sec = cur_tv.tv_sec + ping_timeout;
+		tv.tv_usec = cur_tv.tv_usec;
 		add_timeout (&tv, lease_ping_timeout, lease,
 			     (tvref_t)lease_reference,
 			     (tvunref_t)lease_dereference);
