@@ -1051,6 +1051,8 @@ intern(char *atom, enum dhcp_token dfv) {
 			return IP6_ADDRESS;
 		if (!strcasecmp (atom + 1, "nitial-interval"))
 			return INITIAL_INTERVAL;
+                if (!strcasecmp (atom + 1, "nitial-delay"))
+                        return INITIAL_DELAY;
 		if (!strcasecmp (atom + 1, "nterface"))
 			return INTERFACE;
 		if (!strcasecmp (atom + 1, "dentifier"))

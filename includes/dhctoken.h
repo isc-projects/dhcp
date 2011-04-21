@@ -3,7 +3,7 @@
    Tokens for config file lexer and parser. */
 
 /*
- * Copyright (c) 2004,2007-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004,2007-2011 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -357,7 +357,8 @@ enum dhcp_token {
 	CONFLICT_DONE = 660,
 	AUTO_PARTNER_DOWN = 661,
 	GETHOSTNAME = 662,
-	REWIND = 663
+	REWIND = 663,
+	INITIAL_DELAY = 664
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\

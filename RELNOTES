@@ -57,6 +57,39 @@ work on other platforms. Please report any problems and suggested fixes to
   to allow the user to supply the pidfile name for the relay
   in v6 mode at configure time.
   [ISC-Bugs #23351] [ISC-Bugs #17541]
+
+- 'dhclient' no longer waits a random interval after first starting up to
+  begin in the INIT state.  This conforms to RFC 2131, but elects not to
+  implement a 'SHOULD' direction in section 4.1. [ISC-Bugs #19660]
+  
+- Added 'initial-delay' parameter that specifies maximum amount of time 
+  before client goes to the INIT state. The default value is 0. In previous 
+  versions of the code client could wait up to 5 seconds. The old behavior 
+  may be restored by using 'initial-delay 5;' in the client config file.
+  [ISC-Bugs #19660]
+
+- ICMP ping-check should now sit closer to precisely the number of seconds
+  configured (or default 1), due to making use of the new microsecond
+  scale timer internally to dhcpd.  This corrects a bug where the server
+  may immediately timeout an ICMP ping-check if it was made late in the
+  current second. [ISC-Bugs #19660]
+
+- The DHCP client will schedule renewal and rebinding events in
+  microseconds if the DHCP server provided a lease-time that would result
+  in sub-1-second timers.  This corrects a bug where a 2-second or lower
+  lease-time would cause the DHCP client to enter an infinite loop by
+  scheduling renewal at zero seconds. [ISC-Bugs #19660]
+
+- Client lease records are recorded at most once every 15 seconds.  This
+  keeps the client from filling the lease database disk quickly on very small
+  lease times. [ISC-Bugs #19660]
+
+- To defend against RFC 2131 non-compliant DHCP servers which fail to
+  advertise a lease-time (either mangled, or zero in value) the DHCP
+  client now adds the server to the reject list ACL and returns to INIT
+  state to hopefully find an RFC 2131 compliant server (or retry in INIT
+  forever). [ISC-Bugs #19660]
+  
   
 			Changes since 4.2.1rc1
 
