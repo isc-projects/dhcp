@@ -968,6 +968,8 @@ intern(char *atom, enum dhcp_token dfv) {
 			return GROUP;
 		if (!strcasecmp (atom + 1, "et-lease-hostnames"))
 			return GET_LEASE_HOSTNAMES;
+		if (!strcasecmp(atom + 1, "ethostbyname"))
+			return GETHOSTBYNAME;
 		break;
 	      case 'h':
 		if (!strcasecmp(atom + 1, "ash"))

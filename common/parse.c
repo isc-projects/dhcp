@@ -4527,6 +4527,31 @@ int parse_non_binary (expr, cfile, lose, context)
 			goto norparen;
 		break;
 
+	      case GETHOSTBYNAME:
+		token = next_token(&val, NULL, cfile);
+
+		token = next_token(NULL, NULL, cfile);
+		if (token != LPAREN)
+			goto nolparen;
+
+		/* The argument is a quoted string. */
+		token = next_token(&val, NULL, cfile);
+		if (token != STRING) {
+			parse_warn(cfile, "Expecting quoted literal: "
+					  "\"foo.example.com\"");
+			skip_to_semi(cfile);
+			*lose = 1;
+			return 0;
+		}
+		if (!make_host_lookup(expr, val))
+			log_fatal("Error creating gethostbyname() internal "
+				  "record. (%s:%d)", MDL);
+
+		token = next_token(NULL, NULL, cfile);
+		if (token != RPAREN)
+			goto norparen;
+		break;
+
 		/* Not a valid start to an expression... */
 	      default:
 		if (token != NAME && token != NUMBER_OR_NAME)

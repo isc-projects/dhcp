@@ -3988,6 +3988,27 @@ int write_expression (file, expr, col, indent, firstp)
 		col = token_print_indent (file, col, indent, "", "", ")");
 		break;
 
+	      case expr_funcall:
+		col = token_print_indent(file, indent, indent, "", "",
+					 expr->data.funcall.name);
+		col = token_print_indent(file, col, indent, " ", "", "(");
+
+		firstp = 1;
+		e = expr->data.funcall.arglist;
+		while (e != NULL) {
+			if (!firstp)
+				col = token_print_indent(file, col, indent,
+							 "", " ", ",");
+
+			col = write_expression(file, e->data.arg.val, col,
+					       indent, firstp);
+			firstp = 0;
+			e = e->data.arg.next;
+		}
+
+		col = token_print_indent(file, col, indent, "", "", ")");
+		break;
+
 	      default:
 		log_fatal ("invalid expression type in print_expression: %d",
 			   expr -> op);
