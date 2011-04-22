@@ -98,6 +98,13 @@ work on other platforms. Please report any problems and suggested fixes to
 - If a 'next-server' parameter is configured in a dynamic host record via
   OMAPI as a domain name, the syntax written to disk is now correctly parsed
   upon restart.  [ISC-Bugs #22266]
+
+- The DHCP server now responds to DHCPLEASEQUERY messages from agents using
+  IP addresses not covered by a subnet in configuration.  Whether or not to
+  respond to such an agent is still governed by the 'allow leasequery;'
+  configuration parameter, in the case of an agent not covered by a configured
+  subnet the root configuration area is examined. Server now also returns
+  vendor-class-id option, if client sent it. [ISC-Bugs #21094]
   
 			Changes since 4.2.0
 

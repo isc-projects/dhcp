@@ -17,9 +17,6 @@
 #include "dhcpd.h"
 
 /*
- * TODO: RFC4388 specifies that the server SHOULD store the
- *       vendor-class-id.
- *
  * TODO: RFC4388 specifies that the server SHOULD return the same
  *       options it would for a DHCREQUEST message, if no Parameter
  *       Request List option (option 55) is passed. We do not do that.
@@ -145,6 +142,7 @@ dhcpleasequery(struct packet *packet, int ms_nulltp) {
 	unsigned char dhcpMsgType;
 	const char *dhcp_msg_type_name;
 	struct subnet *subnet;
+	struct group *relay_group;
 	struct option_state *options;
 	struct option_cache *oc;
 	int allow_leasequery;
@@ -180,23 +178,26 @@ dhcpleasequery(struct packet *packet, int ms_nulltp) {
 	}
 
 	/* 
-	 * Set up our options, scope, and, um... stuff.
-	 * This is basically copied from dhcpinform() in dhcp.c.
+	 * Initially we use the 'giaddr' subnet options scope to determine if
+	 * the giaddr-identified relay agent is permitted to perform a
+	 * leasequery.  The subnet is not required, and may be omitted, in
+	 * which case we are essentially interrogating the root options class
+	 * to find a globally permit.
 	 */
 	gip.len = sizeof(packet->raw->giaddr);
 	memcpy(gip.iabuf, &packet->raw->giaddr, sizeof(packet->raw->giaddr));
 
 	subnet = NULL;
 	find_subnet(&subnet, gip, MDL);
-	if (subnet == NULL) {
-		log_info("%s: unknown subnet for address %s", 
-			 msgbuf, piaddr(gip));
-		return;
-	}
+	if (subnet != NULL)
+		relay_group = subnet->group;
+	else
+		relay_group = root_group;
+
+	subnet_dereference(&subnet, MDL);
 
 	options = NULL;
 	if (!option_state_allocate(&options, MDL)) {
-		subnet_dereference(&subnet, MDL);
 		log_error("No memory for option state.");
 		log_info("%s: out of memory, no reply sent", msgbuf);
 		return;
@@ -209,8 +210,9 @@ dhcpleasequery(struct packet *packet, int ms_nulltp) {
 				    packet->options,
 				    options,
 				    &global_scope,
-				    subnet->group,
+				    relay_group,
 				    NULL);
+
 	for (i=packet->class_count-1; i>=0; i--) {
 		execute_statements_in_scope(NULL,
 					    packet,
@@ -220,10 +222,8 @@ dhcpleasequery(struct packet *packet, int ms_nulltp) {
 					    options,
 					    &global_scope,
 					    packet->classes[i]->group,
-					    subnet->group);
+					    relay_group);
 	}
-
-	subnet_dereference(&subnet, MDL);
 
 	/* 
 	 * Because LEASEQUERY has some privacy concerns, default to deny.
@@ -245,7 +245,7 @@ dhcpleasequery(struct packet *packet, int ms_nulltp) {
 		option_state_dereference(&options, MDL);
 		return;
 	}
-	    
+
 
 	/* 
 	 * Copy out the client IP address.
@@ -385,6 +385,30 @@ dhcpleasequery(struct packet *packet, int ms_nulltp) {
 
 	if (dhcpMsgType == DHCPLEASEACTIVE)
 	{
+		/*
+		 * RFC 4388 uses the PRL to request options for the agent to
+		 * receive that are "about" the client.  It is confusing
+		 * because in some cases it wants to know what was sent to
+		 * the client (lease times, adjusted), and in others it wants
+		 * to know information the client sent.  You're supposed to
+		 * know this on a case-by-case basis.
+		 *
+		 * "Name servers", "domain name", and the like from the relay
+		 * agent's scope seems less than useful.  Our options are to
+		 * restart the option cache from the lease's best point of view
+		 * (execute statements from the lease pool's group), or to
+		 * simply restart the option cache from empty.
+		 *
+		 * I think restarting the option cache from empty best
+		 * approaches RFC 4388's intent; specific options are included.
+		 */
+		option_state_dereference(&options, MDL);
+
+		if (!option_state_allocate(&options, MDL)) {
+			log_error("%s: out of memory, no reply sent", msgbuf);
+			lease_dereference(&lease, MDL);
+			return;
+		}
 
 		/* 
 		 * Set the hardware address fields.
@@ -430,7 +454,11 @@ dhcpleasequery(struct packet *packet, int ms_nulltp) {
 			(lease_duration / 8);
 
 		if (time_renewal > cur_time) {
-			time_renewal = htonl(time_renewal - cur_time);
+			if (time_renewal < cur_time)
+				time_renewal = 0;
+			else
+				time_renewal = htonl(time_renewal - cur_time);
+
 			if (!add_option(options, 
 					DHO_DHCP_RENEWAL_TIME,
 					&time_renewal, 
@@ -445,6 +473,7 @@ dhcpleasequery(struct packet *packet, int ms_nulltp) {
 
 		if (time_rebinding > cur_time) {
 			time_rebinding = htonl(time_rebinding - cur_time);
+
 			if (!add_option(options, 
 					DHO_DHCP_REBINDING_TIME,
 					&time_rebinding, 
@@ -458,6 +487,14 @@ dhcpleasequery(struct packet *packet, int ms_nulltp) {
 		}
 
 		if (lease->ends > cur_time) {
+			if (time_expiry < cur_time) {
+				log_error("Impossible condition at %s:%d.",
+					  MDL);
+
+				option_state_dereference(&options, MDL);
+				lease_dereference(&lease, MDL);
+				return;
+			}
 			time_expiry = htonl(lease->ends - cur_time);
 			if (!add_option(options, 
 					DHO_DHCP_LEASE_TIME,
@@ -471,9 +508,38 @@ dhcpleasequery(struct packet *packet, int ms_nulltp) {
 			}
 		}
 
+		/* Supply the Vendor-Class-Identifier. */
+		if (lease->scope != NULL) {
+			struct data_string vendor_class;
+
+			memset(&vendor_class, 0, sizeof(vendor_class));
+
+			if (find_bound_string(&vendor_class, lease->scope,
+					      "vendor-class-identifier")) {
+				if (!add_option(options,
+						DHO_VENDOR_CLASS_IDENTIFIER,
+						(void *)vendor_class.data,
+						vendor_class.len)) {
+					option_state_dereference(&options,
+								 MDL);
+					lease_dereference(&lease, MDL);
+					log_error("%s: error adding vendor "
+						  "class identifier, no reply "
+						  "sent", msgbuf);
+					data_string_forget(&vendor_class, MDL);
+					return;
+				}
+				data_string_forget(&vendor_class, MDL);
+			}
+		}
 
 		/*
 		 * Set the relay agent info.
+		 *
+		 * Note that because agent info is appended without regard
+		 * to the PRL in cons_options(), this will be sent as the
+		 * last option in the packet whether it is listed on PRL or
+		 * not.
 		 */
 
 		if (lease->agent_options != NULL) {

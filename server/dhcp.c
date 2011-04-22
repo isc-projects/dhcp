@@ -2329,6 +2329,20 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		option_chain_head_reference (&lt -> agent_options,
 					     lease -> agent_options, MDL);
 
+	/* Save the vendor-class-identifier for DHCPLEASEQUERY. */
+	oc = lookup_option(&dhcp_universe, packet->options,
+			   DHO_VENDOR_CLASS_IDENTIFIER);
+	if (oc != NULL &&
+	    evaluate_option_cache(&d1, packet, NULL, NULL, packet->options,
+				  NULL, &lease->scope, oc, MDL)) {
+		if (d1.len != 0) {
+			bind_ds_value(&lease->scope, "vendor-class-identifier",
+				      &d1);
+		}
+
+		data_string_forget(&d1, MDL);
+	}
+
 	/* If we got relay agent information options from the packet, then
 	 * cache them for renewal in case the relay agent can't supply them
 	 * when the client unicasts.  The options may be from an addressed

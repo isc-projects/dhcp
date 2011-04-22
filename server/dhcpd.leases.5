@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.leases.5,v 1.15 2009/11/24 02:06:57 sar Exp $
+.\" $Id: dhcpd.leases.5,v 1.16 2011/04/22 13:21:35 tomasz Exp $
 .\"
 .TH dhcpd.leases 5
 .SH NAME
@@ -240,6 +240,11 @@ If the server successfully updates the client's PTR record, this
 variable will record the name that the DHCP server used for the PTR
 record.   The name to which the PTR record points will be either the
 \fIddns-fwd-name\fR or the \fIddns-client-fqdn\fR.
+.PP
+.B The \fIvendor-class-identifier\fB variable
+.PP
+The server retains the client-supplied Vendor Class Identifier option
+for informational purposes, and to render them in DHCPLEASEQUERY responses.
 .PP
 .B on \fIevents\fB { \fIstatements...\fB }
 The \fBon\fI statement records a list of statements to execute if a
