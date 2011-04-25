@@ -106,6 +106,12 @@ work on other platforms. Please report any problems and suggested fixes to
   subnet the root configuration area is examined. Server now also returns
   vendor-class-id option, if client sent it. [ISC-Bugs #21094]
   
+- Documentation fixes
+  [ISC-Bugs #17959] add text to AIX section describing how to have it send
+  responses to the all-ones address.
+  [ISC-Bugs #19615] update the includes in dhcpctl/dhcpctl.3 to be more correct
+  [ISC-Bugs #20676] update dhcpd.conf.5 to include the RFC numbers for DDNS
+
 			Changes since 4.2.0
 
 - Documentation cleanup covering multiple tickets

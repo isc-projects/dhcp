@@ -477,9 +477,25 @@ server and relay will work only on a single interface.  (They do work
 on multi-interface machines if configured to listen on only one of the
 interfaces.)
 
+We have reports of Windows XP clients having difficutly retrieving
+addresses from a server running on an AIX machine.  This issue
+was traced to the client requiring messages be sent to the all ones
+broadcast address (255.255.255.255) while the AIX server was sending 
+to 192.168.0.255.
+
+You may be able to solve this by including a relay between the client
+and server with the relay configured to use a broadcast of all-ones.
+
+A second option that worked for AIX 5.1 but doesn't seem to work for
+AIX 5.3 was to:
+	create a host file entry for all-ones (255.255.255.255)
+and then add a route:
+	route add -host all-ones -interface <local-ip-address>
+
 The ISC DHCP distribution does not include a dhclient-script for AIX--
 AIX comes with a DHCP client.  Contribution of a working dhclient-script
 for AIX would be welcome.
+
 
 			       MacOS X
 
