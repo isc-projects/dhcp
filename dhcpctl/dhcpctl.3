@@ -2,8 +2,9 @@
 .\"
 .\" Project:      DHCP
 .\" File:         dhcpctl.3
-.\" RCSId:        $Id: dhcpctl.3,v 1.7.24.1 2009/11/20 01:49:01 sar Exp $
+.\" RCSId:        $Id: dhcpctl.3,v 1.7.24.2 2011/04/25 23:49:52 sar Exp $
 .\" 
+.\" Copyright (c) 2011 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 2004,2009 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 2000-2003 by Internet Software Consortium
 .\" Copyright (c) 2000 Nominum, Inc.
@@ -417,16 +418,20 @@ released.
 The following program will connect to the DHCP server running on the local
 host and will get the details of the existing lease for IP address
 10.0.0.101. It will then print out the time the lease is due to expire. Note
-that most error checking has been ommitted for brevity.
+that most error checking has been ommitted for brevity.  
 .Bd -literal -offset indent
-#include <stdarg.h>
 #include <sys/time.h>
-#include <sys/socket.h>
 #include <stdio.h>
-#include <netinet/in.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
 
-#include <isc/result.h>
-#include <dhcpctl/dhcpctl.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
+#include "omapip/result.h"
+#include "dhcpctl.h"
 
 int main (int argc, char **argv) {
 	dhcpctl_data_string ipaddrstring = NULL;
