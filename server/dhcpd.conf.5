@@ -1,6 +1,6 @@
 .\"	dhcpd.conf.5
 .\"
-.\" Copyright (c) 2004-2010 by Internet Systems Consortium, Inc. ("ISC")
+.\" Copyright (c) 2004-2011 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
@@ -27,7 +27,7 @@
 .\" Support and other services are available for ISC products - see
 .\" https://www.isc.org for more information or to learn more about ISC.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.99.10.4 2010/07/02 23:37:07 sar Exp $
+.\" $Id: dhcpd.conf.5,v 1.99.10.4.6.1 2011/04/26 00:01:57 sar Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -1048,13 +1048,13 @@ compliant so any DNS server supporting RFC 2136 should be able to
 accept updates from the DHCP server.
 .PP
 Two DNS update schemes are currently implemented, and another is
-planned.   The two that are currently available are the ad-hoc DNS
+planned.   The two that are currently implemented are the ad-hoc DNS
 update mode and the interim DHCP-DNS interaction draft update mode.
-If and when the DHCP-DNS interaction draft and the DHCID draft make it
-through the IETF standards process, there will be a third mode, which
-will be the standard DNS update method.   The DHCP server must be
-configured to use one of the two currently-supported methods, or not
-to do dns updates.   This can be done with the
+In the future we plan to add a third mode which will be the standard
+DNS update method based on the RFCS for DHCP-DNS interaction and DHCID
+The DHCP server must be configured to use one of the two
+currently-supported methods, or not to do dns updates.
+This can be done with the
 .I ddns-update-style
 configuration parameter.
 .SH THE AD-HOC DNS UPDATE SCHEME
@@ -1146,15 +1146,31 @@ by sending a DHCPRELEASE message, the server will likewise remove the
 A and PTR records.
 .SH THE INTERIM DNS UPDATE SCHEME
 The interim DNS update scheme operates mostly according to several
-drafts that are being considered by the IETF and are expected to
-become standards, but are not yet standards, and may not be
-standardized exactly as currently proposed.   These are:
+drafts considered by the IETF.  While the drafts have since become
+RFCs the code was written before they were finalized and there are
+some differences between our code and the final RFCs.  We plan to
+update our code, probably adding a standard DNS update option, at
+some time.  The basic framework is similar with the main material
+difference being that a DHCID RR was assigned in the RFCs whereas
+our code continues to use an experimental TXT record.  The format
+of the TXT record bears a resemblance to the DHCID RR but it is not
+equivalent (MD5 vs SHA1, field length differences etc).
+The standard RFCs are:
 .PP
 .nf
 .ce 3
-draft-ietf-dhc-ddns-resolution-??.txt
-draft-ietf-dhc-fqdn-option-??.txt
+RFC 4701 (updated by RF5494)
+RFC 4702
+RFC 4703
+.fi
+.PP
+And the corresponding drafts were:
+.PP
+.nf
+.ce 3
 draft-ietf-dnsext-dhcid-rr-??.txt
+draft-ietf-dhc-fqdn-option-??.txt
+draft-ietf-dhc-ddns-resolution-??.txt
 .fi
 .PP
 Because our implementation is slightly different than the standard, we
@@ -1233,15 +1249,12 @@ gives up trying to do a DNS update for the client until the client
 chooses a new name.
 .PP
 The interim DNS update scheme is called interim for two reasons.
-First, it does not quite follow the drafts.   The current versions of
-the drafts call for a new DHCID RRtype, but this is not yet
-available.   The interim DNS update scheme uses a TXT record
-instead.   Also, the existing ddns-resolution draft calls for the DHCP
-server to put a DHCID RR on the PTR record, but the \fIinterim\fR
-update method does not do this.   It is our position that this is not
-useful, and we are working with the author in hopes of removing it
-from the next version of the draft, or better understanding why it is
-considered useful.
+First, it does not quite follow the RFCs.   The RFCs call for a
+new DHCID RRtype while he interim DNS update scheme uses a TXT record.
+The ddns-resolution draft cllaed for the DHCP server to put a DHCID RR
+on the PTR record, but the \fIinterim\fR update method does not do this.
+In the final RFC this requirement was relaxed such that a server may
+add a DHCID RR to the PTR record.
 .PP
 In addition to these differences, the server also does not update very
 aggressively.  Because each DNS update involves a round trip to the
