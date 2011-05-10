@@ -590,7 +590,13 @@ do_relay4(struct interface_info *ip, struct dhcp_packet *packet,
 	struct hardware hto, *htop;
 
 	if (packet->hlen > sizeof packet->chaddr) {
-		log_info("Discarding packet with invalid hlen.");
+		log_info("Discarding packet with invalid hlen, received on "
+			 "%s interface.", ip->name);
+		return;
+	}
+	if (ip->address_count < 1 || ip->addresses == NULL) {
+		log_info("Discarding packet received on %s interface that "
+			 "has no IPv4 address assigned.", ip->name);
 		return;
 	}
 
@@ -1293,7 +1299,7 @@ setup_streams(void) {
 				break;
 		}
 		if (i == dp->ifp->v6address_count)
-			log_fatal("Can't find link address for interface '%s'.",
+			log_fatal("Interface %s does not have global IPv6 address assigned.",
 				  dp->ifp->name);
 		if (!link_is_set)
 			memcpy(&dp->link.sin6_addr,
