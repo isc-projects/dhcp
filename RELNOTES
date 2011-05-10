@@ -141,6 +141,9 @@ work on other platforms. Please report any problems and suggested fixes to
   [ISC-Bugs #19615] update the includes in dhcpctl/dhcpctl.3 to be more correct
   [ISC-Bugs #20676] update dhcpd.conf.5 to include the RFC numbers for DDNS
 
+- Relay no longer crashes, when DHCP packet is received over interface without
+  any IPv4 address assigned. [ISC-Bugs #22409]
+
 			Changes since 4.1-ESV-R1
 
 ! In dhclient check the data for some string options for
