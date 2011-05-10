@@ -594,6 +594,12 @@ do_relay4(struct interface_info *ip, struct dhcp_packet *packet,
 		return;
 	}
 
+	if (ip->address_count < 1 || ip->addresses == NULL) {
+		log_info("Discarding packet received on %s interface that "
+			 "has no IPv4 address assigned.", ip->name);
+ 		return;
+ 	}
+
 	/* Find the interface that corresponds to the giaddr
 	   in the packet. */
 	if (packet->giaddr.s_addr) {

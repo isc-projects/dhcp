@@ -277,6 +277,9 @@ work on other platforms. Please report any problems and suggested fixes to
   crashing on an assert failure.  Also retag the lease as active
   and reset it's timeout value.
   [ISC-Bugs #21921]
+
+- Relay no longer crashes, when DHCP packet is received over interface without
+  any IPv4 address assigned. [ISC-Bugs #22409]
  
 			Changes since 4.2.0rc1
 
