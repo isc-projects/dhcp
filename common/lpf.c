@@ -36,6 +36,7 @@
 #include <linux/filter.h>
 #include <linux/if_ether.h>
 #include <netinet/in_systm.h>
+#include <net/if_packet.h>
 #include "includes/netinet/ip.h"
 #include "includes/netinet/udp.h"
 #include "includes/netinet/if_ether.h"
@@ -294,7 +295,7 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	double hh [16];
 	double ih [1536 / sizeof (double)];
 	unsigned char *buf = (unsigned char *)ih;
-	struct sockaddr sa;
+	struct sockaddr_pkt sa;
 	int result;
 	int fudge;
 
@@ -315,12 +316,14 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	/* For some reason, SOCK_PACKET sockets can't be connected,
 	   so we have to do a sentdo every time. */
 	memset (&sa, 0, sizeof sa);
-	sa.sa_family = AF_PACKET;
-	strncpy (sa.sa_data,
-		 (const char *)interface -> ifp, sizeof sa.sa_data);
+	sa.spkt_family = AF_PACKET;
+	strncpy ((char *)sa.spkt_device,
+		 (const char *)interface -> ifp, sizeof sa.spkt_device);
+	sa.spkt_protocol = htons(ETH_P_IP);
 
 	result = sendto (interface -> wfdesc,
-			 buf + fudge, ibufp + len - fudge, 0, &sa, sizeof sa);
+			 buf + fudge, ibufp + len - fudge, 0, 
+			 (const struct sockaddr *)&sa, sizeof sa);
 	if (result < 0)
 		log_error ("send_packet: %m");
 	return result;
