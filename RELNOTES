@@ -111,6 +111,10 @@ work on other platforms. Please report any problems and suggested fixes to
   [ISC-Bugs #19615] update the includes in dhcpctl/dhcpctl.3 to be more correct
   [ISC-Bugs #20676] update dhcpd.conf.5 to include the RFC numbers for DDNS
 
+- Linux Packet Filter interface improvement. sockaddr_pkt structure is used, 
+  rather than sockaddr. Packet etherType is now forced to ETH_P_IP. 
+  [ISC-Bugs #18975]
+
 			Changes since 4.2.1rc1
 
 - None
