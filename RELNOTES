@@ -117,6 +117,9 @@ work on other platforms. Please report any problems and suggested fixes to
   packets with invalid hlen with information about relevant interface name.
   [ISC-Bugs #22409]
 
+- Relay now properly logs that packet was received over interface without
+  global IPv6 address [ISC-Bugs #24070]
+
 			Changes since 4.2.0
 
 - Documentation cleanup covering multiple tickets

@@ -1299,8 +1299,8 @@ setup_streams(void) {
 				break;
 		}
 		if (i == dp->ifp->v6address_count)
-			log_fatal("Interface %s does not have global IPv6 address assigned.",
-				  dp->ifp->name);
+			log_fatal("Interface %s does not have global IPv6 "
+				  "address assigned.", dp->ifp->name);
 		if (!link_is_set)
 			memcpy(&dp->link.sin6_addr,
 			       &dp->ifp->v6addresses[i],
