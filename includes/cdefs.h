@@ -4,6 +4,7 @@
 
 /*
  * Copyright (c) 1995 RadioMail Corporation.  All rights reserved.
+ * Copyright (c) 2011 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004,2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
@@ -62,8 +63,7 @@
  * these warnings prohibit the compilation of the package.  This macro
  * allows us to assign the return value to a variable and then ignore it.
  */
-#if !defined(__GNUC__) || (__GNUC__ < 4) || \
-	((__GNUC__ == 4) && (__GNUC_MINOR__ < 3))
+#if !defined(__GNUC__) || (__GNUC__ < 4)
 #define IGNORE_RET(x) (void) x
 #else
 #define IGNORE_RET(x)			\
