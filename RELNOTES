@@ -127,6 +127,9 @@ work on other platforms. Please report any problems and suggested fixes to
   [ISC-Bugs #22695] - Close a file descriptor in an error path.
   [ISC-Bugs #19368] - Tidy up variable types in validate_port.
 
+- Code cleanup
+  [ISC-Bugs #13151] remove obsolete PROTO, KandR, INLINE and ANSI_DECL macros
+
 			Changes since 4.2.1rc1
 
 - None
@@ -155,8 +158,6 @@ work on other platforms. Please report any problems and suggested fixes to
 - Modify the dlpi code to accept getmsg() returning a positive value.
   [ISC-Bugs #22824]
 
-- Code cleanup
-  [ISC-Bugs #13151] remove obsolete PROTO, KandR, INLINE and ANSI_DECL macros
 
 			Changes since 4.2.0
 
