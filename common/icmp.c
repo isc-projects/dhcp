@@ -4,6 +4,7 @@
    responses. */
 
 /*
+ * Copyright (c) 2011 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004,2007,2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
@@ -52,7 +53,7 @@ trace_type_t *trace_icmp_output;
 
 void icmp_startup (routep, handler)
 	int routep;
-	void (*handler) PROTO ((struct iaddr, u_int8_t *, int));
+	void (*handler) (struct iaddr, u_int8_t *, int);
 {
 	struct protoent *proto;
 	int protocol = 1;

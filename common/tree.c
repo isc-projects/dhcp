@@ -3,6 +3,7 @@
    Routines for manipulating parse trees... */
 
 /*
+ * Copyright (c) 2011 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2007,2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
@@ -43,12 +44,11 @@
 
 struct binding_scope *global_scope;
 
-static int do_host_lookup PROTO ((struct data_string *,
-				  struct dns_host_entry *));
+static int do_host_lookup (struct data_string *, struct dns_host_entry *);
 
 #define DS_SPRINTF_SIZE 128
 
-/* 
+/*
  * If we are using a data_string structure to hold a NUL-terminated 
  * ASCII string, this function can be used to append a printf-formatted 
  * string to the end of it. The data_string structure will be resized to
@@ -3342,7 +3342,7 @@ int is_compound_expression (expr)
 		expr -> op == expr_dns_transaction);
 }
 
-static int op_val PROTO ((enum expr_op));
+static int op_val (enum expr_op);
 
 static int op_val (op)
 	enum expr_op op;

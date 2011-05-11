@@ -40,22 +40,6 @@
 #define __attribute__(x)
 #endif
 
-#if (defined (__GNUC__) || defined (__STDC__)) && !defined (BROKEN_ANSI)
-#define PROTO(x)	x
-#define KandR(x)
-#define ANSI_DECL(x)	x
-#if defined (__GNUC__)
-#define INLINE		inline
-#else
-#define INLINE
-#endif /* __GNUC__ */
-#else
-#define PROTO(x)	()
-#define KandR(x)	x
-#define ANSI_DECL(x)
-#define INLINE
-#endif /* __GNUC__ || __STDC__ */
-
 /* The following macro handles the case of unwanted return values.  In
  * GCC one can specify an attribute for a function to generate a warning
  * if the return value of the function is ignored and one can't dispose of

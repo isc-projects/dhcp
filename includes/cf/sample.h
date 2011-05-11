@@ -9,6 +9,7 @@
    probably worth looking at the config files for working ports as well. */
 
 /*
+ * Copyright (c) 2011 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004,2007,2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
@@ -195,7 +196,7 @@ extern int h_errno;
 
 #if 0
 #define NO_STRERROR
-char *strerror PROTO ((int));
+char *strerror (int);
 #endif
 
 /* Porting::
