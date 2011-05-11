@@ -4,8 +4,9 @@
    way... */
 
 /*
- * Copyright (c) 2004,2005,2007-2009 by
- *				Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2011 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2007-2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004,2005 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -611,9 +612,9 @@ piaddrcidr(const struct iaddr *addr, unsigned int bits) {
 
 u_int16_t
 validate_port(char *port) {
-	int local_port = 0;
-	int lower = 1;
-	int upper = 65535;
+	long local_port = 0;
+	long lower = 1;
+	long upper = 65535;
 	char *endptr;
 
 	errno = 0;
@@ -623,8 +624,8 @@ validate_port(char *port) {
 		log_fatal ("Invalid port number specification: %s", port);
 
 	if (local_port < lower || local_port > upper)
-		log_fatal("Port number specified is out of range (%d-%d).",
+		log_fatal("Port number specified is out of range (%ld-%ld).",
 			  lower, upper);
 
-	return htons(local_port);
+	return htons((u_int16_t)local_port);
 }

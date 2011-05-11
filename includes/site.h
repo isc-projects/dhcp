@@ -195,3 +195,8 @@
    traces. */
 
 /* #define TRACING */
+
+/* Define this if you want a DHCPv6 server to send replies to the
+   source port of the message it received.  This is useful for testing
+   but is only included for backwards compatibility. */
+/* #define REPLY_TO_SOURCE_PORT */

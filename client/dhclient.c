@@ -3430,9 +3430,10 @@ void write_client_pid_file ()
 	}
 
 	pf = fdopen (pfdesc, "w");
-	if (!pf)
+	if (!pf) {
+		close(pfdesc);
 		log_error ("Can't fdopen %s: %m", path_dhclient_pid);
-	else {
+	} else {
 		fprintf (pf, "%ld\n", (long)getpid ());
 		fclose (pf);
 	}
