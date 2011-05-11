@@ -3,10 +3,10 @@
    Standard C definitions... */
 
 /*
- * Copyright (c) 1995 RadioMail Corporation.  All rights reserved.
  * Copyright (c) 2011 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004,2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
+ * Copyright (c) 1995 RadioMail Corporation.  All rights reserved.
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -39,22 +39,6 @@
         (__GNUC__ == 2 && __GNUC_MINOR__ < 5) || defined (darwin)
 #define __attribute__(x)
 #endif
-
-#if (defined (__GNUC__) || defined (__STDC__)) && !defined (BROKEN_ANSI)
-#define PROTO(x)	x
-#define KandR(x)
-#define ANSI_DECL(x)	x
-#if defined (__GNUC__)
-#define INLINE		inline
-#else
-#define INLINE
-#endif /* __GNUC__ */
-#else
-#define PROTO(x)	()
-#define KandR(x)	x
-#define ANSI_DECL(x)
-#define INLINE
-#endif /* __GNUC__ || __STDC__ */
 
 /* The following macro handles the case of unwanted return values.  In
  * GCC one can specify an attribute for a function to generate a warning
