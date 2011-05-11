@@ -124,6 +124,18 @@ work on other platforms. Please report any problems and suggested fixes to
   rather than sockaddr. Packet ethertype is now forced to ETH_P_IP. 
   [ISC-Bugs #18975]
 
+- Minor code cleanups - but note port change for #23196
+  [ISC-Bugs #23470] - Modify when an ignore return macro is defined to
+  handle unsed error return warnings for more versions of gcc.
+  [ISC-Bugs #23196] - Modify the reply handling in the server code to
+  send to a specified port rather than to the source port for the incoming
+  message.  Sending to the source port was test code that should have
+  been removed.  The previous functionality may be restored by defining
+  REPLY_TO_SOURCE_PORT in the includes/site.h file.  We suggest you don't
+  enable this except for testing purposes.
+  [ISC-Bugs #22695] - Close a file descriptor in an error path.
+  [ISC-Bugs #19368] - Tidy up variable types in validate_port.
+
 			Changes since 4.2.0
 
 - Documentation cleanup covering multiple tickets

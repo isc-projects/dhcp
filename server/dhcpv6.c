@@ -5884,8 +5884,18 @@ dhcpv6(struct packet *packet) {
 		} else {
 			to_addr.sin6_port = remote_port;
 		}
-/* For testing, we reply to the sending port, so we don't need a root client */
+
+#if defined (REPLY_TO_SOURCE_PORT)
+		/*
+		 * This appears to have been included for testing so we would
+		 * not need a root client, but was accidently left in the
+		 * final code.  We continue to include it in case
+		 * some users have come to rely upon it, but leave
+		 * it off by default as it's a bad idea.
+		 */
 		to_addr.sin6_port = packet->client_port;
+#endif
+
 		memcpy(&to_addr.sin6_addr, packet->client_addr.iabuf, 
 		       sizeof(to_addr.sin6_addr));
 
