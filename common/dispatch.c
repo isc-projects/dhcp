@@ -3,7 +3,7 @@
    Network input dispatcher... */
 
 /*
- * Copyright (c) 2004-2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2009,2011 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -97,7 +97,7 @@ void dispatch ()
 
 void add_timeout (when, where, what, ref, unref)
 	struct timeval *when;
-	void (*where) PROTO ((void *));
+	void (*where) (void *);
 	void *what;
 	tvref_t ref;
 	tvunref_t unref;
@@ -171,7 +171,7 @@ void add_timeout (when, where, what, ref, unref)
 }
 
 void cancel_timeout (where, what)
-	void (*where) PROTO ((void *));
+	void (*where) (void *);
 	void *what;
 {
 	struct timeout *t, *q;

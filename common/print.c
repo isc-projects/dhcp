@@ -3,7 +3,7 @@
    Turn data structures into printable text. */
 
 /*
- * Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2011 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
@@ -521,8 +521,7 @@ char *print_dec_2 (val)
 	return vbuf;
 }
 
-static unsigned print_subexpression PROTO ((struct expression *,
-					    char *, unsigned));
+static unsigned print_subexpression (struct expression *, char *, unsigned);
 
 static unsigned print_subexpression (expr, buf, len)
 	struct expression *expr;

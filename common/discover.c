@@ -3,7 +3,7 @@
    Find and identify the network interfaces. */
 
 /*
- * Copyright (c) 2004-2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2009,2011 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -61,10 +61,10 @@ struct in_addr local_address;
 struct in6_addr local_address6;
 #endif /* DHCPv6 */
 
-void (*bootp_packet_handler) PROTO ((struct interface_info *,
-				     struct dhcp_packet *, unsigned,
-				     unsigned int,
-				     struct iaddr, struct hardware *));
+void (*bootp_packet_handler) (struct interface_info *,
+			      struct dhcp_packet *, unsigned,
+			      unsigned int,
+			      struct iaddr, struct hardware *);
 
 #ifdef DHCPv6
 void (*dhcpv6_packet_handler)(struct interface_info *,

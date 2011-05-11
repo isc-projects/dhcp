@@ -3,6 +3,7 @@
    System dependencies for SunOS 4 (tested on 4.1.4)... */
 
 /*
+ * Copyright (c) 2011 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004,2007,2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
@@ -130,7 +131,7 @@ extern int h_errno;
 
 /* SunOS doesn't supply strerror... */
 #define NO_STRERROR
-char *strerror PROTO ((int));
+char *strerror (int);
 
 #define NEED_INET_ATON
 

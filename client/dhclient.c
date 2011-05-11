@@ -1360,7 +1360,7 @@ void dhcp (packet)
 	struct packet *packet;
 {
 	struct iaddrmatchlist *ap;
-	void (*handler) PROTO ((struct packet *));
+	void (*handler) (struct packet *);
 	const char *type;
 	char addrbuf[4*16];
 	char maskbuf[4*16];

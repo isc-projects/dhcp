@@ -125,7 +125,7 @@
 # endif
 
 #if defined(USE_DLPI_PFMOD) || defined(USE_DLPI_RAW)
-static int strioctl PROTO ((int fd, int cmd, int timeout, int len, char *dp));
+static int strioctl (int fd, int cmd, int timeout, int len, char *dp);
 #endif
 
 #define DLPI_MAXDLBUF		8192	/* Buffer size */
@@ -133,46 +133,44 @@ static int strioctl PROTO ((int fd, int cmd, int timeout, int len, char *dp));
 #define DLPI_DEVDIR		"/dev/"	/* Device directory */
 
 static int dlpiopen(const char *ifname);
-static int dlpiunit PROTO ((char *ifname));
-static int dlpiinforeq PROTO ((int fd));
-static int dlpiphysaddrreq PROTO ((int fd, unsigned long addrtype));
-static int dlpiattachreq PROTO ((int fd, unsigned long ppa));
-static int dlpibindreq PROTO ((int fd, unsigned long sap, unsigned long max_conind,
-			       unsigned long service_mode, unsigned long conn_mgmt,
-			       unsigned long xidtest));
+static int dlpiunit (char *ifname);
+static int dlpiinforeq (int fd);
+static int dlpiphysaddrreq (int fd, unsigned long addrtype);
+static int dlpiattachreq (int fd, unsigned long ppa);
+static int dlpibindreq (int fd, unsigned long sap, unsigned long max_conind,
+			unsigned long service_mode, unsigned long conn_mgmt,
+			unsigned long xidtest);
 #if defined(UNUSED_DLPI_INTERFACE)
 /* These functions are unused at present, but may be used at a later date.
  * defined out to avoid compiler warnings about unused static functions.
  */
-static int dlpidetachreq PROTO ((int fd));
-static int dlpiunbindreq PROTO ((int fd));
+static int dlpidetachreq (int fd);
+static int dlpiunbindreq (int fd);
 #endif
-static int dlpiokack PROTO ((int fd, char *bufp));
-static int dlpiinfoack PROTO ((int fd, char *bufp));
-static int dlpiphysaddrack PROTO ((int fd, char *bufp));
-static int dlpibindack PROTO ((int fd, char *bufp));
+static int dlpiokack (int fd, char *bufp);
+static int dlpiinfoack (int fd, char *bufp);
+static int dlpiphysaddrack (int fd, char *bufp);
+static int dlpibindack (int fd, char *bufp);
 #if defined(USE_DLPI_SEND) || defined(USE_DLPI_RECEIVE)
 /* These functions are not used if we're only sourcing the get_hw_addr()
  * function (for USE_SOCKETS).
  */
-static int dlpiunitdatareq PROTO ((int fd, unsigned char *addr,
-				   int addrlen, unsigned long minpri,
-				   unsigned long maxpri, unsigned char *data,
-				   int datalen));
-static int dlpiunitdataind PROTO ((int fd,
-				   unsigned char *dstaddr,
-				   unsigned long *dstaddrlen,
-				   unsigned char *srcaddr,
-				   unsigned long *srcaddrlen,
-				   unsigned long *grpaddr,
-				   unsigned char *data,
-				   int datalen));
+static int dlpiunitdatareq (int fd, unsigned char *addr, int addrlen, 
+			    unsigned long minpri, unsigned long maxpri, 
+			    unsigned char *data, int datalen);
+static int dlpiunitdataind (int fd,
+			    unsigned char *dstaddr,
+			    unsigned long *dstaddrlen,
+			    unsigned char *srcaddr,
+			    unsigned long *srcaddrlen,
+			    unsigned long *grpaddr,
+			    unsigned char *data,
+			    int datalen);
 #endif /* !USE_DLPI_HWADDR: USE_DLPI_SEND || USE_DLPI_RECEIVE */
-static int	expected PROTO ((unsigned long prim, union DL_primitives *dlp,
-				  int msgflags));
-static int	strgetmsg PROTO ((int fd, struct strbuf *ctlp,
-				  struct strbuf *datap, int *flagsp,
-				  char *caller));
+static int expected (unsigned long prim, union DL_primitives *dlp, 
+		     int msgflags);
+static int strgetmsg (int fd, struct strbuf *ctlp, struct strbuf *datap,
+		      int *flagsp, char *caller);
 
 /* Reinitializes the specified interface after an address change.   This
    is not required for packet-filter APIs. */

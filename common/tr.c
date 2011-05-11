@@ -4,6 +4,7 @@
    Contributed in May of 1999 by Andrew Chittenden */
 
 /*
+ * Copyright (c) 2011 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2007,2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
@@ -42,9 +43,9 @@
  * source routing
  */
 
-static int insert_source_routing PROTO ((struct trh_hdr *trh, struct interface_info* interface));
-static void save_source_routing PROTO ((struct trh_hdr *trh, struct interface_info* interface));
-static void expire_routes PROTO ((void));
+static int insert_source_routing (struct trh_hdr *trh, struct interface_info* interface);
+static void save_source_routing (struct trh_hdr *trh, struct interface_info* interface);
+static void expire_routes (void);
 
 /*
  * As we keep a list of interesting routing information only, a singly

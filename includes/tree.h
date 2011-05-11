@@ -3,6 +3,7 @@
    Definitions for address trees... */
 
 /*
+ * Copyright (c) 2011 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004,2007-2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
@@ -330,9 +331,9 @@ struct universe {
 			    struct binding_scope **,
 			    struct universe *);
 	u_int32_t (*get_tag) (const unsigned char *);
-	void (*store_tag) PROTO ((unsigned char *, u_int32_t));
+	void (*store_tag) (unsigned char *, u_int32_t);
 	u_int32_t (*get_length) (const unsigned char *);
-	void (*store_length) PROTO ((unsigned char *, u_int32_t));
+	void (*store_length) (unsigned char *, u_int32_t);
 	int tag_size, length_size;
 	unsigned site_code_min, end;
 	option_name_hash_t *name_hash;
