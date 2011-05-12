@@ -130,6 +130,8 @@ work on other platforms. Please report any problems and suggested fixes to
 - Code cleanup
   [ISC-Bugs #13151] remove obsolete PROTO, KandR, INLINE and ANSI_DECL macros
 
+- Compilation problem with gcc4.5 and omshell.c resolved. [ISC-Bugs #23831]
+
 			Changes since 4.2.1rc1
 
 - None
