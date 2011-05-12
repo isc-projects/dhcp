@@ -190,11 +190,11 @@ main(int argc, char **argv) {
 		    break;
 		    
 		  case END_OF_FILE:
-		  case EOL:
+		  case ENDOFLINE: /* EOL: */
 		    break;
 		    
 		  case TOKEN_HELP:
-		  case '?':
+	          case QUESTIONMARK: /* '?': */
 		    printf ("Commands:\n");
 		    printf ("  port <server omapi port>\n");
 		    printf ("  server <server address>\n");
