@@ -2465,8 +2465,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		    evaluate_option_cache(&d1, packet, lt, NULL,
 					  packet->options, state->options,
 					  &lt->scope, oc, MDL)) {
-			if (d1.len == 1 &&
-			    (d1.data[0] >= 0) && (d1.data[0] < 100))
+			if (d1.len == 1 && (d1.data[0] < 100))
 				thresh = d1.data[0];
 
 			data_string_forget(&d1, MDL);
