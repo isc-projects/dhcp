@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: macos,v 1.2 2008/11/03 23:32:12 dhankins Exp $
+# $Id: macos,v 1.2.108.1 2011/05/18 20:01:54 sar Exp $
 #
 # automous run of this script will commit the DNS setting
 #
@@ -29,7 +29,14 @@ make_resolv_conf() {
 	if [ $exit_status -ne 0 ]; then
 	  break
 	fi
-        ( echo nameserver ${nameserver} >> /var/run/resolv.conf.dhclient6 )
+	# If the nameserver has a link-local address
+	# add a <zone_id> (interface name) to it.
+	case $nameserver in
+	    fe80:*) zone_id="%$interface";;
+	    FE80:*) zone_id="%$interface";;
+	   *)      zone_id='';;
+	esac
+        ( echo nameserver ${nameserver}$zone_id >> /etc/resolv.conf.dhclient6 )
 	exit_status=$?
       done
 
