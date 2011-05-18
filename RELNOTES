@@ -165,6 +165,14 @@ work on other platforms. Please report any problems and suggested fixes to
 
 - Compilation problem with gcc4.5 and omshell.c resolved. [ISC-Bugs #23831]
 
+- Client Script fixes
+  [ISC-Bugs #23045] Typos in client/scripts/openbsd
+  [ISC-Bugs #23565] In the client scripts add a zone id (interface id) if
+  the domain search address is link local.
+  [ISC-Bugs #1277] In some of the client scripts add code to handle the
+  case of the default router information being changed without the address
+  being changed.
+
 			Changes since 4.1-ESV-R1
 
 ! In dhclient check the data for some string options for

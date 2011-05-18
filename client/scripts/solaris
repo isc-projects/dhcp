@@ -128,6 +128,19 @@ if [ x$reason = xBOUND ] || [ x$reason = xRENEW ] || \
     for router in $new_routers; do
       route add default $router 1 >/dev/null 2>&1
     done
+  else                                                                        
+    # we haven't changed the address, have we changed other options           
+    # that we wish to update?
+    if [ x$new_routers != x ] && [ x$new_routers != x$old_routers ] ; then
+      # if we've changed routers delete the old and add the new.
+      $LOGGER "New Routers: $new_routers"
+      for router in $old_routers; do
+        route delete default $router >/dev/null 2>&1
+      done
+      for router in $new_routers; do
+        route add default $router 1 >/dev/null 2>&1
+      done
+    fi
   fi
   if [ x$new_ip_address != x$alias_ip_address ] && [ x$alias_ip_address != x ];
    then
