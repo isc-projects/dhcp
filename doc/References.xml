@@ -1,6 +1,6 @@
 <?xml version='1.0' ?>
 
-<!-- $Id: References.xml,v 1.4 2009/07/23 18:52:20 sar Exp $ -->
+<!-- $Id: References.xml,v 1.5 2011/05/20 13:48:33 tomasz Exp $ -->
 
 <?rfc private="ISC-DHCP-REFERENCES" ?>
 
@@ -9,6 +9,7 @@
 <?rfc compact="yes"?>
 <?rfc subcompact="no"?>
 <?rfc tocompact="no"?>
+<?rfc symrefs="yes"?>
 
 <!DOCTYPE rfc SYSTEM 'rfc2629bis.dtd' [
   <!ENTITY rfc760 PUBLIC ''
@@ -77,8 +78,8 @@
 	'http://xml.resource.org/public/rfc/bibxml/reference.RFC.4075.xml'>
   <!ENTITY rfc4242 PUBLIC ''
 	'http://xml.resource.org/public/rfc/bibxml/reference.RFC.4242.xml'>
-  <!ENTITY rfc4280 PUBLIC ''
-	'http://xml.resource.org/public/rfc/bibxml/reference.RFC.4280.xml'>
+  <!ENTITY rfc4361 PUBLIC ''
+	'http://xml.resource.org/public/rfc/bibxml/reference.RFC.4361.xml'>
   <!ENTITY rfc4388 PUBLIC ''
 	'http://xml.resource.org/public/rfc/bibxml/reference.RFC.4388.xml'>
   <!ENTITY rfc4580 PUBLIC ''
@@ -91,9 +92,9 @@
 	'http://xml.resource.org/public/rfc/bibxml/reference.RFC.4702.xml'>
   <!ENTITY rfc4703 PUBLIC ''
 	'http://xml.resource.org/public/rfc/bibxml/reference.RFC.4703.xml'>
-  <!ENTITY rfc4704 PUBLIC ''
-	'http://xml.resource.org/public/rfc/bibxml/reference.RFC.4704.xml'>
-]>
+  ]>
+
+
 
 <rfc ipr="none">
   <front>
@@ -111,17 +112,42 @@
 	  <region>CA</region>
 	  <code>94063</code>
 	</postal>
-
-	<phone>+1 650 423 1300</phone>
-	<email>David_Hankins@isc.org</email>
       </address>
     </author>
 
-    <date month="May" year="2007"/>
+    <author initials="T." surname="Mrugalski" fullname="Tomasz Mrugalski">
+      <organization abbrev="ISC">Internet Systems Consortium,
+				 Inc.
+      </organization>
+
+      <address>
+	<postal>
+	  <street>950 Charter Street</street>
+	  <city>Redwood City</city>
+	  <region>CA</region>
+	  <code>94063</code>
+	</postal>
+
+	<phone>+1 650 423 1345</phone>
+	<email>Tomasz_Mrugalski@isc.org</email>
+      </address>
+    </author>
+
+    <date day="20" month="May" year="2011"/>
+
+    <keyword>ISC</keyword>
+    <keyword>DHCP</keyword>
+    <keyword>Reference Implementation</keyword>
+
+    <abstract>
+	<t>This document describes a collection of reference material
+	to which ISC DHCP has been implemented as well as a more
+	complete listing of references for DHCP and DHCPv6 protocols.</t>
+    </abstract>
 
     <note title="Copyright Notice">
-	<t>Copyright (c) 2006-2007,2009 by Internet Systems Consortium, Inc.
-	("ISC")</t>
+	<t>Copyright (c) 2006-2007,2009,2011 by Internet Systems
+	  Consortium, Inc. ("ISC")</t>
 
 	<t>Permission to use, copy, modify, and distribute this software for
 	any purpose with or without fee is hereby granted, provided that the
@@ -137,14 +163,6 @@
 	OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.</t>
     </note>
 
-    <keyword>ISC</keyword>
-    <keyword>DHCP</keyword>
-    <keyword>Reference Implementation</keyword>
-
-    <abstract>
-	<t>This document describes a collection of Reference material that
-	ISC DHCP has been implemented to.</t>
-    </abstract>
   </front>
 
   <middle>
@@ -197,6 +215,7 @@
 
 	<t>This means:</t>
 
+	<t>
       <list style="symbols">
 	<t>To produce new externally-visible behaviour, one must first
 	provide a reference.</t>
@@ -205,6 +224,7 @@
 	simple incompatibilities in any other implementation, one must
 	first provide a reference.</t>
       </list>
+	</t>
 
 	<t>That is the lofty goal, at any rate.  It's well understood that,
 	especially because the ISC DHCP Software package has not always been
@@ -242,7 +262,7 @@
 
 	<t>There are a few things that DHCP servers, relays, and clients all
 	need to do in order to speak the DHCP protocol in strict compliance
-	with <xref target="RFC2131">RFC2131</xref>.</t>
+	with <xref target="RFC2131"/>.
 
       <list style="numbers">
 	<t>Transmit a UDP packet from IP:0.0.0.0 Ethernet:Self, destined to
@@ -253,7 +273,7 @@
 	destined to IP:255.255.255.255 LinkLayer:Broadcast, again on an
 	unconfigured interface.</t>
 
-	<t>Transmit a UDP packet from IP:Self, Ethernet:Seelf, destined to
+	<t>Transmit a UDP packet from IP:Self, Ethernet:Self, destined to
 	IP:remote-system LinkLayer:remote-system, without transmitting a
 	single ARP.</t>
 
@@ -262,15 +282,15 @@
 	with ARP providing the glue, or it may be to a remote system via
 	one or more routers as normal).  In this case, the interfaces are
 	always configured.</t>
-      </list>
+      </list></t>
 
 	<t>The above isn't as simple as it sounds on a regular BSD socket.
 	Many unix implementations will transmit broadcasts not to
 	255.255.255.255, but to x.y.z.255 (where x.y.z is the system's local
 	subnet).  Such packets are not received by several known DHCP client
-	implementations - and it's not their fault, <xref target="RFC2131">
-	RFC2131</xref> very explicitly demands that these packets' IP
-	destination addresses be set to 255.255.255.255.</t>
+	implementations - and it's not their fault, <xref target="RFC2131"/>
+	very explicitly demands that these packets' IP destination
+	addresses be set to 255.255.255.255.</t>
 
 	<t>Receiving packets sent to 255.255.255.255 isn't a problem on most
 	modern unixes...so long as the interface is configured.  When there
@@ -292,12 +312,12 @@
 	the need to implement many forms of Link Layer framing and above.
 	The software gets away with not having to implement IP routing
 	tables as well by simply utilizing the aforementioned 'fallback'
-	UDP socket when unicasting between two configured systems is the
-	need.</t>
+	UDP socket when unicasting between two configured systems is 
+	needed.</t>
 
 	<t>Modern unixes have opened up some facilities that diminish how
 	much of this sort of nefarious kludgery is necessary, but have not
-	found the state of affairs absolutely absolved.  In particular,
+	found the state of affairs absolutely resolved.  In particular,
 	one might now unicast without ARP by inserting an entry into the
 	ARP cache prior to transmitting.  Unconfigured interfaces remain
 	the sticking point, however...on virtually no modern unixes is
@@ -307,11 +327,11 @@
       <section title="Ethernet Protocol References">
 	<t>ISC DHCP Implements Ethernet Version 2 ("DIX"), which is a variant
 	of IEEE 802.2.  No good reference of this framing is known to exist
-	at this time, but it is vaguely described in <xref target="RFC0894">
-	RFC894</xref> (see the section titled "Packet format"), and
+	at this time, but it is vaguely described in <xref target="RFC0894"/>
+	see the section titled "Packet format"), and
 	the following URL is also thought to be useful.</t>
 
-	<t>http://en.wikipedia.org/wiki/DIX</t>
+	<t><eref target="http://en.wikipedia.org/wiki/DIX_Ethernet">http://en.wikipedia.org/wiki/DIX_Ethernet</eref></t>
       </section>
 
       <section title="Token Ring Protocol References">
@@ -320,7 +340,7 @@
       </section>
 
       <section title="FDDI Protocol References">
-	<t><xref target="RFC1188">RFC1188</xref> is the most helpful
+	<t><xref target="RFC1188"/> is the most helpful
 	reference ISC DHCP has used to form FDDI packets.</t>
       </section>
 
@@ -349,13 +369,13 @@
 	RFC1542</xref>.</t>
     </section>
 
-    <section title="DHCP Protocol References">
+    <section title="DHCPv4 Protocol References">
       <section title="DHCPv4 Protocol">
 	<t>"The DHCP[v4] Protocol" is not defined in a single document.  The
 	following collection of references of what ISC DHCP terms "The
 	DHCPv4 Protocol".</t>
 
-        <section title="Core Protocol References">
+	<section title="Core Protocol References">
 	  <t><xref target="RFC2131">RFC2131</xref> defines the protocol format
 	and procedures.  ISC DHCP is not known to diverge from this document
 	in any way.  There are, however, a few points on which different
@@ -386,47 +406,10 @@
 	host-name option and, if so, null terminates any text options it
 	transmits to the client.  It also removes NULL termination from any
 	known text option it receives prior to any other processing.</t>
-        </section>
+	</section>
       </section>
 
-      <section title="DHCPv6 Protocol References">
-	<t>For now there is only one document that specifies the DHCPv6
-	protocol (there have been no updates yet), <xref target="RFC3315">
-	RFC3315</xref>.</t>
-
-	<t>Support for DHCPv6 was added first in version 4.0.0.  The server
-	and client support only IA_NA.  While the server does support multiple
-	IA_NAs within one packet from the client, our client only supports
-	sending one.  There is no relay support.</t>
-
-	<t>DHCPv6 introduces some new and uncomfortable ideas to the common
-	software library.</t>
-
-	<list style="numbers">
-	  <t>Options of zero length are normal in DHCPv6.  Currently, all
-	  ISC DHCP software treats zero-length options as errors.</t>
-
-	  <t>Options sometimes may appear multiple times.  The common
-	  library used to treat all appearance of multiple options as
-	  specified in RFC2131 - to be concatenated.  DHCPv6 options
-	  may sometimes appear multiple times (such as with IA_NA or
-	  IAADDR), but often must not.</t>
-
-	  <t>The same option space appears in DHCPv6 packets multiple times.
-	  If the packet was got via a relay, then the client's packet is
-	  stored to an option within the relay's packet...if there were two
-	  relays, this recurses.  At each of these steps, the root "DHCPv6
-	  option space" is used.  Further, a client packet may contain an
-	  IA_NA, which may contain an IAADDR - but really, in an abstract
-	  sense, this is again re-encapsulation of the DHCPv6 option space
-	  beneath options it also contains.</t>
-	</list>
-
-	<t>Precisely how to correctly support the above conundrums has not
-	quite yet been settled, so support is incomplete.</t>
-      </section>
-
-      <section title="DHCP Option References">
+      <section title="DHCPv4 Option References">
 	<t><xref target="RFC2241">RFC2241</xref> defines options for
 	Novell Directory Services.</t>
 
@@ -455,10 +438,8 @@
 
 	<t><xref target="RFC3011">RFC3011</xref> defines the Subnet-Selection
 	plain DHCPv4 option.  Do not confuse this option with the relay agent
-	"link selection" sub-option, although their behaviour is similar.</t>
-
-	<t><xref target="RFC3319">RFC3319</xref> defines the SIP server
-	options for DHCPv6.</t>
+	"link selection" sub-option, although their behaviour is
+	similar.</t>
 
 	<t><xref target="RFC3396">RFC3396</xref> documents both how long
 	options may be encoded in DHCPv4 packets, and also how multiple
@@ -472,19 +453,9 @@
 	format).  ISC DHCP has both client and server support, and supports
 	RFC1035 name compression.</t>
 
-	<t><xref target="RFC3646">RFC3646</xref> documents the DHCPv6
-	name-servers and domain-search options.</t>
-
-	<t><xref target="RFC3633">RFC3633</xref> documents the Identity
-	Association Prefix Delegation, which is included here for protocol
-	wire reference, but which is not supported by ISC DHCP.</t>
-
 	<t><xref target="RFC3679">RFC3679</xref> documents a number of
 	options that were documented earlier in history, but were not
 	made use of.</t>
-
-	<t><xref target="RFC3898">RFC3898</xref> documents four NIS options
-	for delivering NIS servers and domain information in DHCPv6.</t>
 
 	<t><xref target="RFC3925">RFC3925</xref> documents a pair of
 	Enterprise-ID delimited option spaces for vendors to use in order
@@ -495,30 +466,15 @@
 	<t><xref target="RFC3942">RFC3942</xref> redefined the 'site local'
 	option space.</t>
 
-	<t><xref target="RFC4075">RFC4075</xref> defines the DHCPv6 SNTP
-	Servers option.</t>
-
-	<t><xref target="RFC4242">RFC4242</xref> defines the Information
-	Refresh Time option, which advises DHCPv6 Information-Request
-	clients to return for updated information.</t>
-
-	<t><xref target="RFC4280">RFC4280</xref> defines two BCMS server
-	options.</t>
+	<t><xref target="RFC4280" /> defines two BCMS server options
+	for each protocol family.</t>
 
 	<t><xref target="RFC4388">RFC4388</xref> defined the DHCPv4
 	LEASEQUERY message type and a number of suitable response messages,
 	for the purpose of sharing information about DHCP served addresses
 	and clients.</t>
 
-	<t><xref target="RFC4580">RFC4580</xref> defines a DHCPv6
-	subscriber-id option, which is similar in principle to the DHCPv4
-	relay agent option of the same name.</t>
-
-	<t><xref target="RFC4649">RFC4649</xref> defines a DHCPv6 remote-id
-	option, which is similar in principle to the DHCPv4 relay agent
-	remote-id.</t>
-
-        <section title="Relay Agent Information Option Options">
+	<section title="Relay Agent Information Option Options">
 	  <t><xref target="RFC3046">RFC3046</xref> defines the Relay Agent
 	  Information Option and provides a number of sub-option
 	  definitions.</t>
@@ -527,8 +483,9 @@
 	  Class sub-option.</t>
 
 	  <t><xref target="RFC3527">RFC3527</xref> defines the Link Selection
-  	  sub-option.</t>
-        </section>
+	  sub-option.</t>
+	</section>
+
 
 	<section title="Dynamic DNS Updates References">
 	  <t>The collection of documents that describe the standards-based
@@ -563,13 +520,13 @@
 	</section>
 
 	<section title="Experimental: Failover References">
-	  <t>The Failover Protocol defines a means by which two DHCP Servers
+	  <t>The Failover Protocol defines means by which two DHCP Servers
 	  can share all the relevant information about leases granted to
 	  DHCP clients on given networks, so that one of the two servers may
 	  fail and be survived by a server that can act responsibly.</t>
 
-	  <t>Unfortunately it has been quite some years since the last time
-	  this document was edited, and the authors no longer show any
+	  <t>Unfortunately it has been quite some years (2003) since the last 
+	  time this document was edited, and the authors no longer show any
 	  interest in fielding comments or improving the document.</t>
 
 	  <t>The status of this protocol is very unsure, but ISC's
@@ -591,7 +548,17 @@
 	  number assignment for this state.  As a consequence, ISC DHCP has
 	  elected to use the value 254.</t>
 
-	  <t><xref target="RFC3074">RFC3074</xref> describes the Load Balancing
+	  <t> An optimization described in the failover protocol draft
+	  is included since 4.2.0a1. It permits a DHCP server
+	  operating in communications-interrupted state to 'rewind' a
+	  lease to the state most recently transmitted to its peer,
+	  greatly increasing a server's endurance in
+	  communications-interrupted.  This is supported using a new
+	  'rewind state' record on the dhcpd.leases entry for each
+	  lease.
+	  </t>
+
+	  <t><xref target="RFC3074" /> describes the Load Balancing
 	  Algorithm (LBA) that ISC DHCP uses in concert with the Failover
 	  protocol.  Note that versions 3.0.* are known to misimplement the
 	  hash algorithm (it will only use the low 4 bits of every byte of
@@ -600,14 +567,91 @@
       </section>
 
       <section title="DHCP Procedures">
-	<t><xref target="RFC2939">RFC2939</xref> explains how to go about
+	<t><xref target="RFC2939" /> explains how to go about
 	obtaining a new DHCP Option code assignment.</t>
       </section>
     </section>
+
+
+    <section title="DHCPv6 Protocol References">
+
+      <section title="DHCPv6 Protocol References">
+	<t>For now there is only one document that specifies the base
+	of the DHCPv6 protocol (there have been no updates yet),
+	<xref target="RFC3315"/>.</t>
+
+	<t>Support for DHCPv6 was first added in version 4.0.0.  The server
+	and client support only IA_NA.  While the server does support multiple
+	IA_NAs within one packet from the client, our client only supports
+	sending one.  There is no relay support.</t>
+
+	<t>DHCPv6 introduces some new and uncomfortable ideas to the common
+	software library.</t>
+
+	<t>
+	<list style="numbers">
+	  <t>Options sometimes may appear multiple times.  The common
+	  library used to treat all appearance of multiple options as
+	  specified in RFC2131 - to be concatenated.  DHCPv6 options
+	  may sometimes appear multiple times (such as with IA_NA or
+	  IAADDR), but often must not. As of 4.2.1-P1, multiple IA_NA, IA_PD
+	  or IA_TA are not supported.</t>
+
+	  <t>The same option space appears in DHCPv6 packets multiple times.
+	  If the packet was got via a relay, then the client's packet is
+	  stored to an option within the relay's packet...if there were two
+	  relays, this recurses.  At each of these steps, the root "DHCPv6
+	  option space" is used.  Further, a client packet may contain an
+	  IA_NA, which may contain an IAADDR - but really, in an abstract
+	  sense, this is again re-encapsulation of the DHCPv6 option space
+	  beneath options it also contains.</t>
+	</list>
+	</t>
+
+	<t>Precisely how to correctly support the above conundrums has not
+	quite yet been settled, so support is incomplete.</t>
+      </section>
+
+      <section title="DHCPv6 Options References">
+	<t><xref target="RFC3319"/> defines the SIP server
+	options for DHCPv6.</t>
+
+	<t><xref target="RFC3646"/> documents the DHCPv6
+	name-servers and domain-search options.</t>
+
+	<t><xref target="RFC3633"/> documents the Identity
+	Association Prefix Delegation for DHCPv6, which is included
+	here for protocol wire reference, but which is not supported
+	by ISC DHCP.</t>
+
+	<t><xref target="RFC3898"/> documents four NIS options
+	for delivering NIS servers and domain information in DHCPv6.</t>
+
+	<t><xref target="RFC4075"/> defines the DHCPv6 SNTP
+	Servers option.</t>
+
+	<t><xref target="RFC4242"/> defines the Information
+	Refresh Time option, which advises DHCPv6 Information-Request
+	clients to return for updated information.</t>
+
+	<t><xref target="RFC4280"/> defines two BCMS server options
+	for each protocol family.</t>
+
+	<t><xref target="RFC4580"/> defines a DHCPv6
+	subscriber-id option, which is similar in principle to the DHCPv4
+	relay agent option of the same name.</t>
+
+	<t><xref target="RFC4649"/> defines a DHCPv6 remote-id
+	option, which is similar in principle to the DHCPv4 relay agent
+	remote-id.</t>
+
+      </section>
+    </section>
+
   </middle>
 
   <back>
-    <references>
+    <references title="Published DHCPv4 References">
 	&rfc760;
 	&rfc768;
 	&rfc894;
@@ -620,49 +664,125 @@
 	&rfc2241;
 	&rfc2242;
 	&rfc2485;
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.2563'?>
 	&rfc2610;
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.2855'?>
 	&rfc2937;
 	&rfc2939;
 	&rfc3004;
 	&rfc3011;
 	&rfc3046;
 	&rfc3074;
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.3118'?>
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.3203'?>
 	&rfc3256;
-	&rfc3315;
-	&rfc3319;
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.3361'?>
 	&rfc3396;
 	&rfc3397;
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.3442'?>
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.3456'?>
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.3495'?>
 	&rfc3527;
-	&rfc3633;
-	&rfc3646;
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.3594'?>
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.3634'?>
 	&rfc3679;
-	&rfc3898;
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.3825'?>
 	&rfc3925;
 	&rfc3942;
-	&rfc4075;
-	&rfc4242;
-	&rfc4280;
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.3993'?>
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.4014'?>
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.4030'?>
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.4039'?>
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.4174'?>
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.4243'?>
+	&rfc4361;
 	&rfc4388;
-	&rfc4580;
-	&rfc4649;
-	&rfc4701;
-	&rfc4702;
-	&rfc4703;
-	&rfc4704;
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.4390'?>
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.4436'?>
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.4701'?>
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.4702'?>
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.4703'?>
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.5010'?>
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.5071'?>
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.5107'?>
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.5192'?>
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.5223'?>
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.5859'?>
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.5969'?>
 
 	<reference anchor='draft-failover'>
 	  <front>
 	    <title>DHCP Failover Protocol</title>
-
 	    <author initials='R.' surname='Droms' fullname='Ralph Droms'>
 		<organization abbrev='Cisco'>Cisco Systems</organization>
 	    </author>
-
 	    <date month='March' year='2003'/>
 	  </front>
 	  <format type="TXT" octets="312151" target="https://www.isc.org/sw/dhcp/drafts/draft-ietf-dhc-failover-12.txt"/>
 	</reference>
+
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml3/reference.I-D.draft-ietf-dhc-dhcpv4-relay-encapsulation-00.xml'?>
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml3/reference.I-D.draft-ietf-dhc-dhcpv4-bulk-leasequery-03.xml'?>
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml3/reference.I-D.draft-ietf-dhc-leasequery-by-remote-id-09.xml'?>
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml3/reference.I-D.draft-ietf-dhc-relay-id-suboption-07.xml'?>
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml3/reference.I-D.draft-ietf-mip6-hiopt-17.xml'?>
+
+    </references>
+
+    <references title="Published Common (DHCPv4/DHCPv6) References">
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.4280'?>
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.4477'?>
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.4578'?>
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.4776'?>
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.4833'?>
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.5417'?>
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.5678'?>
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.5908'?>
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.5970'?>
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.5986'?>
+	<?rfc include='http://xml.resource.org/public/rfc/bibxml3/reference.I-D.draft-ietf-dhc-vpn-option-12.xml'?>
+
+    </references>
+
+    <references title="Published DHCPv6 References">
+
+      &rfc3315;
+      &rfc3319;
+      &rfc3633;
+      &rfc3646;
+      <?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.3736'?>
+      &rfc3898;
+      &rfc4075;
+      <?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.4076'?>
+      &rfc4242;
+      &rfc4580;
+      &rfc4649;
+      <?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.4704'?>
+      <?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.4994'?>
+      <?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.5007'?>
+      <?rfc include='http://xml.resource.org/public/rfc/bibxml/reference.RFC.5460'?>
+      <?rfc include='http://xml.resource.org/public/rfc/bibxml3/reference.I-D.ietf-mif-dhcpv6-route-option'?>
+      <?rfc include='http://xml.resource.org/public/rfc/bibxml3/reference.I-D.ietf-dhc-dhcpv6-ldra'?>
+      <?rfc include='http://xml.resource.org/public/rfc/bibxml3/reference.I-D.ietf-dhc-dhcpv6-relay-supplied-options'?>
+      <?rfc include='http://xml.resource.org/public/rfc/bibxml3/reference.I-D.draft-ietf-dhc-pd-exclude-01.xml'?>
+      <?rfc include='http://xml.resource.org/public/rfc/bibxml3/reference.I-D.draft-ietf-dhc-secure-dhcpv6-02.xml'?>
+      <?rfc include='http://xml.resource.org/public/rfc/bibxml3/reference.I-D.ietf-mext-nemo-pd'?>
+      <?rfc include='http://xml.resource.org/public/rfc/bibxml3/reference.I-D.draft-ietf-dhc-duid-uuid-03.xml'?>
+      <?rfc include='http://xml.resource.org/public/rfc/bibxml3/reference.I-D.draft-ietf-softwire-ds-lite-tunnel-option-10.xml'?>
+      <?rfc include='http://xml.resource.org/public/rfc/bibxml3/reference.I-D.draft-ietf-mif-dns-server-selection-01.xml'?>
+      <?rfc include='http://xml.resource.org/public/rfc/bibxml3/reference.I-D.draft-ietf-geopriv-rfc3825bis-17.xml'?>
+
+      <reference anchor='draft-addr-params'>
+	<front>
+	  <title>Address Parameters Option for DHCPv6</title>
+	  <author initials='T.' surname='Mrugalski' fullname='Mrugalski'>
+	    <organization abbrev='Cisco'>Gdansk University of Technology</organization>
+	  </author>
+	  <date month='April' year='2007'/>
+	</front>
+	<format type="TXT" target="http://klub.com.pl/dhcpv6/doc/draft-mrugalski-addropts-XX-2007-04-17.txt"/>
+      </reference>
+
     </references>
   </back>
 </rfc>
-

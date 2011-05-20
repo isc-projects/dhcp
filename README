@@ -46,7 +46,8 @@ client and relay subdirectories.  The README file (this file) includes
 late-breaking operational and system-specific information that you
 should read even if you don't want to read the manual pages, and that
 you should *certainly* read if you run into trouble.  Internet
-standards relating to the DHCP protocol are stored in the doc
+standards relating to the DHCP protocol are listed in the References
+document that is available in html, txt and xml formats in doc/
 subdirectory.  You will have the best luck reading the manual pages if
 you build this software and then install it, although you can read
 them directly out of the distribution if you need to.
@@ -112,10 +113,9 @@ If you wish to run the DHCP Distribution on Linux, please see the
 Linux-specific notes later in this document.  If you wish to run on an
 SCO release, please see the SCO-specific notes later in this document.
 You particularly need to read these notes if you intend to support
-Windows 95 clients.  If you are running a version of FreeBSD prior to
-2.2, please read the note on FreeBSD.  If you are running HP-UX or
-Ultrix, please read the notes for those operating systems below.  If
-you are running NeXTSTEP, please see the notes on NeXTSTEP below.
+Windows 95 clients.  If you are running HP-UX or Ultrix, please read the 
+notes for those operating systems below.  If you are running NeXTSTEP, 
+please see the notes on NeXTSTEP below.
 
 If you start dhcpd and get a message, "no free bpf", that means you
 need to configure the Berkeley Packet Filter into your operating
@@ -564,10 +564,10 @@ has been resolved, then we're still working on it.
 
 PLEASE DO NOT REPORT BUGS IN OLD SOFTWARE RELEASES!  Fetch the latest
 release and see if the bug is still in that version of the software,
-and if it's not, _then_ report it.  ISC release versions always have
-three numbers, for example: 1.2.3.  The 'major release' is 1 here,
-the 'minor release' is 2, and the 'maintenance release' is 3.  ISC
-will accept bug reports against the most recent two major.minor
+and if it is still present, _then_ report it.  ISC release versions 
+always have three numbers, for example: 1.2.3.  The 'major release' is 
+1 here, the 'minor release' is 2, and the 'maintenance release' is 3.  
+ISC will accept bug reports against the most recent two major.minor
 releases: for example, 1.0.0 and 0.9.0, but not 0.8.* or prior.
 
 PLEASE take a moment to determine where the ISC DHCP distribution
