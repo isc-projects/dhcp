@@ -266,7 +266,6 @@ static struct option server_options[] = {
 	{ "ldap-tls-randfile", "t",		&server_universe,  77, 1 },
 #endif /* LDAP_USE_SSL */
 #endif /* LDAP_CONFIGURATION */
-	{ "dhcp-cache-threshold", "B",		&server_universe,  78, 1 },
 	{ NULL, NULL, NULL, 0, 0 }
 };
 

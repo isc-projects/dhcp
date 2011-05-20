@@ -27,7 +27,7 @@
 .\" Support and other services are available for ISC products - see
 .\" https://www.isc.org for more information or to learn more about ISC.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.106.18.4 2011/05/12 14:01:15 tomasz Exp $
+.\" $Id: dhcpd.conf.5,v 1.106.18.5 2011/05/20 14:21:11 tomasz Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -2156,30 +2156,6 @@ a second).
 Please note that as delayed-ack is currently experimental, the delayed-ack
 feature is not compiled in by default, but must be enabled at compile time
 with \'./configure --enable-delayed-ack\'.
-.RE
-.PP
-The 
-.I dhcp-cache-threshold 
-statement
-.RS 0.25i
-.PP
-.B dhcp-cache-threshold \fIpercentage\fB;\fR
-.PP
-The \fIdhcp-cache-threshold\fR statement takes one integer parameter
-with allowed values between 0 and 100. The default value is 25 (25% of
-the lease time). This parameter expresses the percentage of the total
-lease time, measured from the beginning, during which a
-client's attempt to renew its lease will result in getting
-the already assigned lease, rather than an extended lease.
-.PP
-Clients that attempt renewal frequently can cause the server to
-update and write the database frequently resulting in a performance
-impact on the server.  The \fIdhcp-cache-threshold\fR
-statement instructs the DHCP server to avoid updating leases too
-frequently thus avoiding this behavior.  Instead the server assigns the
-same lease with no modifications except for CLTT (Client Last
-Transmission Time) which does not require disk operations. This
-feature applies to IPv4 only.
 .RE
 .PP
 The

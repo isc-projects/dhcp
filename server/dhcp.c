@@ -1505,7 +1505,6 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 #if defined(DELAYED_ACK)
 	isc_boolean_t enqueue = ISC_TRUE;
 #endif
-	int use_old_lease = 0;
 
 	unsigned i, j;
 	int s1;
@@ -2449,46 +2448,6 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 			packet -> raw -> chaddr,
 			sizeof packet -> raw -> chaddr); /* XXX */
 	} else {
-		int commit = (!offer || (offer == DHCPACK));
-		int thresh = DEFAULT_CACHE_THRESHOLD;
-
-		/*
-		 * Check if the lease was issued recently, if so replay the 
-		 * current lease and do not require a database sync event.  
-		 * Recently is defined as being issued less than a given 
-		 * percentage of the lease previously. The percentage can be 
-		 * chosen either from a default value or via configuration.
-		 *
-		 */
-		if ((oc = lookup_option(&server_universe, state->options,
-					SV_CACHE_THRESHOLD)) &&
-		    evaluate_option_cache(&d1, packet, lt, NULL,
-					  packet->options, state->options,
-					  &lt->scope, oc, MDL)) {
-			if (d1.len == 1 && (d1.data[0] < 100))
-				thresh = d1.data[0];
-
-			data_string_forget(&d1, MDL);
-		}
-
-		if ((thresh > 0) && (offer == DHCPACK) &&
-		    (lease->binding_state == FTS_ACTIVE)) {
-			int limit;
-			int prev_lease = lease->ends - lease->starts;
-
-			/* it is better to avoid division by 0 */
-			if (prev_lease <= (INT_MAX / thresh))
-				limit = prev_lease * thresh / 100;
-			else
-				limit = prev_lease / 100 * thresh;
-
-			if ((lt->starts - lease->starts) <= limit) {
-				lt->starts = lease->starts;
-				state->offered_expiry = lt->ends = lease->ends;
-				commit = 0;
-				use_old_lease = 1;
-			}
-		}
 
 #if !defined(DELAYED_ACK)
 		/* Install the new information on 'lt' onto the lease at
@@ -2499,19 +2458,9 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		 * the same lease to another client later, and that would be
 		 * a conflict.
 		 */
-		if (!use_old_lease && !supersede_lease(lease, lt, commit,
+		if (!supersede_lease(lease, lt, !offer || (offer == DHCPACK),
 				     offer == DHCPACK, offer == DHCPACK)) {
 #else /* defined(DELAYED_ACK) */
-		/*
-		 * If there already isn't a need for a lease commit, and we
-		 * can just answer right away, set a flag to indicate this.
-		 */
-		if (commit && !(lease->flags & STATIC_LEASE) &&
-		    (!offer || (offer == DHCPACK)))
-			enqueue = ISC_TRUE;
-		else
-			enqueue = ISC_FALSE;
-
 		/* Install the new information on 'lt' onto the lease at
 		 * 'lease'.  We will not 'commit' this information to disk
 		 * yet (fsync()), we will 'propogate' the information if
@@ -2920,7 +2869,8 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 	} else {
   		lease->cltt = cur_time;
 #if defined(DELAYED_ACK)
-		if (enqueue)
+		if (!(lease->flags & STATIC_LEASE) &&
+		    (!offer || (offer == DHCPACK)))
 			delayed_ack_enqueue(lease);
 		else 
 #endif

@@ -713,7 +713,6 @@ struct lease_state {
 # define SV_LDAP_TLS_RANDFILE           77
 #endif
 #endif
-#define SV_CACHE_THRESHOLD		78
 
 #if !defined (DEFAULT_PING_TIMEOUT)
 # define DEFAULT_PING_TIMEOUT 1
@@ -735,8 +734,27 @@ struct lease_state {
 # define DEFAULT_MIN_ACK_DELAY_USECS 10000 /* 1/100 second */
 #endif
 
-#if !defined (DEFAULT_CACHE_THRESHOLD)
-# define DEFAULT_CACHE_THRESHOLD 25
+#if defined(LDAP_CONFIGURATION)
+# define SV_LDAP_SERVER			60
+# define SV_LDAP_PORT			61
+# define SV_LDAP_USERNAME		62
+# define SV_LDAP_PASSWORD		63
+# define SV_LDAP_BASE_DN		64
+# define SV_LDAP_METHOD			65
+# define SV_LDAP_DEBUG_FILE		66
+# define SV_LDAP_DHCP_SERVER_CN		67
+# define SV_LDAP_REFERRALS		68
+#if defined (LDAP_USE_SSL)
+# define SV_LDAP_SSL			69
+# define SV_LDAP_TLS_REQCERT		70
+# define SV_LDAP_TLS_CA_FILE		71
+# define SV_LDAP_TLS_CA_DIR		72
+# define SV_LDAP_TLS_CERT		73
+# define SV_LDAP_TLS_KEY		74
+# define SV_LDAP_TLS_CRLCHECK		75
+# define SV_LDAP_TLS_CIPHERS		76
+# define SV_LDAP_TLS_RANDFILE		77
+#endif
 #endif
 
 #if !defined (DEFAULT_DEFAULT_LEASE_TIME)

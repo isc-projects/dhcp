@@ -132,13 +132,6 @@ work on other platforms. Please report any problems and suggested fixes to
 
 - Compilation problem with gcc4.5 and omshell.c resolved. [ISC-Bugs #23831]
 
-- If a client renews before 'dhcp-cache-threshold' percent of its lease
-  has elapsed (default 25%), the server will reuse the allocated lease
-  (provide a lease within the currently allocated lease-time) rather
-  than extend or renew the lease.  This absolves the server of needing
-  to perform an fsync() operation on the lease database before reply,
-  which improves performance. [ISC-Bugs #22228]
-
 - Client Script fixes
   [ISC-Bugs #23045] Typos in client/scripts/openbsd
   [ISC-Bugs #23565] In the client scripts add a zone id (interface id) if
@@ -174,6 +167,7 @@ work on other platforms. Please report any problems and suggested fixes to
 
 - Modify the dlpi code to accept getmsg() returning a positive value.
   [ISC-Bugs #22824]
+
 
 			Changes since 4.2.0
 
