@@ -1,10 +1,9 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html lang="en"><head><title>ISC-DHCP-REFERENCES: ISC DHCP References Collection</title>
-<meta http-equiv="Expires" content="Thu, 23 Jul 2009 00:21:33 +0000">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <meta name="description" content="ISC DHCP References Collection">
 <meta name="keywords" content="ISC, DHCP, Reference Implementation">
-<meta name="generator" content="xml2rfc v1.33 (http://xml.resource.org/)">
+<meta name="generator" content="xml2rfc v1.36 (http://xml.resource.org/)">
 <style type='text/css'><!--
         body {
                 font-family: verdana, charcoal, helvetica, arial, sans-serif;
@@ -144,15 +143,22 @@
 <table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
 <table summary="layout" width="66%" border="0" cellpadding="0" cellspacing="0"><tr><td><table summary="layout" width="100%" border="0" cellpadding="2" cellspacing="1">
 <tr><td class="header">ISC-DHCP-REFERENCES</td><td class="header">D. Hankins</td></tr>
+<tr><td class="header">&nbsp;</td><td class="header">T. Mrugalski</td></tr>
 <tr><td class="header">&nbsp;</td><td class="header">ISC</td></tr>
-<tr><td class="header">&nbsp;</td><td class="header">May 2007</td></tr>
+<tr><td class="header">&nbsp;</td><td class="header">May 20, 2011</td></tr>
 </table></td></tr></table>
 <h1><br />ISC DHCP References Collection</h1>
 
+<h3>Abstract</h3>
+
+<p>This document describes a collection of reference material
+	to which ISC DHCP has been implemented as well as a more
+	complete listing of references for DHCP and DHCPv6 protocols.
+</p>
 <h3>Copyright Notice</h3>
 
-<p>Copyright (c) 2006-2007,2009 by Internet Systems Consortium, Inc.
-	("ISC")
+<p>Copyright (c) 2006-2007,2009,2011 by Internet Systems
+	  Consortium, Inc. ("ISC")
 </p>
 <p>Permission to use, copy, modify, and distribute this software for
 	any purpose with or without fee is hereby granted, provided that the
@@ -166,11 +172,6 @@
 	WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 	ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
 	OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-</p>
-<h3>Abstract</h3>
-
-<p>This document describes a collection of Reference material that
-	ISC DHCP has been implemented to.
 </p><a name="toc"></a><br /><hr />
 <h3>Table of Contents</h3>
 <p class="toc">
@@ -197,29 +198,40 @@ Unicast Datagram Protocol References<br />
 BOOTP Protocol References<br />
 <br />
 <a href="#anchor10">5.</a>&nbsp;
-DHCP Protocol References<br />
+DHCPv4 Protocol References<br />
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#anchor11">5.1.</a>&nbsp;
 DHCPv4 Protocol<br />
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#anchor12">5.1.1.</a>&nbsp;
 Core Protocol References<br />
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#anchor13">5.2.</a>&nbsp;
-DHCPv6 Protocol References<br />
-&nbsp;&nbsp;&nbsp;&nbsp;<a href="#anchor14">5.3.</a>&nbsp;
-DHCP Option References<br />
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#anchor15">5.3.1.</a>&nbsp;
+DHCPv4 Option References<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#anchor14">5.2.1.</a>&nbsp;
 Relay Agent Information Option Options<br />
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#anchor16">5.3.2.</a>&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#anchor15">5.2.2.</a>&nbsp;
 Dynamic DNS Updates References<br />
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#anchor17">5.3.3.</a>&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#anchor16">5.2.3.</a>&nbsp;
 Experimental: Failover References<br />
-&nbsp;&nbsp;&nbsp;&nbsp;<a href="#anchor18">5.4.</a>&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#anchor17">5.3.</a>&nbsp;
 DHCP Procedures<br />
 <br />
-<a href="#rfc.references1">6.</a>&nbsp;
+<a href="#anchor18">6.</a>&nbsp;
+DHCPv6 Protocol References<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#anchor19">6.1.</a>&nbsp;
+DHCPv6 Protocol References<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#anchor20">6.2.</a>&nbsp;
+DHCPv6 Options References<br />
+<br />
+<a href="#rfc.references1">7.</a>&nbsp;
 References<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#rfc.references1">7.1.</a>&nbsp;
+Published DHCPv4 References<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#rfc.references2">7.2.</a>&nbsp;
+Published Common (DHCPv4/DHCPv6) References<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#rfc.references3">7.3.</a>&nbsp;
+Published DHCPv6 References<br />
 <br />
 <a href="#rfc.authors">&#167;</a>&nbsp;
-Author's Address<br />
+Authors' Addresses<br />
 </p>
 <br clear="all" />
 
@@ -279,6 +291,8 @@ Definition: Reference Implementation</h3>
 </p>
 <p>This means:
 </p>
+<p>
+      </p>
 <ul class="text">
 <li>To produce new externally-visible behaviour, one must first
 	provide a reference.
@@ -287,7 +301,9 @@ Definition: Reference Implementation</h3>
 	simple incompatibilities in any other implementation, one must
 	first provide a reference.
 </li>
-</ul>
+</ul><p>
+	
+</p>
 <p>That is the lofty goal, at any rate.  It's well understood that,
 	especially because the ISC DHCP Software package has not always been
 	held to this standard (but not entirely due to it), there are many
@@ -327,8 +343,9 @@ Low Layer References</h3>
 </p>
 <p>There are a few things that DHCP servers, relays, and clients all
 	need to do in order to speak the DHCP protocol in strict compliance
-	with <a class='info' href='#RFC2131'>RFC2131<span> (</span><span class='info'>Droms, R., &ldquo;Dynamic Host Configuration Protocol,&rdquo; March&nbsp;1997.</span><span>)</span></a> [RFC2131].
-</p>
+	with <a class='info' href='#RFC2131'>[RFC2131]<span> (</span><span class='info'>Droms, R., &ldquo;Dynamic Host Configuration Protocol,&rdquo; March&nbsp;1997.</span><span>)</span></a>.
+
+      </p>
 <ol class="text">
 <li>Transmit a UDP packet from IP:0.0.0.0 Ethernet:Self, destined to
 	IP:255.255.255.255 LinkLayer:Broadcast on an unconfigured (no IP
@@ -338,7 +355,7 @@ Low Layer References</h3>
 	destined to IP:255.255.255.255 LinkLayer:Broadcast, again on an
 	unconfigured interface.
 </li>
-<li>Transmit a UDP packet from IP:Self, Ethernet:Seelf, destined to
+<li>Transmit a UDP packet from IP:Self, Ethernet:Self, destined to
 	IP:remote-system LinkLayer:remote-system, without transmitting a
 	single ARP.
 </li>
@@ -349,12 +366,14 @@ Low Layer References</h3>
 	always configured.
 </li>
 </ol>
+
 <p>The above isn't as simple as it sounds on a regular BSD socket.
 	Many unix implementations will transmit broadcasts not to
 	255.255.255.255, but to x.y.z.255 (where x.y.z is the system's local
 	subnet).  Such packets are not received by several known DHCP client
-	implementations - and it's not their fault, <a class='info' href='#RFC2131'>RFC2131<span> (</span><span class='info'>Droms, R., &ldquo;Dynamic Host Configuration Protocol,&rdquo; March&nbsp;1997.</span><span>)</span></a> [RFC2131] very explicitly demands that these packets' IP
-	destination addresses be set to 255.255.255.255.
+	implementations - and it's not their fault, <a class='info' href='#RFC2131'>[RFC2131]<span> (</span><span class='info'>Droms, R., &ldquo;Dynamic Host Configuration Protocol,&rdquo; March&nbsp;1997.</span><span>)</span></a>
+	very explicitly demands that these packets' IP destination
+	addresses be set to 255.255.255.255.
 </p>
 <p>Receiving packets sent to 255.255.255.255 isn't a problem on most
 	modern unixes...so long as the interface is configured.  When there
@@ -376,12 +395,12 @@ Low Layer References</h3>
 	the need to implement many forms of Link Layer framing and above.
 	The software gets away with not having to implement IP routing
 	tables as well by simply utilizing the aforementioned 'fallback'
-	UDP socket when unicasting between two configured systems is the
-	need.
+	UDP socket when unicasting between two configured systems is 
+	needed.
 </p>
 <p>Modern unixes have opened up some facilities that diminish how
 	much of this sort of nefarious kludgery is necessary, but have not
-	found the state of affairs absolutely absolved.  In particular,
+	found the state of affairs absolutely resolved.  In particular,
 	one might now unicast without ARP by inserting an entry into the
 	ARP cache prior to transmitting.  Unconfigured interfaces remain
 	the sticking point, however...on virtually no modern unixes is
@@ -395,10 +414,11 @@ Ethernet Protocol References</h3>
 
 <p>ISC DHCP Implements Ethernet Version 2 ("DIX"), which is a variant
 	of IEEE 802.2.  No good reference of this framing is known to exist
-	at this time, but it is vaguely described in <a class='info' href='#RFC0894'>RFC894<span> (</span><span class='info'>Hornig, C., &ldquo;Standard for the transmission of IP datagrams over Ethernet networks,&rdquo; April&nbsp;1984.</span><span>)</span></a> [RFC0894] (see the section titled "Packet format"), and
+	at this time, but it is vaguely described in <a class='info' href='#RFC0894'>[RFC0894]<span> (</span><span class='info'>Hornig, C., &ldquo;Standard for the transmission of IP datagrams over Ethernet networks,&rdquo; April&nbsp;1984.</span><span>)</span></a>
+	see the section titled "Packet format"), and
 	the following URL is also thought to be useful.
 </p>
-<p>http://en.wikipedia.org/wiki/DIX
+<p><a href='http://en.wikipedia.org/wiki/DIX_Ethernet'>http://en.wikipedia.org/wiki/DIX_Ethernet</a>
 </p>
 <a name="anchor5"></a><br /><hr />
 <table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
@@ -413,7 +433,7 @@ Token Ring Protocol References</h3>
 <a name="rfc.section.3.3"></a><h3>3.3.&nbsp;
 FDDI Protocol References</h3>
 
-<p><a class='info' href='#RFC1188'>RFC1188<span> (</span><span class='info'>Katz, D., &ldquo;Proposed Standard for the Transmission of IP Datagrams over FDDI Networks,&rdquo; October&nbsp;1990.</span><span>)</span></a> [RFC1188] is the most helpful
+<p><a class='info' href='#RFC1188'>[RFC1188]<span> (</span><span class='info'>Katz, D., &ldquo;Proposed Standard for the Transmission of IP Datagrams over FDDI Networks,&rdquo; October&nbsp;1990.</span><span>)</span></a> is the most helpful
 	reference ISC DHCP has used to form FDDI packets.
 </p>
 <a name="anchor7"></a><br /><hr />
@@ -451,7 +471,7 @@ BOOTP Protocol References</h3>
 <a name="anchor10"></a><br /><hr />
 <table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
 <a name="rfc.section.5"></a><h3>5.&nbsp;
-DHCP Protocol References</h3>
+DHCPv4 Protocol References</h3>
 
 <a name="anchor11"></a><br /><hr />
 <table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
@@ -501,46 +521,7 @@ Core Protocol References</h3>
 <a name="anchor13"></a><br /><hr />
 <table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
 <a name="rfc.section.5.2"></a><h3>5.2.&nbsp;
-DHCPv6 Protocol References</h3>
-
-<p>For now there is only one document that specifies the DHCPv6
-	protocol (there have been no updates yet), <a class='info' href='#RFC3315'>RFC3315<span> (</span><span class='info'>Droms, R., Bound, J., Volz, B., Lemon, T., Perkins, C., and M. Carney, &ldquo;Dynamic Host Configuration Protocol for IPv6 (DHCPv6),&rdquo; July&nbsp;2003.</span><span>)</span></a> [RFC3315].
-</p>
-<p>Support for DHCPv6 was added first in version 4.0.0.  The server
-	and client support only IA_NA.  While the server does support multiple
-	IA_NAs within one packet from the client, our client only supports
-	sending one.  There is no relay support.
-</p>
-<p>DHCPv6 introduces some new and uncomfortable ideas to the common
-	software library.
-</p>
-<ol class="text">
-<li>Options of zero length are normal in DHCPv6.  Currently, all
-	  ISC DHCP software treats zero-length options as errors.
-</li>
-<li>Options sometimes may appear multiple times.  The common
-	  library used to treat all appearance of multiple options as
-	  specified in RFC2131 - to be concatenated.  DHCPv6 options
-	  may sometimes appear multiple times (such as with IA_NA or
-	  IAADDR), but often must not.
-</li>
-<li>The same option space appears in DHCPv6 packets multiple times.
-	  If the packet was got via a relay, then the client's packet is
-	  stored to an option within the relay's packet...if there were two
-	  relays, this recurses.  At each of these steps, the root "DHCPv6
-	  option space" is used.  Further, a client packet may contain an
-	  IA_NA, which may contain an IAADDR - but really, in an abstract
-	  sense, this is again re-encapsulation of the DHCPv6 option space
-	  beneath options it also contains.
-</li>
-</ol>
-<p>Precisely how to correctly support the above conundrums has not
-	quite yet been settled, so support is incomplete.
-</p>
-<a name="anchor14"></a><br /><hr />
-<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
-<a name="rfc.section.5.3"></a><h3>5.3.&nbsp;
-DHCP Option References</h3>
+DHCPv4 Option References</h3>
 
 <p><a class='info' href='#RFC2241'>RFC2241<span> (</span><span class='info'>Provan, D., &ldquo;DHCP Options for Novell Directory Services,&rdquo; November&nbsp;1997.</span><span>)</span></a> [RFC2241] defines options for
 	Novell Directory Services.
@@ -570,10 +551,8 @@ DHCP Option References</h3>
 </p>
 <p><a class='info' href='#RFC3011'>RFC3011<span> (</span><span class='info'>Waters, G., &ldquo;The IPv4 Subnet Selection Option for DHCP,&rdquo; November&nbsp;2000.</span><span>)</span></a> [RFC3011] defines the Subnet-Selection
 	plain DHCPv4 option.  Do not confuse this option with the relay agent
-	"link selection" sub-option, although their behaviour is similar.
-</p>
-<p><a class='info' href='#RFC3319'>RFC3319<span> (</span><span class='info'>Schulzrinne, H. and B. Volz, &ldquo;Dynamic Host Configuration Protocol (DHCPv6) Options for Session Initiation Protocol (SIP) Servers,&rdquo; July&nbsp;2003.</span><span>)</span></a> [RFC3319] defines the SIP server
-	options for DHCPv6.
+	"link selection" sub-option, although their behaviour is
+	similar.
 </p>
 <p><a class='info' href='#RFC3396'>RFC3396<span> (</span><span class='info'>Lemon, T. and S. Cheshire, &ldquo;Encoding Long Options in the Dynamic Host Configuration Protocol (DHCPv4),&rdquo; November&nbsp;2002.</span><span>)</span></a> [RFC3396] documents both how long
 	options may be encoded in DHCPv4 packets, and also how multiple
@@ -586,19 +565,9 @@ DHCP Option References</h3>
 	format).  ISC DHCP has both client and server support, and supports
 	RFC1035 name compression.
 </p>
-<p><a class='info' href='#RFC3646'>RFC3646<span> (</span><span class='info'>Droms, R., &ldquo;DNS Configuration options for Dynamic Host Configuration Protocol for IPv6 (DHCPv6),&rdquo; December&nbsp;2003.</span><span>)</span></a> [RFC3646] documents the DHCPv6
-	name-servers and domain-search options.
-</p>
-<p><a class='info' href='#RFC3633'>RFC3633<span> (</span><span class='info'>Troan, O. and R. Droms, &ldquo;IPv6 Prefix Options for Dynamic Host Configuration Protocol (DHCP) version 6,&rdquo; December&nbsp;2003.</span><span>)</span></a> [RFC3633] documents the Identity
-	Association Prefix Delegation, which is included here for protocol
-	wire reference, but which is not supported by ISC DHCP.
-</p>
 <p><a class='info' href='#RFC3679'>RFC3679<span> (</span><span class='info'>Droms, R., &ldquo;Unused Dynamic Host Configuration Protocol (DHCP) Option Codes,&rdquo; January&nbsp;2004.</span><span>)</span></a> [RFC3679] documents a number of
 	options that were documented earlier in history, but were not
 	made use of.
-</p>
-<p><a class='info' href='#RFC3898'>RFC3898<span> (</span><span class='info'>Kalusivalingam, V., &ldquo;Network Information Service (NIS) Configuration Options for Dynamic Host Configuration Protocol for IPv6 (DHCPv6),&rdquo; October&nbsp;2004.</span><span>)</span></a> [RFC3898] documents four NIS options
-	for delivering NIS servers and domain information in DHCPv6.
 </p>
 <p><a class='info' href='#RFC3925'>RFC3925<span> (</span><span class='info'>Littlefield, J., &ldquo;Vendor-Identifying Vendor Options for Dynamic Host Configuration Protocol version 4 (DHCPv4),&rdquo; October&nbsp;2004.</span><span>)</span></a> [RFC3925] documents a pair of
 	Enterprise-ID delimited option spaces for vendors to use in order
@@ -609,32 +578,17 @@ DHCP Option References</h3>
 <p><a class='info' href='#RFC3942'>RFC3942<span> (</span><span class='info'>Volz, B., &ldquo;Reclassifying Dynamic Host Configuration Protocol version 4 (DHCPv4) Options,&rdquo; November&nbsp;2004.</span><span>)</span></a> [RFC3942] redefined the 'site local'
 	option space.
 </p>
-<p><a class='info' href='#RFC4075'>RFC4075<span> (</span><span class='info'>Kalusivalingam, V., &ldquo;Simple Network Time Protocol (SNTP) Configuration Option for DHCPv6,&rdquo; May&nbsp;2005.</span><span>)</span></a> [RFC4075] defines the DHCPv6 SNTP
-	Servers option.
-</p>
-<p><a class='info' href='#RFC4242'>RFC4242<span> (</span><span class='info'>Venaas, S., Chown, T., and B. Volz, &ldquo;Information Refresh Time Option for Dynamic Host Configuration Protocol for IPv6 (DHCPv6),&rdquo; November&nbsp;2005.</span><span>)</span></a> [RFC4242] defines the Information
-	Refresh Time option, which advises DHCPv6 Information-Request
-	clients to return for updated information.
-</p>
-<p><a class='info' href='#RFC4280'>RFC4280<span> (</span><span class='info'>Chowdhury, K., Yegani, P., and L. Madour, &ldquo;Dynamic Host Configuration Protocol (DHCP) Options for Broadcast and Multicast Control Servers,&rdquo; November&nbsp;2005.</span><span>)</span></a> [RFC4280] defines two BCMS server
-	options.
+<p><a class='info' href='#RFC4280'>[RFC4280]<span> (</span><span class='info'>Chowdhury, K., Yegani, P., and L. Madour, &ldquo;Dynamic Host Configuration Protocol (DHCP) Options for Broadcast and Multicast Control Servers,&rdquo; November&nbsp;2005.</span><span>)</span></a> defines two BCMS server options
+	for each protocol family.
 </p>
 <p><a class='info' href='#RFC4388'>RFC4388<span> (</span><span class='info'>Woundy, R. and K. Kinnear, &ldquo;Dynamic Host Configuration Protocol (DHCP) Leasequery,&rdquo; February&nbsp;2006.</span><span>)</span></a> [RFC4388] defined the DHCPv4
 	LEASEQUERY message type and a number of suitable response messages,
 	for the purpose of sharing information about DHCP served addresses
 	and clients.
 </p>
-<p><a class='info' href='#RFC4580'>RFC4580<span> (</span><span class='info'>Volz, B., &ldquo;Dynamic Host Configuration Protocol for IPv6 (DHCPv6) Relay Agent Subscriber-ID Option,&rdquo; June&nbsp;2006.</span><span>)</span></a> [RFC4580] defines a DHCPv6
-	subscriber-id option, which is similar in principle to the DHCPv4
-	relay agent option of the same name.
-</p>
-<p><a class='info' href='#RFC4649'>RFC4649<span> (</span><span class='info'>Volz, B., &ldquo;Dynamic Host Configuration Protocol for IPv6 (DHCPv6) Relay Agent Remote-ID Option,&rdquo; August&nbsp;2006.</span><span>)</span></a> [RFC4649] defines a DHCPv6 remote-id
-	option, which is similar in principle to the DHCPv4 relay agent
-	remote-id.
-</p>
-<a name="anchor15"></a><br /><hr />
+<a name="anchor14"></a><br /><hr />
 <table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
-<a name="rfc.section.5.3.1"></a><h3>5.3.1.&nbsp;
+<a name="rfc.section.5.2.1"></a><h3>5.2.1.&nbsp;
 Relay Agent Information Option Options</h3>
 
 <p><a class='info' href='#RFC3046'>RFC3046<span> (</span><span class='info'>Patrick, M., &ldquo;DHCP Relay Agent Information Option,&rdquo; January&nbsp;2001.</span><span>)</span></a> [RFC3046] defines the Relay Agent
@@ -645,11 +599,11 @@ Relay Agent Information Option Options</h3>
 	  Class sub-option.
 </p>
 <p><a class='info' href='#RFC3527'>RFC3527<span> (</span><span class='info'>Kinnear, K., Stapp, M., Johnson, R., and J. Kumarasamy, &ldquo;Link Selection sub-option for the Relay Agent Information Option for DHCPv4,&rdquo; April&nbsp;2003.</span><span>)</span></a> [RFC3527] defines the Link Selection
-  	  sub-option.
+	  sub-option.
 </p>
-<a name="anchor16"></a><br /><hr />
+<a name="anchor15"></a><br /><hr />
 <table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
-<a name="rfc.section.5.3.2"></a><h3>5.3.2.&nbsp;
+<a name="rfc.section.5.2.2"></a><h3>5.2.2.&nbsp;
 Dynamic DNS Updates References</h3>
 
 <p>The collection of documents that describe the standards-based
@@ -682,18 +636,18 @@ Dynamic DNS Updates References</h3>
 	  record.  However, for DHCPv6 FQDN, we do use DHCID type code '2',
 	  as no other value really makes sense in our context.
 </p>
-<a name="anchor17"></a><br /><hr />
+<a name="anchor16"></a><br /><hr />
 <table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
-<a name="rfc.section.5.3.3"></a><h3>5.3.3.&nbsp;
+<a name="rfc.section.5.2.3"></a><h3>5.2.3.&nbsp;
 Experimental: Failover References</h3>
 
-<p>The Failover Protocol defines a means by which two DHCP Servers
+<p>The Failover Protocol defines means by which two DHCP Servers
 	  can share all the relevant information about leases granted to
 	  DHCP clients on given networks, so that one of the two servers may
 	  fail and be survived by a server that can act responsibly.
 </p>
-<p>Unfortunately it has been quite some years since the last time
-	  this document was edited, and the authors no longer show any
+<p>Unfortunately it has been quite some years (2003) since the last 
+	  time this document was edited, and the authors no longer show any
 	  interest in fielding comments or improving the document.
 </p>
 <p>The status of this protocol is very unsure, but ISC's
@@ -715,113 +669,340 @@ Experimental: Failover References</h3>
 	  number assignment for this state.  As a consequence, ISC DHCP has
 	  elected to use the value 254.
 </p>
-<p><a class='info' href='#RFC3074'>RFC3074<span> (</span><span class='info'>Volz, B., Gonczi, S., Lemon, T., and R. Stevens, &ldquo;DHC Load Balancing Algorithm,&rdquo; February&nbsp;2001.</span><span>)</span></a> [RFC3074] describes the Load Balancing
+<p> An optimization described in the failover protocol draft
+	  is included since 4.2.0a1. It permits a DHCP server
+	  operating in communications-interrupted state to 'rewind' a
+	  lease to the state most recently transmitted to its peer,
+	  greatly increasing a server's endurance in
+	  communications-interrupted.  This is supported using a new
+	  'rewind state' record on the dhcpd.leases entry for each
+	  lease.
+	  
+</p>
+<p><a class='info' href='#RFC3074'>[RFC3074]<span> (</span><span class='info'>Volz, B., Gonczi, S., Lemon, T., and R. Stevens, &ldquo;DHC Load Balancing Algorithm,&rdquo; February&nbsp;2001.</span><span>)</span></a> describes the Load Balancing
 	  Algorithm (LBA) that ISC DHCP uses in concert with the Failover
 	  protocol.  Note that versions 3.0.* are known to misimplement the
 	  hash algorithm (it will only use the low 4 bits of every byte of
 	  the hash bucket array).
 </p>
-<a name="anchor18"></a><br /><hr />
+<a name="anchor17"></a><br /><hr />
 <table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
-<a name="rfc.section.5.4"></a><h3>5.4.&nbsp;
+<a name="rfc.section.5.3"></a><h3>5.3.&nbsp;
 DHCP Procedures</h3>
 
-<p><a class='info' href='#RFC2939'>RFC2939<span> (</span><span class='info'>Droms, R., &ldquo;Procedures and IANA Guidelines for Definition of New DHCP Options and Message Types,&rdquo; September&nbsp;2000.</span><span>)</span></a> [RFC2939] explains how to go about
+<p><a class='info' href='#RFC2939'>[RFC2939]<span> (</span><span class='info'>Droms, R., &ldquo;Procedures and IANA Guidelines for Definition of New DHCP Options and Message Types,&rdquo; September&nbsp;2000.</span><span>)</span></a> explains how to go about
 	obtaining a new DHCP Option code assignment.
 </p>
+<a name="anchor18"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<a name="rfc.section.6"></a><h3>6.&nbsp;
+DHCPv6 Protocol References</h3>
+
+<a name="anchor19"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<a name="rfc.section.6.1"></a><h3>6.1.&nbsp;
+DHCPv6 Protocol References</h3>
+
+<p>For now there is only one document that specifies the base
+	of the DHCPv6 protocol (there have been no updates yet),
+	<a class='info' href='#RFC3315'>[RFC3315]<span> (</span><span class='info'>Droms, R., Bound, J., Volz, B., Lemon, T., Perkins, C., and M. Carney, &ldquo;Dynamic Host Configuration Protocol for IPv6 (DHCPv6),&rdquo; July&nbsp;2003.</span><span>)</span></a>.
+</p>
+<p>Support for DHCPv6 was first added in version 4.0.0.  The server
+	and client support only IA_NA.  While the server does support multiple
+	IA_NAs within one packet from the client, our client only supports
+	sending one.  There is no relay support.
+</p>
+<p>DHCPv6 introduces some new and uncomfortable ideas to the common
+	software library.
+</p>
+<p>
+	</p>
+<ol class="text">
+<li>Options sometimes may appear multiple times.  The common
+	  library used to treat all appearance of multiple options as
+	  specified in RFC2131 - to be concatenated.  DHCPv6 options
+	  may sometimes appear multiple times (such as with IA_NA or
+	  IAADDR), but often must not. As of 4.2.1-P1, multiple IA_NA, IA_PD
+	  or IA_TA are not supported.
+</li>
+<li>The same option space appears in DHCPv6 packets multiple times.
+	  If the packet was got via a relay, then the client's packet is
+	  stored to an option within the relay's packet...if there were two
+	  relays, this recurses.  At each of these steps, the root "DHCPv6
+	  option space" is used.  Further, a client packet may contain an
+	  IA_NA, which may contain an IAADDR - but really, in an abstract
+	  sense, this is again re-encapsulation of the DHCPv6 option space
+	  beneath options it also contains.
+</li>
+</ol><p>
+	
+</p>
+<p>Precisely how to correctly support the above conundrums has not
+	quite yet been settled, so support is incomplete.
+</p>
+<a name="anchor20"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<a name="rfc.section.6.2"></a><h3>6.2.&nbsp;
+DHCPv6 Options References</h3>
+
+<p><a class='info' href='#RFC3319'>[RFC3319]<span> (</span><span class='info'>Schulzrinne, H. and B. Volz, &ldquo;Dynamic Host Configuration Protocol (DHCPv6) Options for Session Initiation Protocol (SIP) Servers,&rdquo; July&nbsp;2003.</span><span>)</span></a> defines the SIP server
+	options for DHCPv6.
+</p>
+<p><a class='info' href='#RFC3646'>[RFC3646]<span> (</span><span class='info'>Droms, R., &ldquo;DNS Configuration options for Dynamic Host Configuration Protocol for IPv6 (DHCPv6),&rdquo; December&nbsp;2003.</span><span>)</span></a> documents the DHCPv6
+	name-servers and domain-search options.
+</p>
+<p><a class='info' href='#RFC3633'>[RFC3633]<span> (</span><span class='info'>Troan, O. and R. Droms, &ldquo;IPv6 Prefix Options for Dynamic Host Configuration Protocol (DHCP) version 6,&rdquo; December&nbsp;2003.</span><span>)</span></a> documents the Identity
+	Association Prefix Delegation for DHCPv6, which is included
+	here for protocol wire reference, but which is not supported
+	by ISC DHCP.
+</p>
+<p><a class='info' href='#RFC3898'>[RFC3898]<span> (</span><span class='info'>Kalusivalingam, V., &ldquo;Network Information Service (NIS) Configuration Options for Dynamic Host Configuration Protocol for IPv6 (DHCPv6),&rdquo; October&nbsp;2004.</span><span>)</span></a> documents four NIS options
+	for delivering NIS servers and domain information in DHCPv6.
+</p>
+<p><a class='info' href='#RFC4075'>[RFC4075]<span> (</span><span class='info'>Kalusivalingam, V., &ldquo;Simple Network Time Protocol (SNTP) Configuration Option for DHCPv6,&rdquo; May&nbsp;2005.</span><span>)</span></a> defines the DHCPv6 SNTP
+	Servers option.
+</p>
+<p><a class='info' href='#RFC4242'>[RFC4242]<span> (</span><span class='info'>Venaas, S., Chown, T., and B. Volz, &ldquo;Information Refresh Time Option for Dynamic Host Configuration Protocol for IPv6 (DHCPv6),&rdquo; November&nbsp;2005.</span><span>)</span></a> defines the Information
+	Refresh Time option, which advises DHCPv6 Information-Request
+	clients to return for updated information.
+</p>
+<p><a class='info' href='#RFC4280'>[RFC4280]<span> (</span><span class='info'>Chowdhury, K., Yegani, P., and L. Madour, &ldquo;Dynamic Host Configuration Protocol (DHCP) Options for Broadcast and Multicast Control Servers,&rdquo; November&nbsp;2005.</span><span>)</span></a> defines two BCMS server options
+	for each protocol family.
+</p>
+<p><a class='info' href='#RFC4580'>[RFC4580]<span> (</span><span class='info'>Volz, B., &ldquo;Dynamic Host Configuration Protocol for IPv6 (DHCPv6) Relay Agent Subscriber-ID Option,&rdquo; June&nbsp;2006.</span><span>)</span></a> defines a DHCPv6
+	subscriber-id option, which is similar in principle to the DHCPv4
+	relay agent option of the same name.
+</p>
+<p><a class='info' href='#RFC4649'>[RFC4649]<span> (</span><span class='info'>Volz, B., &ldquo;Dynamic Host Configuration Protocol for IPv6 (DHCPv6) Relay Agent Remote-ID Option,&rdquo; August&nbsp;2006.</span><span>)</span></a> defines a DHCPv6 remote-id
+	option, which is similar in principle to the DHCPv4 relay agent
+	remote-id.
+</p>
+<a name="rfc.references"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<a name="rfc.section.7"></a><h3>7.&nbsp;
+References</h3>
+
 <a name="rfc.references1"></a><br /><hr />
 <table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
-<h3>6.&nbsp;References</h3>
+<h3>7.1.&nbsp;Published DHCPv4 References</h3>
 <table width="99%" border="0">
 <tr><td class="author-text" valign="top"><a name="RFC0760">[RFC0760]</a></td>
-<td class="author-text">Postel, J., &ldquo;<a href="http://tools.ietf.org/html/rfc760">DoD standard Internet Protocol</a>,&rdquo; RFC&nbsp;760, January&nbsp;1980 (<a href="ftp://ftp.isi.edu/in-notes/rfc760.txt">TXT</a>).</td></tr>
+<td class="author-text">Postel, J., &ldquo;<a href="http://tools.ietf.org/html/rfc760">DoD standard Internet Protocol</a>,&rdquo; RFC&nbsp;760, January&nbsp;1980 (<a href="http://www.rfc-editor.org/rfc/rfc760.txt">TXT</a>).</td></tr>
 <tr><td class="author-text" valign="top"><a name="RFC0768">[RFC0768]</a></td>
-<td class="author-text">Postel, J., &ldquo;<a href="http://tools.ietf.org/html/rfc768">User Datagram Protocol</a>,&rdquo; STD&nbsp;6, RFC&nbsp;768, August&nbsp;1980 (<a href="ftp://ftp.isi.edu/in-notes/rfc768.txt">TXT</a>).</td></tr>
+<td class="author-text">Postel, J., &ldquo;<a href="http://tools.ietf.org/html/rfc768">User Datagram Protocol</a>,&rdquo; STD&nbsp;6, RFC&nbsp;768, August&nbsp;1980 (<a href="http://www.rfc-editor.org/rfc/rfc768.txt">TXT</a>).</td></tr>
 <tr><td class="author-text" valign="top"><a name="RFC0894">[RFC0894]</a></td>
-<td class="author-text">Hornig, C., &ldquo;<a href="http://tools.ietf.org/html/rfc894">Standard for the transmission of IP datagrams over Ethernet networks</a>,&rdquo; STD&nbsp;41, RFC&nbsp;894, April&nbsp;1984 (<a href="ftp://ftp.isi.edu/in-notes/rfc894.txt">TXT</a>).</td></tr>
+<td class="author-text">Hornig, C., &ldquo;<a href="http://tools.ietf.org/html/rfc894">Standard for the transmission of IP datagrams over Ethernet networks</a>,&rdquo; STD&nbsp;41, RFC&nbsp;894, April&nbsp;1984 (<a href="http://www.rfc-editor.org/rfc/rfc894.txt">TXT</a>).</td></tr>
 <tr><td class="author-text" valign="top"><a name="RFC0951">[RFC0951]</a></td>
-<td class="author-text">Croft, B. and J. Gilmore, &ldquo;<a href="http://tools.ietf.org/html/rfc951">Bootstrap Protocol</a>,&rdquo; RFC&nbsp;951, September&nbsp;1985 (<a href="ftp://ftp.isi.edu/in-notes/rfc951.txt">TXT</a>).</td></tr>
+<td class="author-text">Croft, B. and J. Gilmore, &ldquo;<a href="http://tools.ietf.org/html/rfc951">Bootstrap Protocol</a>,&rdquo; RFC&nbsp;951, September&nbsp;1985 (<a href="http://www.rfc-editor.org/rfc/rfc951.txt">TXT</a>).</td></tr>
 <tr><td class="author-text" valign="top"><a name="RFC1035">[RFC1035]</a></td>
-<td class="author-text">Mockapetris, P., &ldquo;<a href="http://tools.ietf.org/html/rfc1035">Domain names - implementation and specification</a>,&rdquo; STD&nbsp;13, RFC&nbsp;1035, November&nbsp;1987 (<a href="ftp://ftp.isi.edu/in-notes/rfc1035.txt">TXT</a>).</td></tr>
+<td class="author-text">Mockapetris, P., &ldquo;<a href="http://tools.ietf.org/html/rfc1035">Domain names - implementation and specification</a>,&rdquo; STD&nbsp;13, RFC&nbsp;1035, November&nbsp;1987 (<a href="http://www.rfc-editor.org/rfc/rfc1035.txt">TXT</a>).</td></tr>
 <tr><td class="author-text" valign="top"><a name="RFC1188">[RFC1188]</a></td>
-<td class="author-text"><a href="mailto:dkatz@merit.edu">Katz, D.</a>, &ldquo;<a href="http://tools.ietf.org/html/rfc1188">Proposed Standard for the Transmission of IP Datagrams over FDDI Networks</a>,&rdquo; RFC&nbsp;1188, October&nbsp;1990 (<a href="ftp://ftp.isi.edu/in-notes/rfc1188.txt">TXT</a>).</td></tr>
+<td class="author-text"><a href="mailto:dkatz@merit.edu">Katz, D.</a>, &ldquo;<a href="http://tools.ietf.org/html/rfc1188">Proposed Standard for the Transmission of IP Datagrams over FDDI Networks</a>,&rdquo; RFC&nbsp;1188, October&nbsp;1990 (<a href="http://www.rfc-editor.org/rfc/rfc1188.txt">TXT</a>).</td></tr>
 <tr><td class="author-text" valign="top"><a name="RFC1542">[RFC1542]</a></td>
-<td class="author-text"><a href="mailto:Walter.Wimer@CMU.EDU">Wimer, W.</a>, &ldquo;<a href="http://tools.ietf.org/html/rfc1542">Clarifications and Extensions for the Bootstrap Protocol</a>,&rdquo; RFC&nbsp;1542, October&nbsp;1993 (<a href="ftp://ftp.isi.edu/in-notes/rfc1542.txt">TXT</a>).</td></tr>
+<td class="author-text"><a href="mailto:Walter.Wimer@CMU.EDU">Wimer, W.</a>, &ldquo;<a href="http://tools.ietf.org/html/rfc1542">Clarifications and Extensions for the Bootstrap Protocol</a>,&rdquo; RFC&nbsp;1542, October&nbsp;1993 (<a href="http://www.rfc-editor.org/rfc/rfc1542.txt">TXT</a>).</td></tr>
 <tr><td class="author-text" valign="top"><a name="RFC2131">[RFC2131]</a></td>
-<td class="author-text"><a href="mailto:droms@bucknell.edu">Droms, R.</a>, &ldquo;<a href="http://tools.ietf.org/html/rfc2131">Dynamic Host Configuration Protocol</a>,&rdquo; RFC&nbsp;2131, March&nbsp;1997 (<a href="ftp://ftp.isi.edu/in-notes/rfc2131.txt">TXT</a>, <a href="http://xml.resource.org/public/rfc/html/rfc2131.html">HTML</a>, <a href="http://xml.resource.org/public/rfc/xml/rfc2131.xml">XML</a>).</td></tr>
+<td class="author-text"><a href="mailto:droms@bucknell.edu">Droms, R.</a>, &ldquo;<a href="http://tools.ietf.org/html/rfc2131">Dynamic Host Configuration Protocol</a>,&rdquo; RFC&nbsp;2131, March&nbsp;1997 (<a href="http://www.rfc-editor.org/rfc/rfc2131.txt">TXT</a>, <a href="http://xml.resource.org/public/rfc/html/rfc2131.html">HTML</a>, <a href="http://xml.resource.org/public/rfc/xml/rfc2131.xml">XML</a>).</td></tr>
 <tr><td class="author-text" valign="top"><a name="RFC2132">[RFC2132]</a></td>
-<td class="author-text"><a href="mailto:sca@engr.sgi.com">Alexander, S.</a> and <a href="mailto:droms@bucknell.edu">R. Droms</a>, &ldquo;<a href="http://tools.ietf.org/html/rfc2132">DHCP Options and BOOTP Vendor Extensions</a>,&rdquo; RFC&nbsp;2132, March&nbsp;1997 (<a href="ftp://ftp.isi.edu/in-notes/rfc2132.txt">TXT</a>, <a href="http://xml.resource.org/public/rfc/html/rfc2132.html">HTML</a>, <a href="http://xml.resource.org/public/rfc/xml/rfc2132.xml">XML</a>).</td></tr>
+<td class="author-text"><a href="mailto:sca@engr.sgi.com">Alexander, S.</a> and <a href="mailto:droms@bucknell.edu">R. Droms</a>, &ldquo;<a href="http://tools.ietf.org/html/rfc2132">DHCP Options and BOOTP Vendor Extensions</a>,&rdquo; RFC&nbsp;2132, March&nbsp;1997 (<a href="http://www.rfc-editor.org/rfc/rfc2132.txt">TXT</a>, <a href="http://xml.resource.org/public/rfc/html/rfc2132.html">HTML</a>, <a href="http://xml.resource.org/public/rfc/xml/rfc2132.xml">XML</a>).</td></tr>
 <tr><td class="author-text" valign="top"><a name="RFC2241">[RFC2241]</a></td>
-<td class="author-text"><a href="mailto:donp@Novell.Com">Provan, D.</a>, &ldquo;<a href="http://tools.ietf.org/html/rfc2241">DHCP Options for Novell Directory Services</a>,&rdquo; RFC&nbsp;2241, November&nbsp;1997 (<a href="ftp://ftp.isi.edu/in-notes/rfc2241.txt">TXT</a>, <a href="http://xml.resource.org/public/rfc/html/rfc2241.html">HTML</a>, <a href="http://xml.resource.org/public/rfc/xml/rfc2241.xml">XML</a>).</td></tr>
+<td class="author-text"><a href="mailto:donp@Novell.Com">Provan, D.</a>, &ldquo;<a href="http://tools.ietf.org/html/rfc2241">DHCP Options for Novell Directory Services</a>,&rdquo; RFC&nbsp;2241, November&nbsp;1997 (<a href="http://www.rfc-editor.org/rfc/rfc2241.txt">TXT</a>, <a href="http://xml.resource.org/public/rfc/html/rfc2241.html">HTML</a>, <a href="http://xml.resource.org/public/rfc/xml/rfc2241.xml">XML</a>).</td></tr>
 <tr><td class="author-text" valign="top"><a name="RFC2242">[RFC2242]</a></td>
-<td class="author-text"><a href="mailto:droms@bucknell.edu">Droms, R.</a> and <a href="mailto:kfong@novell.com">K. Fong</a>, &ldquo;<a href="http://tools.ietf.org/html/rfc2242">NetWare/IP Domain Name and Information</a>,&rdquo; RFC&nbsp;2242, November&nbsp;1997 (<a href="ftp://ftp.isi.edu/in-notes/rfc2242.txt">TXT</a>, <a href="http://xml.resource.org/public/rfc/html/rfc2242.html">HTML</a>, <a href="http://xml.resource.org/public/rfc/xml/rfc2242.xml">XML</a>).</td></tr>
+<td class="author-text"><a href="mailto:droms@bucknell.edu">Droms, R.</a> and <a href="mailto:kfong@novell.com">K. Fong</a>, &ldquo;<a href="http://tools.ietf.org/html/rfc2242">NetWare/IP Domain Name and Information</a>,&rdquo; RFC&nbsp;2242, November&nbsp;1997 (<a href="http://www.rfc-editor.org/rfc/rfc2242.txt">TXT</a>, <a href="http://xml.resource.org/public/rfc/html/rfc2242.html">HTML</a>, <a href="http://xml.resource.org/public/rfc/xml/rfc2242.xml">XML</a>).</td></tr>
 <tr><td class="author-text" valign="top"><a name="RFC2485">[RFC2485]</a></td>
-<td class="author-text"><a href="mailto:drach@sun.com">Drach, S.</a>, &ldquo;<a href="http://tools.ietf.org/html/rfc2485">DHCP Option for The Open Group&#039;s User Authentication Protocol</a>,&rdquo; RFC&nbsp;2485, January&nbsp;1999 (<a href="ftp://ftp.isi.edu/in-notes/rfc2485.txt">TXT</a>, <a href="http://xml.resource.org/public/rfc/html/rfc2485.html">HTML</a>, <a href="http://xml.resource.org/public/rfc/xml/rfc2485.xml">XML</a>).</td></tr>
+<td class="author-text"><a href="mailto:drach@sun.com">Drach, S.</a>, &ldquo;<a href="http://tools.ietf.org/html/rfc2485">DHCP Option for The Open Group&#039;s User Authentication Protocol</a>,&rdquo; RFC&nbsp;2485, January&nbsp;1999 (<a href="http://www.rfc-editor.org/rfc/rfc2485.txt">TXT</a>, <a href="http://xml.resource.org/public/rfc/html/rfc2485.html">HTML</a>, <a href="http://xml.resource.org/public/rfc/xml/rfc2485.xml">XML</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC2563">[RFC2563]</a></td>
+<td class="author-text"><a href="mailto:rtroll@corp.home.net">Troll, R.</a>, &ldquo;<a href="http://tools.ietf.org/html/rfc2563">DHCP Option to Disable Stateless Auto-Configuration in IPv4 Clients</a>,&rdquo; RFC&nbsp;2563, May&nbsp;1999 (<a href="http://www.rfc-editor.org/rfc/rfc2563.txt">TXT</a>).</td></tr>
 <tr><td class="author-text" valign="top"><a name="RFC2610">[RFC2610]</a></td>
-<td class="author-text"><a href="mailto:Charles.Perkins@Sun.Com">Perkins, C.</a> and <a href="mailto:Erik.Guttman@Sun.Com">E. Guttman</a>, &ldquo;<a href="http://tools.ietf.org/html/rfc2610">DHCP Options for Service Location Protocol</a>,&rdquo; RFC&nbsp;2610, June&nbsp;1999 (<a href="ftp://ftp.isi.edu/in-notes/rfc2610.txt">TXT</a>).</td></tr>
+<td class="author-text"><a href="mailto:Charles.Perkins@Sun.Com">Perkins, C.</a> and <a href="mailto:Erik.Guttman@Sun.Com">E. Guttman</a>, &ldquo;<a href="http://tools.ietf.org/html/rfc2610">DHCP Options for Service Location Protocol</a>,&rdquo; RFC&nbsp;2610, June&nbsp;1999 (<a href="http://www.rfc-editor.org/rfc/rfc2610.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC2855">[RFC2855]</a></td>
+<td class="author-text">Fujisawa, K., &ldquo;<a href="http://tools.ietf.org/html/rfc2855">DHCP for IEEE 1394</a>,&rdquo; RFC&nbsp;2855, June&nbsp;2000 (<a href="http://www.rfc-editor.org/rfc/rfc2855.txt">TXT</a>).</td></tr>
 <tr><td class="author-text" valign="top"><a name="RFC2937">[RFC2937]</a></td>
-<td class="author-text">Smith, C., &ldquo;<a href="http://tools.ietf.org/html/rfc2937">The Name Service Search Option for DHCP</a>,&rdquo; RFC&nbsp;2937, September&nbsp;2000 (<a href="ftp://ftp.isi.edu/in-notes/rfc2937.txt">TXT</a>).</td></tr>
+<td class="author-text">Smith, C., &ldquo;<a href="http://tools.ietf.org/html/rfc2937">The Name Service Search Option for DHCP</a>,&rdquo; RFC&nbsp;2937, September&nbsp;2000 (<a href="http://www.rfc-editor.org/rfc/rfc2937.txt">TXT</a>).</td></tr>
 <tr><td class="author-text" valign="top"><a name="RFC2939">[RFC2939]</a></td>
-<td class="author-text">Droms, R., &ldquo;<a href="http://tools.ietf.org/html/rfc2939">Procedures and IANA Guidelines for Definition of New DHCP Options and Message Types</a>,&rdquo; BCP&nbsp;43, RFC&nbsp;2939, September&nbsp;2000 (<a href="ftp://ftp.isi.edu/in-notes/rfc2939.txt">TXT</a>).</td></tr>
+<td class="author-text">Droms, R., &ldquo;<a href="http://tools.ietf.org/html/rfc2939">Procedures and IANA Guidelines for Definition of New DHCP Options and Message Types</a>,&rdquo; BCP&nbsp;43, RFC&nbsp;2939, September&nbsp;2000 (<a href="http://www.rfc-editor.org/rfc/rfc2939.txt">TXT</a>).</td></tr>
 <tr><td class="author-text" valign="top"><a name="RFC3004">[RFC3004]</a></td>
-<td class="author-text">Stump, G., Droms, R., Gu, Y., Vyaghrapuri, R., Demirtjis, A., Beser, B., and J. Privat, &ldquo;<a href="http://tools.ietf.org/html/rfc3004">The User Class Option for DHCP</a>,&rdquo; RFC&nbsp;3004, November&nbsp;2000 (<a href="ftp://ftp.isi.edu/in-notes/rfc3004.txt">TXT</a>).</td></tr>
+<td class="author-text">Stump, G., Droms, R., Gu, Y., Vyaghrapuri, R., Demirtjis, A., Beser, B., and J. Privat, &ldquo;<a href="http://tools.ietf.org/html/rfc3004">The User Class Option for DHCP</a>,&rdquo; RFC&nbsp;3004, November&nbsp;2000 (<a href="http://www.rfc-editor.org/rfc/rfc3004.txt">TXT</a>).</td></tr>
 <tr><td class="author-text" valign="top"><a name="RFC3011">[RFC3011]</a></td>
-<td class="author-text">Waters, G., &ldquo;<a href="http://tools.ietf.org/html/rfc3011">The IPv4 Subnet Selection Option for DHCP</a>,&rdquo; RFC&nbsp;3011, November&nbsp;2000 (<a href="ftp://ftp.isi.edu/in-notes/rfc3011.txt">TXT</a>).</td></tr>
+<td class="author-text">Waters, G., &ldquo;<a href="http://tools.ietf.org/html/rfc3011">The IPv4 Subnet Selection Option for DHCP</a>,&rdquo; RFC&nbsp;3011, November&nbsp;2000 (<a href="http://www.rfc-editor.org/rfc/rfc3011.txt">TXT</a>).</td></tr>
 <tr><td class="author-text" valign="top"><a name="RFC3046">[RFC3046]</a></td>
-<td class="author-text">Patrick, M., &ldquo;<a href="http://tools.ietf.org/html/rfc3046">DHCP Relay Agent Information Option</a>,&rdquo; RFC&nbsp;3046, January&nbsp;2001 (<a href="ftp://ftp.isi.edu/in-notes/rfc3046.txt">TXT</a>).</td></tr>
+<td class="author-text">Patrick, M., &ldquo;<a href="http://tools.ietf.org/html/rfc3046">DHCP Relay Agent Information Option</a>,&rdquo; RFC&nbsp;3046, January&nbsp;2001 (<a href="http://www.rfc-editor.org/rfc/rfc3046.txt">TXT</a>).</td></tr>
 <tr><td class="author-text" valign="top"><a name="RFC3074">[RFC3074]</a></td>
-<td class="author-text">Volz, B., Gonczi, S., Lemon, T., and R. Stevens, &ldquo;<a href="http://tools.ietf.org/html/rfc3074">DHC Load Balancing Algorithm</a>,&rdquo; RFC&nbsp;3074, February&nbsp;2001 (<a href="ftp://ftp.isi.edu/in-notes/rfc3074.txt">TXT</a>).</td></tr>
+<td class="author-text">Volz, B., Gonczi, S., Lemon, T., and R. Stevens, &ldquo;<a href="http://tools.ietf.org/html/rfc3074">DHC Load Balancing Algorithm</a>,&rdquo; RFC&nbsp;3074, February&nbsp;2001 (<a href="http://www.rfc-editor.org/rfc/rfc3074.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC3118">[RFC3118]</a></td>
+<td class="author-text">Droms, R. and W. Arbaugh, &ldquo;<a href="http://tools.ietf.org/html/rfc3118">Authentication for DHCP Messages</a>,&rdquo; RFC&nbsp;3118, June&nbsp;2001 (<a href="http://www.rfc-editor.org/rfc/rfc3118.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC3203">[RFC3203]</a></td>
+<td class="author-text">T&#039;Joens, Y., Hublet, C., and P. De Schrijver, &ldquo;<a href="http://tools.ietf.org/html/rfc3203">DHCP reconfigure extension</a>,&rdquo; RFC&nbsp;3203, December&nbsp;2001 (<a href="http://www.rfc-editor.org/rfc/rfc3203.txt">TXT</a>).</td></tr>
 <tr><td class="author-text" valign="top"><a name="RFC3256">[RFC3256]</a></td>
-<td class="author-text">Jones, D. and R. Woundy, &ldquo;<a href="http://tools.ietf.org/html/rfc3256">The DOCSIS (Data-Over-Cable Service Interface Specifications) Device Class DHCP (Dynamic Host Configuration Protocol) Relay Agent Information Sub-option</a>,&rdquo; RFC&nbsp;3256, April&nbsp;2002 (<a href="ftp://ftp.isi.edu/in-notes/rfc3256.txt">TXT</a>).</td></tr>
-<tr><td class="author-text" valign="top"><a name="RFC3315">[RFC3315]</a></td>
-<td class="author-text">Droms, R., Bound, J., Volz, B., Lemon, T., Perkins, C., and M. Carney, &ldquo;<a href="http://tools.ietf.org/html/rfc3315">Dynamic Host Configuration Protocol for IPv6 (DHCPv6)</a>,&rdquo; RFC&nbsp;3315, July&nbsp;2003 (<a href="ftp://ftp.isi.edu/in-notes/rfc3315.txt">TXT</a>).</td></tr>
-<tr><td class="author-text" valign="top"><a name="RFC3319">[RFC3319]</a></td>
-<td class="author-text">Schulzrinne, H. and B. Volz, &ldquo;<a href="http://tools.ietf.org/html/rfc3319">Dynamic Host Configuration Protocol (DHCPv6) Options for Session Initiation Protocol (SIP) Servers</a>,&rdquo; RFC&nbsp;3319, July&nbsp;2003 (<a href="ftp://ftp.isi.edu/in-notes/rfc3319.txt">TXT</a>).</td></tr>
+<td class="author-text">Jones, D. and R. Woundy, &ldquo;<a href="http://tools.ietf.org/html/rfc3256">The DOCSIS (Data-Over-Cable Service Interface Specifications) Device Class DHCP (Dynamic Host Configuration Protocol) Relay Agent Information Sub-option</a>,&rdquo; RFC&nbsp;3256, April&nbsp;2002 (<a href="http://www.rfc-editor.org/rfc/rfc3256.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC3361">[RFC3361]</a></td>
+<td class="author-text">Schulzrinne, H., &ldquo;<a href="http://tools.ietf.org/html/rfc3361">Dynamic Host Configuration Protocol (DHCP-for-IPv4) Option for Session Initiation Protocol (SIP) Servers</a>,&rdquo; RFC&nbsp;3361, August&nbsp;2002 (<a href="http://www.rfc-editor.org/rfc/rfc3361.txt">TXT</a>).</td></tr>
 <tr><td class="author-text" valign="top"><a name="RFC3396">[RFC3396]</a></td>
-<td class="author-text">Lemon, T. and S. Cheshire, &ldquo;<a href="http://tools.ietf.org/html/rfc3396">Encoding Long Options in the Dynamic Host Configuration Protocol (DHCPv4)</a>,&rdquo; RFC&nbsp;3396, November&nbsp;2002 (<a href="ftp://ftp.isi.edu/in-notes/rfc3396.txt">TXT</a>).</td></tr>
+<td class="author-text">Lemon, T. and S. Cheshire, &ldquo;<a href="http://tools.ietf.org/html/rfc3396">Encoding Long Options in the Dynamic Host Configuration Protocol (DHCPv4)</a>,&rdquo; RFC&nbsp;3396, November&nbsp;2002 (<a href="http://www.rfc-editor.org/rfc/rfc3396.txt">TXT</a>).</td></tr>
 <tr><td class="author-text" valign="top"><a name="RFC3397">[RFC3397]</a></td>
-<td class="author-text">Aboba, B. and S. Cheshire, &ldquo;<a href="http://tools.ietf.org/html/rfc3397">Dynamic Host Configuration Protocol (DHCP) Domain Search Option</a>,&rdquo; RFC&nbsp;3397, November&nbsp;2002 (<a href="ftp://ftp.isi.edu/in-notes/rfc3397.txt">TXT</a>).</td></tr>
+<td class="author-text">Aboba, B. and S. Cheshire, &ldquo;<a href="http://tools.ietf.org/html/rfc3397">Dynamic Host Configuration Protocol (DHCP) Domain Search Option</a>,&rdquo; RFC&nbsp;3397, November&nbsp;2002 (<a href="http://www.rfc-editor.org/rfc/rfc3397.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC3442">[RFC3442]</a></td>
+<td class="author-text">Lemon, T., Cheshire, S., and B. Volz, &ldquo;<a href="http://tools.ietf.org/html/rfc3442">The Classless Static Route Option for Dynamic Host Configuration Protocol (DHCP) version 4</a>,&rdquo; RFC&nbsp;3442, December&nbsp;2002 (<a href="http://www.rfc-editor.org/rfc/rfc3442.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC3456">[RFC3456]</a></td>
+<td class="author-text">Patel, B., Aboba, B., Kelly, S., and V. Gupta, &ldquo;<a href="http://tools.ietf.org/html/rfc3456">Dynamic Host Configuration Protocol (DHCPv4) Configuration of IPsec Tunnel Mode</a>,&rdquo; RFC&nbsp;3456, January&nbsp;2003 (<a href="http://www.rfc-editor.org/rfc/rfc3456.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC3495">[RFC3495]</a></td>
+<td class="author-text">Beser, B. and P. Duffy, &ldquo;<a href="http://tools.ietf.org/html/rfc3495">Dynamic Host Configuration Protocol (DHCP) Option for CableLabs Client Configuration</a>,&rdquo; RFC&nbsp;3495, March&nbsp;2003 (<a href="http://www.rfc-editor.org/rfc/rfc3495.txt">TXT</a>).</td></tr>
 <tr><td class="author-text" valign="top"><a name="RFC3527">[RFC3527]</a></td>
-<td class="author-text">Kinnear, K., Stapp, M., Johnson, R., and J. Kumarasamy, &ldquo;<a href="http://tools.ietf.org/html/rfc3527">Link Selection sub-option for the Relay Agent Information Option for DHCPv4</a>,&rdquo; RFC&nbsp;3527, April&nbsp;2003 (<a href="ftp://ftp.isi.edu/in-notes/rfc3527.txt">TXT</a>).</td></tr>
-<tr><td class="author-text" valign="top"><a name="RFC3633">[RFC3633]</a></td>
-<td class="author-text">Troan, O. and R. Droms, &ldquo;<a href="http://tools.ietf.org/html/rfc3633">IPv6 Prefix Options for Dynamic Host Configuration Protocol (DHCP) version 6</a>,&rdquo; RFC&nbsp;3633, December&nbsp;2003 (<a href="ftp://ftp.isi.edu/in-notes/rfc3633.txt">TXT</a>).</td></tr>
-<tr><td class="author-text" valign="top"><a name="RFC3646">[RFC3646]</a></td>
-<td class="author-text">Droms, R., &ldquo;<a href="http://tools.ietf.org/html/rfc3646">DNS Configuration options for Dynamic Host Configuration Protocol for IPv6 (DHCPv6)</a>,&rdquo; RFC&nbsp;3646, December&nbsp;2003 (<a href="ftp://ftp.isi.edu/in-notes/rfc3646.txt">TXT</a>).</td></tr>
+<td class="author-text">Kinnear, K., Stapp, M., Johnson, R., and J. Kumarasamy, &ldquo;<a href="http://tools.ietf.org/html/rfc3527">Link Selection sub-option for the Relay Agent Information Option for DHCPv4</a>,&rdquo; RFC&nbsp;3527, April&nbsp;2003 (<a href="http://www.rfc-editor.org/rfc/rfc3527.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC3594">[RFC3594]</a></td>
+<td class="author-text">Duffy, P., &ldquo;<a href="http://tools.ietf.org/html/rfc3594">PacketCable Security Ticket Control Sub-Option for the DHCP CableLabs Client Configuration (CCC) Option</a>,&rdquo; RFC&nbsp;3594, September&nbsp;2003 (<a href="http://www.rfc-editor.org/rfc/rfc3594.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC3634">[RFC3634]</a></td>
+<td class="author-text">Luehrs, K., Woundy, R., Bevilacqua, J., and N. Davoust, &ldquo;<a href="http://tools.ietf.org/html/rfc3634">Key Distribution Center (KDC) Server Address Sub-option for the Dynamic Host Configuration Protocol (DHCP) CableLabs Client Configuration (CCC) Option</a>,&rdquo; RFC&nbsp;3634, December&nbsp;2003 (<a href="http://www.rfc-editor.org/rfc/rfc3634.txt">TXT</a>).</td></tr>
 <tr><td class="author-text" valign="top"><a name="RFC3679">[RFC3679]</a></td>
-<td class="author-text">Droms, R., &ldquo;<a href="http://tools.ietf.org/html/rfc3679">Unused Dynamic Host Configuration Protocol (DHCP) Option Codes</a>,&rdquo; RFC&nbsp;3679, January&nbsp;2004 (<a href="ftp://ftp.isi.edu/in-notes/rfc3679.txt">TXT</a>).</td></tr>
-<tr><td class="author-text" valign="top"><a name="RFC3898">[RFC3898]</a></td>
-<td class="author-text">Kalusivalingam, V., &ldquo;<a href="http://tools.ietf.org/html/rfc3898">Network Information Service (NIS) Configuration Options for Dynamic Host Configuration Protocol for IPv6 (DHCPv6)</a>,&rdquo; RFC&nbsp;3898, October&nbsp;2004 (<a href="ftp://ftp.isi.edu/in-notes/rfc3898.txt">TXT</a>).</td></tr>
+<td class="author-text">Droms, R., &ldquo;<a href="http://tools.ietf.org/html/rfc3679">Unused Dynamic Host Configuration Protocol (DHCP) Option Codes</a>,&rdquo; RFC&nbsp;3679, January&nbsp;2004 (<a href="http://www.rfc-editor.org/rfc/rfc3679.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC3825">[RFC3825]</a></td>
+<td class="author-text">Polk, J., Schnizlein, J., and M. Linsner, &ldquo;<a href="http://tools.ietf.org/html/rfc3825">Dynamic Host Configuration Protocol Option for Coordinate-based Location Configuration Information</a>,&rdquo; RFC&nbsp;3825, July&nbsp;2004 (<a href="http://www.rfc-editor.org/rfc/rfc3825.txt">TXT</a>).</td></tr>
 <tr><td class="author-text" valign="top"><a name="RFC3925">[RFC3925]</a></td>
-<td class="author-text">Littlefield, J., &ldquo;<a href="http://tools.ietf.org/html/rfc3925">Vendor-Identifying Vendor Options for Dynamic Host Configuration Protocol version 4 (DHCPv4)</a>,&rdquo; RFC&nbsp;3925, October&nbsp;2004 (<a href="ftp://ftp.isi.edu/in-notes/rfc3925.txt">TXT</a>).</td></tr>
+<td class="author-text">Littlefield, J., &ldquo;<a href="http://tools.ietf.org/html/rfc3925">Vendor-Identifying Vendor Options for Dynamic Host Configuration Protocol version 4 (DHCPv4)</a>,&rdquo; RFC&nbsp;3925, October&nbsp;2004 (<a href="http://www.rfc-editor.org/rfc/rfc3925.txt">TXT</a>).</td></tr>
 <tr><td class="author-text" valign="top"><a name="RFC3942">[RFC3942]</a></td>
-<td class="author-text">Volz, B., &ldquo;<a href="http://tools.ietf.org/html/rfc3942">Reclassifying Dynamic Host Configuration Protocol version 4 (DHCPv4) Options</a>,&rdquo; RFC&nbsp;3942, November&nbsp;2004 (<a href="ftp://ftp.isi.edu/in-notes/rfc3942.txt">TXT</a>).</td></tr>
-<tr><td class="author-text" valign="top"><a name="RFC4075">[RFC4075]</a></td>
-<td class="author-text">Kalusivalingam, V., &ldquo;<a href="http://tools.ietf.org/html/rfc4075">Simple Network Time Protocol (SNTP) Configuration Option for DHCPv6</a>,&rdquo; RFC&nbsp;4075, May&nbsp;2005 (<a href="ftp://ftp.isi.edu/in-notes/rfc4075.txt">TXT</a>).</td></tr>
-<tr><td class="author-text" valign="top"><a name="RFC4242">[RFC4242]</a></td>
-<td class="author-text">Venaas, S., Chown, T., and B. Volz, &ldquo;<a href="http://tools.ietf.org/html/rfc4242">Information Refresh Time Option for Dynamic Host Configuration Protocol for IPv6 (DHCPv6)</a>,&rdquo; RFC&nbsp;4242, November&nbsp;2005 (<a href="ftp://ftp.isi.edu/in-notes/rfc4242.txt">TXT</a>).</td></tr>
-<tr><td class="author-text" valign="top"><a name="RFC4280">[RFC4280]</a></td>
-<td class="author-text">Chowdhury, K., Yegani, P., and L. Madour, &ldquo;<a href="http://tools.ietf.org/html/rfc4280">Dynamic Host Configuration Protocol (DHCP) Options for Broadcast and Multicast Control Servers</a>,&rdquo; RFC&nbsp;4280, November&nbsp;2005 (<a href="ftp://ftp.isi.edu/in-notes/rfc4280.txt">TXT</a>).</td></tr>
+<td class="author-text">Volz, B., &ldquo;<a href="http://tools.ietf.org/html/rfc3942">Reclassifying Dynamic Host Configuration Protocol version 4 (DHCPv4) Options</a>,&rdquo; RFC&nbsp;3942, November&nbsp;2004 (<a href="http://www.rfc-editor.org/rfc/rfc3942.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC3993">[RFC3993]</a></td>
+<td class="author-text">Johnson, R., Palaniappan, T., and M. Stapp, &ldquo;<a href="http://tools.ietf.org/html/rfc3993">Subscriber-ID Suboption for the Dynamic Host Configuration Protocol (DHCP) Relay Agent Option</a>,&rdquo; RFC&nbsp;3993, March&nbsp;2005 (<a href="http://www.rfc-editor.org/rfc/rfc3993.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC4014">[RFC4014]</a></td>
+<td class="author-text">Droms, R. and J. Schnizlein, &ldquo;<a href="http://tools.ietf.org/html/rfc4014">Remote Authentication Dial-In User Service (RADIUS) Attributes Suboption for the Dynamic Host Configuration Protocol (DHCP) Relay Agent Information Option</a>,&rdquo; RFC&nbsp;4014, February&nbsp;2005 (<a href="http://www.rfc-editor.org/rfc/rfc4014.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC4030">[RFC4030]</a></td>
+<td class="author-text">Stapp, M. and T. Lemon, &ldquo;<a href="http://tools.ietf.org/html/rfc4030">The Authentication Suboption for the Dynamic Host Configuration Protocol (DHCP) Relay Agent Option</a>,&rdquo; RFC&nbsp;4030, March&nbsp;2005 (<a href="http://www.rfc-editor.org/rfc/rfc4030.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC4039">[RFC4039]</a></td>
+<td class="author-text">Park, S., Kim, P., and B. Volz, &ldquo;<a href="http://tools.ietf.org/html/rfc4039">Rapid Commit Option for the Dynamic Host Configuration Protocol version 4 (DHCPv4)</a>,&rdquo; RFC&nbsp;4039, March&nbsp;2005 (<a href="http://www.rfc-editor.org/rfc/rfc4039.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC4174">[RFC4174]</a></td>
+<td class="author-text">Monia, C., Tseng, J., and K. Gibbons, &ldquo;<a href="http://tools.ietf.org/html/rfc4174">The IPv4 Dynamic Host Configuration Protocol (DHCP) Option for the Internet Storage Name Service</a>,&rdquo; RFC&nbsp;4174, September&nbsp;2005 (<a href="http://www.rfc-editor.org/rfc/rfc4174.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC4243">[RFC4243]</a></td>
+<td class="author-text">Stapp, M., Johnson, R., and T. Palaniappan, &ldquo;<a href="http://tools.ietf.org/html/rfc4243">Vendor-Specific Information Suboption for the Dynamic Host Configuration Protocol (DHCP) Relay Agent Option</a>,&rdquo; RFC&nbsp;4243, December&nbsp;2005 (<a href="http://www.rfc-editor.org/rfc/rfc4243.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC4361">[RFC4361]</a></td>
+<td class="author-text">Lemon, T. and B. Sommerfeld, &ldquo;<a href="http://tools.ietf.org/html/rfc4361">Node-specific Client Identifiers for Dynamic Host Configuration Protocol Version Four (DHCPv4)</a>,&rdquo; RFC&nbsp;4361, February&nbsp;2006 (<a href="http://www.rfc-editor.org/rfc/rfc4361.txt">TXT</a>).</td></tr>
 <tr><td class="author-text" valign="top"><a name="RFC4388">[RFC4388]</a></td>
-<td class="author-text">Woundy, R. and K. Kinnear, &ldquo;<a href="http://tools.ietf.org/html/rfc4388">Dynamic Host Configuration Protocol (DHCP) Leasequery</a>,&rdquo; RFC&nbsp;4388, February&nbsp;2006 (<a href="ftp://ftp.isi.edu/in-notes/rfc4388.txt">TXT</a>).</td></tr>
-<tr><td class="author-text" valign="top"><a name="RFC4580">[RFC4580]</a></td>
-<td class="author-text">Volz, B., &ldquo;<a href="http://tools.ietf.org/html/rfc4580">Dynamic Host Configuration Protocol for IPv6 (DHCPv6) Relay Agent Subscriber-ID Option</a>,&rdquo; RFC&nbsp;4580, June&nbsp;2006 (<a href="ftp://ftp.isi.edu/in-notes/rfc4580.txt">TXT</a>).</td></tr>
-<tr><td class="author-text" valign="top"><a name="RFC4649">[RFC4649]</a></td>
-<td class="author-text">Volz, B., &ldquo;<a href="http://tools.ietf.org/html/rfc4649">Dynamic Host Configuration Protocol for IPv6 (DHCPv6) Relay Agent Remote-ID Option</a>,&rdquo; RFC&nbsp;4649, August&nbsp;2006 (<a href="ftp://ftp.isi.edu/in-notes/rfc4649.txt">TXT</a>).</td></tr>
+<td class="author-text">Woundy, R. and K. Kinnear, &ldquo;<a href="http://tools.ietf.org/html/rfc4388">Dynamic Host Configuration Protocol (DHCP) Leasequery</a>,&rdquo; RFC&nbsp;4388, February&nbsp;2006 (<a href="http://www.rfc-editor.org/rfc/rfc4388.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC4390">[RFC4390]</a></td>
+<td class="author-text">Kashyap, V., &ldquo;<a href="http://tools.ietf.org/html/rfc4390">Dynamic Host Configuration Protocol (DHCP) over InfiniBand</a>,&rdquo; RFC&nbsp;4390, April&nbsp;2006 (<a href="http://www.rfc-editor.org/rfc/rfc4390.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC4436">[RFC4436]</a></td>
+<td class="author-text">Aboba, B., Carlson, J., and S. Cheshire, &ldquo;<a href="http://tools.ietf.org/html/rfc4436">Detecting Network Attachment in IPv4 (DNAv4)</a>,&rdquo; RFC&nbsp;4436, March&nbsp;2006 (<a href="http://www.rfc-editor.org/rfc/rfc4436.txt">TXT</a>).</td></tr>
 <tr><td class="author-text" valign="top"><a name="RFC4701">[RFC4701]</a></td>
-<td class="author-text">Stapp, M., Lemon, T., and A. Gustafsson, &ldquo;<a href="http://tools.ietf.org/html/rfc4701">A DNS Resource Record (RR) for Encoding Dynamic Host Configuration Protocol (DHCP) Information (DHCID RR)</a>,&rdquo; RFC&nbsp;4701, October&nbsp;2006 (<a href="ftp://ftp.isi.edu/in-notes/rfc4701.txt">TXT</a>).</td></tr>
+<td class="author-text">Stapp, M., Lemon, T., and A. Gustafsson, &ldquo;<a href="http://tools.ietf.org/html/rfc4701">A DNS Resource Record (RR) for Encoding Dynamic Host Configuration Protocol (DHCP) Information (DHCID RR)</a>,&rdquo; RFC&nbsp;4701, October&nbsp;2006 (<a href="http://www.rfc-editor.org/rfc/rfc4701.txt">TXT</a>).</td></tr>
 <tr><td class="author-text" valign="top"><a name="RFC4702">[RFC4702]</a></td>
-<td class="author-text">Stapp, M., Volz, B., and Y. Rekhter, &ldquo;<a href="http://tools.ietf.org/html/rfc4702">The Dynamic Host Configuration Protocol (DHCP) Client Fully Qualified Domain Name (FQDN) Option</a>,&rdquo; RFC&nbsp;4702, October&nbsp;2006 (<a href="ftp://ftp.isi.edu/in-notes/rfc4702.txt">TXT</a>).</td></tr>
+<td class="author-text">Stapp, M., Volz, B., and Y. Rekhter, &ldquo;<a href="http://tools.ietf.org/html/rfc4702">The Dynamic Host Configuration Protocol (DHCP) Client Fully Qualified Domain Name (FQDN) Option</a>,&rdquo; RFC&nbsp;4702, October&nbsp;2006 (<a href="http://www.rfc-editor.org/rfc/rfc4702.txt">TXT</a>).</td></tr>
 <tr><td class="author-text" valign="top"><a name="RFC4703">[RFC4703]</a></td>
-<td class="author-text">Stapp, M. and B. Volz, &ldquo;<a href="http://tools.ietf.org/html/rfc4703">Resolution of Fully Qualified Domain Name (FQDN) Conflicts among Dynamic Host Configuration Protocol (DHCP) Clients</a>,&rdquo; RFC&nbsp;4703, October&nbsp;2006 (<a href="ftp://ftp.isi.edu/in-notes/rfc4703.txt">TXT</a>).</td></tr>
-<tr><td class="author-text" valign="top"><a name="RFC4704">[RFC4704]</a></td>
-<td class="author-text">Volz, B., &ldquo;<a href="http://tools.ietf.org/html/rfc4704">The Dynamic Host Configuration Protocol for IPv6 (DHCPv6) Client Fully Qualified Domain Name (FQDN) Option</a>,&rdquo; RFC&nbsp;4704, October&nbsp;2006 (<a href="ftp://ftp.isi.edu/in-notes/rfc4704.txt">TXT</a>).</td></tr>
+<td class="author-text">Stapp, M. and B. Volz, &ldquo;<a href="http://tools.ietf.org/html/rfc4703">Resolution of Fully Qualified Domain Name (FQDN) Conflicts among Dynamic Host Configuration Protocol (DHCP) Clients</a>,&rdquo; RFC&nbsp;4703, October&nbsp;2006 (<a href="http://www.rfc-editor.org/rfc/rfc4703.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC5010">[RFC5010]</a></td>
+<td class="author-text">Kinnear, K., Normoyle, M., and M. Stapp, &ldquo;<a href="http://tools.ietf.org/html/rfc5010">The Dynamic Host Configuration Protocol Version 4 (DHCPv4) Relay Agent Flags Suboption</a>,&rdquo; RFC&nbsp;5010, September&nbsp;2007 (<a href="http://www.rfc-editor.org/rfc/rfc5010.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC5071">[RFC5071]</a></td>
+<td class="author-text">Hankins, D., &ldquo;<a href="http://tools.ietf.org/html/rfc5071">Dynamic Host Configuration Protocol Options Used by PXELINUX</a>,&rdquo; RFC&nbsp;5071, December&nbsp;2007 (<a href="http://www.rfc-editor.org/rfc/rfc5071.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC5107">[RFC5107]</a></td>
+<td class="author-text">Johnson, R., Kumarasamy, J., Kinnear, K., and M. Stapp, &ldquo;<a href="http://tools.ietf.org/html/rfc5107">DHCP Server Identifier Override Suboption</a>,&rdquo; RFC&nbsp;5107, February&nbsp;2008 (<a href="http://www.rfc-editor.org/rfc/rfc5107.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC5192">[RFC5192]</a></td>
+<td class="author-text">Morand, L., Yegin, A., Kumar, S., and S. Madanapalli, &ldquo;<a href="http://tools.ietf.org/html/rfc5192">DHCP Options for Protocol for Carrying Authentication for Network Access (PANA) Authentication Agents</a>,&rdquo; RFC&nbsp;5192, May&nbsp;2008 (<a href="http://www.rfc-editor.org/rfc/rfc5192.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC5223">[RFC5223]</a></td>
+<td class="author-text">Schulzrinne, H., Polk, J., and H. Tschofenig, &ldquo;<a href="http://tools.ietf.org/html/rfc5223">Discovering Location-to-Service Translation (LoST) Servers Using the Dynamic Host Configuration Protocol (DHCP)</a>,&rdquo; RFC&nbsp;5223, August&nbsp;2008 (<a href="http://www.rfc-editor.org/rfc/rfc5223.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC5859">[RFC5859]</a></td>
+<td class="author-text">Johnson, R., &ldquo;<a href="http://tools.ietf.org/html/rfc5859">TFTP Server Address Option for DHCPv4</a>,&rdquo; RFC&nbsp;5859, June&nbsp;2010 (<a href="http://www.rfc-editor.org/rfc/rfc5859.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC5969">[RFC5969]</a></td>
+<td class="author-text">Townsley, W. and O. Troan, &ldquo;<a href="http://tools.ietf.org/html/rfc5969">IPv6 Rapid Deployment on IPv4 Infrastructures (6rd) -- Protocol Specification</a>,&rdquo; RFC&nbsp;5969, August&nbsp;2010 (<a href="http://www.rfc-editor.org/rfc/rfc5969.txt">TXT</a>).</td></tr>
 <tr><td class="author-text" valign="top"><a name="draft-failover">[draft-failover]</a></td>
 <td class="author-text">Droms, R., &ldquo;<a href="https://www.isc.org/sw/dhcp/drafts/draft-ietf-dhc-failover-12.txt">DHCP Failover Protocol</a>,&rdquo; March&nbsp;2003.</td></tr>
+<tr><td class="author-text" valign="top"><a name="I-D.ietf-dhc-dhcpv4-relay-encapsulation">[I-D.ietf-dhc-dhcpv4-relay-encapsulation]</a></td>
+<td class="author-text">Lemon, T. and H. Deng, &ldquo;<a href="http://tools.ietf.org/html/draft-ietf-dhc-dhcpv4-relay-encapsulation-00">Relay Agent Encapsulation for DHCPv4</a>,&rdquo; draft-ietf-dhc-dhcpv4-relay-encapsulation-00 (work in progress), October&nbsp;2010 (<a href="http://www.ietf.org/internet-drafts/draft-ietf-dhc-dhcpv4-relay-encapsulation-00.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="I-D.ietf-dhc-dhcpv4-bulk-leasequery">[I-D.ietf-dhc-dhcpv4-bulk-leasequery]</a></td>
+<td class="author-text">Kinnear, K., Volz, B., Russell, N., Stapp, M., Rao, D., Joshi, B., and P. Kurapati, &ldquo;<a href="http://tools.ietf.org/html/draft-ietf-dhc-dhcpv4-bulk-leasequery-03">Bulk DHCPv4 Lease Query</a>,&rdquo; draft-ietf-dhc-dhcpv4-bulk-leasequery-03 (work in progress), October&nbsp;2010 (<a href="http://www.ietf.org/internet-drafts/draft-ietf-dhc-dhcpv4-bulk-leasequery-03.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="I-D.ietf-dhc-leasequery-by-remote-id">[I-D.ietf-dhc-leasequery-by-remote-id]</a></td>
+<td class="author-text">Kurapati, P. and B. Joshi, &ldquo;<a href="http://tools.ietf.org/html/draft-ietf-dhc-leasequery-by-remote-id-09">DHCPv4 lease query by Relay Agent Remote ID</a>,&rdquo; draft-ietf-dhc-leasequery-by-remote-id-09 (work in progress), December&nbsp;2010 (<a href="http://www.ietf.org/internet-drafts/draft-ietf-dhc-leasequery-by-remote-id-09.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="I-D.ietf-dhc-relay-id-suboption">[I-D.ietf-dhc-relay-id-suboption]</a></td>
+<td class="author-text">Stapp, M., &ldquo;<a href="http://tools.ietf.org/html/draft-ietf-dhc-relay-id-suboption-07">The DHCPv4 Relay Agent Identifier Suboption</a>,&rdquo; draft-ietf-dhc-relay-id-suboption-07 (work in progress), July&nbsp;2009 (<a href="http://www.ietf.org/internet-drafts/draft-ietf-dhc-relay-id-suboption-07.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="I-D.ietf-mip6-hiopt">[I-D.ietf-mip6-hiopt]</a></td>
+<td class="author-text">Jang, H., Yegin, A., Chowdhury, K., and J. Choi, &ldquo;<a href="http://tools.ietf.org/html/draft-ietf-mip6-hiopt-17">DHCP Options for Home Information Discovery in MIPv6</a>,&rdquo; draft-ietf-mip6-hiopt-17 (work in progress), May&nbsp;2008 (<a href="http://www.ietf.org/internet-drafts/draft-ietf-mip6-hiopt-17.txt">TXT</a>).</td></tr>
+</table>
+
+<a name="rfc.references2"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<h3>7.2.&nbsp;Published Common (DHCPv4/DHCPv6) References</h3>
+<table width="99%" border="0">
+<tr><td class="author-text" valign="top"><a name="RFC4280">[RFC4280]</a></td>
+<td class="author-text">Chowdhury, K., Yegani, P., and L. Madour, &ldquo;<a href="http://tools.ietf.org/html/rfc4280">Dynamic Host Configuration Protocol (DHCP) Options for Broadcast and Multicast Control Servers</a>,&rdquo; RFC&nbsp;4280, November&nbsp;2005 (<a href="http://www.rfc-editor.org/rfc/rfc4280.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC4477">[RFC4477]</a></td>
+<td class="author-text">Chown, T., Venaas, S., and C. Strauf, &ldquo;<a href="http://tools.ietf.org/html/rfc4477">Dynamic Host Configuration Protocol (DHCP): IPv4 and IPv6 Dual-Stack Issues</a>,&rdquo; RFC&nbsp;4477, May&nbsp;2006 (<a href="http://www.rfc-editor.org/rfc/rfc4477.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC4578">[RFC4578]</a></td>
+<td class="author-text">Johnston, M. and S. Venaas, &ldquo;<a href="http://tools.ietf.org/html/rfc4578">Dynamic Host Configuration Protocol (DHCP) Options for the Intel Preboot eXecution Environment (PXE)</a>,&rdquo; RFC&nbsp;4578, November&nbsp;2006 (<a href="http://www.rfc-editor.org/rfc/rfc4578.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC4776">[RFC4776]</a></td>
+<td class="author-text">Schulzrinne, H., &ldquo;<a href="http://tools.ietf.org/html/rfc4776">Dynamic Host Configuration Protocol (DHCPv4 and DHCPv6) Option for Civic Addresses Configuration Information</a>,&rdquo; RFC&nbsp;4776, November&nbsp;2006 (<a href="http://www.rfc-editor.org/rfc/rfc4776.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC4833">[RFC4833]</a></td>
+<td class="author-text">Lear, E. and P. Eggert, &ldquo;<a href="http://tools.ietf.org/html/rfc4833">Timezone Options for DHCP</a>,&rdquo; RFC&nbsp;4833, April&nbsp;2007 (<a href="http://www.rfc-editor.org/rfc/rfc4833.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC5417">[RFC5417]</a></td>
+<td class="author-text">Calhoun, P., &ldquo;<a href="http://tools.ietf.org/html/rfc5417">Control And Provisioning of Wireless Access Points (CAPWAP) Access Controller DHCP Option</a>,&rdquo; RFC&nbsp;5417, March&nbsp;2009 (<a href="http://www.rfc-editor.org/rfc/rfc5417.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC5678">[RFC5678]</a></td>
+<td class="author-text">Bajko, G. and S. Das, &ldquo;<a href="http://tools.ietf.org/html/rfc5678">Dynamic Host Configuration Protocol (DHCPv4 and DHCPv6) Options for IEEE 802.21 Mobility Services (MoS) Discovery</a>,&rdquo; RFC&nbsp;5678, December&nbsp;2009 (<a href="http://www.rfc-editor.org/rfc/rfc5678.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC5908">[RFC5908]</a></td>
+<td class="author-text">Gayraud, R. and B. Lourdelet, &ldquo;<a href="http://tools.ietf.org/html/rfc5908">Network Time Protocol (NTP) Server Option for DHCPv6</a>,&rdquo; RFC&nbsp;5908, June&nbsp;2010 (<a href="http://www.rfc-editor.org/rfc/rfc5908.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC5970">[RFC5970]</a></td>
+<td class="author-text">Huth, T., Freimann, J., Zimmer, V., and D. Thaler, &ldquo;<a href="http://tools.ietf.org/html/rfc5970">DHCPv6 Options for Network Boot</a>,&rdquo; RFC&nbsp;5970, September&nbsp;2010 (<a href="http://www.rfc-editor.org/rfc/rfc5970.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC5986">[RFC5986]</a></td>
+<td class="author-text">Thomson, M. and J. Winterbottom, &ldquo;<a href="http://tools.ietf.org/html/rfc5986">Discovering the Local Location Information Server (LIS)</a>,&rdquo; RFC&nbsp;5986, September&nbsp;2010 (<a href="http://www.rfc-editor.org/rfc/rfc5986.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="I-D.ietf-dhc-vpn-option">[I-D.ietf-dhc-vpn-option]</a></td>
+<td class="author-text">Kinnear, K., Johnson, R., and M. Stapp, &ldquo;<a href="http://tools.ietf.org/html/draft-ietf-dhc-vpn-option-12">Virtual Subnet Selection Options for DHCPv4 and DHCPv6</a>,&rdquo; draft-ietf-dhc-vpn-option-12 (work in progress), October&nbsp;2010 (<a href="http://www.ietf.org/internet-drafts/draft-ietf-dhc-vpn-option-12.txt">TXT</a>).</td></tr>
+</table>
+
+<a name="rfc.references3"></a><br /><hr />
+<table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
+<h3>7.3.&nbsp;Published DHCPv6 References</h3>
+<table width="99%" border="0">
+<tr><td class="author-text" valign="top"><a name="RFC3315">[RFC3315]</a></td>
+<td class="author-text">Droms, R., Bound, J., Volz, B., Lemon, T., Perkins, C., and M. Carney, &ldquo;<a href="http://tools.ietf.org/html/rfc3315">Dynamic Host Configuration Protocol for IPv6 (DHCPv6)</a>,&rdquo; RFC&nbsp;3315, July&nbsp;2003 (<a href="http://www.rfc-editor.org/rfc/rfc3315.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC3319">[RFC3319]</a></td>
+<td class="author-text">Schulzrinne, H. and B. Volz, &ldquo;<a href="http://tools.ietf.org/html/rfc3319">Dynamic Host Configuration Protocol (DHCPv6) Options for Session Initiation Protocol (SIP) Servers</a>,&rdquo; RFC&nbsp;3319, July&nbsp;2003 (<a href="http://www.rfc-editor.org/rfc/rfc3319.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC3633">[RFC3633]</a></td>
+<td class="author-text">Troan, O. and R. Droms, &ldquo;<a href="http://tools.ietf.org/html/rfc3633">IPv6 Prefix Options for Dynamic Host Configuration Protocol (DHCP) version 6</a>,&rdquo; RFC&nbsp;3633, December&nbsp;2003 (<a href="http://www.rfc-editor.org/rfc/rfc3633.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC3646">[RFC3646]</a></td>
+<td class="author-text">Droms, R., &ldquo;<a href="http://tools.ietf.org/html/rfc3646">DNS Configuration options for Dynamic Host Configuration Protocol for IPv6 (DHCPv6)</a>,&rdquo; RFC&nbsp;3646, December&nbsp;2003 (<a href="http://www.rfc-editor.org/rfc/rfc3646.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC3736">[RFC3736]</a></td>
+<td class="author-text">Droms, R., &ldquo;<a href="http://tools.ietf.org/html/rfc3736">Stateless Dynamic Host Configuration Protocol (DHCP) Service for IPv6</a>,&rdquo; RFC&nbsp;3736, April&nbsp;2004 (<a href="http://www.rfc-editor.org/rfc/rfc3736.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC3898">[RFC3898]</a></td>
+<td class="author-text">Kalusivalingam, V., &ldquo;<a href="http://tools.ietf.org/html/rfc3898">Network Information Service (NIS) Configuration Options for Dynamic Host Configuration Protocol for IPv6 (DHCPv6)</a>,&rdquo; RFC&nbsp;3898, October&nbsp;2004 (<a href="http://www.rfc-editor.org/rfc/rfc3898.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC4075">[RFC4075]</a></td>
+<td class="author-text">Kalusivalingam, V., &ldquo;<a href="http://tools.ietf.org/html/rfc4075">Simple Network Time Protocol (SNTP) Configuration Option for DHCPv6</a>,&rdquo; RFC&nbsp;4075, May&nbsp;2005 (<a href="http://www.rfc-editor.org/rfc/rfc4075.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC4076">[RFC4076]</a></td>
+<td class="author-text">Chown, T., Venaas, S., and A. Vijayabhaskar, &ldquo;<a href="http://tools.ietf.org/html/rfc4076">Renumbering Requirements for Stateless Dynamic Host Configuration Protocol for IPv6 (DHCPv6)</a>,&rdquo; RFC&nbsp;4076, May&nbsp;2005 (<a href="http://www.rfc-editor.org/rfc/rfc4076.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC4242">[RFC4242]</a></td>
+<td class="author-text">Venaas, S., Chown, T., and B. Volz, &ldquo;<a href="http://tools.ietf.org/html/rfc4242">Information Refresh Time Option for Dynamic Host Configuration Protocol for IPv6 (DHCPv6)</a>,&rdquo; RFC&nbsp;4242, November&nbsp;2005 (<a href="http://www.rfc-editor.org/rfc/rfc4242.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC4580">[RFC4580]</a></td>
+<td class="author-text">Volz, B., &ldquo;<a href="http://tools.ietf.org/html/rfc4580">Dynamic Host Configuration Protocol for IPv6 (DHCPv6) Relay Agent Subscriber-ID Option</a>,&rdquo; RFC&nbsp;4580, June&nbsp;2006 (<a href="http://www.rfc-editor.org/rfc/rfc4580.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC4649">[RFC4649]</a></td>
+<td class="author-text">Volz, B., &ldquo;<a href="http://tools.ietf.org/html/rfc4649">Dynamic Host Configuration Protocol for IPv6 (DHCPv6) Relay Agent Remote-ID Option</a>,&rdquo; RFC&nbsp;4649, August&nbsp;2006 (<a href="http://www.rfc-editor.org/rfc/rfc4649.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC4704">[RFC4704]</a></td>
+<td class="author-text">Volz, B., &ldquo;<a href="http://tools.ietf.org/html/rfc4704">The Dynamic Host Configuration Protocol for IPv6 (DHCPv6) Client Fully Qualified Domain Name (FQDN) Option</a>,&rdquo; RFC&nbsp;4704, October&nbsp;2006 (<a href="http://www.rfc-editor.org/rfc/rfc4704.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC4994">[RFC4994]</a></td>
+<td class="author-text">Zeng, S., Volz, B., Kinnear, K., and J. Brzozowski, &ldquo;<a href="http://tools.ietf.org/html/rfc4994">DHCPv6 Relay Agent Echo Request Option</a>,&rdquo; RFC&nbsp;4994, September&nbsp;2007 (<a href="http://www.rfc-editor.org/rfc/rfc4994.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC5007">[RFC5007]</a></td>
+<td class="author-text">Brzozowski, J., Kinnear, K., Volz, B., and S. Zeng, &ldquo;<a href="http://tools.ietf.org/html/rfc5007">DHCPv6 Leasequery</a>,&rdquo; RFC&nbsp;5007, September&nbsp;2007 (<a href="http://www.rfc-editor.org/rfc/rfc5007.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="RFC5460">[RFC5460]</a></td>
+<td class="author-text">Stapp, M., &ldquo;<a href="http://tools.ietf.org/html/rfc5460">DHCPv6 Bulk Leasequery</a>,&rdquo; RFC&nbsp;5460, February&nbsp;2009 (<a href="http://www.rfc-editor.org/rfc/rfc5460.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="I-D.ietf-mif-dhcpv6-route-option">[I-D.ietf-mif-dhcpv6-route-option]</a></td>
+<td class="author-text">Dec, W., Mrugalski, T., Sun, T., and B. Sarikaya, &ldquo;<a href="http://tools.ietf.org/html/draft-ietf-mif-dhcpv6-route-option-01">DHCPv6 Route Option</a>,&rdquo; draft-ietf-mif-dhcpv6-route-option-01 (work in progress), March&nbsp;2011 (<a href="http://www.ietf.org/internet-drafts/draft-ietf-mif-dhcpv6-route-option-01.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="I-D.ietf-dhc-dhcpv6-ldra">[I-D.ietf-dhc-dhcpv6-ldra]</a></td>
+<td class="author-text">Miles, D., Ooghe, S., Dec, W., Krishnan, S., and A. Kavanagh, &ldquo;<a href="http://tools.ietf.org/html/draft-ietf-dhc-dhcpv6-ldra-03">Lightweight DHCPv6 Relay Agent</a>,&rdquo; draft-ietf-dhc-dhcpv6-ldra-03 (work in progress), October&nbsp;2010 (<a href="http://www.ietf.org/internet-drafts/draft-ietf-dhc-dhcpv6-ldra-03.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="I-D.ietf-dhc-dhcpv6-relay-supplied-options">[I-D.ietf-dhc-dhcpv6-relay-supplied-options]</a></td>
+<td class="author-text">Lemon, T. and W. Wu, &ldquo;<a href="http://tools.ietf.org/html/draft-ietf-dhc-dhcpv6-relay-supplied-options-06">Relay-Supplied DHCP Options</a>,&rdquo; draft-ietf-dhc-dhcpv6-relay-supplied-options-06 (work in progress), May&nbsp;2011 (<a href="http://www.ietf.org/internet-drafts/draft-ietf-dhc-dhcpv6-relay-supplied-options-06.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="I-D.ietf-dhc-pd-exclude">[I-D.ietf-dhc-pd-exclude]</a></td>
+<td class="author-text">Korhonen, J., Savolainen, T., Krishnan, S., and O. Troan, &ldquo;<a href="http://tools.ietf.org/html/draft-ietf-dhc-pd-exclude-01">Prefix Exclude Option for DHCPv6-based Prefix Delegation</a>,&rdquo; draft-ietf-dhc-pd-exclude-01 (work in progress), January&nbsp;2011 (<a href="http://www.ietf.org/internet-drafts/draft-ietf-dhc-pd-exclude-01.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="I-D.ietf-dhc-secure-dhcpv6">[I-D.ietf-dhc-secure-dhcpv6]</a></td>
+<td class="author-text">Jiang, S., &ldquo;<a href="http://tools.ietf.org/html/draft-ietf-dhc-secure-dhcpv6-02">Secure DHCPv6 Using CGAs</a>,&rdquo; draft-ietf-dhc-secure-dhcpv6-02 (work in progress), December&nbsp;2010 (<a href="http://www.ietf.org/internet-drafts/draft-ietf-dhc-secure-dhcpv6-02.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="I-D.ietf-mext-nemo-pd">[I-D.ietf-mext-nemo-pd]</a></td>
+<td class="author-text">Droms, R., Thubert, P., Dupont, F., Haddad, W., and C. Bernardos, &ldquo;<a href="http://tools.ietf.org/html/draft-ietf-mext-nemo-pd-07">DHCPv6 Prefix Delegation for NEMO</a>,&rdquo; draft-ietf-mext-nemo-pd-07 (work in progress), December&nbsp;2010 (<a href="http://www.ietf.org/internet-drafts/draft-ietf-mext-nemo-pd-07.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="I-D.ietf-dhc-duid-uuid">[I-D.ietf-dhc-duid-uuid]</a></td>
+<td class="author-text">Narten, T. and J. Johnson, &ldquo;<a href="http://tools.ietf.org/html/draft-ietf-dhc-duid-uuid-03">Definition of the UUID-based DHCPv6 Unique Identifier (DUID-UUID)</a>,&rdquo; draft-ietf-dhc-duid-uuid-03 (work in progress), February&nbsp;2011 (<a href="http://www.ietf.org/internet-drafts/draft-ietf-dhc-duid-uuid-03.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="I-D.ietf-softwire-ds-lite-tunnel-option">[I-D.ietf-softwire-ds-lite-tunnel-option]</a></td>
+<td class="author-text">Hankins, D. and T. Mrugalski, &ldquo;<a href="http://tools.ietf.org/html/draft-ietf-softwire-ds-lite-tunnel-option-10">Dynamic Host Configuration Protocol for IPv6 (DHCPv6) Option for Dual- Stack Lite</a>,&rdquo; draft-ietf-softwire-ds-lite-tunnel-option-10 (work in progress), March&nbsp;2011 (<a href="http://www.ietf.org/internet-drafts/draft-ietf-softwire-ds-lite-tunnel-option-10.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="I-D.ietf-mif-dns-server-selection">[I-D.ietf-mif-dns-server-selection]</a></td>
+<td class="author-text">Savolainen, T. and J. Kato, &ldquo;<a href="http://tools.ietf.org/html/draft-ietf-mif-dns-server-selection-01">Improved DNS Server Selection for Multi-Homed Nodes</a>,&rdquo; draft-ietf-mif-dns-server-selection-01 (work in progress), March&nbsp;2011 (<a href="http://www.ietf.org/internet-drafts/draft-ietf-mif-dns-server-selection-01.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="I-D.ietf-geopriv-rfc3825bis">[I-D.ietf-geopriv-rfc3825bis]</a></td>
+<td class="author-text">Polk, J., Linsner, M., Thomson, M., and B. Aboba, &ldquo;<a href="http://tools.ietf.org/html/draft-ietf-geopriv-rfc3825bis-17">Dynamic Host Configuration Protocol Options for Coordinate-based Location Configuration Information</a>,&rdquo; draft-ietf-geopriv-rfc3825bis-17 (work in progress), February&nbsp;2011 (<a href="http://www.ietf.org/internet-drafts/draft-ietf-geopriv-rfc3825bis-17.txt">TXT</a>).</td></tr>
+<tr><td class="author-text" valign="top"><a name="draft-addr-params">[draft-addr-params]</a></td>
+<td class="author-text">Mrugalski, T., &ldquo;<a href="http://klub.com.pl/dhcpv6/doc/draft-mrugalski-addropts-XX-2007-04-17.txt">Address Parameters Option for DHCPv6</a>,&rdquo; April&nbsp;2007.</td></tr>
 </table>
 
 <a name="rfc.authors"></a><br /><hr />
 <table summary="layout" cellpadding="0" cellspacing="2" class="TOCbug" align="right"><tr><td class="TOCbug"><a href="#toc">&nbsp;TOC&nbsp;</a></td></tr></table>
-<h3>Author's Address</h3>
+<h3>Authors' Addresses</h3>
 <table width="99%" border="0" cellpadding="0" cellspacing="0">
 <tr><td class="author-text">&nbsp;</td>
 <td class="author-text">David W. Hankins</td></tr>
@@ -832,9 +1013,19 @@ DHCP Procedures</h3>
 <td class="author-text">950 Charter Street</td></tr>
 <tr><td class="author-text">&nbsp;</td>
 <td class="author-text">Redwood City, CA  94063</td></tr>
+<tr cellpadding="3"><td>&nbsp;</td><td>&nbsp;</td></tr>
+<tr><td class="author-text">&nbsp;</td>
+<td class="author-text">Tomasz Mrugalski</td></tr>
+<tr><td class="author-text">&nbsp;</td>
+<td class="author-text">Internet Systems Consortium,
+				 Inc.</td></tr>
+<tr><td class="author-text">&nbsp;</td>
+<td class="author-text">950 Charter Street</td></tr>
+<tr><td class="author-text">&nbsp;</td>
+<td class="author-text">Redwood City, CA  94063</td></tr>
 <tr><td class="author" align="right">Phone:&nbsp;</td>
-<td class="author-text">+1 650 423 1300</td></tr>
+<td class="author-text">+1 650 423 1345</td></tr>
 <tr><td class="author" align="right">Email:&nbsp;</td>
-<td class="author-text"><a href="mailto:David_Hankins@isc.org">David_Hankins@isc.org</a></td></tr>
+<td class="author-text"><a href="mailto:Tomasz_Mrugalski@isc.org">Tomasz_Mrugalski@isc.org</a></td></tr>
 </table>
 </body></html>

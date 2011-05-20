@@ -331,6 +331,11 @@ static struct option dhcpv6_options[] = {
 	{ "relay-msg", "X",			&dhcpv6_universe,  9, 1 },
 
 	/* Option code 10 is curiously unassigned. */
+	/* 
+	 * In draft-ietf-dhc-dhcpv6-25 there were two OPTION_CLIENT_MSG and
+	 * OPTION_SERVER_MSG options. They were eventually unified as
+	 * OPTION_RELAY_MSG, hence no option with value of 10. 
+	 */
 #if 0
 	/* XXX: missing suitable atoms for the auth option.  We may want
 	 * to 'virtually encapsulate' this option a la the fqdn option

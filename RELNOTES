@@ -140,6 +140,9 @@ work on other platforms. Please report any problems and suggested fixes to
   case of the default router information being changed without the address
   being changed.
 
+- Documentation cleanup
+  [ISC-Bugs #23326] Updated References document, several man page updates
+
 			Changes since 4.2.1rc1
 
 - None

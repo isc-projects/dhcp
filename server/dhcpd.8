@@ -28,7 +28,7 @@
 .\" Support and other services are available for ISC products - see
 .\" https://www.isc.org for more information or to learn more about ISC.
 .\"
-.\" $Id: dhcpd.8,v 1.30.24.4 2011/04/15 22:12:50 sar Exp $
+.\" $Id: dhcpd.8,v 1.30.24.5 2011/05/20 14:33:28 tomasz Exp $
 .\"
 .TH dhcpd 8
 .SH NAME
@@ -190,11 +190,11 @@ possible, and listen for DHCP broadcasts on each interface.
 .SH COMMAND LINE OPTIONS
 .TP
 .BI \-4
-Run as a DHCP server.  This cannot be combined with \fB\-6\fR.
+Run as a DHCP server. This is the default and cannot be combined with
+\fB\-6\fR.
 .TP
 .BI \-6
-Run as a DHCPv6 server.  This is the default and cannot be combined
-with \fB\-4\fR.
+Run as a DHCPv6 server. This cannot be combined with \fB\-4\fR.
 .TP
 .BI \-p \ port
 The udp port number on which 
