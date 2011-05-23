@@ -4395,15 +4395,18 @@ get_server_source_address(struct in_addr *from,
 
        	option_num = DHO_DHCP_SERVER_IDENTIFIER;
        	oc = lookup_option(&dhcp_universe, options, option_num);
-       	if ((oc != NULL) &&
-	    evaluate_option_cache(&d, packet, NULL, NULL, packet->options,
-				  options, &global_scope, oc, MDL)) {
-		if (d.len == sizeof(*from)) {
-			memcpy(from, d.data, sizeof(*from));
+       	if (oc != NULL)  {
+		if (evaluate_option_cache(&d, packet, NULL, NULL, 
+					  packet->options, options, 
+					  &global_scope, oc, MDL)) {
+			if (d.len == sizeof(*from)) {
+				memcpy(from, d.data, sizeof(*from));
+				data_string_forget(&d, MDL);
+				return;
+			}
 			data_string_forget(&d, MDL);
-			return;
 		}
-		data_string_forget(&d, MDL);
+		oc = NULL;
 	}
 
 	if (packet->interface->address_count > 0) {
