@@ -3,7 +3,7 @@
    Subroutines for dealing with connections. */
 
 /*
- * Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2011 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
@@ -231,6 +231,16 @@ isc_result_t omapi_connect_list (omapi_object_t *c,
 			goto out;
 		status = omapi_connection_connect_internal ((omapi_object_t *)
 							    obj);
+		/*
+		 * inprogress is the same as success but used
+		 * to indicate to the dispatch code that we should
+		 * mark the socket as requiring more attention.
+		 * Routines calling this function should handle
+		 * success properly.
+		 */
+		if (status == ISC_R_INPROGRESS) {
+			status = ISC_R_SUCCESS;
+		}
 #if defined (TRACING)
 	}
 	omapi_connection_register (obj, MDL);
