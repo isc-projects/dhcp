@@ -162,6 +162,11 @@ work on other platforms. Please report any problems and suggested fixes to
 - Server no longer complains about NULL pointer when configured 
   server-identifier expression fails to evaluate. [ISC-Bugs #24547]
 
+- Convert ISC_R_INPROGRESS status to ISC_R_SUCCESS when called from other
+  than the dispatch handler.  This fixes an issue where omshell, when
+  run from the same platform as the server, would appear to fail to
+  connect.  This is a companion to #21839.  [ISC-Bugs #23592]
+
 			Changes since 4.2.0
 
 - Documentation cleanup covering multiple tickets
