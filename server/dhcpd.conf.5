@@ -27,7 +27,7 @@
 .\" Support and other services are available for ISC products - see
 .\" https://www.isc.org for more information or to learn more about ISC.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.99.10.4.6.1 2011/04/26 00:01:57 sar Exp $
+.\" $Id: dhcpd.conf.5,v 1.99.10.4.6.2 2011/06/01 23:38:06 sar Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -1251,7 +1251,7 @@ chooses a new name.
 The interim DNS update scheme is called interim for two reasons.
 First, it does not quite follow the RFCs.   The RFCs call for a
 new DHCID RRtype while he interim DNS update scheme uses a TXT record.
-The ddns-resolution draft cllaed for the DHCP server to put a DHCID RR
+The ddns-resolution draft called for the DHCP server to put a DHCID RR
 on the PTR record, but the \fIinterim\fR update method does not do this.
 In the final RFC this requirement was relaxed such that a server may
 add a DHCID RR to the PTR record.

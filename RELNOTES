@@ -173,6 +173,10 @@ work on other platforms. Please report any problems and suggested fixes to
   case of the default router information being changed without the address
   being changed.
 
+- Enlarge the buffer size used by the Omshell code and some of the
+  print routines to allow for greater than 60 characters or, when
+  printing as hex strings, 20 characters.  [ISC-Bugs #22743]
+
 			Changes since 4.1-ESV-R1
 
 ! In dhclient check the data for some string options for

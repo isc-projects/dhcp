@@ -3,7 +3,7 @@
    Examine and modify omapi objects. */
 
 /*
- * Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2011 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2001-2003 by Internet Software Consortium
  *
@@ -99,7 +99,7 @@ main(int argc, char **argv) {
 	char buf[1024];
 	char s1[1024];
 	int connected = 0;
-	char hex_buf[61];
+	char hex_buf[1025];
 
 	for (i = 1; i < argc; i++) {
 		usage(argv[0]);
