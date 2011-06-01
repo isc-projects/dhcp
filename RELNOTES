@@ -167,6 +167,10 @@ work on other platforms. Please report any problems and suggested fixes to
   run from the same platform as the server, would appear to fail to
   connect.  This is a companion to #21839.  [ISC-Bugs #23592]
 
+- Enlarge the buffer size used by the Omshell code and some of the
+  print routines to allow for greater than 60 characters or, when
+  printing as hex strings, 20 characters.  [ISC-Bugs #22743]
+
 			Changes since 4.2.0
 
 - Documentation cleanup covering multiple tickets
