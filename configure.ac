@@ -143,6 +143,24 @@ if test "$enable_early_chroot" = "yes" ; then
 		  [Define to any value to chroot() prior to loading config.])
 fi
 
+AC_ARG_ENABLE(IPv4_PKTINFO,
+	AC_HELP_STRING([--enable-ipv4-pktinfo],
+		[enable use of pktinfo on IPv4 sockets (default is no)]))
+
+if test "$enable_ipv4_pktinfo" = "yes"; then
+	AC_DEFINE([USE_V4_PKTINFO], [1],
+		[Define to 1 to enable IPv4 packet info support.])
+fi
+
+AC_ARG_ENABLE(USE_SOCKETS,
+	AC_HELP_STRING([--enable-use-sockets],
+		[use the standard BSD socket API (default is no)]))
+
+if test "$enable_use_sockets" = "yes"; then
+	AC_DEFINE([USE_SOCKETS], [1],
+		[Define to 1 to use the standard BSD socket API.])
+fi
+
 ###
 ### Path fun.  Older versions of DHCP were installed in /usr/sbin, so we
 ### need to look there and potentially overwrite by default (but not if
