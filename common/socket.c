@@ -3,7 +3,7 @@
    BSD socket interface code... */
 
 /*
- * Copyright (c) 2004-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2011 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -47,6 +47,13 @@
 #include <sys/uio.h>
 #include <signal.h>
 
+#if defined(sun) && defined(USE_V4_PKTINFO)
+#include <sys/sysmacros.h>
+#include <net/if.h>
+#include <sys/sockio.h>
+#include <net/if_dl.h>
+#endif
+
 #ifdef USE_SOCKET_FALLBACK
 # if !defined (USE_SOCKET_SEND)
 #  define if_register_send if_register_fallback
@@ -64,6 +71,16 @@ static unsigned int global_v6_socket_references = 0;
 static int global_v6_socket = -1;
 
 static void if_register_multicast(struct interface_info *info);
+#endif
+
+/*
+ * We can use a single socket for AF_INET (similar to AF_INET6) on all
+ * interfaces configured for DHCP if the system has support for IP_PKTINFO
+ * and IP_RECVPKTINFO (for example Solaris 11).
+ */
+#if defined(IP_PKTINFO) && defined(IP_RECVPKTINFO) && defined(USE_V4_PKTINFO)
+static unsigned int global_v4_socket_references = 0;
+static int global_v4_socket = -1;
 #endif
 
 /*
@@ -242,6 +259,20 @@ if_register_socket(struct interface_info *info, int family,
 		log_fatal("Can't set IP_BROADCAST_IF on dhcp socket: %m");
 #endif
 
+#if defined(IP_PKTINFO) && defined(IP_RECVPKTINFO)  && defined(USE_V4_PKTINFO)
+	/*
+	 * If we turn on IP_RECVPKTINFO we will be able to receive
+	 * the interface index information of the received packet.
+	 */
+	if (family == AF_INET) {
+		int on = 1;
+		if (setsockopt(sock, IPPROTO_IP, IP_RECVPKTINFO, 
+		               &on, sizeof(on)) != 0) {
+			log_fatal("setsockopt: IPV_RECVPKTINFO: %m");
+		}
+	}
+#endif
+
 #ifdef DHCPv6
 	/*
 	 * If we turn on IPV6_PKTINFO, we will be able to receive 
@@ -275,10 +306,6 @@ if_register_socket(struct interface_info *info, int family,
 	}
 #endif /* DHCPv6 */
 
-	/* If this is a normal IPv4 address, get the hardware address. */
-	if ((local_family == AF_INET) && (strcmp(info->name, "fallback") != 0))
-		get_hw_addr(info->name, &info->hw_address);
-
 	return sock;
 }
 #endif /* USE_SOCKET_SEND || USE_SOCKET_RECEIVE || USE_SOCKET_FALLBACK */
@@ -288,21 +315,24 @@ void if_register_send (info)
 	struct interface_info *info;
 {
 #ifndef USE_SOCKET_RECEIVE
-	info -> wfdesc = if_register_socket (info, AF_INET, 0);
+	info->wfdesc = if_register_socket(info, AF_INET, 0);
+	/* If this is a normal IPv4 address, get the hardware address. */
+	if (strcmp(info->name, "fallback") != 0)
+		get_hw_addr(info->name, &info->hw_address);
 #if defined (USE_SOCKET_FALLBACK)
 	/* Fallback only registers for send, but may need to receive as
 	   well. */
-	info -> rfdesc = info -> wfdesc;
+	info->rfdesc = info->wfdesc;
 #endif
 #else
-	info -> wfdesc = info -> rfdesc;
+	info->wfdesc = info->rfdesc;
 #endif
 	if (!quiet_interface_discovery)
 		log_info ("Sending on   Socket/%s%s%s",
-		      info -> name,
-		      (info -> shared_network ? "/" : ""),
-		      (info -> shared_network ?
-		       info -> shared_network -> name : ""));
+		      info->name,
+		      (info->shared_network ? "/" : ""),
+		      (info->shared_network ?
+		       info->shared_network->name : ""));
 }
 
 #if defined (USE_SOCKET_SEND)
@@ -328,23 +358,61 @@ void if_deregister_send (info)
 void if_register_receive (info)
 	struct interface_info *info;
 {
+
+#if defined(IP_PKTINFO) && defined(IP_RECVPKTINFO) && defined(USE_V4_PKTINFO)
+	if (global_v4_socket_references == 0) {
+		global_v4_socket = if_register_socket(info, AF_INET, 0);
+		if (global_v4_socket < 0) {
+			/*
+			 * if_register_socket() fatally logs if it fails to
+			 * create a socket, this is just a sanity check.
+			 */
+			log_fatal("Failed to create AF_INET socket %s:%d",
+				  MDL);
+		}
+	}
+		
+	info->rfdesc = global_v4_socket;
+	global_v4_socket_references++;
+#else
 	/* If we're using the socket API for sending and receiving,
 	   we don't need to register this interface twice. */
-	info -> rfdesc = if_register_socket (info, AF_INET, 0);
+	info->rfdesc = if_register_socket(info, AF_INET, 0);
+#endif /* IP_PKTINFO... */
+	/* If this is a normal IPv4 address, get the hardware address. */
+	if (strcmp(info->name, "fallback") != 0)
+		get_hw_addr(info->name, &info->hw_address);
+
 	if (!quiet_interface_discovery)
 		log_info ("Listening on Socket/%s%s%s",
-		      info -> name,
-		      (info -> shared_network ? "/" : ""),
-		      (info -> shared_network ?
-		       info -> shared_network -> name : ""));
+		      info->name,
+		      (info->shared_network ? "/" : ""),
+		      (info->shared_network ?
+		       info->shared_network->name : ""));
 }
 
 void if_deregister_receive (info)
 	struct interface_info *info;
 {
-	close (info -> rfdesc);
-	info -> rfdesc = -1;
+#if defined(IP_PKTINFO) && defined(IP_RECVPKTINFO) && defined(USE_V4_PKTINFO)
+	/* Dereference the global v4 socket. */
+	if ((info->rfdesc == global_v4_socket) &&
+	    (info->wfdesc == global_v4_socket) &&
+	    (global_v4_socket_references > 0)) {
+		global_v4_socket_references--;
+		info->rfdesc = -1;
+	} else {
+		log_fatal("Impossible condition at %s:%d", MDL);
+	}
 
+	if (global_v4_socket_references == 0) {
+		close(global_v4_socket);
+		global_v4_socket = -1;
+	}
+#else
+	close(info->rfdesc);
+	info->rfdesc = -1;
+#endif /* IP_PKTINFO... */
 	if (!quiet_interface_discovery)
 		log_info ("Disabling input on Socket/%s%s%s",
 		      info -> name,
@@ -489,6 +557,18 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	int retry = 0;
 	do {
 #endif
+#if defined(IP_PKTINFO) && defined(IP_RECVPKTINFO) && defined(USE_V4_PKTINFO)
+		struct in_pktinfo pktinfo;
+
+		if (interface->ifp != NULL) {
+			memset(&pktinfo, 0, sizeof (pktinfo));
+			pktinfo.ipi_ifindex = interface->ifp->ifr_index;
+			if (setsockopt(interface->wfdesc, IPPROTO_IP,
+				       IP_PKTINFO, (char *)&pktinfo,
+				       sizeof(pktinfo)) < 0) 
+				log_fatal("setsockopt: IP_PKTINFO: %m");
+		}
+#endif
 		result = sendto (interface -> wfdesc, (char *)raw, len, 0,
 				 (struct sockaddr *)to, sizeof *to);
 #ifdef IGNORE_HOSTUNREACH
@@ -559,11 +639,15 @@ static size_t CMSG_SPACE(size_t len) {
 
 #endif /* DHCPv6 */
 
-#ifdef DHCPv6
+#if defined(DHCPv6) || \
+	(defined(IP_PKTINFO) && defined(IP_RECVPKTINFO) && \
+	 defined(USE_V4_PKTINFO))
 /*
  * For both send_packet6() and receive_packet6() we need to allocate
  * space for the cmsg header information.  We do this once and reuse
- * the buffer.
+ * the buffer.  We also need the control buf for send_packet() and
+ * receive_packet() when we use a single socket and IP_PKTINFO to
+ * send the packet out the correct interface.
  */
 static void   *control_buf = NULL;
 static size_t  control_buf_len = 0;
@@ -574,7 +658,9 @@ allocate_cmsg_cbuf(void) {
 	control_buf = dmalloc(control_buf_len, MDL);
 	return;
 }
+#endif /* DHCPv6, IP_PKTINFO ... */
 
+#ifdef DHCPv6
 /* 
  * For both send_packet6() and receive_packet6() we need to use the 
  * sendmsg()/recvmsg() functions rather than the simpler send()/recv()
@@ -673,7 +759,9 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 	struct sockaddr_in *from;
 	struct hardware *hfrom;
 {
+#if !defined(USE_V4_PKTINFO)
 	SOCKLEN_T flen = sizeof *from;
+#endif
 	int result;
 
 	/*
@@ -687,8 +775,99 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 	int retry = 0;
 	do {
 #endif
+
+#if defined(IP_PKTINFO) && defined(IP_RECVPKTINFO) && defined(USE_V4_PKTINFO)
+	struct msghdr m;
+	struct iovec v;
+	struct cmsghdr *cmsg;
+	struct in_pktinfo *pktinfo;
+	unsigned int ifindex;
+	int found_pktinfo;
+
+	/*
+	 * If necessary allocate space for the control message header.
+	 * The space is common between send and receive.
+	 */
+	if (control_buf == NULL) {
+		allocate_cmsg_cbuf();
+		if (control_buf == NULL) {
+			log_error("receive_packet: unable to allocate cmsg "
+				  "header");
+			return(ENOMEM);
+		}
+	}
+	memset(control_buf, 0, control_buf_len);
+
+	/*
+	 * Initialize our message header structure.
+	 */
+	memset(&m, 0, sizeof(m));
+
+	/*
+	 * Point so we can get the from address.
+	 */
+	m.msg_name = from;
+	m.msg_namelen = sizeof(*from);
+
+	/*
+	 * Set the data buffer we're receiving. (Using this wacky 
+	 * "scatter-gather" stuff... but we that doesn't really make
+	 * sense for us, so we use a single vector entry.)
+	 */
+	v.iov_base = buf;
+	v.iov_len = len;
+	m.msg_iov = &v;
+	m.msg_iovlen = 1;
+
+	/*
+	 * Getting the interface is a bit more involved.
+	 *
+	 * We set up some space for a "control message". We have 
+	 * previously asked the kernel to give us packet 
+	 * information (when we initialized the interface), so we
+	 * should get the destination address from that.
+	 */
+	m.msg_control = control_buf;
+	m.msg_controllen = control_buf_len;
+
+	result = recvmsg(interface->rfdesc, &m, 0);
+
+	if (result >= 0) {
+		/*
+		 * If we did read successfully, then we need to loop
+		 * through the control messages we received and 
+		 * find the one with our destination address.
+		 *
+		 * We also keep a flag to see if we found it. If we 
+		 * didn't, then we consider this to be an error.
+		 */
+		found_pktinfo = 0;
+		cmsg = CMSG_FIRSTHDR(&m);
+		while (cmsg != NULL) {
+			if ((cmsg->cmsg_level == IPPROTO_IP) && 
+			    (cmsg->cmsg_type == IP_PKTINFO)) {
+				pktinfo = (struct in_pktinfo *)CMSG_DATA(cmsg);
+				ifindex = pktinfo->ipi_ifindex;
+				/*
+				 * We pass the ifindex back to the caller 
+				 * using the unused hfrom parameter avoiding
+				 * interface changes between sockets and 
+				 * the discover code.
+				 */
+				memcpy(hfrom->hbuf, &ifindex, sizeof(ifindex));
+				found_pktinfo = 1;
+			}
+			cmsg = CMSG_NXTHDR(&m, cmsg);
+		}
+		if (!found_pktinfo) {
+			result = -1;
+			errno = EIO;
+		}
+	}
+#else
 		result = recvfrom (interface -> rfdesc, (char *)buf, len, 0,
 				   (struct sockaddr *)from, &flen);
+#endif /* IP_PKTINFO ... */
 #ifdef IGNORE_HOSTUNREACH
 	} while (result < 0 &&
 		 (errno == EHOSTUNREACH ||
@@ -842,10 +1021,12 @@ int can_receive_unicast_unconfigured (ip)
 int supports_multiple_interfaces (ip)
 	struct interface_info *ip;
 {
-#if defined (SO_BINDTODEVICE)
-	return 1;
+#if defined(SO_BINDTODEVICE) || \
+	(defined(IP_PKTINFO) && defined(IP_RECVPKTINFO) && \
+	 defined(USE_V4_PKTINFO))
+	return(1);
 #else
-	return 0;
+	return(0);
 #endif
 }
 
@@ -876,6 +1057,68 @@ void maybe_setup_fallback ()
 	}
 #endif
 }
+
+
+#if defined(sun) && defined(USE_V4_PKTINFO)
+/* This code assumes the existence of SIOCGLIFHWADDR */
+void
+get_hw_addr(const char *name, struct hardware *hw) {
+	struct sockaddr_dl *dladdrp;
+	int rv, sock, i;
+	struct lifreq lifr;
+
+	memset(&lifr, 0, sizeof (lifr));
+	(void) strlcpy(lifr.lifr_name, name, sizeof (lifr.lifr_name));
+	/*
+	 * Check if the interface is a virtual or IPMP interface - in those
+	 * cases it has no hw address, so generate a random one.
+	 */
+	if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ||
+	    ioctl(sock, SIOCGLIFFLAGS, &lifr) < 0) {
+		if (sock != -1)
+			(void) close(sock);
+
+#ifdef DHCPv6
+		/*
+		 * If approrpriate try this with an IPv6 socket
+		 */
+		if ((sock = socket(AF_INET6, SOCK_DGRAM, 0)) >= 0 &&
+		    ioctl(sock, SIOCGLIFFLAGS, &lifr) >= 0) {
+			goto flag_check;
+		}
+		if (sock != -1)
+			(void) close(sock);
+#endif
+		log_fatal("Couldn't get interface flags for %s: %m", name);
+
+	}
+
+ flag_check:
+	if (lifr.lifr_flags & (IFF_VIRTUAL|IFF_IPMP)) {
+		hw->hlen = sizeof (hw->hbuf);
+		srandom((long)gethrtime());
+
+		for (i = 0; i < hw->hlen; ++i) {
+			hw->hbuf[i] = random() % 256;
+		}
+
+		if (sock != -1)
+			(void) close(sock);
+		return;
+	}
+
+	if (ioctl(sock, SIOCGLIFHWADDR, &lifr) < 0)
+		log_fatal("Couldn't get interface hardware address for %s: %m",
+			  name);
+	dladdrp = (struct sockaddr_dl *)&lifr.lifr_addr;
+	hw->hlen = dladdrp->sdl_alen;
+	memcpy(hw->hbuf, LLADDR(dladdrp), hw->hlen);
+
+	if (sock != -1)
+		(void) close(sock);
+}
+#endif /* defined(sun) */
+
 #endif /* USE_SOCKET_SEND */
 
 /*
