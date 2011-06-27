@@ -1297,6 +1297,9 @@ Optional Features:
   --enable-paranoia       enable support for chroot/setuid (default is no)
   --enable-early-chroot   enable chrooting prior to configuration (default is
                           no)
+  --enable-ipv4-pktinfo   enable use of pktinfo on IPv4 sockets (default is
+                          no)
+  --enable-use-sockets    use the standard BSD socket API (default is no)
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -4759,6 +4762,34 @@ if test "$enable_early_chroot" = "yes" ; then
 
 cat >>confdefs.h <<\_ACEOF
 #define EARLY_CHROOT 1
+_ACEOF
+
+fi
+
+# Check whether --enable-IPv4_PKTINFO was given.
+if test "${enable_IPv4_PKTINFO+set}" = set; then
+  enableval=$enable_IPv4_PKTINFO;
+fi
+
+
+if test "$enable_ipv4_pktinfo" = "yes"; then
+
+cat >>confdefs.h <<\_ACEOF
+#define USE_V4_PKTINFO 1
+_ACEOF
+
+fi
+
+# Check whether --enable-USE_SOCKETS was given.
+if test "${enable_USE_SOCKETS+set}" = set; then
+  enableval=$enable_USE_SOCKETS;
+fi
+
+
+if test "$enable_use_sockets" = "yes"; then
+
+cat >>confdefs.h <<\_ACEOF
+#define USE_SOCKETS 1
 _ACEOF
 
 fi
