@@ -133,6 +133,12 @@
 /* Define to include server activity tracing support. */
 #undef TRACING
 
+/* Define to 1 to use the standard BSD socket API. */
+#undef USE_SOCKETS
+
+/* Define to 1 to enable IPv4 packet info support. */
+#undef USE_V4_PKTINFO
+
 /* Version number of package */
 #undef VERSION
 
