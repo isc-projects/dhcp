@@ -171,6 +171,9 @@ work on other platforms. Please report any problems and suggested fixes to
   print routines to allow for greater than 60 characters or, when
   printing as hex strings, 20 characters.  [ISC-Bugs #22743]
 
+- In Solaris 11 switch to using sockets instead of DLPI, thanks
+  to a patch form Oracle.  [ISC-Bugs #24634].
+
 			Changes since 4.2.0
 
 - Documentation cleanup covering multiple tickets

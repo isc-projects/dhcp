@@ -33,6 +33,8 @@ the ISC DHCP Distribution.
 	 5.6	 FreeBSD
 	 5.7	 NeXTSTEP
 	 5.8	 SOLARIS
+	  5.8.1 Solaris 11
+	  5.8.2 Other Solaris Items
 	 5.9	 AIX
 	 5.10	 MacOS X
 	6	SUPPORT
@@ -416,8 +418,8 @@ The first is that older Sun compilers generate an error on some of
 our uses of the flexible array option.  Newer versions only generate
 a warning, which can be safely ignored.  If you run into this error
 ("type of struct member "buf" can not be derived from structure with
-flexible array member"), upgrade your tools to  Sun Studio 12 or
-something newer.
+flexible array member"), upgrade your tools to  Oracle Solaris Studio 
+(previously Sun Studio) 12 or something newer.
 
 The second is the interaction between the configure script and the
 makefiles for the Bind libraries.  Currently we don't pass all
@@ -434,6 +436,21 @@ following commands:
 
 	CC=/opt/SUNWspro/bin/cc ./configure
 	CC=/opt/SUNWspro/bin/cc make
+
+				Solaris 11
+
+We have integrated a patch from Oracle to use sockets instead of
+DLPI on Solaris 11.  This functionality was written for use with
+Solaris Studio 12.2 and requires the system/header package.
+
+By default this code is disabled in order to minimize disruptions
+for current users.  In order to enable this code you will need to
+enable both USE_SOCKETS and USE_V4_PKTINFO as part of the
+configuration step.  The command line would be something like:
+
+	  ./configure --enable-use-sockets --enable-ipv4-pktinfo
+
+				Other Solaris Items
 
 One problem which has been observed and is not fixed in this
 patchlevel has to do with using DLPI on Solaris machines.  The symptom
