@@ -4006,8 +4006,13 @@ static int check_option_values(struct universe *universe,
 	/* just reject options we want to protect, will be escaped anyway */
 	if ((universe == NULL) || (universe == &dhcp_universe)) {
 		switch(opt) {
-		      case DHO_HOST_NAME:
 		      case DHO_DOMAIN_NAME:
+#ifdef ACCEPT_LIST_IN_DOMAIN_NAME
+			      return check_domain_name_list(ptr, len, 0);
+#else
+			      return check_domain_name(ptr, len, 0);
+#endif
+		      case DHO_HOST_NAME:
 		      case DHO_NIS_DOMAIN:
 		      case DHO_NETBIOS_SCOPE:
 			return check_domain_name(ptr, len, 0);
