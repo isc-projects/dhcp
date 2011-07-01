@@ -881,7 +881,7 @@ ddns_removals(struct lease *lease, struct iasubopt *lease6)
 	      try_rev:
 		if (find_bound_string(&ddns_rev_name, *scope,
 				      "ddns-rev-name")) {
-			if (ddns_remove_ptr(&ddns_rev_name) == NOERROR) {
+			if (ddns_remove_ptr(&ddns_rev_name) == ISC_R_SUCCESS) {
 				unset(*scope, "ddns-rev-name");
 				if (client_updated)
 					unset(*scope, "ddns-client-fqdn");

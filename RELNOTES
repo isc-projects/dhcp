@@ -179,6 +179,9 @@ work on other platforms. Please report any problems and suggested fixes to
 - In Solaris 11 switch to using sockets instead of DLPI, thanks
   to a patch form Oracle.  [ISC-Bugs #24634].
 
+- Compilation fix for gcc 4.5 or newer in server/ddns.c
+  [ISC-Bugs #24973]
+
 			Changes since 4.1-ESV-R1
 
 ! In dhclient check the data for some string options for
