@@ -3324,6 +3324,33 @@ int parse_boolean_expression (expr, cfile, lose)
 	return 1;
 }
 
+/* boolean :== ON SEMI | OFF SEMI | TRUE SEMI | FALSE SEMI */
+
+int parse_boolean (cfile)
+	struct parse *cfile;
+{
+	enum dhcp_token token;
+	const char *val;
+	int rv;
+
+	token = next_token (&val, (unsigned *)0, cfile);
+	if (!strcasecmp (val, "true")
+	    || !strcasecmp (val, "on"))
+		rv = 1;
+	else if (!strcasecmp (val, "false")
+		 || !strcasecmp (val, "off"))
+		rv = 0;
+	else {
+		parse_warn (cfile,
+			    "boolean value (true/false/on/off) expected");
+		skip_to_semi (cfile);
+		return 0;
+	}
+	parse_semi (cfile);
+	return rv;
+}
+
+
 /*
  * data_expression :== SUBSTRING LPAREN data-expression COMMA
  *					numeric-expression COMMA

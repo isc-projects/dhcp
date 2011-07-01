@@ -216,3 +216,10 @@
    source port of the message it received.  This is useful for testing
    but is only included for backwards compatibility. */
 /* #define REPLY_TO_SOURCE_PORT */
+
+/* Define this if you want to allow domain list in domain-name option.
+   RFC2132 does not allow that behavior, but it is somewhat used due
+   to historic reasons. Note that it may be removed some time in the
+   future. */
+
+#define ACCEPT_LIST_IN_DOMAIN_NAME
