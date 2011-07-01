@@ -1917,7 +1917,6 @@ void parse_failover_state (struct parse *,
 #endif
 int permit_list_match (struct permit *, struct permit *);
 void parse_pool_statement (struct parse *, struct group *, int);
-int parse_boolean (struct parse *);
 int parse_lbrace (struct parse *);
 void parse_host_declaration (struct parse *, struct group *);
 int parse_class_declaration (struct class **, struct parse *,
@@ -2000,6 +1999,7 @@ int parse_if_statement (struct executable_statement **,
 			struct parse *, int *);
 int parse_boolean_expression (struct expression **,
 			      struct parse *, int *);
+int parse_boolean (struct parse *);
 int parse_data_expression (struct expression **,
 			   struct parse *, int *);
 int parse_numeric_expression (struct expression **,
