@@ -1,6 +1,6 @@
 <?xml version='1.0' ?>
 
-<!-- $Id: References.xml,v 1.5 2011/05/20 13:48:33 tomasz Exp $ -->
+<!-- $Id: References.xml,v 1.6 2011/07/01 18:37:09 sar Exp $ -->
 
 <?rfc private="ISC-DHCP-REFERENCES" ?>
 
@@ -498,7 +498,7 @@
 	  RR used in DNS to perform a kind of atomic locking.</t>
 
 	  <t>ISC DHCP adoped early versions of these documents, and has not
-	  yet synched up with the final standards versions.</t>
+	  yet synced up with the final standards versions.</t>
 
 	  <t>For RFCs 4702 and 4704, the 'N' bit is not yet supported.  The
 	  result is that it is always set zero, and is ignored if set.</t>
