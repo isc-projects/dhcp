@@ -535,8 +535,8 @@ Hankins                                                         [Page 9]
    [RFC4701] which describes the DHCID RR used in DNS to perform a kind
    of atomic locking.
 
-   ISC DHCP adoped early versions of these documents, and has not yet
-   synced up with the final standards versions.
+   ISC DHCP adopted early versions of these documents, and has not yet
+   synchronized with the final standards versions.
 
    For RFCs 4702 and 4704, the 'N' bit is not yet supported.  The result
    is that it is always set zero, and is ignored if set.
