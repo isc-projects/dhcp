@@ -47,7 +47,8 @@ the README file.
 			Changes since 3.1-ESV-R1
 ! Two packets were found that cause a server to halt.  The code
   has been updated to properly process or reject the packets as
-  appropriate.  [ISC-Bugs #24960]
+  appropriate.  Thanks to David Zych at University of Illinois
+  for reporting this issue.  [ISC-Bugs #24960]
 
 			Changes since 3.1-ESV
 
