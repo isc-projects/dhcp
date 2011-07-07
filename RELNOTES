@@ -39,6 +39,15 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and may not
 work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
+			Changes since 4.2.2b1
+
+- Strict checks for content of domain-name DHCPv4 option can now be 
+  configured during compilation time. Even though RFC2132 does not allow 
+  to store more than one domain in domain-name option, such behavior is 
+  now enabled by default, but this may change some time in the future.
+  See ACCEPT_LIST_IN_DOMAIN_NAME define in includes/site.h.
+  [ISC-Bugs #24167]
+
 			Changes since 4.2.1
 
 ! In dhclient check the data for some string options for
@@ -157,13 +166,6 @@ work on other platforms. Please report any problems and suggested fixes to
 
 - In Solaris 11 switch to using sockets instead of DLPI, thanks
   to a patch form Oracle.  [ISC-Bugs #24634].
-
-- Strict checks for content of domain-name DHCPv4 option can now be 
-  configured during compilation time. Even though RFC2132 does not allow 
-  to store more than one domain in domain-name option, such behavior is 
-  now enabled by default, but this may change some time in the future.
-  See ACCEPT_LIST_IN_DOMAIN_NAME define in includes/site.h.
-  [ISC-Bugs #24167]
 
 			Changes since 4.2.1rc1
 
