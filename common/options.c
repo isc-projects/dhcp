@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.98.2.23 2011/03/24 22:51:52 sar Exp $ Copyright (c) 2004-2009 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.98.2.24 2011/07/07 19:18:47 sar Exp $ Copyright (c) 2004-2009 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -557,8 +557,8 @@ cons_options(struct packet *inpacket, struct dhcp_packet *outpacket,
 	} else if (bootpp) {
 		mb_size = 64;
 		if (inpacket != NULL &&
-		    (inpacket->packet_length - DHCP_FIXED_LEN >= 64))
-			mb_size = inpacket->packet_length - DHCP_FIXED_LEN;
+		    (inpacket->packet_length >= 64 + DHCP_FIXED_NON_UDP))
+			mb_size = inpacket->packet_length - DHCP_FIXED_NON_UDP;
 	} else
 		mb_size = DHCP_MIN_OPTION_LEN;
 

@@ -44,6 +44,11 @@ as well as how to find documentation and report bugs, please consult
 the README file.
 
 
+			Changes since 3.1-ESV-R1
+! Two packets were found that cause a server to halt.  The code
+  has been updated to properly process or reject the packets as
+  appropriate.  [ISC-Bugs #24960]
+
 			Changes since 3.1-ESV
 
 - The 'domain-list' atom documentation in common/dhcp-options.5 was

@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.211.2.18 2009/09/01 20:32:28 dhankins Exp $ Copyright (c) 2004-2009 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.211.2.19 2011/07/07 19:18:47 sar Exp $ Copyright (c) 2004-2009 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1518,6 +1518,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 	 * by the user into the new state, not just give up.
 	 */
 	if (!packet->agent_options_stashed &&
+	    (packet->options != NULL) &&
 	    packet->options->universe_count > agent_universe.index &&
 	    packet->options->universes[agent_universe.index] != NULL &&
 	    (state->options->universe_count <= agent_universe.index ||
@@ -2274,6 +2275,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 	 * giaddr.
 	 */
 	if (!packet->agent_options_stashed &&
+	    (packet->options != NULL) &&
 	    packet->options->universe_count > agent_universe.index &&
 	    packet->options->universes[agent_universe.index] != NULL) {
 	    oc = lookup_option (&server_universe, state -> options,
