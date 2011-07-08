@@ -217,6 +217,10 @@
    but is only included for backwards compatibility. */
 /* #define REPLY_TO_SOURCE_PORT */
 
+/* Define this if you want to enable strict checks in DNS Updates mechanism.
+   Do not enable this unless are DHCP developer. */
+/* #define DNS_UPDATES_MEMORY_CHECKS */
+
 /* Define this if you want to allow domain list in domain-name option.
    RFC2132 does not allow that behavior, but it is somewhat used due
    to historic reasons. Note that it may be removed some time in the

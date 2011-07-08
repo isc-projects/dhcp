@@ -3,7 +3,7 @@
    Definitions for dhcpd... */
 
 /*
- * Copyright (c) 2004-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2011 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -3547,3 +3547,6 @@ ddns_modify_ptr(dhcp_ddns_cb_t *ddns_cb);
 
 void
 ddns_cancel(dhcp_ddns_cb_t *ddns_cb);
+
+#define MAX_ADDRESS_STRING_LEN \
+   (sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255"))

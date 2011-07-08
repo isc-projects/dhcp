@@ -48,6 +48,15 @@ work on other platforms. Please report any problems and suggested fixes to
   See ACCEPT_LIST_IN_DOMAIN_NAME define in includes/site.h.
   [ISC-Bugs #24167]
 
+- DNS Update fix. A misconfigured server could crash during DNS update
+  processing if the configuration included overlapping pools or
+  multiple fixed-address entries for a single address.  This issue
+  affected both IPv4 and IPv6. The fix allows a server to detect such
+  conditions, provides the user with extra information and recommended
+  steps to fix the problem.  If the user enables the appropriate option
+  in site.h then server will be terminated
+  [ISC-Bugs #23595]
+
 			Changes since 4.2.1
 
 ! In dhclient check the data for some string options for

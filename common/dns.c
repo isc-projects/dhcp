@@ -3,7 +3,7 @@
    Domain Name Service subroutines. */
 
 /*
- * Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2011 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2001-2003 by Internet Software Consortium
  *
@@ -448,12 +448,20 @@ ddns_cb_alloc(const char *file, int line)
 		}
 	}
 
+#if defined (DEBUG_DNS_UPDATES)
+	log_info("%s(%d): Allocating ddns_cb=%p", file, line, ddns_cb);
+#endif
+
 	return(ddns_cb);
 }
 		
 void
 ddns_cb_free(dhcp_ddns_cb_t *ddns_cb, const char *file, int line)
 {
+#if defined (DEBUG_DNS_UPDATES)
+	log_info("%s(%d): freeing ddns_cb=%p", file, line, ddns_cb);
+#endif
+
   	data_string_forget(&ddns_cb->fwd_name, file, line);
 	data_string_forget(&ddns_cb->rev_name, file, line);
 	data_string_forget(&ddns_cb->dhcid, file, line);
