@@ -1417,14 +1417,24 @@ print_dns_status (int direction,
 	}
 
 	en = " dhcid: ";
-	if (s + strlen(en) + ddns_cb->dhcid.len < end) {
-		strcpy(s, en);
-		s += strlen(s);
-		strncpy(s, (char *)ddns_cb->dhcid.data + 1,
-			ddns_cb->dhcid.len - 1);
-		s += strlen(s);
+	if (ddns_cb->dhcid.len > 0) {
+		if (s + strlen(en) + ddns_cb->dhcid.len-1 < end) {
+			strcpy(s, en);
+			s += strlen(s);
+			strncpy(s, (char *)ddns_cb->dhcid.data+1,
+				ddns_cb->dhcid.len-1);
+			s += strlen(s);
+		} else {
+			goto bailout;
+		}
 	} else {
-		goto bailout;
+		en = " dhcid: <empty>";
+		if (s + strlen(en) < end) {
+			strcpy(s, en);
+			s += strlen(s);
+		} else {
+			goto bailout;
+		}
 	}
 
 	en = " ttl: ";
