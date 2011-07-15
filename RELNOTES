@@ -49,6 +49,9 @@ the README file.
   has been updated to properly process or reject the packets as
   appropriate.  Thanks to David Zych at University of Illinois
   for reporting this issue.  [ISC-Bugs #24960]
+  One CVE number for each class of packet.
+  CVE-2011-2748
+  CVE-2011-2749
 
 			Changes since 3.1-ESV
 
