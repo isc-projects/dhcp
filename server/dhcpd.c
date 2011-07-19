@@ -34,11 +34,11 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.121.42.10 2011/03/24 22:51:53 sar Exp $ Copyright 2004-2011 Internet Systems Consortium.";
+"$Id: dhcpd.c,v 1.121.42.11 2011/07/19 22:49:48 sar Exp $ Copyright 2004-2011 Internet Systems Consortium.";
 #endif
 
 static const char copyright[] =
-	"Copyright 2004-2010 Internet Systems Consortium.";
+	"Copyright 2004-2011 Internet Systems Consortium.";
 static const char arr[] = "All rights reserved.";
 static const char message[] = "Internet Systems Consortium DHCP Server";
 static const char url[] =

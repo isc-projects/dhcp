@@ -1,14 +1,13 @@
 	      Internet Systems Consortium DHCP Distribution
-			    Version 3.1-ESV-R1
-			      March 25, 2011
+			    Version 3.1-ESV-R2
+			      July 27, 2011
 
 			      Release Notes
 
 			      NEW FEATURES
 
-Version 3.1-ESV-R1 is an extended support version (ESV) release.  ESVs are
-intended for users who have longer upgrade constraints and only critical
-bug and security fixes will be added to future ESV releases.  Please see
+Version 3.1-ESV-R2 is an extended support version (ESV) release.  ESVs are
+intended for users who have longer upgrade constraints.  Please see
 our web page http://www.isc.org/downloads/extended-support for more
 information on ESVs.
 
@@ -42,7 +41,6 @@ changes list directly following this section.
 For information on how to install, configure and run this software,
 as well as how to find documentation and report bugs, please consult
 the README file.
-
 
 			Changes since 3.1-ESV-R1
 ! Two packets were found that cause a server to halt.  The code

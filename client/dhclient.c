@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.143.2.18 2011/04/04 23:03:13 marka Exp $ Copyright (c) 2004-2011 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.143.2.19 2011/07/19 22:49:47 sar Exp $ Copyright (c) 2004-2011 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -62,7 +62,7 @@ struct in_addr giaddr;
 #define ASSERT_STATE(state_is, state_shouldbe) {}
 
 static const char copyright[] =
-	"Copyright 2004-2010 Internet Systems Consortium.";
+	"Copyright 2004-2011 Internet Systems Consortium.";
 static const char arr[] = "All rights reserved.";
 static const char message[] = "Internet Systems Consortium DHCP Client";
 static const char url[] =

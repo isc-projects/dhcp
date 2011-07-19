@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcrelay.c,v 1.59.2.9 2011/03/24 22:51:53 sar Exp $ Copyright (c) 2004-2011 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.59.2.10 2011/07/19 22:49:48 sar Exp $ Copyright (c) 2004-2011 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -102,7 +102,7 @@ struct server_list {
 } *servers;
 
 static const char copyright[] =
-	"Copyright 2004-2010 Internet Systems Consortium.";
+	"Copyright 2004-2011 Internet Systems Consortium.";
 static const char arr[] = "All rights reserved.";
 static const char message[] = "Internet Systems Consortium DHCP Relay Agent";
 static const char url[] =
