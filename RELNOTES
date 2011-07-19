@@ -1,5 +1,5 @@
 	      Internet Systems Consortium DHCP Distribution
-			    Version 3.1-ESV-R2
+			    Version 3.1-ESV-R3
 			      July 27, 2011
 
 			      Release Notes
@@ -41,6 +41,9 @@ changes list directly following this section.
 For information on how to install, configure and run this software,
 as well as how to find documentation and report bugs, please consult
 the README file.
+
+			Changes since 3.1-ESV-R2
+- None - 3.1-ESV-R2 skipped 
 
 			Changes since 3.1-ESV-R1
 ! Two packets were found that cause a server to halt.  The code

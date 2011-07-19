@@ -1,5 +1,5 @@
 	      Internet Systems Consortium DHCP Distribution
-			   Version 3.1-ESV-R2
+			   Version 3.1-ESV-R3
 			     July 27, 2011
 
 			      README FILE
@@ -92,7 +92,7 @@ directory, it may not have up-to-date information).
 
 			    RELEASE STATUS
 
-This is ISC DHCP 3.1-ESV-R2, an extended support (ESV) release that seeks
+This is ISC DHCP 3.1-ESV-R3, an extended support (ESV) release that seeks
 only to fix bugs present in ISC DHCP 3.1.3-ESV-R1 or prior, and provides no
 new features.  ESVs are intended for users who have longer upgrade
 constraints.  Please see our web page
@@ -140,12 +140,12 @@ information.   On Digital Unix, type ``man pfilt''.
 To build the DHCP Distribution, unpack the compressed tar file using
 the tar utility and the gzip command - type something like:
 
-	gunzip dhcp-3.1-ESV-R2.tar.gz
-	tar xvf dhcp-3.1-ESV-R2.tar
+	gunzip dhcp-3.1-ESV-R3.tar.gz
+	tar xvf dhcp-3.1-ESV-R3.tar
 
 			    CONFIGURING IT
 
-Now, cd to the dhcp-3.1-ESV-R2 subdirectory that you've just created and
+Now, cd to the dhcp-3.1-ESV-R3 subdirectory that you've just created and
 configure the source tree by typing:
 
 	./configure
