@@ -190,6 +190,14 @@ work on other platforms. Please report any problems and suggested fixes to
   in site.h then server will be terminated
   [ISC-Bugs #23595]
 
+! Two packets were found that cause a server to halt.  The code
+  has been updated to properly process or reject the packets as
+  appropriate.  Thanks to David Zych at University of Illinois
+  for reporting this issue.  [ISC-Bugs #24960]
+  One CVE number for each class of packet.
+  CVE-2011-2748
+  CVE-2011-2749
+
 			Changes since 4.2.0
 
 - Documentation cleanup covering multiple tickets
