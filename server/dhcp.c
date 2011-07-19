@@ -2353,6 +2353,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 	 * giaddr.
 	 */
 	if (!packet->agent_options_stashed &&
+	    (packet->options != NULL) &&
 	    packet->options->universe_count > agent_universe.index &&
 	    packet->options->universes[agent_universe.index] != NULL) {
 	    oc = lookup_option (&server_universe, state -> options,
@@ -4456,6 +4457,7 @@ maybe_return_agent_options(struct packet *packet, struct option_state *options)
 	 * by the user into the new state, not just give up.
 	 */
 	if (!packet->agent_options_stashed &&
+	    (packet->options != NULL) &&
 	    packet->options->universe_count > agent_universe.index &&
 	    packet->options->universes[agent_universe.index] != NULL &&
 	    (options->universe_count <= agent_universe.index ||
