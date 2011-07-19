@@ -592,8 +592,8 @@ cons_options(struct packet *inpacket, struct dhcp_packet *outpacket,
 	} else if (bootpp) {
 		mb_size = 64;
 		if (inpacket != NULL &&
-		    (inpacket->packet_length - DHCP_FIXED_LEN >= 64))
-			mb_size = inpacket->packet_length - DHCP_FIXED_LEN;
+		    (inpacket->packet_length >= 64 + DHCP_FIXED_NON_UDP))
+			mb_size = inpacket->packet_length - DHCP_FIXED_NON_UDP;
 	} else
 		mb_size = DHCP_MIN_OPTION_LEN;
 

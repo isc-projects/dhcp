@@ -64,6 +64,14 @@ work on other platforms. Please report any problems and suggested fixes to
   See ACCEPT_LIST_IN_DOMAIN_NAME define in includes/site.h.
   [ISC-Bugs #24167]
 
+! Two packets were found that cause a server to halt.  The code
+  has been updated to properly process or reject the packets as
+  appropriate.  Thanks to David Zych at University of Illinois
+  for reporting this issue.  [ISC-Bugs #24960]
+  One CVE number for each class of packet.
+  CVE-2011-2748
+  CVE-2011-2749
+
 			Changes since 4.1-ESV-R2
 
 - DHCPv6 server now responds properly if client asks for a prefix that

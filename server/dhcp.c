@@ -3,7 +3,7 @@
    DHCP Protocol engine. */
 
 /*
- * Copyright (c) 2004-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2011 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -1541,6 +1541,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 	 * by the user into the new state, not just give up.
 	 */
 	if (!packet->agent_options_stashed &&
+	    (packet->options != NULL) &&
 	    packet->options->universe_count > agent_universe.index &&
 	    packet->options->universes[agent_universe.index] != NULL &&
 	    (state->options->universe_count <= agent_universe.index ||
@@ -2360,6 +2361,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 	 * giaddr.
 	 */
 	if (!packet->agent_options_stashed &&
+	    (packet->options != NULL) &&
 	    packet->options->universe_count > agent_universe.index &&
 	    packet->options->universes[agent_universe.index] != NULL) {
 	    oc = lookup_option (&server_universe, state -> options,

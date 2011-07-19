@@ -1395,12 +1395,16 @@ isc_result_t got_one (h)
 	if (result == 0)
 		return ISC_R_UNEXPECTED;
 
-	/* If we didn't at least get the fixed portion of the BOOTP
-	   packet, drop the packet.  We're allowing packets with no
-	   sname or filename, because we're aware of at least one
-	   client that sends such packets, but this definitely falls
-	   into the category of being forgiving. */
-	if (result < DHCP_FIXED_NON_UDP - DHCP_SNAME_LEN - DHCP_FILE_LEN)
+	/*
+	 * If we didn't at least get the fixed portion of the BOOTP
+	 * packet, drop the packet.
+	 * Previously we allowed packets with no sname or filename
+	 * as we were aware of at least one client that did.  But
+	 * a bug caused short packets to not work and nobody has
+	 * complained, it seems rational to tighten up that
+	 * restriction.
+	 */
+	if (result < DHCP_FIXED_NON_UDP)
 		return ISC_R_UNEXPECTED;
 
 #if defined(IP_PKTINFO) && defined(IP_RECVPKTINFO) && defined(USE_V4_PKTINFO)
