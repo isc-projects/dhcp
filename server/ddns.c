@@ -1591,8 +1591,7 @@ ddns_removals(struct lease    *lease,
 	} else if ((lease6 != NULL) && (lease6->ddns_cb != NULL)) {
 		ddns_cancel(lease6->ddns_cb);
 		lease6->ddns_cb = NULL;
-	} else
-		goto cleanup;
+	}
 
 	/* allocate our control block */
 	ddns_cb = ddns_cb_alloc(MDL);
