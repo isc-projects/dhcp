@@ -39,6 +39,13 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and may not
 work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
+			Changes since 4.2.2
+
+- Fix the code that checks for an existing DDNS transaction to cancel
+  when removing DDNS information, so that we will continue with the
+  processing if we have a lease even if it doesn't have an outstanding
+  transaction.  [ISC-Bugs #24682]
+
 			Changes since 4.2.1
 
 ! In dhclient check the data for some string options for
