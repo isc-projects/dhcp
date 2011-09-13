@@ -46,6 +46,9 @@ work on other platforms. Please report any problems and suggested fixes to
   processing if we have a lease even if it doesn't have an outstanding
   transaction.  [ISC-Bugs #24682]
 
+- Add AM_MAINTAINER_MODE to configure.ac to avoid rebuilding
+  configuration files.  [ISC-Bugs #24107]
+
 			Changes since 4.2.2rc1
 
 ! Two packets were found that cause a server to halt.  The code
