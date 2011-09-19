@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.leases.5,v 1.14.24.2 2011/04/22 13:30:14 tomasz Exp $
+.\" $Id: dhcpd.leases.5,v 1.14.24.3 2011/09/19 00:24:22 sar Exp $
 .\"
 .TH dhcpd.leases 5
 .SH NAME
@@ -277,7 +277,9 @@ possible: \fBunknown-state\fR, \fBpartner-down\fR, \fBnormal\fR,
 \fBcommunications-interrupted\fR, \fBresolution-interrupted\fR,
 \fBpotential-conflict\fR, \fBrecover\fR, \fBrecover-done\fR,
 \fBshutdown\fR, \fBpaused\fR, and \fBstartup\fR.
-.B DBDIR/dhcpd.leases
+.RE
+.SH FILES
+.B DBDIR/dhcpd.leases DBDIR/dhcpd.leases~
 .SH SEE ALSO
 dhcpd(8), dhcp-options(5), dhcp-eval(5), dhcpd.conf(5), RFC2132, RFC2131.
 .SH AUTHOR
