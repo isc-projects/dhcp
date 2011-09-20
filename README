@@ -523,20 +523,23 @@ this text is only about the DHCPv6 client (``dhclient -6 ...'').  The DNS
 configuration (domain search list and name servers' addresses) is managed
 by a System Configuration agent, not by /etc/resolv.conf (which is a link
 to /var/run/resolv.conf, which itself only reflects the internal state;
-the System Configuration agent's Dynamic Store).
+the System Configuration framework's Dynamic Store).
 
-This means that modifying resolv.conf directly doesn't have the intended
-effect, so the macos script sample uses its own resolv.conf.dhclient6 in
-/var/run, and inserts the contents of this file into the System
-Configuration agent.  Because the System Configuration agent expects the
-prefix along with the configured address, and a default router, this is
-not usable (the DHCPv6 protocol does not today deliver this information).
-Instead, ifconfig is directly used for address configuration.
+This means that modifying resolv.conf directly doesn't have the
+intended effect, instead the macos script sample creates its own
+resolv.conf.dhclient6 in /var/run, and inserts the contents of this
+file into the Dynamic Store.
+
+When updating the address configuration the System Configuration
+framework expects the prefix and a default router along with the
+configured address. As this extra information is not available via
+the DHCPv6 protocol the System Configuration framework isn't usable
+for address configuration, instead ifconfig is used directly.
 
 Note the Dynamic Store (from which /var/run/resolv.conf is built) is
-recomputed from scratch when the current location/set is changed, for
-instance when a laptop is resumed from sleep. In this case running the
-dhclient-script could reinstall the resolv.conf.dhclient6 configuration.
+recomputed from scratch when the current location/set is changed.
+Running the dhclient-script reinstalls the resolv.conf.dhclient6
+configuration.
 
 			       SUPPORT
 

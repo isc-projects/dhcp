@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: macos,v 1.2.108.1 2011/05/18 20:01:54 sar Exp $
+# $Id: macos,v 1.2.108.2 2011/09/20 17:04:03 sar Exp $
 #
 # automous run of this script will commit the DNS setting
 #
@@ -49,8 +49,13 @@ make_resolv_conf() {
 }
 
 # Try to commit /var/run/resolv.conf.dhclient6 contents to
-# SystemConfiguration Dynamic Store
+# System Configuration framework's Dynamic Store.
 # Note this will be cleared by the next location change
+# or preempted by IPv4.
+#
+# The System Configuration agent "IPMonitor" gets the DNS configuration
+# from the IPv4 or IPv6 primary service in the Dynamic Store
+# (managed by configd).
 commit_resolv_conf() {
   if [ -f /var/run/resolv.conf.dhclient6 ]; then
     if [ -x /usr/sbin/scutil ]; then
