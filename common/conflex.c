@@ -1228,6 +1228,8 @@ intern(char *atom, enum dhcp_token dfv) {
 			return PEER;
 		if (!strcasecmp (atom + 1, "rimary"))
 			return PRIMARY;
+		if (!strcasecmp (atom + 1, "rimary6"))
+			return PRIMARY6;
 		if (!strncasecmp (atom + 1, "artner", 6)) {
 			if (!atom [7])
 				return PARTNER;
@@ -1317,7 +1319,9 @@ intern(char *atom, enum dhcp_token dfv) {
 			    tolower((unsigned char)atom[2]) == 'c') {
 				if (!strncasecmp(atom + 3, "ond", 3)) {
                                         if (!strcasecmp(atom + 6, "ary"))
-                                                return SECONDARY;
+						return SECONDARY;
+                                        if (!strcasecmp(atom + 6, "ary6"))
+						return SECONDARY6;
                                         if (!strcasecmp(atom + 6, "s"))
                                                 return SECONDS;
 					break;

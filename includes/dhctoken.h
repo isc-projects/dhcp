@@ -362,7 +362,9 @@ enum dhcp_token {
 	GETHOSTNAME = 662,
 	REWIND = 663,
 	INITIAL_DELAY = 664,
-	GETHOSTBYNAME = 665
+	GETHOSTBYNAME = 665,
+	PRIMARY6 = 666,
+	SECONDARY6 = 667
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
