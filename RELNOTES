@@ -49,6 +49,9 @@ work on other platforms. Please report any problems and suggested fixes to
 - Add AM_MAINTAINER_MODE to configure.ac to avoid rebuilding
   configuration files.  [ISC-Bugs #24107]
 
+- Add support for passing DDNS information to a DNS server over
+  an IPv6 address.  [ISC-Bugs #22647]
+
 			Changes since 4.2.2rc1
 
 ! Two packets were found that cause a server to halt.  The code

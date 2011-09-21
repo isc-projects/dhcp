@@ -1374,6 +1374,8 @@ struct dns_zone {
 	char *name;
 	struct option_cache *primary;
 	struct option_cache *secondary;
+	struct option_cache *primary6;
+	struct option_cache *secondary6;
 	struct auth_key *key;
 };
 

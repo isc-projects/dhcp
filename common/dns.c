@@ -64,6 +64,11 @@
  * support update forwarding, AFAIK).   If no TSIG key is listed, the update
  * is attempted without TSIG.
  *
+ * You can also include IPv6 addresses via the primary6 and secondary6
+ * options.  The search order for the addresses is primary, primary6,
+ * secondary and lastly secondary6, with a limit on the number of 
+ * addresses used.  Currently this limit is 3.
+ *
  * The DHCP server tries to find an existing zone for any given name by
  * trying to look up a local zone structure for each domain containing
  * that name, all the way up to '.'.   If it finds one cached, it tries
@@ -602,44 +607,48 @@ int dns_zone_dereference (ptr, file, line)
 {
 	struct dns_zone *dns_zone;
 
-	if (!ptr || !*ptr) {
-		log_error ("%s(%d): null pointer", file, line);
+	if ((ptr == NULL) || (*ptr == NULL)) {
+		log_error("%s(%d): null pointer", file, line);
 #if defined (POINTER_DEBUG)
-		abort ();
+		abort();
 #else
-		return 0;
+		return (0);
 #endif
 	}
 
 	dns_zone = *ptr;
-	*ptr = (struct dns_zone *)0;
-	--dns_zone -> refcnt;
-	rc_register (file, line, ptr, dns_zone, dns_zone -> refcnt, 1, RC_MISC);
-	if (dns_zone -> refcnt > 0)
-		return 1;
+	*ptr = NULL;
+	--dns_zone->refcnt;
+	rc_register(file, line, ptr, dns_zone, dns_zone->refcnt, 1, RC_MISC);
+	if (dns_zone->refcnt > 0)
+		return (1);
 
-	if (dns_zone -> refcnt < 0) {
-		log_error ("%s(%d): negative refcnt!", file, line);
+	if (dns_zone->refcnt < 0) {
+		log_error("%s(%d): negative refcnt!", file, line);
 #if defined (DEBUG_RC_HISTORY)
-		dump_rc_history (dns_zone);
+		dump_rc_history(dns_zone);
 #endif
 #if defined (POINTER_DEBUG)
-		abort ();
+		abort();
 #else
-		return 0;
+		return (0);
 #endif
 	}
 
-	if (dns_zone -> name)
-		dfree (dns_zone -> name, file, line);
-	if (dns_zone -> key)
-		omapi_auth_key_dereference (&dns_zone -> key, file, line);
-	if (dns_zone -> primary)
-		option_cache_dereference (&dns_zone -> primary, file, line);
-	if (dns_zone -> secondary)
-		option_cache_dereference (&dns_zone -> secondary, file, line);
-	dfree (dns_zone, file, line);
-	return 1;
+	if (dns_zone->name)
+		dfree(dns_zone->name, file, line);
+	if (dns_zone->key)
+		omapi_auth_key_dereference(&dns_zone->key, file, line);
+	if (dns_zone->primary)
+		option_cache_dereference(&dns_zone->primary, file, line);
+	if (dns_zone->secondary)
+		option_cache_dereference(&dns_zone->secondary, file, line);
+	if (dns_zone->primary6)
+		option_cache_dereference(&dns_zone->primary6, file, line);
+	if (dns_zone->secondary6)
+		option_cache_dereference(&dns_zone->secondary6, file, line);
+	dfree(dns_zone, file, line);
+	return (1);
 }
 
 #if defined (NSUPDATE)
@@ -648,9 +657,10 @@ find_cached_zone(dhcp_ddns_cb_t *ddns_cb, int direction)
 {
 	isc_result_t status = ISC_R_NOTFOUND;
 	const char *np;
-	struct dns_zone *zone = (struct dns_zone *)0;
+	struct dns_zone *zone = NULL;
 	struct data_string nsaddrs;
 	struct in_addr zone_addr;
+	struct in6_addr zone_addr6;
 	int ix;
 
 	if (direction == FIND_FORWARD) {
@@ -661,14 +671,14 @@ find_cached_zone(dhcp_ddns_cb_t *ddns_cb, int direction)
 
 	/* We can't look up a null zone. */
 	if ((np == NULL) || (*np == '\0')) {
-		return DHCP_R_INVALIDARG;
+		return (DHCP_R_INVALIDARG);
 	}
 
 	/*
 	 * For each subzone, try to find a cached zone.
 	 */
 	for (;;) {
-		status = dns_zone_lookup (&zone, np);
+		status = dns_zone_lookup(&zone, np);
 		if (status == ISC_R_SUCCESS)
 			break;
 
@@ -679,32 +689,72 @@ find_cached_zone(dhcp_ddns_cb_t *ddns_cb, int direction)
 	}
 
 	if (status != ISC_R_SUCCESS)
-		return status;
+		return (status);
 
 	/* Make sure the zone is valid. */
-	if (zone -> timeout && zone -> timeout < cur_time) {
-		dns_zone_dereference (&zone, MDL);
-		return ISC_R_CANCELED;
+	if (zone->timeout && zone->timeout < cur_time) {
+		dns_zone_dereference(&zone, MDL);
+		return (ISC_R_CANCELED);
 	}
 
 	/* Make sure the zone name will fit. */
 	if (strlen(zone->name) > sizeof(ddns_cb->zone_name)) {
-		dns_zone_dereference (&zone, MDL);
-		return ISC_R_NOSPACE;
+		dns_zone_dereference(&zone, MDL);
+		return (ISC_R_NOSPACE);
 	}
 	strcpy((char *)&ddns_cb->zone_name[0], zone->name);
 
 	memset (&nsaddrs, 0, sizeof nsaddrs);
 	ix = 0;
 
-	if (zone -> primary) {
-		if (evaluate_option_cache (&nsaddrs, (struct packet *)0,
-					   (struct lease *)0,
-					   (struct client_state *)0,
-					   (struct option_state *)0,
-					   (struct option_state *)0,
-					   &global_scope,
-					   zone -> primary, MDL)) {
+	if (zone->primary) {
+		if (evaluate_option_cache(&nsaddrs, NULL, NULL, NULL,
+					  NULL, NULL, &global_scope,
+					  zone->primary, MDL)) {
+			int ip = 0;
+			while (ix < DHCP_MAXNS) {
+				if (ip + 4 > nsaddrs.len)
+					break;
+				memcpy(&zone_addr, &nsaddrs.data[ip], 4);
+				isc_sockaddr_fromin(&ddns_cb->zone_addrs[ix],
+						    &zone_addr,
+						    NS_DEFAULTPORT);
+				ISC_LIST_APPEND(ddns_cb->zone_server_list,
+						&ddns_cb->zone_addrs[ix],
+						link);
+				ip += 4;
+				ix++;
+			}
+			data_string_forget(&nsaddrs, MDL);
+		}
+	}
+
+	if (zone->primary6) {
+		if (evaluate_option_cache(&nsaddrs, NULL, NULL, NULL,
+					  NULL, NULL, &global_scope,
+					  zone->primary6, MDL)) {
+			int ip = 0;
+			while (ix < DHCP_MAXNS) {
+				if (ip + 16 > nsaddrs.len)
+					break;
+				memcpy(&zone_addr6, &nsaddrs.data[ip], 16);
+				isc_sockaddr_fromin6(&ddns_cb->zone_addrs[ix],
+						    &zone_addr6,
+						    NS_DEFAULTPORT);
+				ISC_LIST_APPEND(ddns_cb->zone_server_list,
+						&ddns_cb->zone_addrs[ix],
+						link);
+				ip += 16;
+				ix++;
+			}
+			data_string_forget(&nsaddrs, MDL);
+		}
+	}
+
+	if (zone->secondary) {
+		if (evaluate_option_cache(&nsaddrs, NULL, NULL, NULL,
+					  NULL, NULL, &global_scope,
+					  zone->secondary, MDL)) {
 			int ip = 0;
 			while (ix < DHCP_MAXNS) {
 				if (ip + 4 > nsaddrs.len)
@@ -722,26 +772,23 @@ find_cached_zone(dhcp_ddns_cb_t *ddns_cb, int direction)
 			data_string_forget (&nsaddrs, MDL);
 		}
 	}
-	if (zone -> secondary) {
-		if (evaluate_option_cache (&nsaddrs, (struct packet *)0,
-					   (struct lease *)0,
-					   (struct client_state *)0,
-					   (struct option_state *)0,
-					   (struct option_state *)0,
-					   &global_scope,
-					   zone -> secondary, MDL)) {
+
+	if (zone->secondary6) {
+		if (evaluate_option_cache(&nsaddrs, NULL, NULL, NULL,
+					  NULL, NULL, &global_scope,
+					  zone->secondary6, MDL)) {
 			int ip = 0;
 			while (ix < DHCP_MAXNS) {
-				if (ip + 4 > nsaddrs.len)
+				if (ip + 16 > nsaddrs.len)
 					break;
-				memcpy(&zone_addr, &nsaddrs.data[ip], 4);
-				isc_sockaddr_fromin(&ddns_cb->zone_addrs[ix],
-						    &zone_addr,
+				memcpy(&zone_addr6, &nsaddrs.data[ip], 16);
+				isc_sockaddr_fromin6(&ddns_cb->zone_addrs[ix],
+						    &zone_addr6,
 						    NS_DEFAULTPORT);
 				ISC_LIST_APPEND(ddns_cb->zone_server_list,
 						&ddns_cb->zone_addrs[ix],
 						link);
-				ip += 4;
+				ip += 16;
 				ix++;
 			}
 			data_string_forget (&nsaddrs, MDL);

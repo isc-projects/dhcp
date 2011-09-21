@@ -27,7 +27,7 @@
 .\" Support and other services are available for ISC products - see
 .\" https://www.isc.org for more information or to learn more about ISC.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.106.18.6 2011/06/01 23:30:53 sar Exp $
+.\" $Id: dhcpd.conf.5,v 1.106.18.7 2011/09/21 20:43:10 sar Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -1357,7 +1357,14 @@ zone 17.127.10.in-addr.arpa. {
 .fi
 .PP
 The \fIprimary\fR statement specifies the IP address of the name
-server whose zone information is to be updated.
+server whose zone information is to be updated.  In addition to
+the \fIprimary\fR statement there are also the \fIprimary6\fR ,
+\fIsecondary\fR and \fIsecondary6\fR statements.  The \fIprimary6\fR
+statement specifies an IPv6 address for the name server.  The
+secondaries provide for additional addresses for name servers
+to be used if the primary does not respond.  The number of name
+servers the DDNS code will attempt to use before giving up
+is limited and is currently set to three.
 .PP
 Note that the zone declarations have to correspond to authority
 records in your name server - in the above example, there must be an

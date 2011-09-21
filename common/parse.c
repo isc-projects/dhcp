@@ -2698,6 +2698,8 @@ int parse_executable_statement (result, cfile, lose, case_context)
    zone-statement :==
 	PRIMARY ip-addresses SEMI |
 	SECONDARY ip-addresses SEMI |
+	PRIMARY6 ip-address6 SEMI |
+	SECONDARY6 ip-address6 SEMI |
 	key-reference SEMI
    ip-addresses :== ip-addr-or-hostname |
 		  ip-addr-or-hostname COMMA ip-addresses
@@ -2776,6 +2778,61 @@ int parse_zone (struct dns_zone *zone, struct parse *cfile)
 			    parse_warn (cfile, "expecting semicolon.");
 			    skip_to_semi (cfile);
 			    return 0;
+		    }
+		    break;
+
+	          case PRIMARY6:
+		    if (zone->primary6) {
+			    parse_warn(cfile, "more than one primary6.");
+			    skip_to_semi(cfile);
+			    return (0);
+		    }
+		    if (!option_cache_allocate (&zone->primary6, MDL))
+			    log_fatal("can't allocate primary6 option cache.");
+		    oc = zone->primary6;
+		    goto consemup6;
+
+	          case SECONDARY6:
+		    if (zone->secondary6) {
+			    parse_warn(cfile, "more than one secondary6.");
+			    skip_to_semi(cfile);
+			    return (0);
+		    }
+		    if (!option_cache_allocate (&zone->secondary6, MDL))
+			    log_fatal("can't allocate secondary6 "
+				      "option cache.");
+		    oc = zone->secondary6;
+	          consemup6:
+		    token = next_token(&val, NULL, cfile);
+		    do {
+			    struct expression *expr = NULL;
+			    if (parse_ip6_addr_expr(&expr, cfile) == 0) {
+				    parse_warn(cfile, "expecting IPv6 addr.");
+				    skip_to_semi(cfile);
+				    return (0);
+			    }
+			    if (oc->expression) {
+				    struct expression *old = NULL;
+				    expression_reference(&old, oc->expression,
+							 MDL);
+				    expression_dereference(&oc->expression,
+							   MDL);
+				    if (!make_concat(&oc->expression,
+						     old, expr))
+					    log_fatal("no memory for concat.");
+				    expression_dereference(&expr, MDL);
+				    expression_dereference(&old, MDL);
+			    } else {
+				    expression_reference(&oc->expression,
+							 expr, MDL);
+				    expression_dereference(&expr, MDL);
+			    }
+			    token = next_token(&val, NULL, cfile);
+		    } while (token == COMMA);
+		    if (token != SEMI) {
+			    parse_warn(cfile, "expecting semicolon.");
+			    skip_to_semi(cfile);
+			    return (0);
 		    }
 		    break;
 
