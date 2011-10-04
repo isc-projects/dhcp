@@ -52,6 +52,9 @@ work on other platforms. Please report any problems and suggested fixes to
 - Add support for passing DDNS information to a DNS server over
   an IPv6 address.  [ISC-Bugs #22647]
 
+- Enhanced patch for 23595 to handle IPv4 fixed addresses more
+  cleanly.  [ISC-Bugs #23595]
+
 			Changes since 4.2.2rc1
 
 ! Two packets were found that cause a server to halt.  The code
