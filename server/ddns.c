@@ -126,10 +126,17 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 	}
 	/* assume that we shall update both the A and ptr records */
 	ddns_cb->flags = DDNS_UPDATE_ADDR | DDNS_UPDATE_PTR;
- 	
+
+	/*
+	 * For v4 we flag static leases so we don't try
+	 * and manipulate the lease later.  For v6 we don't
+	 * get static leases and don't need to flag them.
+	 */
 	if (lease != NULL) {
 		scope = &(lease->scope);
 		ddns_cb->address = lease->ip_addr;
+		if (lease->flags & STATIC_LEASE)
+			ddns_cb->flags |= DDNS_STATIC_LEASE;
 	} else if (lease6 != NULL) {
 		scope = &(lease6->scope);
 		memcpy(ddns_cb->address.iabuf, lease6->addr.s6_addr, 16);
@@ -726,6 +733,13 @@ ddns_update_lease_text(dhcp_ddns_cb_t        *ddns_cb,
 	struct in6_addr        addr;
 	struct data_string     lease_dhcid;
 	
+	/*
+	 * If the lease was static (for a fixed address)
+	 * we don't need to do any work.
+	 */
+	if (ddns_cb->flags & DDNS_STATIC_LEASE)
+		return (ISC_R_SUCCESS);
+
 	if (inscope != NULL) {
 		scope = inscope;
 	} else if (ddns_cb->address.len == 4) {
@@ -839,8 +853,10 @@ update_lease_failed(struct lease *lease,
 	sprintf(reason, "unknown");
 	sprintf(lease_address, "unknown");
 
-	/* let's pretend that everything is ok, so we can continue for 
-	   for information gathering purposes */
+	/*
+	 * let's pretend that everything is ok, so we can continue for 
+	 * information gathering purposes
+	 */
 	
 	if (ddns_cb != NULL) {
 		strncpy(lease_address, piaddr(ddns_cb->address), 
@@ -891,133 +907,138 @@ update_lease_failed(struct lease *lease,
 
 void
 safe_lease_update(struct lease *lease,
-		  struct iasubopt *lease6,
 		  dhcp_ddns_cb_t *oldcb,
 		  dhcp_ddns_cb_t *newcb,
 		  const char *file, int line)
 {
-	char addrbuf[MAX_ADDRESS_STRING_LEN];
-
-	if (lease != NULL) {
-		if ( (lease->ddns_cb == NULL) && (newcb == NULL) ) {
-			/*
-			 * Trying to clean up pointer that is already null. We
-			 * are most likely trying to update wrong lease here.
-			 */
-
-			/* 
-			 * this error message pops out during every DNS Update
-			 * for fixed leases. It is enabled only for debugging
-			 * DNS Updates. Investigation pending.
-			 */
-#if defined (DEBUG_DNS_UPDATES)
-			log_error("%s(%d): Invalid lease update. Tried to "
-				  "clear already NULL DDNS control block "
-				  "pointer for lease %s.",
-				  file, line, piaddr(lease->ip_addr) );
-#endif
-
-#if defined (DNS_UPDATES_MEMORY_CHECKS)
-			update_lease_failed(lease, NULL, oldcb, newcb, file,
-					    line);
-#endif
-			/* 
-			 * May not reach this: update_lease_failed calls 
-			 * log_fatal.
-			 */ 
-			return;
-		}
-
-		if ( (lease->ddns_cb != NULL) && (lease->ddns_cb != oldcb) ) {
-			/* 
-			 * There is existing cb structure, but it differs from
-			 * what we expected to see there. Most likely we are 
-			 * trying to update wrong lease. 
-			 */
-			log_error("%s(%d): Failed to update internal lease "
-				  "structure with DDNS control block. Existing"
-				  " ddns_cb structure does not match "
-				  "expectations.IPv4=%s, old ddns_cb=%p, tried"
-				  "to update to new ddns_cb=%p", file, line,
-				  piaddr(lease->ip_addr), oldcb,  newcb);
-
-#if defined (DNS_UPDATES_MEMORY_CHECKS)
-			update_lease_failed(lease, NULL, oldcb, newcb, file,
-					    line);
-#endif
-			/* 
-			 * May not reach this: update_lease_failed calls 
-			 * log_fatal.
-			 */ 
-			return; 
-		}
-		/* additional IPv4 specific checks may be added here */
-
-		/* update the lease */
-		lease->ddns_cb = newcb;
-	} else if (lease6 != NULL) {
-		if ( (lease6->ddns_cb == NULL) && (newcb == NULL) ) {
-			inet_ntop(AF_INET6, &lease6->addr, addrbuf, 
-				  MAX_ADDRESS_STRING_LEN);
-			/*
-			 * Trying to clean up pointer that is already null. We
-			 * are most likely trying to update wrong lease here.
-			 */
-#if defined (DEBUG_DNS_UPDATES)
-			log_error("%s(%d): Failed to update internal lease "
-				  "structure. Tried to clear already NULL "
-				  "DDNS control block pointer for lease %s.",
-				  file, line, addrbuf);
-#endif
-
-#if defined (DNS_UPDATES_MEMORY_CHECKS)
-			update_lease_failed(NULL, lease6, oldcb, newcb, file,
-					    line);
-#endif
-
-			/* 
-			 * May not reach this: update_lease_failed calls 
-			 * log_fatal.
-			 */ 
-			return; 
-		}
-
-		if ( (lease6->ddns_cb != NULL) && (lease6->ddns_cb != oldcb) ) {
-			/* 
-			 * there is existing cb structure, but it differs from
-			 * what we expected to see there. Most likely we are 
-			 * trying to update wrong lease. 
-			 */
-			inet_ntop(AF_INET6, &lease6->addr, addrbuf, 
-				  MAX_ADDRESS_STRING_LEN);
-
-			log_error("%s(%d): Failed to update internal lease "
-				  "structure with DDNS control block. Existing"
-				  " ddns_cb structure does not match "
-				  "expectations.IPv6=%s, old ddns_cb=%p, tried"
-				  "to update to new ddns_cb=%p", file, line,
-				  addrbuf, oldcb,  newcb);
-
-#if defined (DNS_UPDATES_MEMORY_CHECKS)
-			update_lease_failed(NULL, lease6, oldcb, newcb, file, 
-					    line);
-#endif
-			/* 
-			 * May not reach this: update_lease_failed calls 
-			 * log_fatal.
-			 */ 
-			return;
-		}
-		/* additional IPv6 specific checks may be added here */
-	
-		/* update the lease */
-		lease6->ddns_cb = newcb;
-
-	} else {
+	if (lease == NULL) {
 		/* should never get here */
 		log_fatal("Impossible condition at %s:%d (called from %s:%d).", 
 			  MDL, file, line);
 	}
+
+	if ( (lease->ddns_cb == NULL) && (newcb == NULL) ) {
+		/*
+		 * Trying to clean up pointer that is already null. We
+		 * are most likely trying to update wrong lease here.
+		 */
+
+		/* 
+		 * Previously this error message popped out during
+		 * DNS update for fixed leases.  As we no longer
+		 * try to update the lease for a fixed (static) lease
+		 * this should not be a problem.
+		 */
+		log_error("%s(%d): Invalid lease update. Tried to "
+			  "clear already NULL DDNS control block "
+			  "pointer for lease %s.",
+			  file, line, piaddr(lease->ip_addr) );
+
+#if defined (DNS_UPDATES_MEMORY_CHECKS)
+		update_lease_failed(lease, NULL, oldcb, newcb, file, line);
+#endif
+		/* 
+		 * May not reach this: update_lease_failed calls 
+		 * log_fatal.
+		 */ 
+		return;
+	}
+
+	if ( (lease->ddns_cb != NULL) && (lease->ddns_cb != oldcb) ) {
+		/* 
+		 * There is existing cb structure, but it differs from
+		 * what we expected to see there. Most likely we are 
+		 * trying to update wrong lease. 
+		 */
+		log_error("%s(%d): Failed to update internal lease "
+			  "structure with DDNS control block. Existing"
+			  " ddns_cb structure does not match "
+			  "expectations.IPv4=%s, old ddns_cb=%p, tried"
+			  "to update to new ddns_cb=%p", file, line,
+			  piaddr(lease->ip_addr), oldcb,  newcb);
+
+#if defined (DNS_UPDATES_MEMORY_CHECKS)
+		update_lease_failed(lease, NULL, oldcb, newcb, file, line);
+#endif
+		/* 
+		 * May not reach this: update_lease_failed calls 
+		 * log_fatal.
+		 */ 
+		return; 
+	}
+
+	/* additional IPv4 specific checks may be added here */
+
+	/* update the lease */
+	lease->ddns_cb = newcb;
+}
+
+void
+safe_lease6_update(struct iasubopt *lease6,
+		   dhcp_ddns_cb_t *oldcb,
+		   dhcp_ddns_cb_t *newcb,
+		   const char *file, int line)
+{
+	char addrbuf[MAX_ADDRESS_STRING_LEN];
+
+	if (lease6 == NULL) {
+		/* should never get here */
+		log_fatal("Impossible condition at %s:%d (called from %s:%d).", 
+			  MDL, file, line);
+	}
+
+	if ( (lease6->ddns_cb == NULL) && (newcb == NULL) ) {
+		inet_ntop(AF_INET6, &lease6->addr, addrbuf, 
+			  MAX_ADDRESS_STRING_LEN);
+		/*
+		 * Trying to clean up pointer that is already null. We
+		 * are most likely trying to update wrong lease here.
+		 */
+		log_error("%s(%d): Failed to update internal lease "
+			  "structure. Tried to clear already NULL "
+			  "DDNS control block pointer for lease %s.",
+			  file, line, addrbuf);
+
+#if defined (DNS_UPDATES_MEMORY_CHECKS)
+		update_lease_failed(NULL, lease6, oldcb, newcb, file, line);
+#endif
+
+		/* 
+		 * May not reach this: update_lease_failed calls 
+		 * log_fatal.
+		 */ 
+		return; 
+	}
+
+	if ( (lease6->ddns_cb != NULL) && (lease6->ddns_cb != oldcb) ) {
+		/* 
+		 * there is existing cb structure, but it differs from
+		 * what we expected to see there. Most likely we are 
+		 * trying to update wrong lease. 
+		 */
+		inet_ntop(AF_INET6, &lease6->addr, addrbuf, 
+			  MAX_ADDRESS_STRING_LEN);
+
+		log_error("%s(%d): Failed to update internal lease "
+			  "structure with DDNS control block. Existing"
+			  " ddns_cb structure does not match "
+			  "expectations.IPv6=%s, old ddns_cb=%p, tried"
+			  "to update to new ddns_cb=%p", file, line,
+			  addrbuf, oldcb,  newcb);
+
+#if defined (DNS_UPDATES_MEMORY_CHECKS)
+		update_lease_failed(NULL, lease6, oldcb, newcb, file, line);
+#endif
+		/* 
+		 * May not reach this: update_lease_failed calls 
+		 * log_fatal.
+		 */ 
+		return;
+	}
+	/* additional IPv6 specific checks may be added here */
+	
+	/* update the lease */
+	lease6->ddns_cb = newcb;
 }
 
 /*
@@ -1043,7 +1064,7 @@ ddns_update_lease_ptr(struct lease    *lease,
 		      const char * file, int line)
 {
 	char ddns_address[MAX_ADDRESS_STRING_LEN];
-	sprintf(ddns_address, "uknown");
+	sprintf(ddns_address, "unknown");
 	if (ddns_cb) {
 		strncpy(ddns_address, piaddr(ddns_cb->address), 
 			MAX_ADDRESS_STRING_LEN);
@@ -1053,14 +1074,23 @@ ddns_update_lease_ptr(struct lease    *lease,
 		 file, line, ddns_cb, ddns_address );
 #endif
 
+	/*
+	 * If the lease was static (for a fixed address)
+	 * we don't need to do any work.
+	 */
+	if (ddns_cb->flags & DDNS_STATIC_LEASE) {
+#if defined (DEBUG_DNS_UPDATES)
+		log_info("lease is static, returning");
+#endif
+		return (ISC_R_SUCCESS);
+	}
+
 	if (lease != NULL) {
-		safe_lease_update(lease, NULL, ddns_cb, ddns_cb_set, 
+		safe_lease_update(lease, ddns_cb, ddns_cb_set, 
 				  file, line);
-		/* lease->ddns_cb = ddns_cb_set; */
 	} else if (lease6 != NULL) {
-		safe_lease_update(NULL, lease6, ddns_cb, ddns_cb_set, 
+		safe_lease6_update(lease6, ddns_cb, ddns_cb_set, 
 				  file, line);
-		/* lease6->ddns_cb = ddns_cb_set; */
 	} else if (ddns_cb->address.len == 4) {
 		struct lease *find_lease = NULL;
 		if (find_lease_by_ip_addr(&find_lease,
@@ -1071,17 +1101,14 @@ ddns_update_lease_ptr(struct lease    *lease,
 				 find_lease);
 #endif
 		  
-			/* find_lease->ddns_cb = ddns_cb_set; */
-			safe_lease_update(find_lease, NULL, ddns_cb,
+			safe_lease_update(find_lease, ddns_cb,
 					  ddns_cb_set, file, line);
 			lease_dereference(&find_lease, MDL);
 		}
 		else {
-#if defined (DEBUG_DNS_UPDATES)
 			log_error("%s(%d): ddns_update_lease_ptr failed. "
-				  "Lease for %s not found. (Is it static lease?)",
+				  "Lease for %s not found.",
 				  file, line, piaddr(ddns_cb->address));
-#endif
 
 #if defined (DNS_UPDATES_MEMORY_CHECKS)
 			update_lease_failed(NULL, NULL, ddns_cb, ddns_cb_set,
@@ -1120,7 +1147,7 @@ ddns_update_lease_ptr(struct lease    *lease,
 			return(ISC_R_FAILURE);
 		}
 
-		if (iasubopt_hash_lookup(&find_lease6,  pool->leases,
+		if (iasubopt_hash_lookup(&find_lease6, pool->leases,
 					 &addr, 16, MDL)) {
 			find_lease6->ddns_cb = ddns_cb_set;
 			iasubopt_dereference(&find_lease6, MDL);
@@ -1599,10 +1626,17 @@ ddns_removals(struct lease    *lease,
 	if (ddns_cb == NULL) {
 		goto cleanup;
 	}
-	
+
+	/*
+	 * For v4 we flag static leases so we don't try
+	 * and manipulate the lease later.  For v6 we don't
+	 * get static leases and don't need to flag them.
+	 */
 	if (lease != NULL) {
 		scope = &(lease->scope);
 		ddns_cb->address = lease->ip_addr;
+		if (lease->flags & STATIC_LEASE)
+			ddns_cb->flags |= DDNS_STATIC_LEASE;
 	} else if (lease6 != NULL) {
 		scope = &(lease6->scope);
 		memcpy(&ddns_cb->address.iabuf, lease6->addr.s6_addr, 16);
@@ -1618,7 +1652,7 @@ ddns_removals(struct lease    *lease,
 		goto cleanup;
 
 	/* Assume that we are removing both records */
-	ddns_cb->flags = DDNS_UPDATE_ADDR | DDNS_UPDATE_PTR;
+	ddns_cb->flags |= DDNS_UPDATE_ADDR | DDNS_UPDATE_PTR;
 
 	/* and that we want to do the add call */
 	execute_add = ISC_R_SUCCESS;

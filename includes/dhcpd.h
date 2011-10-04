@@ -1538,6 +1538,7 @@ struct ipv6_pool {
 #define DDNS_CLIENT_DID_UPDATE  0x10
 #define DDNS_EXECUTE_NEXT       0x20
 #define DDNS_ABORT              0x40
+#define DDNS_STATIC_LEASE       0x80
 
 /*
  * The following two groups are separate and we could reuse
