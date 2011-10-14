@@ -10,7 +10,7 @@ ISC DHCP 4.2.x includes features that were not included in DHCP 4.1.x.
 These include:
 
 Processing the DHCP to DNS server transactions in an asynchronous fashion.
-The DHCP server or client can now continue with it's processing while
+The DHCP server or client can now continue with its processing while
 awaiting replies from the DNS server.
 
 There are a number of DHCPv6 limitations and features missing in this
@@ -366,7 +366,7 @@ work on other platforms. Please report any problems and suggested fixes to
   decline request for it previously) don't attempt to move it from
   the inactive to active pool as doing so can result in the server
   crashing on an assert failure.  Also retag the lease as active
-  and reset it's timeout value.
+  and reset its timeout value.
   [ISC-Bugs #21921]
 
 - Relay no longer crashes, when DHCP packet is received over interface without
@@ -510,7 +510,7 @@ work on other platforms. Please report any problems and suggested fixes to
   determined lease time) are omitted.
 
 - Processing the DHCP to DNS server transactions in an asyncrhonous fashion.
-  The DHCP server or client can now continue with it's processing while
+  The DHCP server or client can now continue with its processing while
   awaiting replies from the DNS server.
 
 - The 'hardware [ethernet|etc] ...;' parameter in host records has been
