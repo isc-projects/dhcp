@@ -219,7 +219,7 @@ work on other platforms. Please report any problems and suggested fixes to
   decline request for it previously) don't attempt to move it from
   the inactive to active pool as doing so can result in the server
   crshing on an assert failure.  Also retag the lease as active
-  and reset it's timeout value.
+  and reset its timeout value.
   [ISC-Bugs #21921]
 
 			Changes since 4.1.2
