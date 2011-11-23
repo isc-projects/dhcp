@@ -39,6 +39,14 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and may not
 work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
+			Changes since 4.2.3
+
+! Add a check for a null pointer before calling the regexec function.
+  Without out this check we could, under some circumstances, pass
+  a null pointer to the regexec function causing it to segfault.
+  [ISC-Bugs #26704].
+  CVE:
+
 			Changes since 4.2.2
 
 - Fix the code that checks for an existing DDNS transaction to cancel
