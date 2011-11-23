@@ -62,7 +62,7 @@ work on other platforms. Please report any problems and suggested fixes to
   a null pointer to the regexec function causing it to segfault.
   Thanks to a report from BlueCat Networks.
   [ISC-Bugs #26704].
-  CVE:
+  CVE: CVE-2011-4539
 
 			Changes since 4.1-ESV-R3b1
 
