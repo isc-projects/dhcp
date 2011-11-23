@@ -56,6 +56,12 @@ work on other platforms. Please report any problems and suggested fixes to
 
 - Add AM_MAINTAINER_MODE to configure.ac to avoid rebuilding
   configuration files.  [ISC-Bugs #24107]
+ 
+! Add a check for a null pointer before calling the regexec function.
+  Without out this check we could, under some circumstances, pass
+  a null pointer to the regexec function causing it to segfault.
+  [ISC-Bugs #26704].
+  CVE:
 
 			Changes since 4.1-ESV-R3b1
 
