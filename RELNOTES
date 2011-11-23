@@ -44,6 +44,7 @@ work on other platforms. Please report any problems and suggested fixes to
 ! Add a check for a null pointer before calling the regexec function.
   Without out this check we could, under some circumstances, pass
   a null pointer to the regexec function causing it to segfault.
+  Thanks to a report from BlueCat Networks.
   [ISC-Bugs #26704].
   CVE:
 
