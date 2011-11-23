@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-		           Version 4.1-ESV-R3
-			      27 July 2011
+		           Version 4.1-ESV-R4
+			    29 November 2011
 
 			      README FILE
 
@@ -96,8 +96,9 @@ directory, it may not have up-to-date information).
 
 			    RELEASE STATUS
 
-This is ISC DHCP 4.1-ESV-R3, an extended support (ESV)
-release that provides patches for a number of bugs.
+This is ISC DHCP 4.1-ESV-R4, an extended support (ESV)
+release that provides patches for a pair of bugs one of
+which is a potential security issue.
 
 ESVs are intended for users who have longer upgrade constraints 
 Please see our web page http://www.isc.org/downloads/extended-support
