@@ -1125,7 +1125,7 @@ int evaluate_boolean_expression (result, packet, lease, client_state,
 		*result = 0;
 		memset(&re, 0, sizeof(re));
 		if (bleft && bright &&
-		    (left.data != NULL) &&
+		    (left.data != NULL) && (right.data != NULL) &&
         	    (regcomp(&re, (char *)right.data, regflags) == 0) &&
 		    (regexec(&re, (char *)left.data, (size_t)0, NULL, 0) == 0))
 				*result = 1;

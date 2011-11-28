@@ -1,6 +1,6 @@
-.\"	$Id: dhcp-eval.5,v 1.27.364.3 2010/07/02 23:37:06 sar Exp $
+.\"	$Id: dhcp-eval.5,v 1.27.364.3.6.1 2011/11/28 18:13:51 sar Exp $
 .\"
-.\" Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
+.\" Copyright (c) 2009-2011 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
 .\"
@@ -133,8 +133,8 @@ extended regex(7) matching of the values of two data expressions, returning
 true if \fIdata-expression-1\fR matches against the regular expression
 evaluated by \fIdata-expression-2\fR, or false if it does not match or
 encounters some error.  If either the left-hand side or the right-hand side 
-are null, the result is also false.  The \fB~~\fR operator differs from the
-\fB~=\fR operator in that it is case-insensitive.
+are null or empty strings, the result is also false.  The \fB~~\fR operator
+differs from the \fB~=\fR operator in that it is case-insensitive.
 .RE
 .PP
 .I boolean-expression-1 \fBand\fR \fIboolean-expression-2\fR
