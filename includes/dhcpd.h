@@ -1557,7 +1557,7 @@ struct ipv6_pool {
 #define DDNS_EXECUTE_NEXT       0x20
 #define DDNS_ABORT              0x40
 #define DDNS_STATIC_LEASE       0x80
-
+#define DDNS_ACTIVE_LEASE	0x100
 /*
  * The following two groups are separate and we could reuse
  * values but not reusing them may be useful in the future.
@@ -1598,7 +1598,7 @@ typedef struct dhcp_ddns_cb {
 	int zone_addr_count;
 	struct dns_zone *zone;
 
-	int flags;
+	u_int16_t flags;
 	TIME timeout;
 	int state;
 	ddns_action_t cur_func;
@@ -1950,7 +1950,7 @@ void parse_server_duid_conf(struct parse *cfile);
 /* ddns.c */
 int ddns_updates(struct packet *, struct lease *, struct lease *,
 		 struct iasubopt *, struct iasubopt *, struct option_state *);
-int ddns_removals(struct lease *, struct iasubopt *, struct dhcp_ddns_cb *);
+int ddns_removals(struct lease *, struct iasubopt *, struct dhcp_ddns_cb *, isc_boolean_t);
 #if defined (TRACING)
 void trace_ddns_init(void);
 #endif

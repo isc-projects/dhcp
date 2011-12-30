@@ -48,6 +48,19 @@ work on other platforms. Please report any problems and suggested fixes to
   [ISC-Bugs #26704].
   CVE: CVE-2011-4539
 
+! Modify the DDNS handling code.  In a previous patch we added logging
+  code to the DDNS handling.  This code included a bug that caused it
+  to attempt to dereference a NULL pointer and eventually segfault.
+  While reviewing the code as we addressed this problem, we determined
+  that some of the updates to the lease structures would not work as
+  planned since the structures being updated were in the process of
+  being freed: these updates were removed.  In addition we removed an
+  incorrect call to the DDNS removal function that could cause a failure
+  during the removal of DDNS information from the DNS server.
+  Thanks to Jasper Jongmans for reporting this issue.
+  [ISC-Bugs #27078]
+  CVE: CVE-2011-4868
+
 			Changes since 4.2.2
 
 - Fix the code that checks for an existing DDNS transaction to cancel

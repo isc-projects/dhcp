@@ -5218,7 +5218,7 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 	 */
 	if (msg->binding_status == FTS_ACTIVE &&
 	    (chaddr_changed || ident_changed)) {
-		ddns_removals(lease, NULL, NULL);
+		ddns_removals(lease, NULL, NULL, ISC_FALSE);
 
 		if (lease->scope != NULL)
 			binding_scope_dereference(&lease->scope, MDL);
