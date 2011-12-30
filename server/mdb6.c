@@ -1058,7 +1058,7 @@ move_lease_to_inactive(struct ipv6_pool *pool, struct iasubopt *lease,
 #if defined (NSUPDATE)
 		/* Process events upon expiration. */
 		if (pool->pool_type != D6O_IA_PD) {
-			ddns_removals(NULL, lease, NULL);
+			ddns_removals(NULL, lease, NULL, ISC_FALSE);
 		}
 #endif
 
@@ -1466,6 +1466,11 @@ lease_timeout_support(void *vpool) {
 		 * Note that if there are no leases in the pool, 
 		 * expire_lease6() will return ISC_R_SUCCESS with 
 		 * a NULL lease.
+		 *
+		 * expire_lease6() will call move_lease_to_inactive() which
+		 * calls ddns_removals() do we want that on the standard
+		 * expiration timer or a special 'depref' timer?  Original
+		 * query from DH, moved here by SAR.
 		 */
 		lease = NULL;
 		if (expire_lease6(&lease, pool, cur_time) != ISC_R_SUCCESS) {
@@ -1474,18 +1479,6 @@ lease_timeout_support(void *vpool) {
 		if (lease == NULL) {
 			break;
 		}
-
-		/* Look to see if there were ddns updates, and if
-		 * so, drop them.
-		 *
-		 * DH: Do we want to do this on a special 'depref'
-		 * timer rather than expiration timer?
-		 */
-#if defined (NSUPDATE)
-		if (pool->pool_type != D6O_IA_PD) {
-			ddns_removals(NULL, lease, NULL);
-		}
-#endif
 
 		write_ia(lease->ia);
 

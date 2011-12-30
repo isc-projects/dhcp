@@ -124,8 +124,12 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 	if (ddns_cb == NULL) {
 		return(0);
 	}
-	/* assume that we shall update both the A and ptr records */
-	ddns_cb->flags = DDNS_UPDATE_ADDR | DDNS_UPDATE_PTR;
+	/*
+	 * Assume that we shall update both the A and ptr records and,
+	 * as this is an update, set the active flag 
+	 */
+	ddns_cb->flags = DDNS_UPDATE_ADDR | DDNS_UPDATE_PTR |
+		DDNS_ACTIVE_LEASE;
 
 	/*
 	 * For v4 we flag static leases so we don't try
@@ -330,7 +334,7 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 
 		/* If desired do the removals */
 		if (do_remove != 0) {
-			(void) ddns_removals(lease, lease6, NULL);
+			(void) ddns_removals(lease, lease6, NULL, ISC_TRUE);
 		}
 		goto out;
 	}
@@ -532,7 +536,7 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 	 * the ddns messages.  Currently we don't.
 	 */
 	if (do_remove) {
-		rcode1 = ddns_removals(lease, lease6, ddns_cb);
+		rcode1 = ddns_removals(lease, lease6, ddns_cb, ISC_TRUE);
 	}
 	else {
 		ddns_fwd_srv_connector(lease, lease6, scope, ddns_cb,
@@ -739,6 +743,15 @@ ddns_update_lease_text(dhcp_ddns_cb_t        *ddns_cb,
 	 */
 	if (ddns_cb->flags & DDNS_STATIC_LEASE)
 		return (ISC_R_SUCCESS);
+
+	/* 
+	 * If we are processing an expired or released v6 lease
+	 * we don't actually have a scope to update
+	 */
+	if ((ddns_cb->address.len == 16) &&
+	    ((ddns_cb->flags & DDNS_ACTIVE_LEASE) == 0)) {
+		return (ISC_R_SUCCESS);
+	}
 
 	if (inscope != NULL) {
 		scope = inscope;
@@ -1085,6 +1098,15 @@ ddns_update_lease_ptr(struct lease    *lease,
 		return (ISC_R_SUCCESS);
 	}
 
+	/* 
+	 * If we are processing an expired or released v6 lease
+	 * we don't actually have a scope to update
+	 */
+	if ((ddns_cb->address.len == 16) &&
+	    ((ddns_cb->flags & DDNS_ACTIVE_LEASE) == 0)) {
+		return (ISC_R_SUCCESS);
+	}
+
 	if (lease != NULL) {
 		safe_lease_update(lease, ddns_cb, ddns_cb_set, 
 				  file, line);
@@ -1132,7 +1154,7 @@ ddns_update_lease_ptr(struct lease    *lease,
 		     ISC_R_SUCCESS) &&
 		    (find_ipv6_pool(&pool, D6O_IA_NA, &addr) != 
 		     ISC_R_SUCCESS)) {
-			inet_ntop(AF_INET6, &lease6->addr, addrbuf,
+			inet_ntop(AF_INET6, &addr, addrbuf,
 				  MAX_ADDRESS_STRING_LEN);
 			log_error("%s(%d): Pool for lease %s not found.",
 				  file, line, addrbuf);
@@ -1152,7 +1174,7 @@ ddns_update_lease_ptr(struct lease    *lease,
 			find_lease6->ddns_cb = ddns_cb_set;
 			iasubopt_dereference(&find_lease6, MDL);
 		} else {
-			inet_ntop(AF_INET6, &lease6->addr, addrbuf,
+			inet_ntop(AF_INET6, &addr, addrbuf,
 				  MAX_ADDRESS_STRING_LEN);
 			log_error("%s(%d): Lease %s not found within pool.",
 				  file, line, addrbuf);
@@ -1594,12 +1616,18 @@ ddns_fwd_srv_rem1(dhcp_ddns_cb_t *ddns_cb,
  * 0 - badness occurred and we weren't able to do what was wanted
  * 1 - we were able to do stuff but it's in progress
  * in both cases any additional block has been passed on to it's handler
+ * 
+ * active == ISC_TRUE if the lease is still active, and FALSE if the lease
+ * is inactive.  This is used to indicate if the lease is inactive or going
+ * to inactive in IPv6 so we can avoid trying to update the lease with
+ * cb pointers and text information.
  */
 
 int
 ddns_removals(struct lease    *lease,
 	      struct iasubopt *lease6,
-	      dhcp_ddns_cb_t  *add_ddns_cb)
+	      dhcp_ddns_cb_t  *add_ddns_cb,
+	      isc_boolean_t    active)
 {
 	isc_result_t rcode, execute_add = ISC_R_FAILURE;
 	struct binding_scope **scope = NULL;
@@ -1643,6 +1671,16 @@ ddns_removals(struct lease    *lease,
 		ddns_cb->address.len = 16;
 	} else
 		goto cleanup;
+
+	/*
+	 * Set the flag bit if the lease is active, that is it isn't
+	 * expired or released.  This is used in the IPv6 paths to
+	 * determine if we need to update the lease when the response
+	 * from the DNS code is processed.
+	 */
+	if (active == ISC_TRUE) {
+		ddns_cb->flags |= DDNS_ACTIVE_LEASE;
+	}
 
 	/* No scope implies that DDNS has not been performed for this lease. */
 	if (*scope == NULL)
