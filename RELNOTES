@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-			     Version 4.2.3-P1
-			     29 Novemberr 2011
+			     Version 4.2.3-P2
+			      4 January 2012
 
 			      Release Notes
 
@@ -39,14 +39,7 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and may not
 work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
-			Changes since 4.2.3
-
-! Add a check for a null pointer before calling the regexec function.
-  Without out this check we could, under some circumstances, pass
-  a null pointer to the regexec function causing it to segfault.
-  Thanks to a report from BlueCat Networks.
-  [ISC-Bugs #26704].
-  CVE: CVE-2011-4539
+			Changes since 4.2.3-P1
 
 ! Modify the DDNS handling code.  In a previous patch we added logging
   code to the DDNS handling.  This code included a bug that caused it
@@ -60,6 +53,15 @@ work on other platforms. Please report any problems and suggested fixes to
   Thanks to Jasper Jongmans for reporting this issue.
   [ISC-Bugs #27078]
   CVE: CVE-2011-4868
+
+			Changes since 4.2.3
+
+! Add a check for a null pointer before calling the regexec function.
+  Without out this check we could, under some circumstances, pass
+  a null pointer to the regexec function causing it to segfault.
+  Thanks to a report from BlueCat Networks.
+  [ISC-Bugs #26704].
+  CVE: CVE-2011-4539
 
 			Changes since 4.2.2
 
