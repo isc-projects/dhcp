@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2011 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2007-2012 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -808,15 +808,14 @@ create_lease6(struct ipv6_pool *pool, struct iasubopt **addr,
 		}
 
 		/*
-		 * Avoid reserved interface IDs.
-		 * (cf. draft-krishnan-ipv6-reserved-iids-02.txt)
+		 * Avoid reserved interface IDs. (cf. RFC 5453)
 		 */
 		reserved_iid = ISC_FALSE;
-		if (memcmp(&tmp.s6_addr[8], &rtany, 8) == 0) {
+		if (memcmp(&tmp.s6_addr[8], &rtany.s6_addr[8], 8) == 0) {
 			reserved_iid = ISC_TRUE;
 		}
 		if (!reserved_iid &&
-		    (memcmp(&tmp.s6_addr[8], &resany, 7) == 0) &&
+		    (memcmp(&tmp.s6_addr[8], &resany.s6_addr[8], 7) == 0) &&
 		    ((tmp.s6_addr[15] & 0x80) == 0x80)) {
 			reserved_iid = ISC_TRUE;
 		}
