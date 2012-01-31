@@ -4,8 +4,9 @@ Introduction
 In DHCP, a unit test exercises a particular piece of code in 
 isolation. There is a separate unit test per module or API. Each unit
 test lives in a directory beneath the code it is designed to exercise.
-So, we have:
+So, we (will eventually) have:
 
+    server/tests/
     client/tests/
     common/tests/
     dhcpctl/tests/
@@ -18,60 +19,49 @@ we try to be a bit more pragmatic, and target the most basic
 operations, as well tricky code, and areas we have seen bugs in the
 past.
 
+We are using ATF (Automated Test Framework) as a framework to run our
+unittests.
 
 Running Unit Tests
 ------------------
 
-In order to run the unit tests for DHCP, use:
+In order to run the unit tests for DHCP, enable ATF support during configure:
+
+$ ./configure --enable-atf
+
+And then use:
 
 $ make check
 
-This will run all of the unit tests.
+This will run all of the unit tests. Make sure that ATF is actually
+installed and that you have atf-run and atf-report tool in your PATH.
 
 You can run a single test by going to the appropriate test directory 
 and invoking the test directly:
 
-$ cd common/tests
-$ make test_alloc
-$ ./test_alloc
+$ cd server/tests
+$ atf-run | atf-report
 
 There are also a number of options that you can use when running a
-test. To see these, use the "-u" flag on the program.
-
+test. See atf-run and atf-report documentation.
 
 Adding a New Unit Test
 ----------------------
 
 To add an additional test to an existing test program, you must create
-a function for the new test in the C source file:
+a function for the new test in the C source file. You can extend existing
+test suite or create a new one. For introductory example, see 
+server/tests/simple_unittest.c. It is a skeleton example of ATF test.
 
-static void
-mynewtest(void) {
-	static const char *test_desc = "describe the test";
-
-	t_assert("mynewtest", 1, T_REQUIRED, test_desc);
-
-	/* ... test code ... */ 
-
-	t_result(T_PASS);
-}
-
-Then add this function to the T_testlist[] array in the file:
-
-testspec_t T_testlist[] = {
-        ...
-	{	mynewtest, 	"some new test" },
-	{	NULL, 		NULL		}
-};
-
-Then you should be able to compile and run your new test.
-
+Tests in specified directory must be registered in Atffile. See
+server/tests/Atffile for example. Currently every executable with name
+that falls into *_unittest pattern will be executed automatically.
 
 Adding a New Unit Test Program
 ------------------------------
 
 To add a new program, such as when a new module is added, you can copy
-the "unit_test_sample.c" file (in this directory) to a new name, add
+the "simple_unittest.c" file (in this directory) to a new name, add
 the new file as a target in Makefile.am, and begin adding tests. Do
 not forget to add it to CVS via "cvs add".
 
@@ -113,35 +103,9 @@ See existing Makefile.am for examples, and the Automake documentation:
 Support Functions
 -----------------
 
-Here are a few of the most useful functions defined in t_api that you
-can use in testing:
-
-	void
-	t_assert(const char *component, int anum, int class,
-		 const char *what, ...);
-
-		The name of this function is slightly misleading. It
-		actually just prints out an error message in the test
-		output.
-
-	void
-	t_info(const char *format, ...);
-
-		Prints out a message in the test output. You should
-		include "\n" at the end.
-
-	void
-	t_result(int result);
-
-		Prints out the result in the test output. You should
-		use one of the constants for this:
-
-			T_PASS
-			T_FAIL
-			T_UNRESOLVED
-			T_UNSUPPORTED
-			T_UNTESTED
-			T_THREADONLY
+See http://www.netbsd.org/~jmmv/atf/index.html for details about ATF. Note
+that although ATF was originally used for NetBSD validation, it is used
+on many different platforms and is not NetBSD specific.
 
 Additional Testing
 ------------------
@@ -149,5 +113,4 @@ Additional Testing
 Other static or runtime testing is always an option. For instance, you
 can use valgrind to check for memory leaks.
 
-
-$Id: HOWTO-unit-test,v 1.2 2007/11/16 11:04:12 shane Exp $
+$Id: HOWTO-unit-test,v 1.2.570.1 2012/01/31 15:50:15 tomasz Exp $
