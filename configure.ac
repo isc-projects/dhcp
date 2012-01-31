@@ -168,6 +168,33 @@ if test "$enable_use_sockets" = "yes"; then
 		[Define to 1 to use the standard BSD socket API.])
 fi
 
+# Testing section
+
+# Enable ATF unit tests (Automated Test Framework)
+AC_ARG_ENABLE(atf,
+	AC_HELP_STRING([--enable-atf],
+		       [enable support for ATF unit-tests (default is no)]),
+                       [if test "$enableval" = "yes"; then 
+                           enable_atf=yes
+                        else
+                           enable_atf=no
+                        fi], 
+                       [enable_atf=no])
+
+# TODO: Check if atf-run is actually available. If it is not, abort 
+# configuration.
+if test "$enable_atf" != "no"; then
+        ATF_CFLAGS="`pkg-config --cflags atf-c` -DUNIT_TEST"
+        ATF_LDFLAGS="`pkg-config --libs-only-l --libs-only-other atf-c`"
+        ATF_LIBS="`pkg-config --libs-only-l atf-c`"
+fi
+AM_CONDITIONAL(HAVE_ATF, test "$enable_atf" != "no")
+AC_SUBST(ATF_CFLAGS)
+AC_SUBST(ATF_LDFLAGS)
+AC_SUBST(ATF_LIBS)
+# TODO: Not sure if LDFLAGS and LIBS should stay separate or not.
+# That was FAQ recommends: http://www.netbsd.org/~jmmv/atf/docs/faq.html
+
 ###
 ### Path fun.  Older versions of DHCP were installed in /usr/sbin, so we
 ### need to look there and potentially overwrite by default (but not if
@@ -585,6 +612,48 @@ AC_OUTPUT([
   relay/Makefile
   server/Makefile
   tests/Makefile
+  server/tests/Makefile
 ])
 
 sh util/bindvar.sh
+
+cat > config.report << END
+
+     ISC DHCP source configure results:
+    -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+Package:
+  Name:          $PACKAGE_NAME
+  Version:       $PACKAGE_VERSION
+
+C Compiler:      $CC
+
+Flags:
+  DEFS:          $DEFS
+  CFLAGS:        $CFLAGS
+
+Features:
+  debug:         $enable_debug
+  failover:      $enable_failover
+  execute:       $enable_execute
+
+Developer:
+  ATF unittests : $enable_atf
+
+END
+# TODO: Add unit tests
+# TODO: Add Perl system tests
+
+if test "$enable_atf" != "no"
+then
+echo "ATF_CFLAGS  : $ATF_CFLAGS" >> config.report
+echo "ATF_LDFLAGS : $ATF_LDFLAGS" >> config.report
+echo "ATF_LIBS    : $ATF_LIBS" >> config.report
+echo
+fi
+
+cat config.report
+
+echo
+echo Now you can type "make" to build ISC DHCP
+echo
