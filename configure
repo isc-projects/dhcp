@@ -697,6 +697,11 @@ GREP
 EGREP
 RANLIB
 byte_order
+HAVE_ATF_TRUE
+HAVE_ATF_FALSE
+ATF_CFLAGS
+ATF_LDFLAGS
+ATF_LIBS
 ac_prefix_program
 LDAP_CFLAGS
 LIBOBJS
@@ -1305,6 +1310,7 @@ Optional Features:
   --enable-ipv4-pktinfo   enable use of pktinfo on IPv4 sockets (default is
                           no)
   --enable-use-sockets    use the standard BSD socket API (default is no)
+  --enable-atf            enable support for ATF unit-tests (default is no)
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -4826,6 +4832,42 @@ cat >>confdefs.h <<\_ACEOF
 _ACEOF
 
 fi
+
+# Testing section
+
+# Enable ATF unit tests (Automated Test Framework)
+# Check whether --enable-atf was given.
+if test "${enable_atf+set}" = set; then
+  enableval=$enable_atf; if test "$enableval" = "yes"; then
+                           enable_atf=yes
+                        else
+                           enable_atf=no
+                        fi
+else
+  enable_atf=no
+fi
+
+
+# TODO: Check if atf-run is actually available. If it is not, abort
+# configuration.
+if test "$enable_atf" != "no"; then
+        ATF_CFLAGS="`pkg-config --cflags atf-c` -DUNIT_TEST"
+        ATF_LDFLAGS="`pkg-config --libs-only-l --libs-only-other atf-c`"
+        ATF_LIBS="`pkg-config --libs-only-l atf-c`"
+fi
+ if test "$enable_atf" != "no"; then
+  HAVE_ATF_TRUE=
+  HAVE_ATF_FALSE='#'
+else
+  HAVE_ATF_TRUE='#'
+  HAVE_ATF_FALSE=
+fi
+
+
+
+
+# TODO: Not sure if LDFLAGS and LIBS should stay separate or not.
+# That was FAQ recommends: http://www.netbsd.org/~jmmv/atf/docs/faq.html
 
 ###
 ### Path fun.  Older versions of DHCP were installed in /usr/sbin, so we
@@ -8663,7 +8705,7 @@ _ACEOF
   fi
 
 
-ac_config_files="$ac_config_files Makefile client/Makefile common/Makefile common/tests/Makefile dhcpctl/Makefile dst/Makefile includes/Makefile omapip/Makefile relay/Makefile server/Makefile tests/Makefile"
+ac_config_files="$ac_config_files Makefile client/Makefile common/Makefile common/tests/Makefile dhcpctl/Makefile dst/Makefile includes/Makefile omapip/Makefile relay/Makefile server/Makefile tests/Makefile server/tests/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -8779,6 +8821,13 @@ if test -z "${am__fastdepCC_TRUE}" && test -z "${am__fastdepCC_FALSE}"; then
   { { echo "$as_me:$LINENO: error: conditional \"am__fastdepCC\" was never defined.
 Usually this means the macro was only invoked conditionally." >&5
 echo "$as_me: error: conditional \"am__fastdepCC\" was never defined.
+Usually this means the macro was only invoked conditionally." >&2;}
+   { (exit 1); exit 1; }; }
+fi
+if test -z "${HAVE_ATF_TRUE}" && test -z "${HAVE_ATF_FALSE}"; then
+  { { echo "$as_me:$LINENO: error: conditional \"HAVE_ATF\" was never defined.
+Usually this means the macro was only invoked conditionally." >&5
+echo "$as_me: error: conditional \"HAVE_ATF\" was never defined.
 Usually this means the macro was only invoked conditionally." >&2;}
    { (exit 1); exit 1; }; }
 fi
@@ -9262,6 +9311,7 @@ do
     "relay/Makefile") CONFIG_FILES="$CONFIG_FILES relay/Makefile" ;;
     "server/Makefile") CONFIG_FILES="$CONFIG_FILES server/Makefile" ;;
     "tests/Makefile") CONFIG_FILES="$CONFIG_FILES tests/Makefile" ;;
+    "server/tests/Makefile") CONFIG_FILES="$CONFIG_FILES server/tests/Makefile" ;;
 
   *) { { echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5
 echo "$as_me: error: invalid argument: $ac_config_target" >&2;}
@@ -9407,13 +9457,18 @@ GREP!$GREP$ac_delim
 EGREP!$EGREP$ac_delim
 RANLIB!$RANLIB$ac_delim
 byte_order!$byte_order$ac_delim
+HAVE_ATF_TRUE!$HAVE_ATF_TRUE$ac_delim
+HAVE_ATF_FALSE!$HAVE_ATF_FALSE$ac_delim
+ATF_CFLAGS!$ATF_CFLAGS$ac_delim
+ATF_LDFLAGS!$ATF_LDFLAGS$ac_delim
+ATF_LIBS!$ATF_LIBS$ac_delim
 ac_prefix_program!$ac_prefix_program$ac_delim
 LDAP_CFLAGS!$LDAP_CFLAGS$ac_delim
 LIBOBJS!$LIBOBJS$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 87; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 92; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5
@@ -9976,3 +10031,44 @@ fi
 
 
 sh util/bindvar.sh
+
+cat > config.report << END
+
+     ISC DHCP source configure results:
+    -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+Package:
+  Name:          $PACKAGE_NAME
+  Version:       $PACKAGE_VERSION
+
+C Compiler:      $CC
+
+Flags:
+  DEFS:          $DEFS
+  CFLAGS:        $CFLAGS
+
+Features:
+  debug:         $enable_debug
+  failover:      $enable_failover
+  execute:       $enable_execute
+
+Developer:
+  ATF unittests : $enable_atf
+
+END
+# TODO: Add unit tests
+# TODO: Add Perl system tests
+
+if test "$enable_atf" != "no"
+then
+echo "ATF_CFLAGS  : $ATF_CFLAGS" >> config.report
+echo "ATF_LDFLAGS : $ATF_LDFLAGS" >> config.report
+echo "ATF_LIBS    : $ATF_LIBS" >> config.report
+echo
+fi
+
+cat config.report
+
+echo
+echo Now you can type "make" to build ISC DHCP
+echo
