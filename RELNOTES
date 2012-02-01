@@ -54,7 +54,7 @@ work on other platforms. Please report any problems and suggested fixes to
 
 			Changes since 4.1-ESV-R4
 
-- Fixed teh code that checks if an address the server is planning
+- Fixed the code that checks if an address the server is planning
   to hand out is in a reserved range.  This would appear as
   the server being out of addresses in pools with particular ranges.
   [ISC-Bugs #26498]
