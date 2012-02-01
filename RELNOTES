@@ -39,6 +39,16 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and may not
 work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
+			Changes since 4.2.x
+<list of changes for 4.3 not in any 4.2.x - remove this line when done>
+
+- If a client renews before 'dhcp-cache-threshold' percent of its lease
+  has elapsed (default 25%), the server will reuse the allocated lease
+  (provide a lease within the currently allocated lease-time) rather
+  than extend or renew the lease.  This absolves the server of needing
+  to perform an fsync() operation on the lease database before reply,
+  which improves performance. [ISC-Bugs #22228]
+
 			Changes since 4.2.3
 
 ! Add a check for a null pointer before calling the regexec function.
@@ -183,13 +193,6 @@ work on other platforms. Please report any problems and suggested fixes to
   [ISC-Bugs #13151] 
 
 - Compilation problem with gcc4.5 and omshell.c resolved. [ISC-Bugs #23831]
-
-- If a client renews before 'dhcp-cache-threshold' percent of its lease
-  has elapsed (default 25%), the server will reuse the allocated lease
-  (provide a lease within the currently allocated lease-time) rather
-  than extend or renew the lease.  This absolves the server of needing
-  to perform an fsync() operation on the lease database before reply,
-  which improves performance. [ISC-Bugs #22228]
 
 - Client Script fixes
   [ISC-Bugs #23045] Typos in client/scripts/openbsd
