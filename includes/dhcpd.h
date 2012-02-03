@@ -3,7 +3,7 @@
    Definitions for dhcpd... */
 
 /*
- * Copyright (c) 2004-2011 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2012 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -3543,13 +3543,13 @@ void ddns_cb_forget_zone (dhcp_ddns_cb_t *ddns_cb);
 //void *key_from_zone(struct dns_zone *zone);
 
 isc_result_t
-ddns_modify_fwd(dhcp_ddns_cb_t *ddns_cb);
+ddns_modify_fwd(dhcp_ddns_cb_t *ddns_cb, const char *file, int line);
 
 isc_result_t
-ddns_modify_ptr(dhcp_ddns_cb_t *ddns_cb);
+ddns_modify_ptr(dhcp_ddns_cb_t *ddns_cb, const char *file, int line);
 
 void
-ddns_cancel(dhcp_ddns_cb_t *ddns_cb);
+ddns_cancel(dhcp_ddns_cb_t *ddns_cb, const char *file, int line);
 
 #define MAX_ADDRESS_STRING_LEN \
    (sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255"))
