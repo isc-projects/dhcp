@@ -3,7 +3,7 @@
    Domain Name Service subroutines. */
 
 /*
- * Copyright (c) 2009-2011 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2012 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2001-2003 by Internet Software Consortium
  *
@@ -813,6 +813,12 @@ void repudiate_zone (struct dns_zone **zone)
 	   XXX zones.   This isn't a big problem since we're not yet
 	   XXX caching zones... :'} */
 
+	/* verify that we have a pointer at least */
+	if ((zone == NULL) || (*zone == NULL)) {
+		log_info("Null argument to repudiate zone");
+		return;
+	}
+
 	(*zone) -> timeout = cur_time - 1;
 	dns_zone_dereference (zone, MDL);
 }
@@ -1319,6 +1325,24 @@ void ddns_interlude(isc_task_t  *taskp,
 	 * need to clean up. */
 	if ((eresult == ISC_R_CANCELED) ||
 	    ((ddns_cb->flags & DDNS_ABORT) != 0)) {
+#if defined (DEBUG_DNS_UPDATES)
+		log_info("DDNS: completeing transaction cancellation cb=%p, "
+			 "flags=%x, %s",
+			 ddns_cb, ddns_cb->flags, isc_result_totext(eresult));
+#endif
+		if ((ddns_cb->flags & DDNS_ABORT) == 0) {
+			log_info("DDNS: cleaning up lease pointer for a cancel "
+				 "cb=%p", ddns_cb);
+			/* 
+			 * We shouldn't actually be able to get here but
+			 * we are.  This means we haven't cleaned up
+			 * the lease pointer so we need to do that before
+			 * freeing the cb.  
+			 */
+			ddns_cb->cur_func(ddns_cb, eresult);
+			return;
+		}
+
 		if (ddns_cb->next_op != NULL) {
 			/* if necessary cleanup up next op block */
 			ddns_cb_free(ddns_cb->next_op, MDL);
@@ -1333,6 +1357,8 @@ void ddns_interlude(isc_task_t  *taskp,
 		int i;
 		/* Our zone information was questionable,
 		 * repudiate it and try again */
+		log_error("DDNS: bad zone information, repudiating zone %s",
+			  ddns_cb->zone_name);
 		repudiate_zone(&ddns_cb->zone);
 		ddns_cb->zone_name[0]    = 0;
 		ISC_LIST_INIT(ddns_cb->zone_server_list);
@@ -1340,20 +1366,18 @@ void ddns_interlude(isc_task_t  *taskp,
 			ISC_LINK_INIT(&ddns_cb->zone_addrs[i], link);
 		}
 
-		if ((ddns_cb->state &
-		     (DDNS_STATE_ADD_PTR | DDNS_STATE_REM_PTR)) != 0) {
-			result = ddns_modify_ptr(ddns_cb);
+		if ((ddns_cb->state == DDNS_STATE_ADD_PTR) ||
+		    (ddns_cb->state == DDNS_STATE_REM_PTR)) {
+			result = ddns_modify_ptr(ddns_cb, MDL);
 		} else {
-			result = ddns_modify_fwd(ddns_cb);
+			result = ddns_modify_fwd(ddns_cb, MDL);
 		}
 
 		if (result != ISC_R_SUCCESS) {
-			/* if we couldn't redo the query toss it */
-			if (ddns_cb->next_op != NULL) {
-				/* cleanup up next op block */
-				ddns_cb_free(ddns_cb->next_op, MDL);
-				}
-			ddns_cb_free(ddns_cb, MDL);
+			/* if we couldn't redo the query log it and
+			 * let the next function clean it up */
+			log_info("DDNS: Failed to retry after zone failure");
+			ddns_cb->cur_func(ddns_cb, result);
 		}
 		return;
 	} else {
@@ -1371,7 +1395,7 @@ void ddns_interlude(isc_task_t  *taskp,
  */
 
 isc_result_t
-ddns_modify_fwd(dhcp_ddns_cb_t *ddns_cb)
+ddns_modify_fwd(dhcp_ddns_cb_t *ddns_cb, const char *file, int line)
 {
 	isc_result_t result;
 	dns_tsec_t *tsec_key = NULL;
@@ -1541,6 +1565,13 @@ ddns_modify_fwd(dhcp_ddns_cb_t *ddns_cb)
 #endif
 
  cleanup:
+#if defined (DEBUG_DNS_UPDATES)
+	if (result != ISC_R_SUCCESS) {
+		log_info("DDNS: %s(%d): error in ddns_modify_fwd %s for %p",
+			 file, line, isc_result_totext(result), ddns_cb);
+	}
+#endif
+
 	if (dataspace != NULL) {
 		isc_mem_put(dhcp_gbl_ctx.mctx, dataspace,
 			    sizeof(*dataspace) * 4);
@@ -1550,7 +1581,7 @@ ddns_modify_fwd(dhcp_ddns_cb_t *ddns_cb)
 
 
 isc_result_t
-ddns_modify_ptr(dhcp_ddns_cb_t *ddns_cb)
+ddns_modify_ptr(dhcp_ddns_cb_t *ddns_cb, const char *file, int line)
 {
 	isc_result_t result;
 	dns_tsec_t *tsec_key  = NULL;
@@ -1730,6 +1761,13 @@ ddns_modify_ptr(dhcp_ddns_cb_t *ddns_cb)
 #endif
 
  cleanup:
+#if defined (DEBUG_DNS_UPDATES)
+	if (result != ISC_R_SUCCESS) {
+		log_info("DDNS: %s(%d): error in ddns_modify_ptr %s for %p",
+			 file, line, isc_result_totext(result), ddns_cb);
+	}
+#endif
+
 	if (dataspace != NULL) {
 		isc_mem_put(dhcp_gbl_ctx.mctx, dataspace,
 			    sizeof(*dataspace) * 2);
@@ -1738,13 +1776,18 @@ ddns_modify_ptr(dhcp_ddns_cb_t *ddns_cb)
 }
 
 void
-ddns_cancel(dhcp_ddns_cb_t *ddns_cb) {
+ddns_cancel(dhcp_ddns_cb_t *ddns_cb, const char *file, int line) {
 	ddns_cb->flags |= DDNS_ABORT;
 	if (ddns_cb->transaction != NULL) {
 		dns_client_cancelupdate((dns_clientupdatetrans_t *)
 					ddns_cb->transaction);
 	}
 	ddns_cb->lease = NULL;
+
+#if defined (DEBUG_DNS_UPDATES)
+	log_info("DDNS: %s(%d): cancelling transaction for  %p",
+		 file, line,  ddns_cb);
+#endif
 }
 
 #endif /* NSUPDATE */

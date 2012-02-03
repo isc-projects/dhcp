@@ -4,7 +4,7 @@
 
 /*
  * 
- * Copyright (c) 2009-2011 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2012 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2000-2003 by Internet Software Consortium
  *
@@ -104,12 +104,12 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 
 	if (lease != NULL) {
 		if ((old != NULL) && (old->ddns_cb != NULL)) {
-			ddns_cancel(old->ddns_cb);
+			ddns_cancel(old->ddns_cb, MDL);
 			old->ddns_cb = NULL;
 		}
 	} else if (lease6 != NULL) {
 		if ((old6 != NULL) && (old6->ddns_cb != NULL)) {
-			ddns_cancel(old6->ddns_cb);
+			ddns_cancel(old6->ddns_cb, MDL);
 			old6->ddns_cb = NULL;
 		}
 	} else {
@@ -1263,6 +1263,11 @@ ddns_ptr_remove(dhcp_ddns_cb_t *ddns_cb,
 
 		/* trigger any add operation */
 		result = ISC_R_SUCCESS;
+#if defined (DEBUG_DNS_UPDATES)
+		log_info("DDNS: removed map or no reverse map to remove %.*s",
+			 (int)ddns_cb->rev_name.len,
+			 (const char *)ddns_cb->rev_name.data);
+#endif
 		break;
 
 	default:
@@ -1337,7 +1342,7 @@ ddns_fwd_srv_add2(dhcp_ddns_cb_t *ddns_cb,
 			ddns_cb->state = DDNS_STATE_ADD_PTR;
 			ddns_cb->cur_func = ddns_ptr_add;
 			
-			result = ddns_modify_ptr(ddns_cb);
+			result = ddns_modify_ptr(ddns_cb, MDL);
 			if (result == ISC_R_SUCCESS) {
 				return;
 			}
@@ -1410,12 +1415,11 @@ ddns_fwd_srv_add1(dhcp_ddns_cb_t *ddns_cb,
 			ddns_cb->state = DDNS_STATE_ADD_PTR;
 			ddns_cb->cur_func = ddns_ptr_add;
 			
-			result = ddns_modify_ptr(ddns_cb);
+			result = ddns_modify_ptr(ddns_cb, MDL);
 			if (result == ISC_R_SUCCESS) {
 				return;
 			}
 		}
-			
 		break;
 
 	case DNS_R_YXDOMAIN:
@@ -1423,11 +1427,10 @@ ddns_fwd_srv_add1(dhcp_ddns_cb_t *ddns_cb,
 		ddns_cb->state = DDNS_STATE_ADD_FW_YXDHCID;
 		ddns_cb->cur_func = ddns_fwd_srv_add2;
 			
-		result = ddns_modify_fwd(ddns_cb);
+		result = ddns_modify_fwd(ddns_cb, MDL);
 		if (result == ISC_R_SUCCESS) {
 			return;
 		}
-
 		break;
 
 	default:
@@ -1478,12 +1481,12 @@ ddns_fwd_srv_connector(struct lease          *lease,
 		if (ddns_cb->flags & DDNS_UPDATE_ADDR) {
 			ddns_cb->state    = DDNS_STATE_ADD_FW_NXDOMAIN;
 			ddns_cb->cur_func = ddns_fwd_srv_add1;
-			result = ddns_modify_fwd(ddns_cb);
+			result = ddns_modify_fwd(ddns_cb, MDL);
 		} else if ((ddns_cb->flags & DDNS_UPDATE_PTR) &&
 			 (ddns_cb->rev_name.len != 0)) {
 			ddns_cb->state    = DDNS_STATE_ADD_PTR;
 			ddns_cb->cur_func = ddns_ptr_add;
-			result = ddns_modify_ptr(ddns_cb);
+			result = ddns_modify_ptr(ddns_cb, MDL);
 		} else {
 			ddns_update_lease_text(ddns_cb, inscope);
 		}
@@ -1528,7 +1531,7 @@ ddns_fwd_srv_rem2(dhcp_ddns_cb_t *ddns_cb,
 			ddns_cb->state = DDNS_STATE_REM_PTR;
 			ddns_cb->cur_func = ddns_ptr_remove;
 			
-			eresult = ddns_modify_ptr(ddns_cb);
+			eresult = ddns_modify_ptr(ddns_cb, MDL);
 			if (eresult == ISC_R_SUCCESS) {
 				return;
 			}
@@ -1568,7 +1571,7 @@ ddns_fwd_srv_rem1(dhcp_ddns_cb_t *ddns_cb,
 		/* Do the second step of the FWD removal */
 		ddns_cb->state    = DDNS_STATE_REM_FW_NXRR;
 		ddns_cb->cur_func = ddns_fwd_srv_rem2;
-		result = ddns_modify_fwd(ddns_cb);
+		result = ddns_modify_fwd(ddns_cb, MDL);
 		if (result == ISC_R_SUCCESS) {
 			return;
 		}
@@ -1577,6 +1580,10 @@ ddns_fwd_srv_rem1(dhcp_ddns_cb_t *ddns_cb,
 	case DNS_R_NXRRSET:
 	case DNS_R_NXDOMAIN:
 		ddns_update_lease_text(ddns_cb, NULL);
+
+#if defined (DEBUG_DNS_UPDATES)
+		log_info("DDNS: no forward map to remove. %p", ddns_cb);
+#endif
 
 		/* Do the next operation */
 		if ((ddns_cb->flags & DDNS_UPDATE_PTR) != 0) {
@@ -1588,7 +1595,7 @@ ddns_fwd_srv_rem1(dhcp_ddns_cb_t *ddns_cb,
 			ddns_cb->state    = DDNS_STATE_REM_PTR;
 			ddns_cb->cur_func = ddns_ptr_remove;
 			
-			result = ddns_modify_ptr(ddns_cb);
+			result = ddns_modify_ptr(ddns_cb, MDL);
 			if (result == ISC_R_SUCCESS) {
 				return;
 			}
@@ -1642,10 +1649,10 @@ ddns_removals(struct lease    *lease,
 	 * - for example as part of a lease expiry - we won't.
 	 */
 	if ((lease != NULL) && (lease->ddns_cb != NULL)) {
-		ddns_cancel(lease->ddns_cb);
+		ddns_cancel(lease->ddns_cb, MDL);
 		lease->ddns_cb = NULL;
 	} else if ((lease6 != NULL) && (lease6->ddns_cb != NULL)) {
-		ddns_cancel(lease6->ddns_cb);
+		ddns_cancel(lease6->ddns_cb, MDL);
 		lease6->ddns_cb = NULL;
 	}
 
@@ -1766,7 +1773,7 @@ ddns_removals(struct lease    *lease,
 			ddns_cb->state    = DDNS_STATE_REM_FW_YXDHCID;
 			ddns_cb->cur_func = ddns_fwd_srv_rem1;
 
-			rcode = ddns_modify_fwd(ddns_cb);
+			rcode = ddns_modify_fwd(ddns_cb, MDL);
 			if (rcode == ISC_R_SUCCESS) {
 				ddns_update_lease_ptr(lease, lease6, ddns_cb,
 						      ddns_cb, MDL);
@@ -1806,7 +1813,7 @@ ddns_removals(struct lease    *lease,
 			result = 1;
 		}
 
-		rcode = ddns_modify_ptr(ddns_cb);
+		rcode = ddns_modify_ptr(ddns_cb, MDL);
 		if (rcode == ISC_R_SUCCESS) {
 			ddns_update_lease_ptr(lease, lease6, ddns_cb, ddns_cb,
 					      MDL);

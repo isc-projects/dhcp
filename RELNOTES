@@ -76,6 +76,11 @@ work on other platforms. Please report any problems and suggested fixes to
   the server being out of addresses in pools with particular ranges.
   [ISC-Bugs #26498]
 
+- In the DDNS code handle error conditions more gracefully and add more
+  logging code.  The major change is to handle unexpected cancel events
+  from the DNS client code.
+  [ISC-Bugs 26287].
+
 			Changes since 4.2.2
 
 - Fix the code that checks for an existing DDNS transaction to cancel

@@ -3,7 +3,7 @@
    DHCP Client. */
 
 /*
- * Copyright (c) 2004-2011 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2012 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -3704,7 +3704,7 @@ client_dns_remove_action(dhcp_ddns_cb_t *ddns_cb,
 		/* Do the second stage of the FWD removal */
 		ddns_cb->state = DDNS_STATE_REM_FW_NXRR;
 
-		result = ddns_modify_fwd(ddns_cb);
+		result = ddns_modify_fwd(ddns_cb, MDL);
 		if (result == ISC_R_SUCCESS) {
 			return;
 		}
@@ -3724,7 +3724,7 @@ client_dns_remove(struct client_state *client,
 
 	/* if we have an old ddns request for this client, cancel it */
 	if (client->ddns_cb != NULL) {
-		ddns_cancel(client->ddns_cb);
+		ddns_cancel(client->ddns_cb, MDL);
 		client->ddns_cb = NULL;
 	}
 	
@@ -3882,7 +3882,7 @@ client_dns_update_action(dhcp_ddns_cb_t *ddns_cb,
 			ddns_cb->state = DDNS_STATE_ADD_FW_YXDHCID;
 			ddns_cb->cur_func = client_dns_update_action;
 
-			result = ddns_modify_fwd(ddns_cb);
+			result = ddns_modify_fwd(ddns_cb, MDL);
 			if (result == ISC_R_SUCCESS) {
 				return;
 			}
@@ -4019,7 +4019,7 @@ client_dns_update(struct client_state *client, dhcp_ddns_cb_t *ddns_cb)
 	 * Perform updates.
 	 */
 	if (ddns_cb->fwd_name.len && ddns_cb->dhcid.len) {
-		rcode = ddns_modify_fwd(ddns_cb);
+		rcode = ddns_modify_fwd(ddns_cb, MDL);
 	} else
 		rcode = ISC_R_FAILURE;
 
@@ -4052,7 +4052,7 @@ dhclient_schedule_updates(struct client_state *client,
 
 	/* cancel any outstanding ddns requests */
 	if (client->ddns_cb != NULL) {
-		ddns_cancel(client->ddns_cb);
+		ddns_cancel(client->ddns_cb, MDL);
 		client->ddns_cb = NULL;
 	}
 
