@@ -81,6 +81,9 @@ work on other platforms. Please report any problems and suggested fixes to
   from the DNS client code.
   [ISC-Bugs 26287].
 
+- Tidy up the receive calls and eliminate the need for found_pkt
+  [ISC-Bugs #25066]
+ 
 			Changes since 4.2.2
 
 - Fix the code that checks for an existing DDNS transaction to cancel
