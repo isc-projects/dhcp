@@ -759,7 +759,7 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 	struct sockaddr_in *from;
 	struct hardware *hfrom;
 {
-#if !defined(USE_V4_PKTINFO)
+#if !(defined(IP_PKTINFO) && defined(IP_RECVPKTINFO) && defined(USE_V4_PKTINFO))
 	SOCKLEN_T flen = sizeof *from;
 #endif
 	int result;
@@ -782,7 +782,6 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 	struct cmsghdr *cmsg;
 	struct in_pktinfo *pktinfo;
 	unsigned int ifindex;
-	int found_pktinfo;
 
 	/*
 	 * If necessary allocate space for the control message header.
@@ -825,7 +824,7 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 	 * We set up some space for a "control message". We have 
 	 * previously asked the kernel to give us packet 
 	 * information (when we initialized the interface), so we
-	 * should get the destination address from that.
+	 * should get the interface index from that.
 	 */
 	m.msg_control = control_buf;
 	m.msg_controllen = control_buf_len;
@@ -836,12 +835,8 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 		/*
 		 * If we did read successfully, then we need to loop
 		 * through the control messages we received and 
-		 * find the one with our destination address.
-		 *
-		 * We also keep a flag to see if we found it. If we 
-		 * didn't, then we consider this to be an error.
+		 * find the one with our inteface index.
 		 */
-		found_pktinfo = 0;
 		cmsg = CMSG_FIRSTHDR(&m);
 		while (cmsg != NULL) {
 			if ((cmsg->cmsg_level == IPPROTO_IP) && 
@@ -855,18 +850,21 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 				 * the discover code.
 				 */
 				memcpy(hfrom->hbuf, &ifindex, sizeof(ifindex));
-				found_pktinfo = 1;
+				return (result);
 			}
 			cmsg = CMSG_NXTHDR(&m, cmsg);
 		}
-		if (!found_pktinfo) {
-			result = -1;
-			errno = EIO;
-		}
+
+		/*
+		 * We didn't find the necessary control message
+		 * flag it as an error
+		 */
+		result = -1;
+		errno = EIO;
 	}
 #else
-		result = recvfrom (interface -> rfdesc, (char *)buf, len, 0,
-				   (struct sockaddr *)from, &flen);
+		result = recvfrom(interface -> rfdesc, (char *)buf, len, 0,
+				  (struct sockaddr *)from, &flen);
 #endif /* IP_PKTINFO ... */
 #ifdef IGNORE_HOSTUNREACH
 	} while (result < 0 &&
@@ -874,7 +872,7 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 		  errno == ECONNREFUSED) &&
 		 retry++ < 10);
 #endif
-	return result;
+	return (result);
 }
 
 #endif /* USE_SOCKET_RECEIVE */
@@ -891,7 +889,6 @@ receive_packet6(struct interface_info *interface,
 	int result;
 	struct cmsghdr *cmsg;
 	struct in6_pktinfo *pktinfo;
-	int found_pktinfo;
 
 	/*
 	 * If necessary allocate space for the control message header.
@@ -946,11 +943,7 @@ receive_packet6(struct interface_info *interface,
 		 * If we did read successfully, then we need to loop
 		 * through the control messages we received and 
 		 * find the one with our destination address.
-		 *
-		 * We also keep a flag to see if we found it. If we 
-		 * didn't, then we consider this to be an error.
 		 */
-		found_pktinfo = 0;
 		cmsg = CMSG_FIRSTHDR(&m);
 		while (cmsg != NULL) {
 			if ((cmsg->cmsg_level == IPPROTO_IPV6) && 
@@ -958,17 +951,21 @@ receive_packet6(struct interface_info *interface,
 				pktinfo = (struct in6_pktinfo *)CMSG_DATA(cmsg);
 				*to_addr = pktinfo->ipi6_addr;
 				*if_idx = pktinfo->ipi6_ifindex;
-				found_pktinfo = 1;
+
+				return (result);
 			}
 			cmsg = CMSG_NXTHDR(&m, cmsg);
 		}
-		if (!found_pktinfo) {
-			result = -1;
-			errno = EIO;
-		}
+
+		/*
+		 * We didn't find the necessary control message
+		 * flag is as an error
+		 */
+		result = -1;
+		errno = EIO;
 	}
 
-	return result;
+	return (result);
 }
 #endif /* DHCPv6 */
 

@@ -59,6 +59,9 @@ work on other platforms. Please report any problems and suggested fixes to
   the server being out of addresses in pools with particular ranges.
   [ISC-Bugs #26498]
 
+- Tidy up the receive calls and eliminate the need for found_pkt
+  [ISC-Bugs #25066]
+
 			Changes since 4.1-ESV-R3
 
 - Add AM_MAINTAINER_MODE to configure.ac to avoid rebuilding
