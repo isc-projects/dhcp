@@ -4799,9 +4799,9 @@ _ACEOF
 
 fi
 
-# Check whether --enable-IPv4_PKTINFO was given.
-if test "${enable_IPv4_PKTINFO+set}" = set; then
-  enableval=$enable_IPv4_PKTINFO;
+# Check whether --enable-ipv4_pktinfo was given.
+if test "${enable_ipv4_pktinfo+set}" = set; then
+  enableval=$enable_ipv4_pktinfo;
 fi
 
 
@@ -4813,9 +4813,9 @@ _ACEOF
 
 fi
 
-# Check whether --enable-USE_SOCKETS was given.
-if test "${enable_USE_SOCKETS+set}" = set; then
-  enableval=$enable_USE_SOCKETS;
+# Check whether --enable-use_sockets was given.
+if test "${enable_use_sockets+set}" = set; then
+  enableval=$enable_use_sockets;
 fi
 
 
@@ -6796,7 +6796,7 @@ fi
 		then
 
 cat >>confdefs.h <<\_ACEOF
-#define HAVE_BPF ""
+#define HAVE_BPF 1
 _ACEOF
 
 		fi
