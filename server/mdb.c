@@ -3,6 +3,7 @@
    Server-specific in-memory database support. */
 
 /*
+ * Copyright (c) 2011-2012 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
@@ -1882,9 +1883,17 @@ int find_lease_by_hw_addr (struct lease **lp,
 			   const char *file, int line)
 {
 	if (hwlen == 0)
-		return 0;
-	return lease_id_hash_lookup(lp, lease_hw_addr_hash, hwaddr, hwlen,
-				    file, line);
+		return (0);
+
+	/*
+	 * If it's an infiniband address don't bother
+	 * as we don't have a useful address to hash.
+	 */
+	if ((hwlen == 1) && (hwaddr[0] == HTYPE_INFINIBAND))
+		return (0);
+
+	return (lease_id_hash_lookup(lp, lease_hw_addr_hash, hwaddr, hwlen,
+				     file, line));
 }
 
 /* If the lease is preferred over the candidate, return truth.  The
@@ -2049,6 +2058,8 @@ void uid_hash_delete (lease)
 }
 
 /* Add the specified lease to the hardware address hash. */
+/* We don't add leases with infiniband addresses to the
+ * hash as there isn't any address to hash on. */
 
 void
 hw_hash_add(struct lease *lease)
@@ -2058,6 +2069,14 @@ hw_hash_add(struct lease *lease)
 	struct lease *prev = NULL;
 	struct lease *next = NULL;
 
+	/*
+	 * If it's an infiniband address don't bother
+	 * as we don't have a useful address to hash.
+	 */
+	if ((lease->hardware_addr.hlen == 1) &&
+	    (lease->hardware_addr.hbuf[0] == HTYPE_INFINIBAND))
+		return;
+	   
 	/* If it's not in the hash, just add it. */
 	if (!find_lease_by_hw_addr (&head, lease -> hardware_addr.hbuf,
 				    lease -> hardware_addr.hlen, MDL))
@@ -2128,6 +2147,14 @@ void hw_hash_delete (lease)
 {
 	struct lease *head = (struct lease *)0;
 	struct lease *next = (struct lease *)0;
+
+	/*
+	 * If it's an infiniband address don't bother
+	 * as we don't have a useful address to hash.
+	 */
+	if ((lease->hardware_addr.hlen == 1) &&
+	    (lease->hardware_addr.hbuf[0] == HTYPE_INFINIBAND))
+		return;
 
 	/* If it's not in the hash, we have no work to do. */
 	if (!find_lease_by_hw_addr (&head, lease -> hardware_addr.hbuf,

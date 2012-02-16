@@ -3,7 +3,7 @@
    Common parser code for dhcpd and dhclient. */
 
 /*
- * Copyright (c) 2004-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2012 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -569,7 +569,9 @@ parse_ip_addr_with_subnet(cfile, match)
 
 /*
  * hardware-parameter :== HARDWARE hardware-type colon-separated-hex-list SEMI
- * hardware-type :== ETHERNET | TOKEN_RING | TOKEN_FDDI
+ * hardware-type :== ETHERNET | TOKEN_RING | TOKEN_FDDI | INFINIBAND
+ * Note that INFINIBAND may not be useful for some items, such as classification
+ * as the hardware address won't always be available.
  */
 
 void parse_hardware_param (cfile, hardware)
@@ -581,24 +583,27 @@ void parse_hardware_param (cfile, hardware)
 	unsigned hlen;
 	unsigned char *t;
 
-	token = next_token (&val, (unsigned *)0, cfile);
+	token = next_token(&val, NULL, cfile);
 	switch (token) {
 	      case ETHERNET:
-		hardware -> hbuf [0] = HTYPE_ETHER;
+		hardware->hbuf[0] = HTYPE_ETHER;
 		break;
 	      case TOKEN_RING:
-		hardware -> hbuf [0] = HTYPE_IEEE802;
+		hardware->hbuf[0] = HTYPE_IEEE802;
 		break;
 	      case TOKEN_FDDI:
-		hardware -> hbuf [0] = HTYPE_FDDI;
+		hardware->hbuf[0] = HTYPE_FDDI;
+		break;
+	      case TOKEN_INFINIBAND:
+		hardware->hbuf[0] = HTYPE_INFINIBAND;
 		break;
 	      default:
-		if (!strncmp (val, "unknown-", 8)) {
-			hardware -> hbuf [0] = atoi (&val [8]);
+		if (!strncmp(val, "unknown-", 8)) {
+			hardware->hbuf[0] = atoi(&val[8]);
 		} else {
-			parse_warn (cfile,
-				    "expecting a network hardware type");
-			skip_to_semi (cfile);
+			parse_warn(cfile,
+				   "expecting a network hardware type");
+			skip_to_semi(cfile);
 
 			return;
 		}
@@ -612,34 +617,33 @@ void parse_hardware_param (cfile, hardware)
 	   that data in the lease file rather than simply failing on such
 	   clients.   Yuck. */
 	hlen = 0;
-	token = peek_token (&val, (unsigned *)0, cfile);
+	token = peek_token(&val, NULL, cfile);
 	if (token == SEMI) {
-		hardware -> hlen = 1;
+		hardware->hlen = 1;
 		goto out;
 	}
-	t = parse_numeric_aggregate (cfile, (unsigned char *)0, &hlen,
-				     COLON, 16, 8);
-	if (!t) {
-		hardware -> hlen = 1;
+	t = parse_numeric_aggregate(cfile, NULL, &hlen, COLON, 16, 8);
+	if (t == NULL) {
+		hardware->hlen = 1;
 		return;
 	}
-	if (hlen + 1 > sizeof hardware -> hbuf) {
-		dfree (t, MDL);
-		parse_warn (cfile, "hardware address too long");
+	if (hlen + 1 > sizeof(hardware->hbuf)) {
+		dfree(t, MDL);
+		parse_warn(cfile, "hardware address too long");
 	} else {
-		hardware -> hlen = hlen + 1;
-		memcpy ((unsigned char *)&hardware -> hbuf [1], t, hlen);
-		if (hlen + 1 < sizeof hardware -> hbuf)
-			memset (&hardware -> hbuf [hlen + 1], 0,
-				(sizeof hardware -> hbuf) - hlen - 1);
-		dfree (t, MDL);
+		hardware->hlen = hlen + 1;
+		memcpy((unsigned char *)&hardware->hbuf[1], t, hlen);
+		if (hlen + 1 < sizeof(hardware->hbuf))
+			memset(&hardware->hbuf[hlen + 1], 0,
+			       (sizeof(hardware->hbuf)) - hlen - 1);
+		dfree(t, MDL);
 	}
 	
       out:
-	token = next_token (&val, (unsigned *)0, cfile);
+	token = next_token(&val, NULL, cfile);
 	if (token != SEMI) {
-		parse_warn (cfile, "expecting semicolon.");
-		skip_to_semi (cfile);
+		parse_warn(cfile, "expecting semicolon.");
+		skip_to_semi(cfile);
 	}
 }
 

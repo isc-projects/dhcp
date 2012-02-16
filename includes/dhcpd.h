@@ -3,7 +3,7 @@
    Definitions for dhcpd... */
 
 /*
- * Copyright (c) 2004-2011 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2012 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -421,7 +421,7 @@ struct packet {
 
 struct hardware {
 	u_int8_t hlen;
-	u_int8_t hbuf [17];
+	u_int8_t hbuf[21];
 };
 
 typedef enum {

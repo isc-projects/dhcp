@@ -3,6 +3,7 @@
    Protocol structures... */
 
 /*
+ * Copyright (c) 2011-2012 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
@@ -79,6 +80,10 @@ struct dhcp_packet {
 #define HTYPE_ETHER	1               /* Ethernet 10Mbps              */
 #define HTYPE_IEEE802	6               /* IEEE 802.2 Token Ring...	*/
 #define HTYPE_FDDI	8		/* FDDI...			*/
+#define HTYPE_INFINIBAND  32		/* IP over Infiniband		*/
+#define HTYPE_IPMP       255            /* IPMP - random hw address - there
+					 * is no standard for this so we
+					 * just steal a type            */
 
 /* Magic cookie validating dhcp options field (and bootp vendor
    extensions field). */

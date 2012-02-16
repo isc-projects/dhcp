@@ -3,7 +3,8 @@
    Lexical scanner for dhcpd config file... */
 
 /*
- * Copyright (c) 2004-2009,2011 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2011-2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -1004,6 +1005,8 @@ intern(char *atom, enum dhcp_token dfv) {
 			return INCLUDE;
 		if (!strcasecmp (atom + 1, "nteger"))
 			return INTEGER;
+		if (!strcasecmp (atom  + 1, "nfiniband"))
+			return TOKEN_INFINIBAND;
 		if (!strcasecmp (atom + 1, "nfinite"))
 			return INFINITE;
 		if (!strcasecmp (atom + 1, "nfo"))
