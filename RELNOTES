@@ -84,6 +84,11 @@ work on other platforms. Please report any problems and suggested fixes to
 - Tidy up the receive calls and eliminate the need for found_pkt
   [ISC-Bugs #25066]
  
+- Add support for Infiniband over sockets to the server and
+  relay code.  We've tested this on Solaris and hope to expand
+  support for Infiniband in the future.  This patch also corrects
+  some issues we found in the socket code.  [ISC-Bugs #24245]
+
 			Changes since 4.2.2
 
 - Fix the code that checks for an existing DDNS transaction to cancel
