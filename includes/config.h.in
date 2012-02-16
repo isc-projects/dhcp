@@ -91,6 +91,9 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
+/* Define to the string for a noreturn attribute. */
+#undef ISC_DHCP_NORETURN
+
 /* Define to 1 if the system has 'struct if_laddrconf'. */
 #undef ISC_PLATFORM_HAVEIF_LADDRCONF
 
