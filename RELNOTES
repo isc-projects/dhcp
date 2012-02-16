@@ -67,6 +67,11 @@ work on other platforms. Please report any problems and suggested fixes to
   support for Infiniband in the future.  This patch also corrects
   some issues we found in the socket code.  [ISC-Bugs #24245]
 
+- Add a compile time check for the presence of the noreturn attribute
+  and use it for log_fatal if it's available.  This will help code
+  checking programs to eliminate false positives.
+  [ISC-Bugs 27539]
+
 			Changes since 4.1-ESV-R3
 
 - Add AM_MAINTAINER_MODE to configure.ac to avoid rebuilding
