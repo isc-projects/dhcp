@@ -453,6 +453,18 @@ AC_TRY_LINK(
 		   [Define to 1 if the system has 'struct if_laddrreq'.])],
 	[AC_MSG_RESULT(no)])
 
+#
+# check for GCC noreturn attribute
+#
+AC_MSG_CHECKING(for GCC noreturn attribute)
+AC_TRY_COMPILE([],[void foo() __attribute__((noreturn));],
+	[AC_MSG_RESULT(yes)
+	 AC_DEFINE([ISC_DHCP_NORETURN], [__attribute__((noreturn))],
+		   [Define to the string for a noreturn attribute.])],
+	[AC_MSG_RESULT(no)
+	 AC_DEFINE([ISC_DHCP_NORETURN], [],
+		   [Define to the string for a noreturn attribute.])])
+
 # Look for optional headers.
 AC_CHECK_HEADERS(sys/socket.h net/if_dl.h net/if6.h regex.h)
 
@@ -488,7 +500,7 @@ AC_CHECK_SIZEOF(struct iaddr *, , [
 #include <stdio.h>
 ])
 
-# Solaris does not have the msg_control or msg_controlen members in 
+# Solaris does not have the msg_control or msg_controlen members 
 # in the msghdr structure unless you define:
 #
 #   _XOPEN_SOURCE, _XOPEN_SOURCE_EXTENDED, and __EXTENSIONS__
