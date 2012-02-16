@@ -150,7 +150,7 @@ if test "$enable_early_chroot" = "yes" ; then
 		  [Define to any value to chroot() prior to loading config.])
 fi
 
-AC_ARG_ENABLE(IPv4_PKTINFO,
+AC_ARG_ENABLE(ipv4_pktinfo,
 	AC_HELP_STRING([--enable-ipv4-pktinfo],
 		[enable use of pktinfo on IPv4 sockets (default is no)]))
 
@@ -159,7 +159,7 @@ if test "$enable_ipv4_pktinfo" = "yes"; then
 		[Define to 1 to enable IPv4 packet info support.])
 fi
 
-AC_ARG_ENABLE(USE_SOCKETS,
+AC_ARG_ENABLE(use_sockets,
 	AC_HELP_STRING([--enable-use-sockets],
 		[use the standard BSD socket API (default is no)]))
 
@@ -403,7 +403,7 @@ else
 		AC_CHECK_HEADER(net/bpf.h, DO_BPF=1)
 		if test -n "$DO_BPF"
 		then
-			AC_DEFINE([HAVE_BPF], [""],
+			AC_DEFINE([HAVE_BPF], [1],
 	  			  [Define to 1 to use the 
 				   Berkeley Packet Filter interface code.])
 		fi

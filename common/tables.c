@@ -3,6 +3,7 @@
    Tables of information... */
 
 /*
+ * Copyright (c) 2011-2012 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
@@ -601,7 +602,7 @@ const char *hardware_types [] = {
 	"unknown-29",
 	"unknown-30",
 	"unknown-31",
-	"unknown-32",
+	"infiniband",
 	"unknown-33",
 	"unknown-34",
 	"unknown-35",

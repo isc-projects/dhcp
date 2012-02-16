@@ -3,7 +3,7 @@
    BSD socket interface code... */
 
 /*
- * Copyright (c) 2004-2011 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2012 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -51,6 +51,7 @@
 #include <net/if.h>
 #include <sys/sockio.h>
 #include <net/if_dl.h>
+#include <sys/dlpi.h>
 #endif
 
 #ifdef USE_SOCKET_FALLBACK
@@ -1067,7 +1068,7 @@ void maybe_setup_fallback ()
 void
 get_hw_addr(const char *name, struct hardware *hw) {
 	struct sockaddr_dl *dladdrp;
-	int rv, sock, i;
+	int sock, i;
 	struct lifreq lifr;
 
 	memset(&lifr, 0, sizeof (lifr));
@@ -1101,7 +1102,8 @@ get_hw_addr(const char *name, struct hardware *hw) {
 		hw->hlen = sizeof (hw->hbuf);
 		srandom((long)gethrtime());
 
-		for (i = 0; i < hw->hlen; ++i) {
+		hw->hbuf[0] = HTYPE_IPMP;
+		for (i = 1; i < hw->hlen; ++i) {
 			hw->hbuf[i] = random() % 256;
 		}
 
@@ -1114,8 +1116,27 @@ get_hw_addr(const char *name, struct hardware *hw) {
 		log_fatal("Couldn't get interface hardware address for %s: %m",
 			  name);
 	dladdrp = (struct sockaddr_dl *)&lifr.lifr_addr;
-	hw->hlen = dladdrp->sdl_alen;
-	memcpy(hw->hbuf, LLADDR(dladdrp), hw->hlen);
+	hw->hlen = dladdrp->sdl_alen+1;
+	switch (dladdrp->sdl_type) {
+		case DL_CSMACD: /* IEEE 802.3 */
+		case DL_ETHER:
+			hw->hbuf[0] = HTYPE_ETHER;
+			break;
+		case DL_TPR:
+			hw->hbuf[0] = HTYPE_IEEE802;
+			break;
+		case DL_FDDI:
+			hw->hbuf[0] = HTYPE_FDDI;
+			break;
+		case DL_IB:
+			hw->hbuf[0] = HTYPE_INFINIBAND;
+			break;
+		default:
+			log_fatal("%s: unsupported DLPI MAC type %lu", name,
+				  (unsigned long)dladdrp->sdl_type);
+	}
+
+	memcpy(hw->hbuf+1, LLADDR(dladdrp), hw->hlen-1);
 
 	if (sock != -1)
 		(void) close(sock);

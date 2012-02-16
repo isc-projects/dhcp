@@ -436,7 +436,7 @@ struct packet {
 
 struct hardware {
 	u_int8_t hlen;
-	u_int8_t hbuf [17];
+	u_int8_t hbuf[21];
 };
 
 #if defined(LDAP_CONFIGURATION)
