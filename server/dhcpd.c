@@ -3,7 +3,7 @@
    DHCP Server Daemon. */
 
 /*
- * Copyright (c) 2004-2011 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2012 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -33,7 +33,7 @@
  */
 
 static const char copyright[] =
-"Copyright 2004-2011 Internet Systems Consortium.";
+"Copyright 2004-2012 Internet Systems Consortium.";
 static const char arr [] = "All rights reserved.";
 static const char message [] = "Internet Systems Consortium DHCP Server";
 static const char url [] =

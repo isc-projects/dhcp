@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-		           Version 4.1-ESV-R4
-			    29 November 2011
+		           Version 4.1-ESV-R4-Oracle
+			    22 February 2012
 
 			      README FILE
 
@@ -138,12 +138,12 @@ information.   On Digital Unix, type ``man pfilt''.
 To build the DHCP Distribution, unpack the compressed tar file using
 the tar utility and the gzip command - type something like:
 
-	gunzip dhcp-4.1-ESV-R4.tar.gz
-	tar xvf dhcp-4.1-ESV-R4.tar
+	gunzip dhcp-4.1-ESV-R4-Oracle.tar.gz
+	tar xvf dhcp-4.1-ESV-R4-Oracle.tar
 
 			    CONFIGURING IT
 
-Now, cd to the dhcp-4.1-ESV-R4 subdirectory that you've just created and
+Now, cd to the dhcp-4.1-ESV-R4-Oracle subdirectory that you've just created and
 configure the source tree by typing:
 
 	./configure
