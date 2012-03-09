@@ -1,5 +1,5 @@
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_findzonecut.c,v 1.16.786.3.6.1 2012/03/09 16:00:13 tomasz Exp $";
+static const char rcsid[] = "$Id: res_findzonecut.c,v 1.16.786.3.6.2 2012/03/09 21:45:09 sar Exp $";
 #endif /* not lint */
 
 /*
@@ -335,7 +335,7 @@ get_soa(res_state statp, const char *dname, ns_class class,
 			}
 			strcpy(zname, t);
 			rdata = ns_rr_rdata(rr);
-			ns_rr_rdlen(rr);
+			/* ns_rr_rdlen(rr); */
 			if (ns_name_uncompress((u_char *)resp,
 					       ns_msg_end(msg), rdata,
 					       mname, msize) < 0) {
@@ -471,7 +471,7 @@ save_ns(res_state statp, ns_msg *msg, ns_sect sect,
 				return ISC_R_NOMEMORY;
 			}
 			rdata = ns_rr_rdata(rr);
-			ns_rr_rdlen(rr);
+			/* ns_rr_rdlen(rr); */
 			if (ns_name_uncompress(ns_msg_base(*msg),
 					       ns_msg_end(*msg), rdata,
 					       tname, sizeof tname) < 0) {
