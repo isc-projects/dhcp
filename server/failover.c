@@ -3,7 +3,7 @@
    Failover protocol support code... */
 
 /*
- * Copyright (c) 2004-2011 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2012 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -32,6 +32,7 @@
  * ``http://www.nominum.com''.
  */
 
+#include "cdefs.h"
 #include "dhcpd.h"
 #include <omapip/omapip_p.h>
 
@@ -2412,7 +2413,8 @@ dhcp_failover_pool_dobalance(dhcp_failover_state_t *state,
 	struct shared_network *s;
 	struct pool *p;
 	binding_state_t peer_lease_state;
-	binding_state_t my_lease_state;
+	/* binding_state_t my_lease_state; */
+        /* XXX Why is this my_lease_state never used? */
 	struct lease **lq;
 	int (*log_func)(const char *, ...);
 	const char *result, *reqlog;
@@ -2436,12 +2438,12 @@ dhcp_failover_pool_dobalance(dhcp_failover_state_t *state,
 		if (p->failover_peer->i_am == primary) {
 			lts = (p->free_leases - p->backup_leases) / 2;
 			peer_lease_state = FTS_BACKUP;
-			my_lease_state = FTS_FREE;
+			/* my_lease_state = FTS_FREE; */
 			lq = &p->free;
 		} else {
 			lts = (p->backup_leases - p->free_leases) / 2;
 			peer_lease_state = FTS_FREE;
-			my_lease_state = FTS_BACKUP;
+			/* my_lease_state = FTS_BACKUP; */
 			lq = &p->backup;
 		}
 
@@ -3257,13 +3259,13 @@ isc_result_t dhcp_failover_state_stuff (omapi_object_t *c,
 					omapi_object_t *id,
 					omapi_object_t *h)
 {
+	/* In this function c should be a (omapi_connection_object_t *) */
+
 	dhcp_failover_state_t *s;
-	omapi_connection_object_t *conn;
 	isc_result_t status;
 
 	if (c -> type != omapi_type_connection)
 		return DHCP_R_INVALIDARG;
-	conn = (omapi_connection_object_t *)c;
 
 	if (h -> type != dhcp_type_failover_state)
 		return DHCP_R_INVALIDARG;
@@ -4306,6 +4308,8 @@ void dhcp_failover_send_contact (void *vstate)
 	if (obufix) {
 		log_debug ("%s", obuf);
 	}
+#else
+        IGNORE_UNUSED(status);
 #endif
 	return;
 }
@@ -4354,6 +4358,8 @@ isc_result_t dhcp_failover_send_state (dhcp_failover_state_t *state)
 	if (obufix) {
 		log_debug ("%s", obuf);
 	}
+#else
+        IGNORE_UNUSED(status);
 #endif
 	return ISC_R_SUCCESS;
 }
@@ -4490,7 +4496,6 @@ isc_result_t dhcp_failover_send_disconnect (omapi_object_t *l,
 					    const char *message)
 {
 	dhcp_failover_link_t *link;
-	dhcp_failover_state_t *state;
 	isc_result_t status;
 #if defined (DEBUG_FAILOVER_MESSAGES)	
 	char obuf [64];
@@ -4505,7 +4510,6 @@ isc_result_t dhcp_failover_send_disconnect (omapi_object_t *l,
 	if (!l || l -> type != dhcp_type_failover_link)
 		return DHCP_R_INVALIDARG;
 	link = (dhcp_failover_link_t *)l;
-	state = link -> state_object;
 	if (!l -> outer || l -> outer -> type != omapi_type_connection)
 		return DHCP_R_INVALIDARG;
 

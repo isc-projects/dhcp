@@ -3,7 +3,7 @@
    DHCP Protocol engine. */
 
 /*
- * Copyright (c) 2004-2011 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2012 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -419,7 +419,6 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 #if defined (FAILOVER_PROTOCOL)
 	dhcp_failover_state_t *peer;
 #endif
-	int have_server_identifier = 0;
 	int have_requested_addr = 0;
 
 	oc = lookup_option (&dhcp_universe, packet -> options,
@@ -473,7 +472,6 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 		 * safe.
 		 */
 		sprintf (smbuf, " (%s)", piaddr (sip));
-		have_server_identifier = 1;
 	} else
 		smbuf [0] = 0;
 
@@ -969,6 +967,8 @@ void dhcpinform (packet, ms_nulltp)
 	struct sockaddr_in to;
 	struct in_addr from;
 	isc_boolean_t zeroed_ciaddr;
+	struct interface_info *interface;
+	int result;
 
 	/* The client should set ciaddr to its IP address, but apparently
 	   it's common for clients not to do this, so we'll use their IP
@@ -1169,7 +1169,7 @@ void dhcpinform (packet, ms_nulltp)
 				   packet -> options, options,
 				   &global_scope, oc, MDL)) {
 		struct universe *u = (struct universe *)0;
-		
+
 		if (!universe_hash_lookup (&u, universe_hash,
 					   (const char *)d1.data, d1.len,
 					   MDL)) {
@@ -1314,10 +1314,17 @@ void dhcpinform (packet, ms_nulltp)
 					    packet->interface->name);
 
 	errno = 0;
-	send_packet ((fallback_interface
-		      ? fallback_interface : packet -> interface),
-		     &outgoing, &raw, outgoing.packet_length,
-		     from, &to, (struct hardware *)0);
+	interface = (fallback_interface ? fallback_interface
+		     : packet -> interface);
+	result = send_packet(interface, &outgoing, &raw,
+			     outgoing.packet_length, from, &to, NULL);
+	if (result < 0) {
+		log_error ("%s:%d: Failed to send %d byte long packet over %s "
+			   "interface.", MDL, outgoing.packet_length,
+			   interface->name);
+	}
+
+
 	if (subnet)
 		subnet_dereference (&subnet, MDL);
 }
@@ -1464,6 +1471,13 @@ void nak_lease (packet, cip)
 			result = send_packet(fallback_interface, packet, &raw,
 					     outgoing.packet_length, from, &to,
 					     NULL);
+			if (result < 0) {
+				log_error ("%s:%d: Failed to send %d byte long "
+					   "packet over %s interface.", MDL,
+					   outgoing.packet_length,
+					   fallback_interface->name);
+			}
+
 			return;
 		}
 	} else {
@@ -1474,6 +1488,12 @@ void nak_lease (packet, cip)
 	errno = 0;
 	result = send_packet(packet->interface, packet, &raw,
 			     outgoing.packet_length, from, &to, NULL);
+        if (result < 0) {
+                log_error ("%s:%d: Failed to send %d byte long packet over %s "
+                           "interface.", MDL, outgoing.packet_length,
+                           packet->interface->name);
+        }
+
 }
 
 void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
@@ -3164,11 +3184,16 @@ void dhcp_reply (lease)
 			to.sin_port = remote_port; /* For debugging. */
 
 		if (fallback_interface) {
-			result = send_packet (fallback_interface,
-					      (struct packet *)0,
-					      &raw, packet_length,
-					      raw.siaddr, &to,
-					      (struct hardware *)0);
+			result = send_packet(fallback_interface, NULL, &raw,
+					     packet_length, raw.siaddr, &to,
+					     NULL);
+			if (result < 0) {
+				log_error ("%s:%d: Failed to send %d byte long "
+					   "packet over %s interface.", MDL,
+					   packet_length,
+					   fallback_interface->name);
+			}
+
 
 			free_lease_state (state, MDL);
 			lease -> state = (struct lease_state *)0;
@@ -3197,11 +3222,16 @@ void dhcp_reply (lease)
 		to.sin_port = remote_port;
 
 		if (fallback_interface) {
-			result = send_packet (fallback_interface,
-					      (struct packet *)0,
-					      &raw, packet_length,
-					      raw.siaddr, &to,
-					      (struct hardware *)0);
+			result = send_packet(fallback_interface, NULL, &raw,
+					     packet_length, raw.siaddr, &to,
+					     NULL);
+			if (result < 0) {
+				log_error("%s:%d: Failed to send %d byte long"
+					  " packet over %s interface.", MDL,
+					   packet_length,
+					   fallback_interface->name);
+			}
+
 			free_lease_state (state, MDL);
 			lease -> state = (struct lease_state *)0;
 			return;
@@ -3226,10 +3256,14 @@ void dhcp_reply (lease)
 
 	memcpy (&from, state -> from.iabuf, sizeof from);
 
-	result = send_packet (state -> ip,
-			      (struct packet *)0, &raw, packet_length,
-			      from, &to,
-			      unicastp ? &hto : (struct hardware *)0);
+	result = send_packet(state->ip, NULL, &raw, packet_length,
+			      from, &to, unicastp ? &hto : NULL);
+	if (result < 0) {
+	    log_error ("%s:%d: Failed to send %d byte long "
+		       "packet over %s interface.", MDL,
+		       packet_length, state->ip->name);
+	}
+
 
 	/* Free all of the entries in the option_state structure
 	   now that we're done with them. */
