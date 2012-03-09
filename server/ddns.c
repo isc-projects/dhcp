@@ -81,7 +81,6 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 	struct option_cache *oc;
 	int s1, s2;
 	int result = 0;
-	isc_result_t rcode1 = ISC_R_SUCCESS;
 	int server_updates_a = 1;
 	//int server_updates_ptr = 1;
 	struct buffer *bp = (struct buffer *)0;
@@ -536,7 +535,11 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 	 * the ddns messages.  Currently we don't.
 	 */
 	if (do_remove) {
-		rcode1 = ddns_removals(lease, lease6, ddns_cb, ISC_TRUE);
+		/*
+		 * We should log a more specific error closer to the actual
+		 * error if we want one. ddns_removal failure not logged here.
+		 */
+		 (void) ddns_removals(lease, lease6, ddns_cb, ISC_TRUE);
 	}
 	else {
 		ddns_fwd_srv_connector(lease, lease6, scope, ddns_cb,

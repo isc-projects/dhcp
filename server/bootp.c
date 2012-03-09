@@ -3,7 +3,8 @@
    BOOTP Protocol support. */
 
 /*
- * Copyright (c) 2004,2005,2007,2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009,2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004,2005,2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -384,10 +385,16 @@ void bootp (packet)
 		to.sin_port = local_port;
 
 		if (fallback_interface) {
-			result = send_packet (fallback_interface,
-					      (struct packet *)0,
-					      &raw, outgoing.packet_length,
-					      from, &to, &hto);
+			result = send_packet (fallback_interface, NULL, &raw,
+					      outgoing.packet_length, from,
+					      &to, &hto);
+			if (result < 0) {
+				log_error ("%s:%d: Failed to send %d byte long "
+					   "packet over %s interface.", MDL,
+					   outgoing.packet_length,
+					   fallback_interface->name);
+			}
+
 			goto out;
 		}
 
@@ -407,10 +414,16 @@ void bootp (packet)
 	}
 
 	errno = 0;
-	result = send_packet (packet -> interface,
-			      packet, &raw, outgoing.packet_length,
-			      from, &to, &hto);
+	result = send_packet(packet->interface, packet, &raw,
+			     outgoing.packet_length, from, &to, &hto);
+	if (result < 0) {
+		log_error ("%s:%d: Failed to send %d byte long packet over %s"
+			   " interface.", MDL, outgoing.packet_length,
+			   packet->interface->name);
+	}
+
       out:
+
 	if (options)
 		option_state_dereference (&options, MDL);
 	if (lease)

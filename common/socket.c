@@ -1000,6 +1000,9 @@ isc_result_t fallback_discard (object)
 		log_error ("fallback_discard: %m");
 		return ISC_R_UNEXPECTED;
 	}
+#else
+        /* ignore the fact that status value is never used */
+        IGNORE_UNUSED(status);
 #endif
 	return ISC_R_SUCCESS;
 }

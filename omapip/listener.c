@@ -3,6 +3,7 @@
    Subroutines that support the generic listener object. */
 
 /*
+ * Copyright (c) 2012 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004,2007,2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
@@ -124,7 +125,7 @@ isc_result_t omapi_listen_addr (omapi_object_t *h,
 				status = ISC_R_UNEXPECTED;
 			goto error_exit;
 		}
-	
+
 #if defined (HAVE_SETFD)
 		if (fcntl (obj -> socket, F_SETFD, 1) < 0) {
 			status = ISC_R_UNEXPECTED;
@@ -140,7 +141,7 @@ isc_result_t omapi_listen_addr (omapi_object_t *h,
 			status = ISC_R_UNEXPECTED;
 			goto error_exit;
 		}
-		
+
 		/* Try to bind to the wildcard address using the port number
 		   we were given. */
 		i = bind (obj -> socket,
@@ -369,6 +370,10 @@ static void trace_listener_accept_input (trace_type_t *ttype,
 			obj = (omapi_connection_object_t *)0;
 			status = omapi_listener_connect (&obj,
 							 lp, 0, &remote_addr);
+			if (status != ISC_R_SUCCESS) {
+				log_error("%s:%d: OMAPI: Failed to connect "
+					  "a listener.", MDL);
+			}
 			omapi_listener_dereference (&lp, MDL);
 			return;
 		}
