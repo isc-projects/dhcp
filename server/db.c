@@ -3,7 +3,7 @@
    Persistent database management routines for DHCPD... */
 
 /*
- * Copyright (c) 2004-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2010,2012 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -1007,7 +1007,11 @@ void db_startup (testp)
 		/* Read in the existing lease file... */
 		status = read_conf_file (path_dhcpd_db,
 					 (struct group *)0, 0, 1);
-		/* XXX ignore status? */
+		if (status != ISC_R_SUCCESS) {
+			/* XXX ignore status? */
+			;
+		}
+
 #if defined (TRACING)
 	}
 #endif

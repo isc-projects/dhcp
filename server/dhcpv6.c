@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2011 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2006-2012 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -4606,7 +4606,6 @@ iterate_over_ia_na(struct data_string *reply_ret,
 	struct option_state *host_opt_state;
 	struct data_string iaaddr;
 	struct data_string fixed_addr;
-	int iaaddr_is_found;
 	char reply_data[65536];
 	struct dhcpv6_packet *reply = (struct dhcpv6_packet *)reply_data;
 	int reply_ofs = (int)(offsetof(struct dhcpv6_packet, options));
@@ -4709,7 +4708,6 @@ iterate_over_ia_na(struct data_string *reply_ret,
 	 */
 	for (ia = lookup_option(&dhcpv6_universe, packet->options, D6O_IA_NA);
 	     ia != NULL; ia = ia->next) {
-	     	iaaddr_is_found = 0;
 
 		if (!get_encapsulated_IA_state(&cli_enc_opt_state,
 					       &cli_enc_opt_data,
@@ -5120,7 +5118,6 @@ iterate_over_ia_pd(struct data_string *reply_ret,
 	struct host_decl *host;
 	struct option_state *host_opt_state;
 	struct data_string iaprefix;
-	int iaprefix_is_found;
 	char reply_data[65536];
 	int reply_ofs;
 	struct iasubopt *prefix;
@@ -5183,7 +5180,6 @@ iterate_over_ia_pd(struct data_string *reply_ret,
 	 */
 	for (ia = lookup_option(&dhcpv6_universe, packet->options, D6O_IA_PD);
 	     ia != NULL; ia = ia->next) {
-	    iaprefix_is_found = 0;
 
 	    if (!get_encapsulated_IA_state(&cli_enc_opt_state,
 					   &cli_enc_opt_data,

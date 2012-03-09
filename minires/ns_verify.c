@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static const char rcsid[] = "$Id: ns_verify.c,v 1.9.310.2 2009/07/24 22:04:52 sar Exp $";
+static const char rcsid[] = "$Id: ns_verify.c,v 1.9.310.2.10.1 2012/03/09 16:00:13 tomasz Exp $";
 #endif
 
 /* Import. */
@@ -209,6 +209,9 @@ ns_verify(u_char *msg, unsigned *msglen, void *k,
 	BOUNDS_CHECK(cp, 2*INT16SZ);
 	GETSHORT(id, cp);
 	GETSHORT(error, cp);
+
+        /* Let's silence set-but-unused compilation warning */
+        IGNORE_UNUSED(id);
 
 	/* Parse the other data. */
 	BOUNDS_CHECK(cp, INT16SZ);

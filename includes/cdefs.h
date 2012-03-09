@@ -4,7 +4,7 @@
 
 /*
  * Copyright (c) 1995 RadioMail Corporation.  All rights reserved.
- * Copyright (c) 2011 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2011,2012 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004,2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
@@ -46,15 +46,25 @@
  * the warning by the use of void.  In conjunction with the use of -Werror
  * these warnings prohibit the compilation of the package.  This macro
  * allows us to assign the return value to a variable and then ignore it.
+ *
+ * __attribute__((unused)) is added for avoiding another warning about set,
+ * but unused variable. This is produced by unused-but-set-variable switch
+ * that is enabled by default in gcc 4.6.
  */
 #if !defined(__GNUC__) || (__GNUC__ < 4)
 #define IGNORE_RET(x) (void) x
 #else
 #define IGNORE_RET(x)			\
 	do {				\
-		int ignore_return;	\
-		ignore_return = x;	\
+                int __attribute__((unused)) ignore_return ;\
+                ignore_return = x;                         \
 	} while (0)
 #endif
+
+/* This macro is defined to avoid unused-but-set-variable warning
+ * that is enabled in gcc 4.6 
+ */
+
+#define IGNORE_UNUSED(x) { x = x; }
 
 #endif /* __ISC_DHCP_CDEFS_H__ */

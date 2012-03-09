@@ -27,7 +27,7 @@
  */
 
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_mkupdate.c,v 1.14.10.2 2009/07/24 22:04:52 sar Exp $";
+static const char rcsid[] = "$Id: res_mkupdate.c,v 1.14.10.2.10.1 2012/03/09 16:00:14 tomasz Exp $";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -96,7 +96,7 @@ res_nmkupdate(res_state statp,
 	      ns_updrec *rrecp_in, double *bp, unsigned *blp) {
 	ns_updrec *rrecp_start = rrecp_in;
 	HEADER *hp;
-	u_char *cp, *sp1, *sp2;
+	u_char *cp, *sp2;
 	const unsigned char *startp, *endp;
 	int n, i, soanum, multiline;
 	ns_updrec *rrecp;
@@ -123,7 +123,6 @@ res_nmkupdate(res_state statp,
 	hp->id = htons(++statp->id);
 	hp->opcode = ns_o_update;
 	hp->rcode = NOERROR;
-	sp1 = buf + 2*INT16SZ;  /* save pointer to zocount */
 	cp = buf + HFIXEDSZ;
 	buflen -= HFIXEDSZ;
 	dpp = dnptrs;

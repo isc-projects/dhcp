@@ -1,9 +1,9 @@
 #ifndef LINT
-static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/prandom.c,v 1.6 2007/11/30 21:51:43 fdupont Exp $";
+static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/prandom.c,v 1.6.328.1 2012/03/09 16:00:13 tomasz Exp $";
 #endif
 /*
+ * Portions Copyright (c) 2007,2012 by Internet Systems Consortium, Inc. ("ISC")
  * Portions Copyright (c) 1995-1998 by Trusted Information Systems, Inc.
- * Portions Copyright (c) 2007 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -692,7 +692,6 @@ own_random(dst_work *work)
 {
 	int dir = 0, b;
 	int bytes, n, cmd = 0, dig = 0;
-	int start =0;
 /* 
  * now get the initial seed to put into the quick random function from 
  * the address of the work structure 
@@ -707,7 +706,6 @@ own_random(dst_work *work)
 /* pick a random number in the range of 0..7 based on that random number
  * perform some operations that yield random data
  */
-		start = work->filled;
 		n = (dst_s_quick_random(bytes) >> DST_SHIFT) & 0x07;
 		switch (n) {
 		    case 0:

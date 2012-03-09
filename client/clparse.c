@@ -3,7 +3,7 @@
    Parser for dhclient config and lease files... */
 
 /*
- * Copyright (c) 2004-2011 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2012 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -59,9 +59,17 @@ isc_result_t read_client_conf ()
 {
 	struct client_config *config;
 	struct interface_info *ip;
-	struct parse *parse;
 	isc_result_t status;
 	unsigned code;
+
+        /* 
+         * TODO: LATER constant is very undescriptive. We should review it and
+         * change it to something more descriptive or even better remove it
+         * completely as it is currently not used.
+         */
+#ifdef LATER
+        struct parse *parse = NULL;
+#endif
 
 	/* Initialize the default request list. */
 	memset(default_requested_options, 0, sizeof(default_requested_options));
@@ -159,7 +167,6 @@ isc_result_t read_client_conf ()
 					(struct interface_info *)0,
 					&top_level_config);
 
-	parse = NULL;
 	if (status != ISC_R_SUCCESS) {
 		;
 #ifdef LATER

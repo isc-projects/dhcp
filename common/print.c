@@ -3,7 +3,7 @@
    Turn data structures into printable text. */
 
 /*
- * Copyright (c) 2009-2011 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2012 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
@@ -479,10 +479,9 @@ char *print_dotted_quads (len, data)
 {
 	static char dq_buf [DQLEN + 1];
 	int i;
-	char *s, *last;
+	char *s;
 
 	s = &dq_buf [0];
-	last = s;
 	
 	i = 0;
 

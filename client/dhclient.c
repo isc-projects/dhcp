@@ -1885,11 +1885,14 @@ void send_discover (cpp)
 	      ntohs (sockaddr_broadcast.sin_port), (long)(client -> interval));
 
 	/* Send out a packet. */
-	result = send_packet (client -> interface, (struct packet *)0,
-			      &client -> packet,
-			      client -> packet_length,
-			      inaddr_any, &sockaddr_broadcast,
-			      (struct hardware *)0);
+	result = send_packet(client->interface, NULL, &client->packet,
+			     client->packet_length, inaddr_any,
+                             &sockaddr_broadcast, NULL);
+        if (result < 0) {
+		log_error("%s:%d: Failed to send %d byte long packet over %s "
+			  "interface.", MDL, client->packet_length,
+			  client->interface->name);
+	}
 
 	/*
 	 * If we used 0 microseconds here, and there were other clients on the
@@ -2152,20 +2155,29 @@ void send_request (cpp)
 	      ntohs (destination.sin_port));
 
 	if (destination.sin_addr.s_addr != INADDR_BROADCAST &&
-	    fallback_interface)
-		result = send_packet (fallback_interface,
-				      (struct packet *)0,
-				      &client -> packet,
-				      client -> packet_length,
-				      from, &destination,
-				      (struct hardware *)0);
-	else
+	    fallback_interface) {
+		result = send_packet(fallback_interface, NULL, &client->packet,
+				     client->packet_length, from, &destination,
+				     NULL);
+		if (result < 0) {
+			log_error("%s:%d: Failed to send %d byte long packet "
+				  "over %s interface.", MDL,
+				  client->packet_length,
+				  fallback_interface->name);
+		}
+        }
+	else {
 		/* Send out a packet. */
-		result = send_packet (client -> interface, (struct packet *)0,
-				      &client -> packet,
-				      client -> packet_length,
-				      from, &destination,
-				      (struct hardware *)0);
+		result = send_packet(client->interface, NULL, &client->packet,
+				     client->packet_length, from, &destination,
+				     NULL);
+		if (result < 0) {
+			log_error("%s:%d: Failed to send %d byte long packet"
+				  " over %s interface.", MDL,
+				  client->packet_length,
+				  client->interface->name);
+		}
+        }
 
 	tv.tv_sec = cur_tv.tv_sec + client->interval;
 	tv.tv_usec = ((tv.tv_sec - cur_tv.tv_sec) > 1) ?
@@ -2181,16 +2193,19 @@ void send_decline (cpp)
 	int result;
 
 	log_info ("DHCPDECLINE on %s to %s port %d",
-	      client -> name ? client -> name : client -> interface -> name,
-	      inet_ntoa (sockaddr_broadcast.sin_addr),
-	      ntohs (sockaddr_broadcast.sin_port));
+	      client->name ? client->name : client->interface->name,
+	      inet_ntoa(sockaddr_broadcast.sin_addr),
+	      ntohs(sockaddr_broadcast.sin_port));
 
 	/* Send out a packet. */
-	result = send_packet (client -> interface, (struct packet *)0,
-			      &client -> packet,
-			      client -> packet_length,
-			      inaddr_any, &sockaddr_broadcast,
-			      (struct hardware *)0);
+	result = send_packet(client->interface, NULL, &client->packet,
+			     client->packet_length, inaddr_any,
+			     &sockaddr_broadcast, NULL);
+	if (result < 0) {
+		log_error("%s:%d: Failed to send %d byte long packet over %s"
+			  " interface.", MDL, client->packet_length,
+			  client->interface->name);
+	}
 }
 
 void send_release (cpp)
@@ -2228,20 +2243,29 @@ void send_release (cpp)
 	      inet_ntoa (destination.sin_addr),
 	      ntohs (destination.sin_port));
 
-	if (fallback_interface)
-		result = send_packet (fallback_interface,
-				      (struct packet *)0,
-				      &client -> packet,
-				      client -> packet_length,
-				      from, &destination,
-				      (struct hardware *)0);
-	else
+	if (fallback_interface) {
+		result = send_packet(fallback_interface, NULL, &client->packet,
+				      client->packet_length, from, &destination,
+				      NULL);
+		if (result < 0) {
+			log_error("%s:%d: Failed to send %d byte long packet"
+				  " over %s interface.", MDL,
+				  client->packet_length,
+				  fallback_interface->name);
+		}
+        } else {
 		/* Send out a packet. */
-		result = send_packet (client -> interface, (struct packet *)0,
-				      &client -> packet,
-				      client -> packet_length,
-				      from, &destination,
-				      (struct hardware *)0);
+		result = send_packet(client->interface, NULL, &client->packet,
+				      client->packet_length, from, &destination,
+				      NULL);
+		if (result < 0) {
+			log_error ("%s:%d: Failed to send %d byte long packet"
+				   " over %s interface.", MDL,
+				   client->packet_length,
+				   client->interface->name);
+		}
+
+        }
 }
 
 void
@@ -3204,7 +3228,6 @@ void script_write_params (client, prefix, lease)
 				  lease->server_name);
 		}
 	}
-				
 
 	for (i = 0; i < lease -> options -> universe_count; i++) {
 		option_space_foreach ((struct packet *)0, (struct lease *)0,

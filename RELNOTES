@@ -72,6 +72,9 @@ work on other platforms. Please report any problems and suggested fixes to
   checking programs to eliminate false positives.
   [ISC-Bugs 27539]
 
+- Fixed many compilation problems ("set, but not used" warnings) for
+  gcc 4.6 that may affect Ubuntu 11.10 users. [ISC-Bugs #27588]
+
 			Changes since 4.1-ESV-R3
 
 - Add AM_MAINTAINER_MODE to configure.ac to avoid rebuilding

@@ -907,7 +907,7 @@ parse_date_core(cfile)
 	struct parse *cfile;
 {
 	int guess;
-	int tzoff, wday, year, mon, mday, hour, min, sec;
+	int tzoff, year, mon, mday, hour, min, sec;
 	const char *val;
 	enum dhcp_token token;
 	static int months[11] = { 31, 59, 90, 120, 151, 181,
@@ -945,7 +945,7 @@ parse_date_core(cfile)
 		return((TIME)0);
 	}
 	token = next_token(&val, NULL, cfile); /* consume day of week */
-	wday = atoi(val);
+        /* we are not using this for anything */
 
 	/* Year... */
 	token = peek_token(&val, NULL, cfile);
@@ -3333,11 +3333,10 @@ int parse_boolean_expression (expr, cfile, lose)
 int parse_boolean (cfile)
 	struct parse *cfile;
 {
-	enum dhcp_token token;
 	const char *val;
 	int rv;
 
-	token = next_token (&val, (unsigned *)0, cfile);
+        (void)next_token(&val, NULL, cfile);
 	if (!strcasecmp (val, "true")
 	    || !strcasecmp (val, "on"))
 		rv = 1;
