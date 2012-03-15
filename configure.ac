@@ -170,30 +170,40 @@ fi
 
 # Testing section
 
-# Enable ATF unit tests (Automated Test Framework)
-AC_ARG_ENABLE(atf,
-	AC_HELP_STRING([--enable-atf],
-		       [enable support for ATF unit-tests (default is no)]),
-                       [if test "$enableval" = "yes"; then 
-                           enable_atf=yes
-                        else
-                           enable_atf=no
-                        fi], 
-                       [enable_atf=no])
-
-# TODO: Check if atf-run is actually available. If it is not, abort 
-# configuration.
-if test "$enable_atf" != "no"; then
-        ATF_CFLAGS="`pkg-config --cflags atf-c` -DUNIT_TEST"
-        ATF_LDFLAGS="`pkg-config --libs-only-l --libs-only-other atf-c`"
-        ATF_LIBS="`pkg-config --libs-only-l atf-c`"
+atf_path="no"
+AC_ARG_WITH([atf],
+    AC_HELP_STRING([--with-atf=PATH],
+                   [specify location where atf was installed]),
+    [atf_path="$withval"])
+if test "$atf_path" != "no" ; then
+    # Config path for pkg-config
+    atf_pcp=""
+    if test "$atf_path" != "yes" ; then
+        if test -f $atf_path/lib/pkgconfig/atf-c.pc ; then
+            atf_pcp=$atf_path/lib/pkgconfig
+        fi
+    else
+        # Not specified, try some common paths
+        atf_dirs="/usr /usr/local /usr/pkg /opt /opt/local"
+        for d in $atf_dirs
+        do
+            if test -f $d/lib/pkgconfig/atf-c.pc ; then
+                atf_pcp=$d/lib/pkgconfig
+            fi
+        done
+    fi
+    if test "$atf_pcp" = "" ; then
+        AC_MSG_ERROR([Unable to find atf files in location specified])
+    else
+        ATF_CFLAGS="`PKG_CONFIG_PATH=$atf_pcp pkg-config --cflags atf-c` -DUNIT_TEST"
+        ATF_LDFLAGS="`PKG_CONFIG_PATH=$atf_pcp pkg-config --libs atf-c`"
+        AC_SUBST(ATF_CFLAGS)
+        AC_SUBST(ATF_LDFLAGS)
+    fi
 fi
-AM_CONDITIONAL(HAVE_ATF, test "$enable_atf" != "no")
-AC_SUBST(ATF_CFLAGS)
-AC_SUBST(ATF_LDFLAGS)
-AC_SUBST(ATF_LIBS)
-# TODO: Not sure if LDFLAGS and LIBS should stay separate or not.
-# That was FAQ recommends: http://www.netbsd.org/~jmmv/atf/docs/faq.html
+
+AM_CONDITIONAL(HAVE_ATF, test "$atf_pcp" != "")
+AM_COND_IF([HAVE_ATF], [AC_DEFINE([HAVE_ATF], [1], [ATF framework specified?])])
 
 ###
 ### Path fun.  Older versions of DHCP were installed in /usr/sbin, so we
