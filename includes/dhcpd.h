@@ -1950,7 +1950,8 @@ void parse_server_duid_conf(struct parse *cfile);
 /* ddns.c */
 int ddns_updates(struct packet *, struct lease *, struct lease *,
 		 struct iasubopt *, struct iasubopt *, struct option_state *);
-int ddns_removals(struct lease *, struct iasubopt *, struct dhcp_ddns_cb *, isc_boolean_t);
+isc_result_t ddns_removals(struct lease *, struct iasubopt *,
+			   struct dhcp_ddns_cb *, isc_boolean_t);
 #if defined (TRACING)
 void trace_ddns_init(void);
 #endif
@@ -3243,7 +3244,10 @@ void make_binding_state_transition (struct lease *);
 int lease_copy (struct lease **, struct lease *, const char *, int);
 void release_lease (struct lease *, struct packet *);
 void abandon_lease (struct lease *, const char *);
+#if 0
+/* this appears to be unused and I plan to remove it SAR */
 void dissociate_lease (struct lease *);
+#endif
 void pool_timer (void *);
 int find_lease_by_uid (struct lease **, const unsigned char *,
 		       unsigned, const char *, int);

@@ -1057,7 +1057,7 @@ move_lease_to_inactive(struct ipv6_pool *pool, struct iasubopt *lease,
 #if defined (NSUPDATE)
 		/* Process events upon expiration. */
 		if (pool->pool_type != D6O_IA_PD) {
-			ddns_removals(NULL, lease, NULL, ISC_FALSE);
+			(void) ddns_removals(NULL, lease, NULL, ISC_FALSE);
 		}
 #endif
 
