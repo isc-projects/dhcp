@@ -79,7 +79,7 @@ work on other platforms. Please report any problems and suggested fixes to
 - In the DDNS code handle error conditions more gracefully and add more
   logging code.  The major change is to handle unexpected cancel events
   from the DNS client code.
-  [ISC-Bugs 26287].
+  [ISC-Bugs #26287].
 
 - Tidy up the receive calls and eliminate the need for found_pkt
   [ISC-Bugs #25066]
@@ -92,10 +92,17 @@ work on other platforms. Please report any problems and suggested fixes to
 - Add a compile time check for the presence of the noreturn attribute
   and use it for log_fatal if it's available.  This will help code
   checking programs to eliminate false positives.
-  [ISC-Bugs 27539]
+  [ISC-Bugs #27539]
 
 - Fixed many compilation problems ("set, but not used" warnings) for
   gcc 4.6 that may affect Ubuntu 11.10 users. [ISC-Bugs #27588]
+
+- Modify the code that determines if an outstanding DDNS request
+  should be cancelled.  This patch results in cancelling the
+  outstanding request less often.  It fixes the problem caused
+  by a client doing a release where  the  txt and ptr records
+  weren't removed from the DNS.
+  [ISC-BUGS #27858]
 
 			Changes since 4.2.2
 

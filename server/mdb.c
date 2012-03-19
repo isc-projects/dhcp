@@ -1446,7 +1446,7 @@ void make_binding_state_transition (struct lease *lease)
 	      lease -> binding_state == FTS_ACTIVE &&
 	      lease -> next_binding_state != FTS_RELEASED))) {
 #if defined (NSUPDATE)
-		ddns_removals(lease, NULL, NULL, ISC_FALSE);
+		(void) ddns_removals(lease, NULL, NULL, ISC_TRUE);
 #endif
 		if (lease -> on_expiry) {
 			execute_statements ((struct binding_value **)0,
@@ -1512,7 +1512,7 @@ void make_binding_state_transition (struct lease *lease)
 		 * release message.  This is not true of expiry, where the
 		 * peer may have extended the lease.
 		 */
-		ddns_removals(lease, NULL, NULL, ISC_FALSE);
+		(void) ddns_removals(lease, NULL, NULL, ISC_TRUE);
 #endif
 		if (lease -> on_release) {
 			execute_statements ((struct binding_value **)0,
@@ -1681,7 +1681,7 @@ void release_lease (lease, packet)
 	/* If there are statements to execute when the lease is
 	   released, execute them. */
 #if defined (NSUPDATE)
-	ddns_removals(lease, NULL, NULL, ISC_FALSE);
+	(void) ddns_removals(lease, NULL, NULL, ISC_FALSE);
 #endif
 	if (lease -> on_release) {
 		execute_statements ((struct binding_value **)0,
@@ -1755,7 +1755,7 @@ void abandon_lease (lease, message)
 {
 	struct lease *lt = (struct lease *)0;
 #if defined (NSUPDATE)
-	ddns_removals(lease, NULL, NULL, ISC_FALSE);
+	(void) ddns_removals(lease, NULL, NULL, ISC_FALSE);
 #endif
 
 	if (!lease_copy (&lt, lease, MDL))
@@ -1779,6 +1779,14 @@ void abandon_lease (lease, message)
 	lease_dereference (&lt, MDL);
 }
 
+#if 0
+/*
+ * This doesn't appear to be in use for anything anymore.
+ * I'm ifdeffing it now and if there are no complaints in
+ * the future it will be removed.
+ * SAR
+ */
+
 /* Abandon the specified lease (set its timeout to infinity and its
    particulars to zero, and re-hash it as appropriate. */
 
@@ -1787,7 +1795,7 @@ void dissociate_lease (lease)
 {
 	struct lease *lt = (struct lease *)0;
 #if defined (NSUPDATE)
-	ddns_removals(lease, NULL, NULL, ISC_FALSE);
+	(void) ddns_removals(lease, NULL, NULL, ISC_FALSE);
 #endif
 
 	if (!lease_copy (&lt, lease, MDL))
@@ -1812,6 +1820,7 @@ void dissociate_lease (lease)
 	supersede_lease (lease, lt, 1, 1, 1);
 	lease_dereference (&lt, MDL);
 }
+#endif
 
 /* Timer called when a lease in a particular pool expires. */
 void pool_timer (vpool)
