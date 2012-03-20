@@ -5506,6 +5506,7 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 	msg_type = enc_opt_data.data[0];
 	if ((msg_type == DHCPV6_RELAY_FORW) ||
 	    (msg_type == DHCPV6_RELAY_REPL)) {
+		int relaylen = (int)(offsetof(struct dhcpv6_relay_packet, options));
 		relay = (struct dhcpv6_relay_packet *)enc_opt_data.data;
 		enc_packet->dhcpv6_msg_type = relay->msg_type;
 
@@ -5518,13 +5519,14 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 
 		if (!parse_option_buffer(enc_packet->options,
 					 relay->options, 
-					 enc_opt_data.len-sizeof(*relay),
+					 enc_opt_data.len - relaylen,
 					 &dhcpv6_universe)) {
 			/* no logging here, as parse_option_buffer() logs all
 			   cases where it fails */
 			goto exit;
 		}
 	} else {
+		int msglen = (int)(offsetof(struct dhcpv6_packet, options));
 		msg = (struct dhcpv6_packet *)enc_opt_data.data;
 		enc_packet->dhcpv6_msg_type = msg->msg_type;
 
@@ -5535,7 +5537,7 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 
 		if (!parse_option_buffer(enc_packet->options,
 					 msg->options, 
-					 enc_opt_data.len-sizeof(*msg),
+					 enc_opt_data.len - msglen,
 					 &dhcpv6_universe)) {
 			/* no logging here, as parse_option_buffer() logs all
 			   cases where it fails */
