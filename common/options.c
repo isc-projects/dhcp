@@ -3845,6 +3845,7 @@ do_packet6(struct interface_info *interface, const char *packet,
 	msg_type = packet[0];
 	if ((msg_type == DHCPV6_RELAY_FORW) || 
 	    (msg_type == DHCPV6_RELAY_REPL)) {
+		int relaylen = (int)(offsetof(struct dhcpv6_relay_packet, options));
 		relay = (const struct dhcpv6_relay_packet *)packet;
 		decoded_packet->dhcpv6_msg_type = relay->msg_type;
 
@@ -3856,7 +3857,7 @@ do_packet6(struct interface_info *interface, const char *packet,
 		       relay->peer_address, sizeof(relay->peer_address));
 
 		if (!parse_option_buffer(decoded_packet->options, 
-					 relay->options, len-sizeof(*relay), 
+					 relay->options, len - relaylen, 
 					 &dhcpv6_universe)) {
 			/* no logging here, as parse_option_buffer() logs all
 			   cases where it fails */
@@ -3864,6 +3865,7 @@ do_packet6(struct interface_info *interface, const char *packet,
 			return;
 		}
 	} else {
+		int msglen = (int)(offsetof(struct dhcpv6_packet, options));
 		msg = (const struct dhcpv6_packet *)packet;
 		decoded_packet->dhcpv6_msg_type = msg->msg_type;
 
@@ -3873,7 +3875,7 @@ do_packet6(struct interface_info *interface, const char *packet,
 		       sizeof(decoded_packet->dhcpv6_transaction_id));
 
 		if (!parse_option_buffer(decoded_packet->options, 
-					 msg->options, len-sizeof(*msg), 
+					 msg->options, len - msglen, 
 					 &dhcpv6_universe)) {
 			/* no logging here, as parse_option_buffer() logs all
 			   cases where it fails */
