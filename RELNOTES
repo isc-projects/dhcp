@@ -99,6 +99,10 @@ work on other platforms. Please report any problems and suggested fixes to
   Bruno Verstuyft and Vincent Demaertelaere of Excentis.
   [ISC-Bugs #27941]
 
+- Remove outdated note in the bootp keyword about the option not satisfying 
+  the requirement of failover peers for denying dynamic bootp clients.
+  [ISC-bugs #28574]
+
 			Changes since 4.2.2
 
 - Fix the code that checks for an existing DDNS transaction to cancel
