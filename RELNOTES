@@ -75,6 +75,11 @@ work on other platforms. Please report any problems and suggested fixes to
 - Fixed many compilation problems ("set, but not used" warnings) for
   gcc 4.6 that may affect Ubuntu 11.10 users. [ISC-Bugs #27588]
 
+
+- Remove outdated note in the bootp keyword about the option not satisfying 
+  the requirement of failover peers for denying dynamic bootp clients.
+  [ISC-bugs #28574]
+
 			Changes since 4.1-ESV-R3
 
 - Add AM_MAINTAINER_MODE to configure.ac to avoid rebuilding
