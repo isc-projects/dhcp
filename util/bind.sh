@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Copyright (C) 2009-2011  Internet Systems Consortium, Inc. ("ISC")
+# Copyright (C) 2009-2012 by Internet Systems Consortium, Inc. ("ISC")
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -14,73 +14,96 @@
 # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 
-# $Id: bind.sh,v 1.6.2.20 2012/01/23 17:59:54 sar Exp $
+# $Id: bind.sh,v 1.6.2.21 2012/04/05 22:17:08 sar Exp $
 
 # Get the bind distribution for the libraries
 # This script is used to build the DHCP distribution and shouldn't be shipped
 #
-# Usage: sh bind.sh <DHCP version>
+# Usage: sh bind.sh <DHCP branch or version> <git bind direcotry>
 #
-#
+# By default we will do a git clone of bind into the default bind directory
+# and then get the proper bind tarball from that.  As getting a git clone
+# may be slow for people working remotely we also allow them to indicate
+# a directory that already holds the clone in which case we use it instead.
+# We expect the kit.sh script to create the temporary directory $binddir
+# and to do a git pull to get the latest code.
 
 topdir=`pwd`
 binddir=$topdir/bind
+gitbinddir=$topdir/bindgit
 
 case $# in 
-    1)
-	case "$1" in 
-	###
-	### Robie calls this script with the building branch name so we can
-	### build with BIND9 HEAD for the relevant branch we would release
-	### with.
-	###
-	### XXX: We can't actually use the 'snapshot' syntax because kit.sh
-	### checks out the version.tmp on the branch name, but creates a tar
-	### ball which unpacks with a different name.  So the version.tmp can
-	### not inform us where to chdir down into anymore.
-	###
-	v4_2) noSNAP=snapshot BINDTAG=v9_7 ;;
-	HEAD|v[0-9]_[0-9].*) noSNAP=snapshot BINDTAG=HEAD ;;
-	###
-	### For ease of use, this records the sticky tag of versions
-	### released with each point release.
-	###
-	4.2.3-P1|4.2.3-P2) BINDTAG=v9_8_1_P1 ;;
-	4.2.3rc1|4.2.3) BINDTAG=v9_8_1 ;;
-	4.2.2rc1|4.2.2) BINDTAG=v9_8_0_P4 ;;
-	4.2.1|4.2.1-P1|4.2.2b1) BINDTAG=v9_8_0 ;;
-	4.2.1rc1) BINDTAG=v9_8_0rc1 ;;
-	4.2.1b1) BINDTAG=v9_8_0b1 ;;
-	4.2.0rc1|4.2.0) BINDTAG=v9_7_1 ;;
-	4.2.0b2) BINDTAG=v9_7_1rc1 ;;
-	4.2.0b1) BINDTAG=v9_7_0_P1 ;;
-	4.2.0a2|4.2.0a1) BINDTAG=v9_7_0b3 ;;
-	*) echo "bind.sh: unsupported version: $1" >&2
-	   exit 1
-	   ;;
-	esac
+    2) 
+	gitbinddir=$2
 	;;
-    *) echo "usage: sh bind.sh [<branch>|<version>]" >&2
+    1) 
+	;;
+    *) echo "usage: sh bind.sh [<branch>|<version>] [git binddir]" >&2
        exit 1
        ;;
+esac
+
+case "$1" in 
+###
+### Robie calls this script with the building branch name so we can
+### build with BIND9 HEAD for the relevant branch we would release
+### with.
+###
+### XXX: We can't use the 'snapshot' syntax right now because kit.sh
+### pulls the version.tmp off the branch name, and then stores a
+### tarball with vastly different values.  So the version.tmp can not
+### be used to chdir down into the directory that is unpacked.
+###
+v4_2) noSNAP=snapshot BINDTAG=v9_8; BRANCHTAG=v9_8 ;;
+HEAD|v[0-9]_[0-9].*) noSNAP=snapshot BINDTAG=HEAD; BRANCHTAG=v9_9 ;;
+###
+### For ease of use, this records the sticky tag of versions
+### released with each point release.
+###
+4.2.3-P1|4.2.3-P2) BINDTAG=v9_8_1_P1; BRANCHTAG=v9_8 ;;
+4.2.3rc1|4.2.3) BINDTAG=v9_8_1; BRANCHTAG=v9_8 ;;
+4.2.2rc1|4.2.2) BINDTAG=v9_8_0_P4; BRANCHTAG=v9_8 ;;
+4.2.1|4.2.1-P1|4.2.2b1) BINDTAG=v9_8_0; BRANCHTAG=v9_8 ;;
+4.2.1rc1) BINDTAG=v9_8_0rc1; BRANCHTAG=v9_8 ;;
+4.2.1b1) BINDTAG=v9_8_0b1; BRANCHTAG=v9_8 ;;
+4.2.0rc1|4.2.0) BINDTAG=v9_7_1; BRANCHTAG=v9_7 ;;
+4.2.0b2) BINDTAG=v9_7_1rc1; BRANCHTAG=v9_7 ;;
+4.2.0b1) BINDTAG=v9_7_0_P1; BRANCHTAG=v9_7 ;;
+4.2.0a2|4.2.0a1) BINDTAG=v9_7_0b3; BRANCHTAG=v9_7 ;;
+*) echo "bind.sh: unsupported version: $1" >&2
+   exit 1
+   ;;
 esac
 
 # Delete all previous bind stuff
 rm -rf bind
 
-# Make and move to our directory for all things bind
-mkdir $binddir
-cp util/Makefile.bind bind/Makefile
-cd $binddir
+# If needed clone the directory, note that
+# kit.sh does a pull so we don't have to
+# kit.sh will also build the binddir if it doesn't
+# exist
+if !(test -d ${gitbinddir}) ; then
+    echo Cloning Bind into ${gitbinddir}
+    git clone repo.isc.org:/proj/git/prod/bind9.git ${gitbinddir}
+fi
 
-# Get the bind release kit shell script
-cvs checkout -p -r $BINDTAG bind9/util/kit.sh > kit.sh
+# We seem to need the checkout to get to the correct branch
+# especially for tags of the form v9_8
+echo Checking out verison $BRANCHTAG
+pushd $gitbinddir
+git checkout $BRANCHTAG
+popd
 
 # Create the bind tarball, which has the side effect of
 # setting up the bind directory we will use for building
 # the export libraries
-sh kit.sh $SNAP $BINDTAG $binddir
+echo Creating tarball for $BINDTAG
+sh $gitbinddir/util/kit.sh $SNAP $gitbinddir $BINDTAG $binddir
 
+# and copy the bind makeifle to it
+cp util/Makefile.bind bind/Makefile
+
+cd $binddir
 . ./version.tmp
 
 version=${MAJORVER}.${MINORVER}.${PATCHVER}${RELEASETYPE}${RELEASEVER}
@@ -88,12 +111,6 @@ bindsrcdir=bind-$version
 mm=${MAJORVER}.${MINORVER}
 
 # move the tar file to a known place for use by the make dist command
+echo Moving tar file to bind.tar.gz for distribution
 mv bind-${mm}*.tar.gz bind.tar.gz
-
-# temporary hack to allow testing when using snapshots
-#mv $binddir/bind-9.7* $binddir/$bindsrcdir
-
-# Run the script to build and install the export libraries
-# Let make do this now.
-#sh $topdir/util/bindlib.sh $binddir $bindsrcdir
 
