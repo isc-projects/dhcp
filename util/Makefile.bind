@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2009-2011  Internet Systems Consortium, Inc. ("ISC")
+# Copyright (C) 2009-2012  Internet Systems Consortium, Inc. ("ISC")
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -13,7 +13,7 @@
 # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 
-# $Id: Makefile.bind,v 1.7 2011/04/06 00:41:10 marka Exp $
+# $Id: Makefile.bind,v 1.8 2012/04/05 22:16:47 sar Exp $
 
 # Configure and build the bind libraries for use by DHCP
 
@@ -44,18 +44,31 @@ all:
 # Configure the export libraries
 # Currently disable the epoll and devpoll options as they don't interact
 # well with the DHCP code.
-	@echo Configuring BIND Export libraries for DHCP.
-	@(cd ${bindsrcdir} && ./configure --disable-kqueue --disable-epoll --disable-devpoll --without-openssl --without-libxml2 --enable-exportlib --enable-threads=no --with-export-includedir=${binddir}/include --with-export-libdir=${binddir}/lib --with-gssapi=no > ${binddir}/configure.log)
+# If the top-level Bind Makefile exists we skip the configuration step
+# as we assume it's done and won't change.  Doing a make clean will
+# reset things if necessary.
+	@if test -f ${bindsrcdir}/Makefile ; then                  \
+		echo Bind export libraries already configured ;    \
+	else                                                       \
+		echo Configuring BIND Export libraries for DHCP. ; \
+		rm -rf ./lib ./include ./configure.log ./build.log ./install.log ; \
+		(cd ${bindsrcdir} && ./configure --disable-kqueue --disable-epoll --disable-devpoll --without-openssl --without-libxml2 --enable-exportlib --enable-threads=no --with-export-includedir=${binddir}/include --with-export-libdir=${binddir}/lib --with-gssapi=no > ${binddir}/configure.log); \
+	fi
 
-# Build the export libraries
-	@echo Building BIND Export libraries - this takes some time.
-	@(cd ${bindsrcdir}/lib/export ; \
-	  echo building in `pwd` ; \
-	  MAKE=${GMAKE} ${GMAKE} > ${binddir}/build.log)
-
-	@echo Installing BIND Export libraries to ${binddir}.
-	@(cd ${bindsrcdir}/lib/export ; \
-	  MAKE=${GMAKE} ${GMAKE} install > ${binddir}/install.log)
+# Build and install the export libraries
+# No need to do anything if we already have something installed.
+	@if test -d ${binddir}/lib ; then                                    \
+		echo Bind export libraries already installed ;               \
+	else                                                                 \
+		echo Building BIND Export libraries - this takes some time. ;\
+		(cd ${bindsrcdir}/lib/export ;                               \
+		  echo building in `pwd` ;                                   \
+		  MAKE=${GMAKE} ${GMAKE} > ${binddir}/build.log) ;           \
+                                                                             \
+		echo Installing BIND Export libraries to ${binddir}. ;       \
+		(cd ${bindsrcdir}/lib/export ;                               \
+		  MAKE=${GMAKE} ${GMAKE} install > ${binddir}/install.log) ; \
+	fi
 
 clean:
 	@echo Cleaning BIND export library.
@@ -73,3 +86,4 @@ install:
 
 check:
 
+uninstall:
