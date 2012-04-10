@@ -3,7 +3,8 @@
    Support for executable statements. */
 
 /*
- * Copyright (c) 2004-2007,2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009,2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1998-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -327,66 +328,66 @@ int execute_statements (result, packet, lease, client_state,
 		      case set_statement:
 		      case define_statement:
 			if (!scope) {
-				log_error ("set %s: no scope",
-					   r -> data.set.name);
+				log_error("set %s: no scope",
+					   r->data.set.name);
 				status = 0;
 				break;
 			}
 			if (!*scope) {
-			    if (!binding_scope_allocate (scope, MDL)) {
-				log_error ("set %s: can't allocate scope",
-					   r -> data.set.name);
+			    if (!binding_scope_allocate(scope, MDL)) {
+				log_error("set %s: can't allocate scope",
+					  r->data.set.name);
 				status = 0;
 				break;
 			    }
 			}
-			binding = find_binding (*scope, r -> data.set.name);
+			binding = find_binding(*scope, r->data.set.name);
 #if defined (DEBUG_EXPRESSIONS)
-			log_debug ("exec: set %s", r -> data.set.name);
+			log_debug("exec: set %s", r->data.set.name);
 #endif
-			if (!binding) {
-				binding = dmalloc (sizeof *binding, MDL);
-				if (binding) {
-				    memset (binding, 0, sizeof *binding);
-				    binding -> name =
-					    dmalloc (strlen
-						     (r -> data.set.name) + 1,
-						     MDL);
-				    if (binding -> name) {
-					strcpy (binding -> name,
-						r -> data.set.name);
-					binding -> next = (*scope) -> bindings;
-					(*scope) -> bindings = binding;
+			if (binding == NULL) {
+				binding = dmalloc(sizeof(*binding), MDL);
+				if (binding != NULL) {
+				    memset(binding, 0, sizeof(*binding));
+				    binding->name =
+					    dmalloc(strlen
+						    (r->data.set.name) + 1,
+						    MDL);
+				    if (binding->name != NULL) {
+					strcpy(binding->name, r->data.set.name);
+					binding->next = (*scope)->bindings;
+					(*scope)->bindings = binding;
 				    } else {
-					dfree (binding, MDL);
-					binding = (struct binding *)0;
+					dfree(binding, MDL);
+					binding = NULL;
 				    }
 				}
 			}
-			if (binding) {
-				if (binding -> value)
+			if (binding != NULL) {
+				if (binding->value != NULL)
 					binding_value_dereference
-						(&binding -> value, MDL);
-				if (r -> op == set_statement) {
+						(&binding->value, MDL);
+				if (r->op == set_statement) {
 					status = (evaluate_expression
-						  (&binding -> value, packet,
+						  (&binding->value, packet,
 						   lease, client_state,
 						   in_options, out_options,
-						   scope, r -> data.set.expr,
+						   scope, r->data.set.expr,
 						   MDL));
 				} else {
 				    if (!(binding_value_allocate
-					  (&binding -> value, MDL))) {
-					    dfree (binding, MDL);
-					    binding = (struct binding *)0;
+					  (&binding->value, MDL))) {
+					    dfree(binding, MDL);
+					    binding = NULL;
 				    }
-				    if (binding -> value) {
-				        binding -> value -> type =
-						binding_function;
-					(fundef_reference
-					 (&binding -> value -> value.fundef,
-					  r -> data.set.expr -> data.func,
-					  MDL));
+				    if ((binding != NULL) &&
+					(binding->value != NULL)) {
+					    binding->value->type =
+						    binding_function;
+					    (fundef_reference
+					     (&binding->value->value.fundef,
+					      r->data.set.expr->data.func,
+					      MDL));
 				    }
 				}
 			}

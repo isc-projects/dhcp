@@ -2748,77 +2748,76 @@ void parse_group_declaration (cfile, group)
 	int dynamicp = 0;
 	int staticp = 0;
 
-	g = (struct group *)0;
-	if (!clone_group (&g, group, MDL))
-		log_fatal ("no memory for explicit group.");
+	g = NULL;
+	if (!clone_group(&g, group, MDL))
+		log_fatal("no memory for explicit group.");
 
-	token = peek_token (&val, (unsigned *)0, cfile);
+	token = peek_token(&val, NULL, cfile);
 	if (is_identifier (token) || token == STRING) {
-		next_token (&val, (unsigned *)0, cfile);
+		next_token(&val, NULL, cfile);
 		
-		name = dmalloc (strlen (val) + 1, MDL);
+		name = dmalloc(strlen(val) + 1, MDL);
 		if (!name)
-			log_fatal ("no memory for group decl name %s", val);
-		strcpy (name, val);
+			log_fatal("no memory for group decl name %s", val);
+		strcpy(name, val);
 	}		
 
-	if (!parse_lbrace (cfile)) {
-		group_dereference (&g, MDL);
+	if (!parse_lbrace(cfile)) {
+		group_dereference(&g, MDL);
 		return;
 	}
 
 	do {
-		token = peek_token (&val, (unsigned *)0, cfile);
+		token = peek_token(&val, NULL, cfile);
 		if (token == RBRACE) {
-			token = next_token (&val, (unsigned *)0, cfile);
+			token = next_token(&val, NULL, cfile);
 			break;
 		} else if (token == END_OF_FILE) {
-			token = next_token (&val, (unsigned *)0, cfile);
-			parse_warn (cfile, "unexpected end of file");
+			token = next_token(&val, NULL, cfile);
+			parse_warn(cfile, "unexpected end of file");
 			break;
 		} else if (token == TOKEN_DELETED) {
-			token = next_token (&val, (unsigned *)0, cfile);
-			parse_semi (cfile);
+			token = next_token(&val, NULL, cfile);
+			parse_semi(cfile);
 			deletedp = 1;
 		} else if (token == DYNAMIC) {
-			token = next_token (&val, (unsigned *)0, cfile);
-			parse_semi (cfile);
+			token = next_token(&val, NULL, cfile);
+			parse_semi(cfile);
 			dynamicp = 1;
 		} else if (token == STATIC) {
-			token = next_token (&val, (unsigned *)0, cfile);
-			parse_semi (cfile);
+			token = next_token(&val, NULL, cfile);
+			parse_semi(cfile);
 			staticp = 1;
 		}
-		declaration = parse_statement (cfile, g, GROUP_DECL,
-					       (struct host_decl *)0,
-					       declaration);
+		declaration = parse_statement(cfile, g, GROUP_DECL,
+					      NULL, declaration);
 	} while (1);
 
 	if (name) {
 		if (deletedp) {
 			if (group_name_hash) {
-				t = (struct group_object *)0;
-				if (group_hash_lookup (&t, group_name_hash,
-						       name,
-						       strlen (name), MDL)) {
-					delete_group (t, 0);
+				t = NULL;
+				if (group_hash_lookup(&t, group_name_hash,
+						      name,
+						      strlen(name), MDL)) {
+					delete_group(t, 0);
 				}
 			}
 		} else {
-			t = (struct group_object *)0;
-			status = group_object_allocate (&t, MDL);
+			t = NULL;
+			status = group_object_allocate(&t, MDL);
 			if (status != ISC_R_SUCCESS)
-				log_fatal ("no memory for group decl %s: %s",
-					   val, isc_result_totext (status));
-			group_reference (&t -> group, g, MDL);
-			t -> name = name;
-			t -> flags = ((staticp ? GROUP_OBJECT_STATIC : 0) |
-				      (dynamicp ? GROUP_OBJECT_DYNAMIC : 0) |
-				      (deletedp ? GROUP_OBJECT_DELETED : 0));
-			supersede_group (t, 0);
+				log_fatal("no memory for group decl %s: %s",
+					  val, isc_result_totext(status));
+			group_reference(&t->group, g, MDL);
+			t->name = name;
+			t->flags = ((staticp ? GROUP_OBJECT_STATIC : 0) |
+				    (dynamicp ? GROUP_OBJECT_DYNAMIC : 0) |
+				    (deletedp ? GROUP_OBJECT_DELETED : 0));
+			supersede_group(t, 0);
 		}
-		if (t)
-			group_object_dereference (&t, MDL);
+		if (t != NULL)
+			group_object_dereference(&t, MDL);
 	}
 }
 
