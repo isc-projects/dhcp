@@ -2228,13 +2228,13 @@ address_is_owned(struct reply_state *reply, struct iaddr *addr) {
 			log_fatal("Impossible condition at %s:%d.", MDL);
 
 		if (memcmp(addr->iabuf, reply->fixed.data, 16) == 0)
-			return ISC_TRUE;
+			return (ISC_TRUE);
 
-		return ISC_FALSE;
+		return (ISC_FALSE);
 	}
 
 	if ((reply->old_ia == NULL) || (reply->old_ia->num_iasubopt == 0))
-		return ISC_FALSE;
+		return (ISC_FALSE);
 
 	for (i = 0 ; i < reply->old_ia->num_iasubopt ; i++) {
 		struct iasubopt *tmp;
@@ -2242,12 +2242,15 @@ address_is_owned(struct reply_state *reply, struct iaddr *addr) {
 		tmp = reply->old_ia->iasubopt[i];
 
 		if (memcmp(addr->iabuf, &tmp->addr, 16) == 0) {
+			if (lease6_usable(tmp) == ISC_FALSE) {
+				return (ISC_FALSE);
+			}
 			iasubopt_reference(&reply->lease, tmp, MDL);
-			return ISC_TRUE;
+			return (ISC_TRUE);
 		}
 	}
 
-	return ISC_FALSE;
+	return (ISC_FALSE);
 }
 
 /* Process a client-supplied IA_TA.  This may append options to the tail of
@@ -2769,7 +2772,8 @@ find_client_address(struct reply_state *reply) {
 			 * Look for the best lease on the client's shared
 			 * network.
 			 */
-			if (candidate_shared == reply->shared) {
+			if ((candidate_shared == reply->shared) && 
+			    (lease6_usable(lease) == ISC_TRUE)) {
 				best_lease = lease_compare(lease, best_lease);
 			}
 		}
@@ -2780,7 +2784,7 @@ find_client_address(struct reply_state *reply) {
 	 */
 	if ((best_lease == NULL) || (best_lease->state == FTS_ABANDONED)) {
 		status = pick_v6_address(&reply->lease, reply->shared,
-					 &reply->client_id);
+					 &reply->ia->iaid_duid);
 	} else if (best_lease != NULL) {
 		iasubopt_reference(&reply->lease, best_lease, MDL);
 		status = ISC_R_SUCCESS;
@@ -3652,14 +3656,14 @@ prefix_is_owned(struct reply_state *reply, struct iaddrcidrnet *pref) {
 			if ((pref->bits == l->cidrnet.bits) &&
 			    (memcmp(pref->lo_addr.iabuf,
 				    l->cidrnet.lo_addr.iabuf, 16) == 0))
-				return ISC_TRUE;
+				return (ISC_TRUE);
 		}
-		return ISC_FALSE;
+		return (ISC_FALSE);
 	}
 
 	if ((reply->old_ia == NULL) ||
 	    (reply->old_ia->num_iasubopt == 0))
-		return ISC_FALSE;
+		return (ISC_FALSE);
 
 	for (i = 0 ; i < reply->old_ia->num_iasubopt ; i++) {
 		struct iasubopt *tmp;
@@ -3667,13 +3671,16 @@ prefix_is_owned(struct reply_state *reply, struct iaddrcidrnet *pref) {
 		tmp = reply->old_ia->iasubopt[i];
 
 		if ((pref->bits == (int) tmp->plen) &&
-		    memcmp(pref->lo_addr.iabuf, &tmp->addr, 16) == 0) {
+		    (memcmp(pref->lo_addr.iabuf, &tmp->addr, 16) == 0)) {
+			if (lease6_usable(tmp) == ISC_FALSE) {
+				return (ISC_FALSE);
+			}
 			iasubopt_reference(&reply->lease, tmp, MDL);
-			return ISC_TRUE;
+			return (ISC_TRUE);
 		}
 	}
 
-	return ISC_FALSE;
+	return (ISC_FALSE);
 }
 
 /*
@@ -3767,8 +3774,9 @@ find_client_prefix(struct reply_state *reply) {
 			 * if it is scoped in a pool under the client's shared
 			 * network.
 			 */
-			if (candidate_shared == NULL ||
-			    candidate_shared == reply->shared) {
+			if (((candidate_shared == NULL) ||
+			     (candidate_shared == reply->shared)) &&
+			    (lease6_usable(prefix) == ISC_TRUE)) {
 				best_prefix = prefix_compare(reply, prefix,
 							     best_prefix);
 			}
