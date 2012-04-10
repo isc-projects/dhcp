@@ -14,9 +14,68 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* TODO: assert() */
-/* TODO: simplify functions, as pool is now in iaaddr */
+/*!
+ * \todo assert()
+ * \todo simplify functions, as pool is now in iaaddr
+ */
 
+/*! \file server/mdb6.c
+ *
+ * \page ipv6structures IPv6 Structures Overview
+ *
+ * A brief description of the IPv6 structures as reverse engineered.
+ *
+ * There are three major data strucutes involved in the database:
+ * ipv6_pool - this contains information about a pool of addresses or prefixes
+ *             that the server is using.  This includes a hash table that
+ *             tracks the active items and a pair of heap tables one for
+ *             active items and one for non-active items.  The heap tables
+ *             are used to determine the next items to be modified due to
+ *             timing events (expire mostly).
+ * ia_xx     - this contains information about a single IA from a request
+ *             normally it will contain one pointer to a lease for the client
+ *             but it may contain more in some circumstances.  There are 3
+ *             hash tables to aid in accessing these one each for NA, TA and PD
+ * iasubopt  - the v6 lease structure.  These are creaeted dynamically when
+ *             a client asks for something and will eventually be destroyed
+ *             if the client doesn't re-ask for that item.  A lease has space
+ *             for backpointers to the IA and to the pool to which it belongs.
+ *             The pool backpointer is always filled, the IA pointer may not be
+ *
+ * In normal use we then have something like this:
+ *
+ * ia hash tables
+ *  ia_na_active                           +----------------+
+ *  ia_ta_active          +------------+   | pool           |
+ *  ia_pd_active          | iasubopt   |<--|  active hash   |
+ * +-----------------+    | aka lease  |<--|  active heap   |
+ * | ia_xx           |    |  pool ptr  |-->|                |
+ * |  iasubopt array |<---|  iaptr     |<--|  inactive heap |
+ * |   lease ptr     |--->|            |   |                |
+ * +-----------------+    +------------+   +----------------+
+ *
+ * For the pool either the inactive heap will have a pointer
+ * or both the active heap and the active hash will have pointers.
+ *
+ * I think there are several major items to notice.   The first is
+ * that as a lease moves around it will be added to and removed
+ * from the address hash table in the pool and between the active
+ * and inactive hash tables.  The hash table and the active heap
+ * are used when the lease is either active or abandoned.  The
+ * inactive heap is used for all other states.  In particular a
+ * lease that has expired or been released will be cleaned
+ * (DDNS removal etc) and then moved to the inactive heap.  After
+ * some time period (currently 1 hour) it will be freed.
+ *
+ * The second is that when a client requests specific addresses,
+ * either because it previously owned them or if the server supplied
+ * them as part of a solicit, the server will try to lookup the ia_xx
+ * associated with the client and find the addresses there.  If it
+ * does find appropriate leases it moves them from the old IA to
+ * a new IA and eventually replaces the old IA with the new IA
+ * in the IA hash tables.
+ *
+ */
 #include "config.h"
 
 #include <sys/types.h>
@@ -874,6 +933,145 @@ create_lease6(struct ipv6_pool *pool, struct iasubopt **addr,
 	return result;
 }
 
+
+/*! \file server/mdb6.c
+ *
+ * \brief Cleans up leases when reading from a lease file
+ *
+ * This function is only expected to be run when reading leases in from a file.
+ * It checks to see if a lease already exists for the new leases's address.
+ * We don't add expired leases to the structures when reading a lease file
+ * which limits what can happen.  We have two variables the owners of the leases
+ * being the same or different and the new lease being active or non-active:
+ * Owners active
+ * same   no     remove old lease and its connections
+ * same   yes    nothing to do, other code will update the structures.
+ * diff   no     nothing to do
+ * diff   yes    this combination shouldn't happen, we should only have a
+ *               single active lease per address at a time and that lease
+ *               should move to non-active before any other lease can
+ *               become active for that address.
+ *               Currently we delete the previous lease and pass an error
+ *               to the caller who should log an error.
+ *
+ * When we remove a lease we remove it from the hash table and active heap
+ * (remember only active leases are in the structures at this time) for the
+ * pool, and from the IA's array.  If, after we've removed the pointer from
+ * IA's array to the lease, the IA has no more pointers we remove it from
+ * the appropriate hash table as well.
+ *
+ * \param[in] ia_table = the hash table for the IA
+ * \param[in] pool     = the pool to update
+ * \param[in] lease    = the new lease we want to add
+ * \param[in] ia       = the new ia we are building
+ *
+ * \return
+ * ISC_R_SUCCESS = the incoming lease and any previous lease were in
+ *                 an expected state - one of the first 3 options above.
+ *                 If necessary the old lease was removed.
+ * ISC_R_FAILURE = there is already an active lease for the address in
+ *                 the incoming lease.  This shouldn't happen if it does
+ *                 flag an error for the caller to log.
+ */
+
+isc_result_t
+cleanup_lease6(ia_hash_t *ia_table,
+	       struct ipv6_pool *pool,
+	       struct iasubopt *lease,
+	       struct ia_xx *ia) {
+
+	struct iasubopt *test_iasubopt, *tmp_iasubopt;
+	struct ia_xx *old_ia;
+	isc_result_t status = ISC_R_SUCCESS;
+
+	test_iasubopt = NULL;
+	old_ia = NULL;
+
+	/*
+	 * Look up the address - if we don't find a lease
+	 * we don't need to do anything.
+	 */
+	if (iasubopt_hash_lookup(&test_iasubopt, pool->leases,
+				 &lease->addr, sizeof(lease->addr),
+				 MDL) == 0) {
+		return (ISC_R_SUCCESS);
+	}
+
+	if (test_iasubopt->ia == NULL) {
+		/* no old ia, no work to do */
+		iasubopt_dereference(&test_iasubopt, MDL);
+		return (status);
+	}
+
+	ia_reference(&old_ia, test_iasubopt->ia, MDL);
+
+	if ((old_ia->iaid_duid.len == ia->iaid_duid.len) &&
+	    (memcmp((unsigned char *)ia->iaid_duid.data,
+		    (unsigned char *)old_ia->iaid_duid.data,
+		    ia->iaid_duid.len) == 0)) {
+		/* same IA */
+		if ((lease->state == FTS_ACTIVE) ||
+		    (lease->state == FTS_ABANDONED)) {
+			/* still active, no need to delete */
+			goto cleanup;
+		}
+	} else {
+		/* different IA */
+		if ((lease->state != FTS_ACTIVE) &&
+		    (lease->state != FTS_ABANDONED)) {
+			/* new lease isn't active, no work */
+			goto cleanup;
+		}
+
+		/*
+		 * We appear to have two active leases, this shouldn't happen.
+		 * Before a second lease can be set to active the first lease
+		 * should be set to inactive (released, expired etc). For now
+		 * delete the previous lease and indicate a failure to the
+		 * caller so it can generate a warning.
+		 * In the future we may try and determine which is the better
+		 * lease to keep.
+		 */
+
+		status = ISC_R_FAILURE;
+	}
+
+	/*
+	 * Remove the old lease from the active heap and from the hash table
+	 * then remove the lease from the IA and clean up the IA if necessary.
+	 */
+	isc_heap_delete(pool->active_timeouts, test_iasubopt->heap_index);
+	pool->num_active--;
+
+	iasubopt_hash_delete(pool->leases, &test_iasubopt->addr,
+			     sizeof(test_iasubopt->addr), MDL);
+	ia_remove_iasubopt(old_ia, test_iasubopt, MDL);
+	if (old_ia->num_iasubopt <= 0) {
+		ia_hash_delete(ia_table,
+			       (unsigned char *)old_ia->iaid_duid.data,
+			       old_ia->iaid_duid.len, MDL);
+	}
+
+	/*
+	 * We derefenrece the subopt here as we've just removed it from
+	 * the hash table in the pool.  We need to make a copy as we
+	 * need to derefernece it again later.
+	 */
+	tmp_iasubopt = test_iasubopt;
+	iasubopt_dereference(&tmp_iasubopt, MDL);
+
+      cleanup:
+	ia_dereference(&old_ia, MDL);
+
+	/*
+	 * Clean up the reference, this is in addition to the deference
+	 * above after removing the entry from the hash table
+	 */
+	iasubopt_dereference(&test_iasubopt, MDL);
+
+	return (status);
+}
+
 /*
  * Put a lease in the pool directly. This is intended to be used when
  * loading leases from the file.
@@ -982,6 +1180,38 @@ lease6_exists(const struct ipv6_pool *pool, const struct in6_addr *addr) {
 	} else {
 		return ISC_FALSE;
 	}
+}
+
+/*!
+ *
+ * \brief Check if address is available to a lease
+ *
+ * Determine if the address in the lease is available to that
+ * lease.  Either the address isn't in use or it is in use
+ * but by that lease.
+ *
+ * \param[in] lease = lease to check
+ *
+ * \return
+ * ISC_TRUE  = The lease is allowed to use that address
+ * ISC_FALSE = The lease isn't allowed to use that address
+ */
+isc_boolean_t
+lease6_usable(struct iasubopt *lease) {
+	struct iasubopt *test_iaaddr;
+	isc_boolean_t status = ISC_TRUE;
+
+	test_iaaddr = NULL;
+	if (iasubopt_hash_lookup(&test_iaaddr, lease->ipv6_pool->leases,
+				 (void *)&lease->addr,
+				 sizeof(lease->addr), MDL)) {
+		if (test_iaaddr != lease) {
+			status = ISC_FALSE;
+		}
+		iasubopt_dereference(&test_iaaddr, MDL);
+	}
+
+	return (status);
 }
 
 /*
