@@ -95,6 +95,17 @@ work on other platforms. Please report any problems and suggested fixes to
   an int as a boolean).
   [ISC-Bugs #26203]
 
+- Fix the NA and PD allocation code to handle the case where a client
+  provides a preference and the server doesn't have any addresses or
+  prefixes available.  Previoulsy the server ignored the request with
+  this patch it replies with a NoAddrsAvail or NoPrefixAvai respone.
+  By default the code performs according to the errata of August 2010
+  for RFC 3315 section 17.2.2, to enable the previous style see the
+  seciton on RFC3315_PRE_ERRATA_2010_08 in includes/site.h.  This option
+  may be removed in the future.
+  Thanks to Jiri Popelka at Red Hat for the patch.
+  [ISC-Bugs #22676]
+
 			Changes since 4.1-ESV-R3
 
 - Add AM_MAINTAINER_MODE to configure.ac to avoid rebuilding
