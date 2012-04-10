@@ -984,20 +984,21 @@ isc_result_t dhcp_host_set_value  (omapi_object_t *h,
 
 	if (!omapi_ds_strcmp (name, "hardware-type")) {
 		int type;
-		if (value && (value -> type == omapi_datatype_data &&
-		    	      value -> u.buffer.len == sizeof type)) {
-			if (value -> u.buffer.len > sizeof type)
-				return DHCP_R_INVALIDARG;
-			memcpy (&type,
-				value -> u.buffer.value,
-				value -> u.buffer.len);
-			type = ntohl (type);
-		} else if (value -> type == omapi_datatype_int)
-			type = value -> u.integer;
+		if ((value != NULL) &&
+		    ((value->type == omapi_datatype_data) &&
+		     (value->u.buffer.len == sizeof(type)))) {
+			if (value->u.buffer.len > sizeof(type))
+				return (DHCP_R_INVALIDARG);
+			memcpy(&type, value->u.buffer.value,
+			       value->u.buffer.len);
+			type = ntohl(type);
+		} else if ((value != NULL) &&
+			   (value->type == omapi_datatype_int))
+			type = value->u.integer;
 		else
-			return DHCP_R_INVALIDARG;
-		host -> interface.hbuf [0] = type;
-		return ISC_R_SUCCESS;
+			return (DHCP_R_INVALIDARG);
+		host->interface.hbuf[0] = type;
+		return (ISC_R_SUCCESS);
 	}
 
 	if (!omapi_ds_strcmp (name, "dhcp-client-identifier")) {

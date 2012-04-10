@@ -177,11 +177,12 @@ void bootp (packet)
 	}
 
 	/* Execute the host statements. */
-	execute_statements_in_scope ((struct binding_value **)0,
-				     packet, lease, (struct client_state *)0,
-				     packet -> options, options,
-				     &lease -> scope,
-				     hp -> group, lease -> subnet -> group);
+	if (hp != NULL) {
+		execute_statements_in_scope (NULL, packet, lease, NULL,
+					     packet->options, options,
+					     &lease->scope,
+					     hp->group, lease->subnet->group);
+	}
 	
 	/* Drop the request if it's not allowed for this client. */
 	if ((oc = lookup_option (&server_universe, options, SV_ALLOW_BOOTP)) &&
@@ -362,15 +363,16 @@ void bootp (packet)
 	}
 
 	/* Report what we're doing... */
-	log_info ("%s", msgbuf);
-	log_info ("BOOTREPLY for %s to %s (%s) via %s",
-	      piaddr (lease->ip_addr), hp -> name,
-	      print_hw_addr (packet -> raw -> htype,
-			     packet -> raw -> hlen,
-			     packet -> raw -> chaddr),
-	      packet -> raw -> giaddr.s_addr
-	      ? inet_ntoa (packet -> raw -> giaddr)
-	      : packet -> interface -> name);
+	log_info("%s", msgbuf);
+	log_info("BOOTREPLY for %s to %s (%s) via %s",
+		 piaddr(lease->ip_addr),
+		 ((hp != NULL) && (hp->name != NULL)) ? hp -> name : "unknown",
+		 print_hw_addr (packet->raw->htype,
+				packet->raw->hlen,
+				packet->raw->chaddr),
+		 packet->raw->giaddr.s_addr
+		 ? inet_ntoa (packet->raw->giaddr)
+		 : packet->interface->name);
 
 	/* Set up the parts of the address that are in common. */
 	to.sin_family = AF_INET;

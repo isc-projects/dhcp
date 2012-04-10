@@ -114,6 +114,11 @@ work on other platforms. Please report any problems and suggested fixes to
   [ISC-Bugs #23138] [ISC-Bugs #27945] [ISC-Bugs #25586]
   [ISC-Bugs #27684]
 
+- Remove unnecessary checks in the lease query code and clean up
+  several compiler issues (some dereferences of NULL and treating
+  an int as a boolean).
+  [ISC-Bugs #26203]
+
 			Changes since 4.2.2
 
 - Fix the code that checks for an existing DDNS transaction to cancel
