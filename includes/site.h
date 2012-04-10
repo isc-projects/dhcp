@@ -227,3 +227,13 @@
    future. */
 
 #define ACCEPT_LIST_IN_DOMAIN_NAME
+
+/* In RFC3315 section 17.2.2 stated that if the server was not going
+   to be able to assign any addresses to any IAs in a subsequent Request
+   from a client that the server should not include any IAs.  This
+   requirement was removed in an errata from August 2010.  Define the
+   following if you want the pre-errata version.  
+   You should only enable this option if you have clients that
+   require the original functionality. */
+
+/* #define RFC3315_PRE_ERRATA_2010_08 */
