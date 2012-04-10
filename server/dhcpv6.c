@@ -1092,7 +1092,8 @@ try_client_v6_prefix(struct iasubopt **pref,
 		return DHCP_R_INVALIDARG;
 	}
 	tmp_plen = (int) requested_pref->data[0];
-	if ((tmp_plen < 3) || (tmp_plen > 128)) {
+	if ((tmp_plen < 3) || (tmp_plen > 128) ||
+	    ((int)tmp_plen != pool->units)) {
 		return ISC_R_FAILURE;
 	}
 	memcpy(&tmp_pref, requested_pref->data + 1, sizeof(tmp_pref));
@@ -1105,9 +1106,8 @@ try_client_v6_prefix(struct iasubopt **pref,
 		return ISC_R_FAILURE;
 	}
 
-	if (((int)tmp_plen != pool->units) ||
-	    !ipv6_in_pool(&tmp_pref, pool)) {
-		return ISC_R_FAILURE;
+	if (!ipv6_in_pool(&tmp_pref, pool)) {
+		return ISC_R_ADDRNOTAVAIL;
 	}
 
 	if (prefix6_exists(pool, &tmp_pref, tmp_plen)) {
@@ -1239,7 +1239,9 @@ lease_to_client(struct data_string *reply_ret,
 	static struct reply_state reply;
 	struct option_cache *oc;
 	struct data_string packet_oro;
-	isc_boolean_t no_resources_avail;
+#if defined (RFC3315_PRE_ERRATA_2010_08)
+	isc_boolean_t no_resources_avail = ISC_FALSE;
+#endif
 
 	/* Locate the client.  */
 	if (shared_network_from_packet6(&reply.shared,
@@ -1297,7 +1299,7 @@ lease_to_client(struct data_string *reply_ret,
 	/* Process the client supplied IA's onto the reply buffer. */
 	reply.ia_count = 0;
 	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_IA_NA);
-	no_resources_avail = ISC_FALSE;
+
 	for (; oc != NULL ; oc = oc->next) {
 		isc_result_t status;
 
@@ -1315,12 +1317,14 @@ lease_to_client(struct data_string *reply_ret,
 		    (status != ISC_R_NORESOURCES))
 			goto exit;
 
+#if defined (RFC3315_PRE_ERRATA_2010_08)
 		/*
 		 * If any address cannot be given to any IA, then set the
 		 * NoAddrsAvail status code.
 		 */
 		if (reply.client_resources == 0)
 			no_resources_avail = ISC_TRUE;
+#endif
 	}
 	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_IA_TA);
 	for (; oc != NULL ; oc = oc->next) {
@@ -1340,12 +1344,14 @@ lease_to_client(struct data_string *reply_ret,
 		    (status != ISC_R_NORESOURCES))
 			goto exit;
 
+#if defined (RFC3315_PRE_ERRATA_2010_08)
 		/*
 		 * If any address cannot be given to any IA, then set the
 		 * NoAddrsAvail status code.
 		 */
 		if (reply.client_resources == 0)
 			no_resources_avail = ISC_TRUE;
+#endif
 	}
 
 	/* Same for IA_PD's. */
@@ -1367,13 +1373,6 @@ lease_to_client(struct data_string *reply_ret,
 		if ((status != ISC_R_SUCCESS) &&
 		    (status != ISC_R_NORESOURCES))
 			goto exit;
-
-		/*
-		 * If any prefix cannot be given to any IA_PD, then
-		 * set the NoPrefixAvail status code.
-		 */
-		if (reply.client_resources == 0)
-			no_resources_avail = ISC_TRUE;
 	}
 
 	/*
@@ -1429,6 +1428,7 @@ lease_to_client(struct data_string *reply_ret,
 	 * the server.
 	 * Sends a Renew/Rebind if the IA is not in the Reply message.
 	 */
+#if defined (RFC3315_PRE_ERRATA_2010_08)
 	if (no_resources_avail && (reply.ia_count != 0) &&
 	    (reply.packet->dhcpv6_msg_type == DHCPV6_SOLICIT))
 	{
@@ -1438,36 +1438,6 @@ lease_to_client(struct data_string *reply_ret,
 				     "interface.", reply.opt_state)) {
 			log_error("lease_to_client: Unable to set "
 				  "NoAddrsAvail status code.");
-			goto exit;
-		}
-
-		/* Rewind the cursor to the start. */
-		reply.cursor = REPLY_OPTIONS_INDEX;
-
-		/*
-		 * Produce an advertise that includes only:
-		 *
-		 * Status code.
-		 * Server DUID.
-		 * Client DUID.
-		 */
-		reply.buf.reply.msg_type = DHCPV6_ADVERTISE;
-		reply.cursor += store_options6((char *)reply.buf.data +
-							reply.cursor,
-					       sizeof(reply.buf) -
-					       		reply.cursor,
-					       reply.opt_state, reply.packet,
-					       required_opts_NAA,
-					       NULL);
-	} else if (no_resources_avail && (reply.ia_count == 0) &&
-		   (reply.packet->dhcpv6_msg_type == DHCPV6_SOLICIT))
-	{
-		/* Set the NoPrefixAvail status code. */
-		if (!set_status_code(STATUS_NoPrefixAvail,
-				     "No prefixes available for this "
-				     "interface.", reply.opt_state)) {
-			log_error("lease_to_client: Unable to set "
-				  "NoPrefixAvail status code.");
 			goto exit;
 		}
 
@@ -1502,6 +1472,17 @@ lease_to_client(struct data_string *reply_ret,
 					       required_opts_solicit,
 					       &packet_oro);
 	}
+#else /* defined (RFC3315_PRE_ERRATA_2010_08) */
+	/*
+	 * Having stored the client's IA's, store any options that
+	 * will fit in the remaining space.
+	 */
+	reply.cursor += store_options6((char *)reply.buf.data + reply.cursor,
+				       sizeof(reply.buf) - reply.cursor,
+				       reply.opt_state, reply.packet,
+				       required_opts_solicit,
+				       &packet_oro);
+#endif /* defined (RFC3315_PRE_ERRATA_2010_08) */
 
 	/* Return our reply to the caller. */
 	reply_ret->len = reply.cursor;
@@ -2706,15 +2687,17 @@ find_client_temporaries(struct reply_state *reply) {
  */
 static isc_result_t
 reply_process_try_addr(struct reply_state *reply, struct iaddr *addr) {
-	isc_result_t status = ISC_R_NORESOURCES;
+	isc_result_t status = ISC_R_ADDRNOTAVAIL;
 	struct ipv6_pool *pool;
 	int i;
 	struct data_string data_addr;
 
 	if ((reply == NULL) || (reply->shared == NULL) ||
-	    (reply->shared->ipv6_pools == NULL) || (addr == NULL) ||
-	    (reply->lease != NULL))
-		return DHCP_R_INVALIDARG;
+	    (addr == NULL) || (reply->lease != NULL))
+		return (DHCP_R_INVALIDARG);
+
+	if  (reply->shared->ipv6_pools == NULL)
+		return (ISC_R_ADDRNOTAVAIL);
 
 	memset(&data_addr, 0, sizeof(data_addr));
 	data_addr.len = addr->len;
@@ -2732,7 +2715,7 @@ reply_process_try_addr(struct reply_state *reply, struct iaddr *addr) {
 	/* Note that this is just pedantry.  There is no allocation to free. */
 	data_string_forget(&data_addr, MDL);
 	/* Return just the most recent status... */
-	return status;
+	return (status);
 }
 
 /* Look around for an address to give the client.  First, look through the
@@ -3228,7 +3211,9 @@ reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia) {
 		if (status == ISC_R_CANCELED)
 			break;
 
-		if ((status != ISC_R_SUCCESS) && (status != ISC_R_ADDRINUSE))
+		if ((status != ISC_R_SUCCESS) &&
+		    (status != ISC_R_ADDRINUSE) &&
+		    (status != ISC_R_ADDRNOTAVAIL))
 			goto cleanup;
 	}
 
@@ -3507,8 +3492,9 @@ reply_process_prefix(struct reply_state *reply, struct option_cache *pref) {
 			status = reply_process_try_prefix(reply, &tmp_pref);
 
 			/* Either error out or skip this prefix. */
-			if ((status != ISC_R_SUCCESS) && 
-			    (status != ISC_R_ADDRINUSE)) 
+			if ((status != ISC_R_SUCCESS) &&
+			    (status != ISC_R_ADDRINUSE) &&
+			    (status != ISC_R_ADDRNOTAVAIL))
 				goto cleanup;
 
 			if (reply->lease == NULL) {
@@ -3690,21 +3676,23 @@ prefix_is_owned(struct reply_state *reply, struct iaddrcidrnet *pref) {
 static isc_result_t
 reply_process_try_prefix(struct reply_state *reply,
 			 struct iaddrcidrnet *pref) {
-	isc_result_t status = ISC_R_NORESOURCES;
+	isc_result_t status = ISC_R_ADDRNOTAVAIL;
 	struct ipv6_pool *pool;
 	int i;
 	struct data_string data_pref;
 
 	if ((reply == NULL) || (reply->shared == NULL) ||
-	    (reply->shared->ipv6_pools == NULL) || (pref == NULL) ||
-	    (reply->lease != NULL))
-		return DHCP_R_INVALIDARG;
+	    (pref == NULL) || (reply->lease != NULL))
+		return (DHCP_R_INVALIDARG);
+
+	if (reply->shared->ipv6_pools == NULL)
+		return (ISC_R_ADDRNOTAVAIL);
 
 	memset(&data_pref, 0, sizeof(data_pref));
 	data_pref.len = 17;
 	if (!buffer_allocate(&data_pref.buffer, data_pref.len, MDL)) {
 		log_error("reply_process_try_prefix: out of memory.");
-		return ISC_R_NOMEMORY;
+		return (ISC_R_NOMEMORY);
 	}
 	data_pref.data = data_pref.buffer->data;
 	data_pref.buffer->data[0] = (u_int8_t) pref->bits;
@@ -3723,7 +3711,7 @@ reply_process_try_prefix(struct reply_state *reply,
 
 	data_string_forget(&data_pref, MDL);
 	/* Return just the most recent status... */
-	return status;
+	return (status);
 }
 
 /* Look around for a prefix to give the client.  First, look through the old
