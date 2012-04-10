@@ -3,7 +3,7 @@
    Parser for dhcpd config file... */
 
 /*
- * Copyright (c) 2004-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2012 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -4432,21 +4432,39 @@ parse_ia_na_declaration(struct parse *cfile) {
 			binding_scope_dereference(&scope, MDL);
 		}
 
-		/* add to our various structures */
-		ia_add_iasubopt(ia, iaaddr, MDL);
-		ia_reference(&iaaddr->ia, ia, MDL);
+		/* find the pool this address is in */
 		pool = NULL;
 		if (find_ipv6_pool(&pool, D6O_IA_NA,
 				   &iaaddr->addr) != ISC_R_SUCCESS) {
 			inet_ntop(AF_INET6, &iaaddr->addr,
 				  addr_buf, sizeof(addr_buf));
-			parse_warn(cfile, "no pool found for address %s", 
+			parse_warn(cfile, "no pool found for address %s",
 				   addr_buf);
 			return;
 		}
-		add_lease6(pool, iaaddr, end_time);
-		ipv6_pool_dereference(&pool, MDL);
+
+		/* remove old information */
+		if (cleanup_lease6(ia_na_active, pool,
+				   iaaddr, ia) != ISC_R_SUCCESS) {
+			inet_ntop(AF_INET6, &iaaddr->addr,
+				  addr_buf, sizeof(addr_buf));
+			parse_warn(cfile, "duplicate na lease for address %s",
+				   addr_buf);
+		}
+
+		/*
+		 * if we like the lease we add it to our various structues
+		 * otherwise we leave it and it will get cleaned when we
+		 * do the iasubopt_dereference.
+		 */
+		if ((state == FTS_ACTIVE) || (state == FTS_ABANDONED)) {
+			ia_add_iasubopt(ia, iaaddr, MDL);
+			ia_reference(&iaaddr->ia, ia, MDL);
+			add_lease6(pool, iaaddr, end_time);
+		}
+
 		iasubopt_dereference(&iaaddr, MDL);
+		ipv6_pool_dereference(&pool, MDL);
 	}
 
 	/*
@@ -4795,19 +4813,37 @@ parse_ia_ta_declaration(struct parse *cfile) {
 			binding_scope_dereference(&scope, MDL);
 		}
 
-		/* add to our various structures */
-		ia_add_iasubopt(ia, iaaddr, MDL);
-		ia_reference(&iaaddr->ia, ia, MDL);
+		/* find the pool this address is in */
 		pool = NULL;
 		if (find_ipv6_pool(&pool, D6O_IA_TA,
 				   &iaaddr->addr) != ISC_R_SUCCESS) {
 			inet_ntop(AF_INET6, &iaaddr->addr,
 				  addr_buf, sizeof(addr_buf));
-			parse_warn(cfile, "no pool found for address %s", 
+			parse_warn(cfile, "no pool found for address %s",
 				   addr_buf);
 			return;
 		}
-		add_lease6(pool, iaaddr, end_time);
+
+		/* remove old information */
+		if (cleanup_lease6(ia_ta_active, pool,
+				   iaaddr, ia) != ISC_R_SUCCESS) {
+			inet_ntop(AF_INET6, &iaaddr->addr,
+				  addr_buf, sizeof(addr_buf));
+			parse_warn(cfile, "duplicate ta lease for address %s",
+				   addr_buf);
+		}
+
+		/*
+		 * if we like the lease we add it to our various structues
+		 * otherwise we leave it and it will get cleaned when we
+		 * do the iasubopt_dereference.
+		 */
+		if ((state == FTS_ACTIVE) || (state == FTS_ABANDONED)) {
+			ia_add_iasubopt(ia, iaaddr, MDL);
+			ia_reference(&iaaddr->ia, ia, MDL);
+			add_lease6(pool, iaaddr, end_time);
+		}
+
 		ipv6_pool_dereference(&pool, MDL);
 		iasubopt_dereference(&iaaddr, MDL);
 	}
@@ -5159,19 +5195,37 @@ parse_ia_pd_declaration(struct parse *cfile) {
 			binding_scope_dereference(&scope, MDL);
 		}
 
-		/* add to our various structures */
-		ia_add_iasubopt(ia, iapref, MDL);
-		ia_reference(&iapref->ia, ia, MDL);
+		/* find the pool this address is in */
 		pool = NULL;
 		if (find_ipv6_pool(&pool, D6O_IA_PD,
 				   &iapref->addr) != ISC_R_SUCCESS) {
 			inet_ntop(AF_INET6, &iapref->addr,
 				  addr_buf, sizeof(addr_buf));
-			parse_warn(cfile, "no pool found for address %s", 
+			parse_warn(cfile, "no pool found for address %s",
 				   addr_buf);
 			return;
 		}
-		add_lease6(pool, iapref, end_time);
+
+		/* remove old information */
+		if (cleanup_lease6(ia_pd_active, pool,
+				   iapref, ia) != ISC_R_SUCCESS) {
+			inet_ntop(AF_INET6, &iapref->addr,
+				  addr_buf, sizeof(addr_buf));
+			parse_warn(cfile, "duplicate pd lease for address %s",
+				   addr_buf);
+		}
+
+		/*
+		 * if we like the lease we add it to our various structues
+		 * otherwise we leave it and it will get cleaned when we
+		 * do the iasubopt_dereference.
+		 */
+		if ((state == FTS_ACTIVE) || (state == FTS_ABANDONED)) {
+			ia_add_iasubopt(ia, iapref, MDL);
+			ia_reference(&iapref->ia, ia, MDL);
+			add_lease6(pool, iapref, end_time);
+		}
+
 		ipv6_pool_dereference(&pool, MDL);
 		iasubopt_dereference(&iapref, MDL);
 	}

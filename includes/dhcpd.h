@@ -3286,9 +3286,13 @@ isc_result_t release_lease6(struct ipv6_pool *pool, struct iasubopt *lease);
 isc_result_t decline_lease6(struct ipv6_pool *pool, struct iasubopt *lease);
 isc_boolean_t lease6_exists(const struct ipv6_pool *pool,
 			    const struct in6_addr *addr);
+isc_boolean_t lease6_usable(struct iasubopt *lease);
+isc_result_t cleanup_lease6(ia_hash_t *ia_table,
+			    struct ipv6_pool *pool,
+			    struct iasubopt *lease,
+			    struct ia_xx *ia);
 isc_result_t mark_lease_unavailble(struct ipv6_pool *pool,
 				   const struct in6_addr *addr);
-
 isc_result_t create_prefix6(struct ipv6_pool *pool,
 			    struct iasubopt **pref,
 			    unsigned int *attempts,

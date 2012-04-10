@@ -75,10 +75,20 @@ work on other platforms. Please report any problems and suggested fixes to
 - Fixed many compilation problems ("set, but not used" warnings) for
   gcc 4.6 that may affect Ubuntu 11.10 users. [ISC-Bugs #27588]
 
-
 - Remove outdated note in the bootp keyword about the option not satisfying 
   the requirement of failover peers for denying dynamic bootp clients.
   [ISC-bugs #28574]
+
+- Multiple items to clean up IPv6 address processing.
+  When processing an IA that we've seen check to see if the
+  addresses are usable (not in use by somebody else) before
+  handing it out.
+  When reading in leases from the file discard expired addresses.
+  When picking an address for a client include the IA ID in
+  addition to the client ID to generally pick different addresses
+  for different IAs.
+  [ISC-Bugs #23138] [ISC-Bugs #27945] [ISC-Bugs #25586]
+  [ISC-Bugs #27684]
 
 			Changes since 4.1-ESV-R3
 
