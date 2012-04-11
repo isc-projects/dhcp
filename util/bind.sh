@@ -14,17 +14,27 @@
 # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 
-# $Id: bind.sh,v 1.27 2012/04/10 23:52:06 sar Exp $
+# $Id: bind.sh,v 1.28 2012/04/11 01:51:35 sar Exp $
 
 # Get the bind distribution for the libraries
 # This script is used to build the DHCP distribution and shouldn't be shipped
 #
-# Usage: sh bind.sh <DHCP version>
+# Usage: sh bind.sh [--remote=<path>] <DHCP version>
+#
+# Normally remote will only be used by Robie
 #
 #
 
 topdir=`pwd`
 binddir=$topdir/bind
+remote=--remote=cvs.isc.org:/proj/git/prod/bind9.git
+
+case "${1:-}" in
+--remote=*)
+        remote="${1}";
+        shift
+        ;;
+esac
 
 case $# in 
     1)
@@ -61,7 +71,7 @@ case $# in
 	   ;;
 	esac
 	;;
-    *) echo "usage: sh bind.sh [<branch>|<version>]" >&2
+    *) echo "usage: sh bind.sh [--remote=<path>] [<branch>|<version>]" >&2
        exit 1
        ;;
 esac
@@ -75,11 +85,11 @@ cp util/Makefile.bind bind/Makefile
 cd $binddir
 
 # Get the bind version file and move it to version.tmp
-git archive --format tar --remote=cvs.isc.org:/proj/git/prod/bind9.git $BINDTAG version | tar xf -
+git archive --format tar $remote $BINDTAG version | tar xf -
 mv version version.tmp
 
 # Get the bind release kit shell script
-git archive --format tar --remote=cvs.isc.org:/proj/git/prod/bind9.git  master:util/ | tar xf - kit.sh
+git archive --format tar $remote master:util/ | tar xf - kit.sh
 
 # Create the bind tarball, which has the side effect of
 # setting up the bind directory we will use for building
