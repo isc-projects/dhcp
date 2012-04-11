@@ -2724,7 +2724,7 @@ void parse_group_declaration (cfile, group)
 	enum dhcp_token token;
 	struct group *g;
 	int declaration = 0;
-	struct group_object *t;
+	struct group_object *t = NULL;
 	isc_result_t status;
 	char *name = NULL;
 	int deletedp = 0;
