@@ -14,7 +14,7 @@
 # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 
-# $Id: bind.sh,v 1.6.2.24 2012/04/11 01:51:19 sar Exp $
+# $Id: bind.sh,v 1.6.2.25 2012/04/11 02:40:08 sar Exp $
 
 # Get the bind distribution for the libraries
 # This script is used to build the DHCP distribution and shouldn't be shipped
@@ -95,7 +95,7 @@ git archive --format tar $remote master:util/ | tar xf - kit.sh
 # setting up the bind directory we will use for building
 # the export libraries
 echo Creating tarball for $BINDTAG
-sh kit.sh $SNAP $BINDTAG $binddir
+sh kit.sh $remote $SNAP $BINDTAG $binddir
 
 . ./version.tmp
 
