@@ -3,7 +3,7 @@
    DHCP/BOOTP Relay Agent. */
 
 /*
- * Copyright(c) 2004-2011 by Internet Systems Consortium, Inc.("ISC")
+ * Copyright(c) 2004-2012 by Internet Systems Consortium, Inc.("ISC")
  * Copyright(c) 1997-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -130,7 +130,7 @@ static int strip_relay_agent_options(struct interface_info *,
 				     struct dhcp_packet *, unsigned);
 
 static const char copyright[] =
-"Copyright 2004-2011 Internet Systems Consortium.";
+"Copyright 2004-2012 Internet Systems Consortium.";
 static const char arr[] = "All rights reserved.";
 static const char message[] =
 "Internet Systems Consortium DHCP Relay Agent";

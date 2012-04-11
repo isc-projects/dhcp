@@ -68,7 +68,7 @@ int duid_type = 0;
 #define ASSERT_STATE(state_is, state_shouldbe) {}
 
 static const char copyright[] =
-"Copyright 2004-2011 Internet Systems Consortium.";
+"Copyright 2004-2012 Internet Systems Consortium.";
 static const char arr [] = "All rights reserved.";
 static const char message [] = "Internet Systems Consortium DHCP Client";
 static const char url [] = 
