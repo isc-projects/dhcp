@@ -1,10 +1,11 @@
 #ifndef LINT
-static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/dst_api.c,v 1.6.220.1 2009/01/22 02:07:42 sar Exp $";
+static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/dst_api.c,v 1.6.220.1.10.1 2012/04/11 15:44:14 sar Exp $";
 #endif
 
 /*
  * Portions Copyright (c) 1995-1998 by Trusted Information Systems, Inc.
  * Portions Copyright (c) 2007,2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Portions Copyright (c) 2012 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -341,7 +342,7 @@ dst_read_key(const char *in_keyname, const unsigned in_id,
 			 in_alg));
 		return (NULL);
 	}
-	if ((type && (DST_PUBLIC | DST_PRIVATE)) == 0) 
+	if ((type & (DST_PUBLIC | DST_PRIVATE)) == 0) 
 		return (NULL);
 	if (in_keyname == NULL) {
 		EREPORT(("dst_read_private_key(): Null key name passed in\n"));
