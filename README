@@ -97,7 +97,7 @@ directory, it may not have up-to-date information).
 
 			    RELEASE STATUS
 
-This is ISC DHCP 4.2.4b1, a beat of a maintenance release containing patches.
+This is ISC DHCP 4.2.4b1, a beta of a maintenance release containing patches.
 
 In this release, the DHCPv6 server should be fully functional on Linux,
 Solaris, or any BSD.  The DHCPv6 client should be similarly functional
