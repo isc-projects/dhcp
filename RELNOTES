@@ -79,9 +79,9 @@ work on other platforms. Please report any problems and suggested fixes to
 - In the DDNS code handle error conditions more gracefully and add more
   logging code.  The major change is to handle unexpected cancel events
   from the DNS client code.
-  [ISC-Bugs #26287].
+  [ISC-Bugs #26287]
 
-- Tidy up the receive calls and eliminate the need for found_pkt
+- Tidy up the receive calls and eliminate the need for found_pkt.
   [ISC-Bugs #25066]
  
 - Add support for Infiniband over sockets to the server and
@@ -100,7 +100,7 @@ work on other platforms. Please report any problems and suggested fixes to
 - Modify the code that determines if an outstanding DDNS request
   should be cancelled.  This patch results in cancelling the
   outstanding request less often.  It fixes the problem caused
-  by a client doing a release where  the  txt and ptr records
+  by a client doing a release where  the TXT and PTR records
   weren't removed from the DNS.
   [ISC-BUGS #27858]
 
@@ -109,8 +109,9 @@ work on other platforms. Please report any problems and suggested fixes to
   Bruno Verstuyft and Vincent Demaertelaere of Excentis.
   [ISC-Bugs #27941]
 
-- Remove outdated note in the bootp keyword about the option not satisfying 
-  the requirement of failover peers for denying dynamic bootp clients.
+- Remove outdated note in the description of the bootp keyword about the
+  option not satisfying the requirement of failover peers for denying
+  dynamic bootp clients.
   [ISC-bugs #28574]
 
 - Multiple items to clean up IPv6 address processing.
@@ -131,16 +132,16 @@ work on other platforms. Please report any problems and suggested fixes to
 
 - Fix the NA and PD allocation code to handle the case where a client
   provides a preference and the server doesn't have any addresses or
-  prefixes available.  Previoulsy the server ignored the request with
-  this patch it replies with a NoAddrsAvail or NoPrefixAvai respone.
+  prefixes available.  Previously the server ignored the request with
+  this patch it replies with a NoAddrsAvail or NoPrefixAvail response.
   By default the code performs according to the errata of August 2010
   for RFC 3315 section 17.2.2, to enable the previous style see the
-  seciton on RFC3315_PRE_ERRATA_2010_08 in includes/site.h.  This option
+  section on RFC3315_PRE_ERRATA_2010_08 in includes/site.h.  This option
   may be removed in the future.
   Thanks to Jiri Popelka at Red Hat for the patch.
   [ISC-Bugs #22676]
 
-- Fix up some issues found by static analysis
+- Fix up some issues found by static analysis.
   A potential memory leak and NULL dereference in omapi.
   The use of a boolean test instead of a bitwise test in dst.
   [ISC-Bugs #28941]
