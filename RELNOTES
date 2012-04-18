@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-			     Version 4.2.4b1
-			      12 April 2012
+			     Version 4.2.4rc1
+			      19 April 2012
 
 			      Release Notes
 
@@ -38,6 +38,10 @@ output of "./configure --help" to see what options are available.
 The system has only been tested on Linux, FreeBSD, and Solaris, and may not
 work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
+
+			Changes since 4.2.4b1
+
+- None
 
 			Changes since 4.2.3
 
