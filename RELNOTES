@@ -1,13 +1,13 @@
 	      Internet Systems Consortium DHCP Distribution
-			   Version 4.1-ESV-R5b1
-			      12 April 2012
+			   Version 4.1-ESV-R5rc1
+			      19 April 2012
 
 			      Release Notes
 
 			      NEW FEATURES
 
-Version 4.1-ESV-R5b1 is a beta of an extended support version (ESV) release.
-ESVs are intended for users who have longer upgrade constraints.
+Version 4.1-ESV-R5rc1 is a release candidate of an extended support version (ESV)
+release.  ESVs are intended for users who have longer upgrade constraints.
 Please see our web page http://www.isc.org/downloads/extended-support for
 more information on ESVs.
 
@@ -51,6 +51,10 @@ output of "./configure --help" to see what options are available.
 The system has only been tested on Linux, FreeBSD, and Solaris, and may not
 work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
+
+			Changes since 4.1-ESV-R5b1
+
+- None
 
 			Changes since 4.1-ESV-R4
 
