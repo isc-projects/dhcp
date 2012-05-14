@@ -28,7 +28,7 @@
 .\" Support and other services are available for ISC products - see
 .\" https://www.isc.org for more information or to learn more about ISC.
 .\"
-.\" $Id: dhcrelay.8,v 1.15.38.3.6.1 2011/04/15 22:26:21 sar Exp $
+.\" $Id: dhcrelay.8,v 1.15.38.3.6.2 2012/05/14 23:20:34 sar Exp $
 .\"
 .TH dhcrelay 8
 .SH NAME
@@ -211,6 +211,8 @@ in four ways:  It may \fIappend\fR its own set of relay options to the
 packet, leaving the supplied option field intact; it may \fIreplace\fR the
 existing agent option field; it may \fIforward\fR the packet unchanged; or,
 it may \fIdiscard\fR it.
+
+To use this option you must also enable the \fB-a\fR option.
 .PP
 \fIOptions available in DHCPv6 mode only:\fR
 .TP
