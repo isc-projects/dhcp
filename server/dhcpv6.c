@@ -1206,6 +1206,10 @@ pick_v6_prefix(struct iasubopt **pref, int plen,
 }
 
 /*
+ *! \file server/dhcpv6.c
+ *
+ * \brief construct a reply containing information about a client's lease
+ *
  * lease_to_client() is called from several messages to construct a
  * reply that contains all that we know about the client's correct lease
  * (or projected lease).
@@ -1227,8 +1231,15 @@ pick_v6_prefix(struct iasubopt **pref, int plen,
  * validate and echo back any contents that can be.  If the client-supplied
  * data does not error out (on renew/rebind as above), but we did not send
  * any addresses, attempt to allocate one.
+ *
+ * At the end of the this function we call commit_leases_timed() to
+ * fsync and rotate the file as necessary.  commit_leases_timed() will
+ * check that we have written at least one lease to the file and that
+ * some time has passed before doing any fsync or file rewrite so we
+ * don't bother tracking if we did a write_ia during this function.
  */
 /* TODO: look at client hints for lease times */
+
 static void
 lease_to_client(struct data_string *reply_ret,
 		struct packet *packet, 
@@ -1485,6 +1496,9 @@ lease_to_client(struct data_string *reply_ret,
 	}
 	memcpy(reply_ret->buffer->data, reply.buf.data, reply.cursor);
 	reply_ret->data = reply_ret->buffer->data;
+
+	/* If appropriate commit and rotate the lease file */
+	(void) commit_leases_timed();
 
       exit:
 	/* Cleanup. */
