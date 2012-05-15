@@ -39,6 +39,13 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and may not
 work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
+			Changes since 4.2.4brc1
+
+- Rotate the lease file when running in v6 mode.
+  Thanks to Christoph Moench-Tegeder at Astaro for the
+  report and the first version of the patch.
+  [ISC-Bugs #24887]
+
 			Changes since 4.2.4b1
 
 - None
