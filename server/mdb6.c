@@ -1715,6 +1715,13 @@ lease_timeout_support(void *vpool) {
 	}
 
 	/*
+	 * If appropriate commit and rotate the lease file
+	 * As commit_leases_timed() checks to see if we've done any writes
+	 * we don't bother tracking if this function called write _ia
+	 */
+	(void) commit_leases_timed();
+
+	/*
 	 * Do some cleanup of our expired leases.
 	 */
 	cleanup_old_expired(pool);
