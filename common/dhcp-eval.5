@@ -1,4 +1,4 @@
-.\"	$Id: dhcp-eval.5,v 1.32 2011/11/28 18:01:25 sar Exp $
+.\"	$Id: dhcp-eval.5,v 1.33 2012/05/17 15:50:14 sar Exp $
 .\"
 .\" Copyright (c) 2009-2011 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
@@ -488,7 +488,7 @@ execution times are suitable for use.
 Passing user-supplied data to an external application might be dangerous.
 Make sure the external application checks input buffers for validity.
 Non-printable ASCII characters will be converted into dhcpd.conf language
-octal escapes ("\777"), make sure your external command handles them as
+octal escapes ("\\nnn"), make sure your external command handles them as
 such.
 .PP
 It is possible to use the execute statement in any context, not only
