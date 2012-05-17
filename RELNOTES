@@ -1,10 +1,10 @@
 	      Internet Systems Consortium DHCP Distribution
-			     Version 4.2.4rc1
-			      19 April 2012
+			     Version 4.2.4rc2
+			       21 May 2012
 
-			      Release Notes
+			       Release Notes
 
-			      NEW FEATURES
+			       NEW FEATURES
 
 ISC DHCP 4.2.x includes features that were not included in DHCP 4.1.x.
 These include:
@@ -39,7 +39,7 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and may not
 work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
-			Changes since 4.2.4brc1
+			Changes since 4.2.4rc1
 
 - Rotate the lease file when running in v6 mode.
   Thanks to Christoph Moench-Tegeder at Astaro for the
