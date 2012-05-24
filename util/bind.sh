@@ -14,7 +14,7 @@
 # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 
-# $Id: bind.sh,v 1.31 2012/05/17 18:35:30 sar Exp $
+# $Id: bind.sh,v 1.32 2012/05/24 17:50:00 sar Exp $
 
 # Get the bind distribution for the libraries
 # This script is used to build the DHCP distribution and shouldn't be shipped
@@ -55,7 +55,7 @@ case $# in
 	### For ease of use, this records the sticky tag of versions
 	### released with each point release.
 	###
-	4.2.4rc2) BINDTAG=v9_8_3 ;;
+	4.2.4rc2|4.2.4) BINDTAG=v9_8_3 ;;
 	4.2.4b1|4.2.4rc1) BINDTAG=v9_8_2 ;;
 	4.2.3-P1|4.2.3-P2) BINDTAG=v9_8_1_P1 ;;
 	4.2.3rc1|4.2.3) BINDTAG=v9_8_1 ;;
