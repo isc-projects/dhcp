@@ -1887,26 +1887,37 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		/* If we don't have an active billing, see if we need
 		   one, and if we do, try to do so. */
 		if (lease->billing_class == NULL) {
+			char *cname = "";
 			int bill = 0;
+
 			for (i = 0; i < packet->class_count; i++) {
-				if (packet->classes[i]->lease_limit) {
+				struct class *billclass, *subclass;
+
+				billclass = packet->classes[i];
+				if (billclass->lease_limit) {
 					bill++;
-					if (bill_class(lease,
-						       packet->classes[i]))
+					if (bill_class(lease, billclass))
 						break;
+
+					subclass = billclass->superclass;
+					if (subclass == NULL)
+						cname = subclass->name;
+					else
+						cname = billclass->name;
 				}
 			}
 			if (bill != 0 && i == packet->class_count) {
 				log_info("%s: no available billing: lease "
 					 "limit reached in all matching "
-					 "classes", msg);
+					 "classes (last: '%s')", msg, cname);
 				free_lease_state(state, MDL);
 				if (host)
 					host_dereference(&host, MDL);
 				return;
 			}
 
-			/* If this is an offer, undo the billing.  We go
+			/*
+			 * If this is an offer, undo the billing.  We go
 			 * through all the steps above to bill a class so
 			 * we can hit the 'no available billing' mark and
 			 * abort without offering.  But it just doesn't make
