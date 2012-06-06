@@ -57,6 +57,17 @@ work on other platforms. Please report any problems and suggested fixes to
   for reporting this issue.
   [ISC-Bugs #29062]
 
+- Fix some issues in the code for parsing and printing options.
+  [ISC-Bugs #22625] - properly print options that have several fields
+  followed by an array of something for example "fIa"
+  [ISC-Bugs #27289] - properly parse options in declarations that have
+  several fields followed by an array of something for example "fIa"
+  [ISC-Bugs #27296] - properly determine if we parsed a 16 or 32 bit
+  value in evaluate_numeric_expression (extract-int).
+  [ISC-Bugs #27314] - properly parse a zero length option from
+  a lease file.  Thanks to Marius Tomaschewski from SUSE for the report
+  and prototype patch for this ticket as well as ticket 27289.
+
 			Changes since 4.2.3
 
 ! Add a check for a null pointer before calling the regexec function.
