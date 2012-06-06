@@ -5518,11 +5518,26 @@ int parse_option_decl (oc, cfile)
 	if (status != ISC_R_SUCCESS || option == NULL)
 		return 0;
 
+	fmt = option->format;
+
 	/* Parse the option data... */
 	do {
-		for (fmt = option -> format; *fmt; fmt++) {
-			if (*fmt == 'A')
+		for (; *fmt; fmt++) {
+			if (*fmt == 'A') {
+				/* 'A' is an array of records, start at
+				 *  the beginning
+				 */
+				fmt = option->format;
 				break;
+			}
+
+			if (*fmt == 'a') {
+				/* 'a' is an array of the last field,
+				 * back up one format character
+				 */
+				fmt--;
+				break;
+			}
 			if (*fmt == 'o' && fmt != option -> format)
 				continue;
 			switch (*fmt) {
@@ -5718,7 +5733,7 @@ int parse_option_decl (oc, cfile)
 				goto alloc;
 
 			      case 'Z':	/* Zero-length option */
-				token = next_token(&val, (unsigned *)0, cfile);
+				token = peek_token(&val, (unsigned *)0, cfile);
 				if (token != SEMI) {
 					parse_warn(cfile,
 						   "semicolon expected.");
@@ -5735,7 +5750,7 @@ int parse_option_decl (oc, cfile)
 			}
 		}
 		token = next_token (&val, (unsigned *)0, cfile);
-	} while (*fmt == 'A' && token == COMMA);
+	} while (*fmt && token == COMMA);
 
 	if (token != SEMI) {
 		parse_warn (cfile, "semicolon expected.");

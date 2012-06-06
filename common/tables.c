@@ -64,9 +64,10 @@ HASH_FUNCTIONS (option_code, const unsigned *, struct option,
        some event.  The special all-ones value means 'infinite'.  May either
        be printed as a decimal, eg, "3600", or as this name, eg, "infinite".
    f - flag (true or false)
-   A - array of whatever precedes (e.g., IA means array of IP addresses)
-   a - array of the preceding character (e.g., IIa means two or more IP
-       addresses)
+   A - array of all that precedes (e.g., fIA means array of records of
+       a flag and an IP address)
+   a - array of the preceding character (e.g., fIa means a single flag
+       followed by an array of IP addresses)
    U - name of an option space (universe)
    F - implicit flag - the presence of the option indicates that the
        flag is true.
