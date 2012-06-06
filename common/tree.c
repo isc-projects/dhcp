@@ -3,7 +3,7 @@
    Routines for manipulating parse trees... */
 
 /*
- * Copyright (c) 2011 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2011-2012 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2007,2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
@@ -2379,6 +2379,7 @@ int evaluate_numeric_expression (result, packet, lease, client_state,
 	struct binding *binding;
 	struct binding_value *bv;
 	unsigned long ileft, iright;
+	int rc = 0;
 
 	switch (expr -> op) {
 	      case expr_check:
@@ -2446,32 +2447,42 @@ int evaluate_numeric_expression (result, packet, lease, client_state,
 		status = (evaluate_data_expression
 			  (&data, packet, lease, client_state, in_options,
 			   cfg_options, scope, expr -> data.extract_int, MDL));
-		if (status && data.len >= 2)
+		if (status && data.len >= 2) {
 			*result = getUShort (data.data);
+			rc = 1;
+		}
 #if defined (DEBUG_EXPRESSIONS)
-		log_debug ("num: extract_int16 (%s) = %ld",
-		      ((status && data.len >= 2) ?
-		       print_hex_1 (data.len, data.data, 60) : "NULL"),
-		      *result);
+		if (rc == 1) {
+			log_debug ("num: extract_int16 (%s) = %ld",
+				   print_hex_1(data.len, data.data, 60)
+				   *result);
+		} else {
+			log_debug ("num: extract_int16 (NULL) = NULL");
+		}
 #endif
 		if (status) data_string_forget (&data, MDL);
-		return (status && data.len >= 2);
+		return (rc);
 
 	      case expr_extract_int32:
 		memset (&data, 0, sizeof data);
 		status = (evaluate_data_expression
 			  (&data, packet, lease, client_state, in_options,
 			   cfg_options, scope, expr -> data.extract_int, MDL));
-		if (status && data.len >= 4)
+		if (status && data.len >= 4) {
 			*result = getULong (data.data);
+			rc = 1;
+		}
 #if defined (DEBUG_EXPRESSIONS)
-		log_debug ("num: extract_int32 (%s) = %ld",
-		      ((status && data.len >= 4) ?
-		       print_hex_1 (data.len, data.data, 60) : "NULL"),
-		      *result);
+		if (rc == 1) {
+			log_debug ("num: extract_int32 (%s) = %ld",
+				   print_hex_1 (data.len, data.data, 60),
+				   *result);
+		} else {
+			log_debug ("num: extract_int32 (NULL) = NULL");
+		}
 #endif
 		if (status) data_string_forget (&data, MDL);
-		return (status && data.len >= 4);
+		return (rc);
 
 	      case expr_const_int:
 		*result = expr -> data.const_int;

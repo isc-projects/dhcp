@@ -1677,6 +1677,8 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 	const unsigned char *dp = data;
 	char comma;
 	unsigned long tval;
+	isc_boolean_t a_array = ISC_FALSE;
+	int len_used;
 
 	if (emit_commas)
 		comma = ',';
@@ -1701,6 +1703,8 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 		fmtbuf [l] = option -> format [i];
 		switch (option -> format [i]) {
 		      case 'a':
+			a_array = ISC_TRUE;
+			/* Fall through */
 		      case 'A':
 			--numelem;
 			fmtbuf [l] = 0;
@@ -1729,6 +1733,8 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 				hunksize++;
 				comma = ':';
 				numhunk = 0;
+				a_array = ISC_TRUE;
+				hunkinc = 1;
 			}
 			fmtbuf [l + 1] = 0;
 			break;
@@ -1822,13 +1828,34 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 		      len - hunksize);
 
 	/* If this is an array, compute its size. */
-	if (!numhunk)
-		numhunk = len / hunksize;
-	/* See if we got an exact number of hunks. */
-	if (numhunk > 0 && numhunk * hunksize < len)
-		log_error ("%s: %d extra bytes at end of array\n",
-		      option -> name,
-		      len - numhunk * hunksize);
+	if (numhunk == 0) {
+		if (a_array == ISC_TRUE) {
+			/*
+			 * It is an 'a' type array - we repeat the
+			 * last format type.  A binary string for 'X'
+			 * is also like this.  hunkinc is the size
+			 * of the last format type and we add 1 to
+			 * cover the entire first record.
+			 */
+			numhunk = ((len - hunksize) / hunkinc) + 1;
+			len_used = hunksize + ((numhunk - 1) * hunkinc);
+		} else {
+			/*
+			 * It is an 'A' type array - we repeat the
+			 * entire record
+			 */
+			numhunk = len / hunksize;
+			len_used = numhunk * hunksize;
+		}
+
+		/* See if we got an exact number of hunks. */
+		if (len_used < len) {
+			log_error ("%s: %d extra bytes at end of array\n",
+				   option -> name,
+				   len - len_used);
+		}
+	}
+
 
 	/* A one-hunk array prints the same as a single hunk. */
 	if (numhunk < 0)
@@ -1836,7 +1863,24 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 
 	/* Cycle through the array (or hunk) printing the data. */
 	for (i = 0; i < numhunk; i++) {
-		for (j = 0; j < numelem; j++) {
+		if ((a_array == ISC_TRUE) && (i != 0) && (numelem > 0)) {
+			/*
+			 * For 'a' type of arrays we repeat
+			 * only the last format character
+			 * We should never hit the case of numelem == 0
+			 * but let's include the check to be safe.
+			 */
+			j = numelem - 1;
+		} else {
+			/*
+			 * for other types of arrays or the first
+			 * time through for 'a' types, we go through
+			 * the entire set of format characters.
+			 */
+			j = 0;
+		}
+
+		for (; j < numelem; j++) {
 			switch (fmtbuf [j]) {
 			      case 't':
 				/* endbuf-1 leaves room for NULL. */

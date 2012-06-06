@@ -2728,10 +2728,21 @@ void write_lease_option (struct option_cache *oc,
 	}
 	if (evaluate_option_cache (&ds, packet, lease, client_state,
 				   in_options, cfg_options, scope, oc, MDL)) {
-		fprintf(leaseFile, "%soption %s%s%s %s;\n", preamble,
-			name, dot, oc->option->name,
-			pretty_print_option(oc->option, ds.data, ds.len,
-					    1, 1));
+		/* The option name */
+		fprintf(leaseFile, "%soption %s%s%s", preamble,
+			name, dot, oc->option->name);
+
+		/* The option value if there is one */
+		if ((oc->option->format == NULL) ||
+		    (oc->option->format[0] != 'Z')) {
+			fprintf(leaseFile, " %s",
+				pretty_print_option(oc->option, ds.data,
+						    ds.len, 1, 1));
+		}
+
+		/* The closing semi-colon and newline */
+		fprintf(leaseFile, ";\n");
+
 		data_string_forget (&ds, MDL);
 	}
 }
