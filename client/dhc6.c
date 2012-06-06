@@ -1,6 +1,7 @@
 /* dhc6.c - DHCPv6 client routines. */
 
 /*
+ * Copyright (c) 2012 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2006-2010 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -4020,7 +4021,7 @@ dhc6_check_times(struct client_state *client)
 				/* Set rebind to 3/4 expiration interval. */
 				tmp = ia->starts;
 				tmp += use_expire + (use_expire / 2);
-			} else if (ia->renew == 0xffffffff)
+			} else if (ia->rebind == 0xffffffff)
 				tmp = MAX_TIME;
 			else
 				tmp = ia->starts + ia->rebind;
