@@ -39,6 +39,18 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and may not
 work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
+			Changes since 4.2.4
+
+- Correct code to calculate timing values in client to compare
+  rebind value to infinity instead of renew value.
+  Thanks to Chenda Huang from H3C Technologies Co., Limited
+  for reporting this issue.
+  [ISC-Bugs #29062]
+
+			Changes since 4.2.4rc2
+
+- None
+
 			Changes since 4.2.4rc1
 
 - Rotate the lease file when running in v6 mode.
