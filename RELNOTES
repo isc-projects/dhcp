@@ -49,6 +49,14 @@ work on other platforms. Please report any problems and suggested fixes to
   to perform an fsync() operation on the lease database before reply,
   which improves performance. [ISC-Bugs #22228]
 
+			Changes since 4.2.4
+
+- Correct code to calculate timing values in client to compare
+  rebind value to infinity instead of renew value.
+  Thanks to Chenda Huang from H3C Technologies Co., Limited
+  for reporting this issue.
+  [ISC-Bugs #29062]
+
 			Changes since 4.2.3
 
 ! Add a check for a null pointer before calling the regexec function.
