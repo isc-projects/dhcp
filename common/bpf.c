@@ -3,7 +3,8 @@
    BPF socket interface code, originally contributed by Archie Cobbs. */
 
 /*
- * Copyright (c) 2004,2007,2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009,2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -43,7 +44,6 @@
 #  include <sys/ioctl.h>
 #  include <sys/uio.h>
 #  include <net/bpf.h>
-#  include <net/if_types.h>
 #  if defined (NEED_OSF_PFILT_HACKS)
 #   include <net/pfilt.h>
 #  endif
@@ -55,7 +55,8 @@
 #include "includes/netinet/if_ether.h"
 #endif
 
-#ifdef USE_BPF_RECEIVE
+#if defined(USE_BPF_SEND) || defined(USE_BPF_RECEIVE) || defined(USE_BPF_HWADDR)
+#include <net/if_types.h>
 #include <ifaddrs.h>
 #endif
 
@@ -550,7 +551,9 @@ void maybe_setup_fallback ()
 		interface_dereference (&fbi, MDL);
 	}
 }
+#endif
 
+#if defined(USE_BPF_RECEIVE) || defined(USE_BPF_HWADDR)
 void
 get_hw_addr(const char *name, struct hardware *hw) {
 	struct ifaddrs *ifa;

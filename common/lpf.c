@@ -28,7 +28,6 @@
 
 #include "dhcpd.h"
 #if defined (USE_LPF_SEND) || defined (USE_LPF_RECEIVE)
-#include <sys/ioctl.h>
 #include <sys/uio.h>
 #include <errno.h>
 
@@ -40,8 +39,14 @@
 #include "includes/netinet/ip.h"
 #include "includes/netinet/udp.h"
 #include "includes/netinet/if_ether.h"
-#include <net/if.h>
+#endif
 
+#if defined (USE_LPF_RECEIVE) || defined (USE_LPF_HWADDR)
+#include <sys/ioctl.h>
+#include <net/if.h>
+#endif
+
+#if defined (USE_LPF_SEND) || defined (USE_LPF_RECEIVE)
 /* Reinitializes the specified interface after an address change.   This
    is not required for packet-filter APIs. */
 
@@ -417,7 +422,9 @@ void maybe_setup_fallback ()
 		interface_dereference (&fbi, MDL);
 	}
 }
+#endif
 
+#if defined (USE_LPF_RECEIVE) || defined (USE_LPF_HWADDR)
 void
 get_hw_addr(const char *name, struct hardware *hw) {
 	int sock;

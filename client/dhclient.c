@@ -374,21 +374,17 @@ main(int argc, char **argv) {
 	 * to be reopened after chdir() has been called
 	 */
 	if (path_dhclient_db[0] != '/') {
-		char *path = dmalloc(PATH_MAX, MDL);
-		if (path == NULL)
-			log_fatal("No memory for filename\n");
-		path_dhclient_db = realpath(path_dhclient_db, path);
+		const char *old_path = path_dhclient_db;
+		path_dhclient_db = realpath(path_dhclient_db, NULL);
 		if (path_dhclient_db == NULL)
-			log_fatal("%s: %s", path, strerror(errno));
+			log_fatal("Failed to get realpath for %s: %s", old_path, strerror(errno));
 	}
 
 	if (path_dhclient_script[0] != '/') {
-		char *path = dmalloc(PATH_MAX, MDL);
-		if (path == NULL)
-			log_fatal("No memory for filename\n");
-		path_dhclient_script = realpath(path_dhclient_script, path);
+		const char *old_path = path_dhclient_script;
+		path_dhclient_script = realpath(path_dhclient_script, NULL);
 		if (path_dhclient_script == NULL)
-			log_fatal("%s: %s", path, strerror(errno));
+			log_fatal("Failed to get realpath for %s: %s", old_path, strerror(errno));
 	}
 
 	/*

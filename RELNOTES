@@ -52,6 +52,12 @@ work on other platforms. Please report any problems and suggested fixes to
   matching billing class tried before failing to provide a billing.
   [ISC-Bugs #21759]
 
+- A problem with missing get_hw_addr function when --enable-use-sockets
+  was used is now solved on GNU/Linux, BSD and GNU/Hurd systems. Note
+  that use-sockets feature was not tested on those systems. Client and
+  server code no longer use MAX_PATH constant that is not defined on
+  GNU/Hurd systems. [ISC-Bugs 25979]
+
 			Changes since 4.2.4
 
 - Correct code to calculate timing values in client to compare

@@ -108,6 +108,10 @@
 #  define USE_SOCKET_RECEIVE
 #  if defined(HAVE_DLPI)
 #    define USE_DLPI_HWADDR
+#  elif defined(HAVE_LPF)
+#    define USE_LPF_HWADDR
+#  elif defined(HAVE_BPF)
+#    define USE_BPF_HWADDR
 #  endif
 #endif
 

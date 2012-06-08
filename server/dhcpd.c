@@ -464,12 +464,11 @@ main(int argc, char **argv) {
          * to be reopened after chdir() has been called
          */
         if (path_dhcpd_db[0] != '/') {
-                char *path = dmalloc(PATH_MAX, MDL);
-                if (path == NULL)
-                        log_fatal("No memory for filename\n");
-                path_dhcpd_db = realpath(path_dhcpd_db,  path);
+		const char *path = path_dhcpd_db;
+                path_dhcpd_db = realpath(path_dhcpd_db, NULL);
                 if (path_dhcpd_db == NULL)
-                        log_fatal("%s: %s", path, strerror(errno));
+                        log_fatal("Failed to get realpath for %s: %s", path, 
+                                   strerror(errno));
         }
 
 	if (!quiet) {
