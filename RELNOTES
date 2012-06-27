@@ -39,6 +39,25 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and may not
 work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
+			Changes since 4.2.4
+
+! Previously the server code was relaxed to allow packets with zero
+  length client ids to be processed.  Under some situations use of
+  zero length client ids can cause the server to go into an infinite
+  loop.  As such ids are not valid according to RFC 2132 section 9.14
+  the server no longer accepts them.  Client ids with a length of 1
+  are also invalid but the server still accepts them in order to
+  minimize disruption.  The restriction will likely be tightened in
+  the future to disallow ids with a length of 1.
+  Thanks to Markus Hietava of Codenomicon CROSS project for the
+  finding this issue and CERT-FI for vulnerability coordination. 
+  [ISC-Bugs #29851]
+  CVE: CVE-2012-3571
+
+			Changes since 4.2.4rc2
+
+- None
+
 			Changes since 4.2.4rc1
 
 - Rotate the lease file when running in v6 mode.
