@@ -71,6 +71,13 @@ work on other platforms. Please report any problems and suggested fixes to
   [ISC-Bugs #29851]
   CVE: CVE-2012-3571
 
+! When attempting to convert a DUID from a client id option
+  into a hardware address handle unexpected client ids properly.
+  Thanks to Markus Hietava of Codenomicon CROSS project for the
+  finding this issue and CERT-FI for vulnerability coordination. 
+  [ISC-Bugs #29852]
+  CVE: CVE-2012-3570
+
 			Changes since 4.2.4rc2
 
 - None

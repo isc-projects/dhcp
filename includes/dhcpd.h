@@ -432,11 +432,17 @@ struct packet {
 	isc_boolean_t unicast;
 };
 
-/* A network interface's MAC address. */
+/*
+ * A network interface's MAC address.
+ * 20 bytes for the hardware address
+ * and 1 byte for the type tag
+ */
+
+#define HARDWARE_ADDR_LEN 20
 
 struct hardware {
 	u_int8_t hlen;
-	u_int8_t hbuf[21];
+	u_int8_t hbuf[HARDWARE_ADDR_LEN + 1];
 };
 
 #if defined(LDAP_CONFIGURATION)
