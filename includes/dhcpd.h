@@ -1835,6 +1835,8 @@ void do_packet6(struct interface_info *, const char *,
 		int, int, const struct iaddr *, isc_boolean_t);
 int packet6_len_okay(const char *, int);
 
+int validate_packet(struct packet *);
+
 int add_option(struct option_state *options,
 	       unsigned int option_num,
 	       void *data,

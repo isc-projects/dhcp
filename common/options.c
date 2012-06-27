@@ -3798,11 +3798,13 @@ void do_packet (interface, packet, len, from_port, from, hfrom)
 			data_string_forget (&dp, MDL);
 		}
 	}
-		
-	if (decoded_packet -> packet_type)
-		dhcp (decoded_packet);
-	else
-		bootp (decoded_packet);
+
+	if (validate_packet(decoded_packet) != 0) {
+		if (decoded_packet->packet_type)
+			dhcp(decoded_packet);
+		else
+			bootp(decoded_packet);
+	}
 
 	/* If the caller kept the packet, they'll have upped the refcnt. */
 	packet_dereference (&decoded_packet, MDL);
@@ -4122,4 +4124,47 @@ add_option(struct option_state *options,
 	return 1;
 }
 
+/**
+ *  Checks if received BOOTP/DHCPv4 packet is sane
+ *
+ * @param packet received, decoded packet
+ *
+ * @return 1 if packet is sane, 0 if it is not
+ */
+int validate_packet(struct packet *packet)
+{
+	struct option_cache *oc = NULL;
 
+	oc = lookup_option (&dhcp_universe, packet->options,
+			    DHO_DHCP_CLIENT_IDENTIFIER);
+	if (oc) {
+		/* Let's check if client-identifier is sane */
+		if (oc->data.len == 0) {
+			log_debug("Dropped DHCPv4 packet with zero-length client-id");
+			return (0);
+
+		} else if (oc->data.len == 1) {
+			/*
+			 * RFC2132, section 9.14 states that minimum length of client-id
+			 * is 2.  We will allow single-character client-ids for now (for
+			 * backwards compatibility), but warn the user that support for
+			 * this is against the standard.
+			 */
+			log_debug("Accepted DHCPv4 packet with one-character client-id - "
+				"a future version of ISC DHCP will reject this");
+		}
+	} else {
+		/* 
+		 * If hlen is 0 we don't have any identifier, we warn the user
+		 * but continue processing the packet as we can.
+		 */
+		if (packet->raw->hlen == 0) {
+			log_debug("Received DHCPv4 packet without client-id"
+				  " option and empty hlen field.");
+		}
+	}
+
+	/* @todo: Add checks for other received options */
+
+	return (1);
+}
