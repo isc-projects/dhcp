@@ -6037,7 +6037,7 @@ find_hosts_by_duid_chaddr(struct host_decl **host,
 		break;
 	}
 
-	if (hlen == 0)
+	if ((hlen == 0) || (hlen > HARDWARE_ADDR_LEN)) 
 		return 0;
 
 	/*
