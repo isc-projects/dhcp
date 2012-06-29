@@ -1,0 +1,7 @@
+Content-Type: application/X-atf-atffile; version="1"
+
+prop: test-suite = dhcp4
+
+tp-glob: test_alloc
+tp-glob: hash_unittest
+
