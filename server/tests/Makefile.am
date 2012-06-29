@@ -1,7 +1,7 @@
 SUBDIRS = .
 
 AM_CPPFLAGS = $(ATF_CFLAGS) -DUNIT_TEST -I$(top_srcdir)/includes
-AM_CPPFLAGS += -I$(top_srcdir)/bind/include -I$(top_srcdir)
+AM_CPPFLAGS += -std=c99 -I$(top_srcdir)/bind/include -I$(top_srcdir)
 AM_CPPFLAGS += -DLOCALSTATEDIR='"."' -Wno-unused-function -Wno-error=unused-variable
 
 # for autotools debugging only
@@ -26,7 +26,7 @@ if HAVE_ATF
 check: $(ATF_TESTS)
 	atf-run | atf-report
 
-ATF_TESTS += dhcpd_unittests legacy_unittests
+ATF_TESTS += dhcpd_unittests legacy_unittests hash_unittests
 
 dhcpd_unittests_SOURCES = $(DHCPSRC)
 dhcpd_unittests_SOURCES += simple_unittest.c
@@ -35,6 +35,10 @@ dhcpd_unittests_LDADD = $(ATF_LDFLAGS)
 dhcpd_unittests_LDADD += $(DHCPLIBS)
 
 dhcpd_unittests_LDFLAGS = $(AM_LDFLAGS) $(ATF_LDFLAGS)
+
+hash_unittests_SOURCES = $(DHCPSRC) hash_unittest.c
+hash_unittests_LDADD = $(DHCPLIBS) $(ATF_LDFLAGS)
+
 
 # This is a legacy unittest. It replaces main() with something that was in mdb6.c
 legacy_unittests_SOURCES = $(DHCPSRC) mdb6_unittest.c

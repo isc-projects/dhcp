@@ -59,7 +59,7 @@ ATF_TC_BODY(simple_test_case, tc)
         atf_tc_skip("Skipping test. This Linux-only test.");
     }
 
-    if (condition && linux) {
+    if (condition && this_is_linux) {
         /* no extra comments for pass needed. It just passed. */
         atf_tc_pass();
     }
