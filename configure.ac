@@ -651,7 +651,6 @@ Developer:
   ATF unittests : $enable_atf
 
 END
-# TODO: Add unit tests
 # TODO: Add Perl system tests
 
 if test "$enable_atf" != "no"

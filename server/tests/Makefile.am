@@ -1,6 +1,6 @@
 SUBDIRS = .
 
-AM_CPPFLAGS = $(ATF_CFLAGS) -DUNIT_TEST -I$((top_srcdir)/includes
+AM_CPPFLAGS = $(ATF_CFLAGS) -DUNIT_TEST -I$(top_srcdir)/includes
 AM_CPPFLAGS += -I$(top_srcdir)/bind/include -I$(top_srcdir)
 AM_CPPFLAGS += -DLOCALSTATEDIR='"."' -Wno-unused-function -Wno-error=unused-variable
 
@@ -42,4 +42,4 @@ legacy_unittests_LDADD = $(DHCPLIBS) $(ATF_LDFLAGS)
 
 endif
 
-noinst_PROGRAMS = $(ATF_TESTS) $(TESTS)
+check_PROGRAMS = $(ATF_TESTS) $(TESTS)
