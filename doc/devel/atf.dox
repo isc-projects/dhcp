@@ -1,0 +1,37 @@
+/**
+ *
+ @page tests ISC DHCP Testing
+
+ @section testsOverview Testing Overview
+
+ @section testsAtf ATF unit-tests
+
+ATF stands for Automated Test Framework. We decided to use ATF as a base
+framework for all unit-tests. To enable unit-tests, use the following:
+
+@verbatim
+./configure --enable-atf
+make
+make check
+@endverbatim
+
+Each code directory (e.g. server/) that has unit-tests developed has a
+sub-directory named tests (e.g. server/tests). You can execute make check in
+that directory to run specific subset of tests.
+
+Unit-tests are grouped into suites. Each suite is a separate executable. The 
+typical way to run tests is:
+
+atf-run | atf-report
+
+atf-run will read Atffile and execute all tests specified. Using atf-run rather
+than calling the test binary directly has several major benefits. First and
+foremost, atf-run is able to recover from test segfault and continue execution
+from the next case onwards. It is possible to run atf-run without passing its
+output to atf-report, but its output is somewhat convoluted. That is useful in
+some situations, e.g. when one wants to see test output.
+
+Finally, it is possible to run test binary directly. The only required parameter
+is the test case name. Binary will print out a warning that direct binary
+execution is not recommended as it won't be able to recover from crash. Such
+approach is convenient for running the test under debugger, though.
