@@ -1,4 +1,4 @@
-AC_INIT([DHCP], [4.2.0], [dhcp-users@isc.org])
+AC_INIT([DHCP], [4.2.0-git], [dhcp-users@isc.org])
 
 # we specify "foreign" to avoid having to have the GNU mandated files,
 # like AUTHORS, COPYING, and such
@@ -623,6 +623,7 @@ AC_OUTPUT([
   server/Makefile
   tests/Makefile
   server/tests/Makefile
+  doc/devel/doxyfile
 ])
 
 sh util/bindvar.sh

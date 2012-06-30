@@ -1,9 +1,6 @@
 /**
- *
-
  @page debug Debugging
  This page enumerates various techniques useful for debugging ISC DHCP software.
-
 
  @section debugTips Debugging Tips & Tricks
 
@@ -20,3 +17,5 @@ gdb
 file dhcpd
 b lease_reference
 @endverbatim
+
+*/

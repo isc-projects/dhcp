@@ -1,10 +1,9 @@
 /**
- *
- @page tests ISC DHCP Testing
+@page tests Testing
 
- @section testsOverview Testing Overview
+@section testsOverview Testing Overview
 
- @section testsAtf ATF unit-tests
+@section testsAtf ATF unit-tests
 
 ATF stands for Automated Test Framework. We decided to use ATF as a base
 framework for all unit-tests. To enable unit-tests, use the following:
@@ -80,3 +79,5 @@ any change you may want to do:
 make check
 atf-run | atf-report
 @endverbatim
+
+*/
