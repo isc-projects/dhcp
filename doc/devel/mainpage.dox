@@ -11,8 +11,6 @@
   - @subpage tests
   - @subpage debug
 
- Doxygen logs:
-
  Note: some of the links below may not work if corresponding logs are not available.<br/>
 
  Doxygen: <a href="doxygen.log">[generation log]</a> <a href="doxygen-warnings.log">[errors and warnings]</a> <br/>
