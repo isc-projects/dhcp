@@ -19,7 +19,7 @@ Each code directory (e.g. server/) that has unit-tests developed has a
 sub-directory named tests (e.g. server/tests). You can execute make check in
 that directory to run specific subset of tests.
 
-Unit-tests are grouped into suites. Each suite is a separate executable. The 
+Unit-tests are grouped into suites. Each suite is a separate executable. The
 typical way to run tests is:
 
 atf-run | atf-report
@@ -35,3 +35,48 @@ Finally, it is possible to run test binary directly. The only required parameter
 is the test case name. Binary will print out a warning that direct binary
 execution is not recommended as it won't be able to recover from crash. Such
 approach is convenient for running the test under debugger, though.
+
+@section testsAtfAdding Adding new unit-tests
+
+There is a small number of unit-tests that are not ATF based. They will be
+converted to ATF soon. Please do not use any other frameworks.
+
+Sadly, DHCP code is not written with unit-testing in mind. Therefore it often
+a non-standard approach is required for writing unit-tests. Existing code often
+has many dependencies that makes testing a single piece of code to unit test.
+For example, to test hash tables, one needs to also include OMAPI code. Rather
+than significantly refactoring the code (a huge task that could take months),
+we decided to link whatever is needed in the tests. If developing new test
+suite, it is recommended to take a look at existing tests and just copy them.
+In particular, the following things should be done for adding new tests:
+
+1. create new file that will hold test code. It is recommended to follow
+(tested_feature_name)_unittest.c and put the file in specified tests directory.
+For example tests related to hash tables used on the server side should be named
+server/tests/hash_unittest.c. If in doubt, it is convenient to name the test
+code after the file that holds tested code, e.g. server/mdb6.c is tested in
+server/tests/mdb6_unittest.c.
+
+2. Implement the test. It is recommended to take a look at an example in
+server/tests/simple_unittest.c. It explains the basic layout of the ATF tests.
+There may be many test cases in a single *_unittest.c file. Make sure that
+you register all your test cases using ATF_TP_ADD_TC() macro. Try to minimize
+modifications to the tested code if possible. Keep in mind that we are using
+modernized \ref codingGuidelines for test development. You are advised to
+also look at man 3 atf-c-api.
+
+3. Extend Makefile.am to build your test. In particular, add your binary
+name to ATF_TESTS. tests directory will be built only in case where ATF is
+enabled, using --enable-atf during configure phase.
+
+4. Modify Atffile to include your new test binary, if needed. If you followed
+naming convention proposed in step 2, your test will be included and will
+be included automatically.
+
+5. Enjoy your improved confidence in the code, as you can run the tests after
+any change you may want to do:
+
+@verbatim
+make check
+atf-run | atf-report
+@endverbatim
