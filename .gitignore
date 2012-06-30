@@ -1,4 +1,4 @@
 *.o
 bind
-doc/devel/html
+doc/html
 .deps
