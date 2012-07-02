@@ -4828,7 +4828,9 @@ _ACEOF
 # Optional compile-time DEBUGging.
 # Check whether --enable-debug was given.
 if test "${enable_debug+set}" = set; then :
-  enableval=$enable_debug;
+  enableval=$enable_debug; enable_debug=yes
+else
+  enable_debug=no
 fi
 
 # This is very much off by default.
@@ -7723,12 +7725,12 @@ Features:
   execute:       $enable_execute
 
 Developer:
-  ATF unittests : $enable_atf
+  ATF unittests : $atf_path
 
 END
 # TODO: Add Perl system tests
 
-if test "$enable_atf" != "no"
+if test "$atf_path" != "no"
 then
 echo "ATF_CFLAGS  : $ATF_CFLAGS" >> config.report
 echo "ATF_LDFLAGS : $ATF_LDFLAGS" >> config.report
