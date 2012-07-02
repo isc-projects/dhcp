@@ -433,62 +433,6 @@ void lease_hash_test_3hosts(unsigned char clientid1[], size_t clientid1_len,
 #endif
 }
 
-void lease_hash_test_3hosts_negative(unsigned char clientid1[], size_t clientid1_len,
-                                     unsigned char clientid2[], size_t clientid2_len,
-                                     unsigned char clientid3[], size_t clientid3_len) {
-
-    printf("Checking negative hash operation for 3 hosts: clientid1-len=%lu"
-           " clientid2-len=%lu clientid3-len=%lu\n",
-           clientid1_len, clientid2_len, clientid3_len);
-
-    dhcp_db_objects_setup ();
-    dhcp_common_objects_setup ();
-
-    /* check that there is actually zero hosts in the hash */
-    /* @todo: host_hash_for_each() */
-
-    struct host_decl *host1 = 0, *host2 = 0, *host3 = 0;
-    struct host_decl *check = 0;
-
-    /* === step 1: allocate hosts === */
-    ATF_CHECK_MSG(host_allocate(&host1, MDL) == ISC_R_SUCCESS,
-                  "Failed to allocate host");
-    ATF_CHECK_MSG(host_allocate(&host2, MDL) == ISC_R_SUCCESS,
-                  "Failed to allocate host");
-    ATF_CHECK_MSG(host_allocate(&host3, MDL) == ISC_R_SUCCESS,
-                  "Failed to allocate host");
-
-    ATF_CHECK_MSG(host_new_hash(&host_uid_hash, HOST_HASH_SIZE, MDL) != 0,
-                  "Unable to create new hash");
-
-    /* === step 2: add hosts to the hash === */
-    host_hash_add(host_uid_hash, clientid1, clientid1_len, host1, MDL);
-    host_hash_delete(host_uid_hash, clientid1, clientid1_len, MDL);
-    host_hash_add(host_uid_hash, clientid2, clientid2_len, host2, MDL);
-    host_hash_delete(host_uid_hash, clientid2, clientid2_len, MDL);
-    host_hash_delete(host_uid_hash, clientid2, clientid2_len, MDL);
-
-    host_hash_delete(host_uid_hash, clientid1, clientid1_len, MDL);
-    host_hash_add(host_uid_hash, clientid3, clientid3_len, host3, MDL);
-    host_hash_delete(host_uid_hash, clientid3, clientid3_len, MDL);
-
-    host_dereference(&host1, MDL);
-    host_dereference(&host2, MDL);
-    host_dereference(&host3, MDL);
-
-    /*
-     * No easy way to check if the host object were actually released.
-     * We could run it in valgrind and check for memory leaks.
-     */
-
-#if defined (DEBUG_MEMORY_LEAKAGE) && defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
-    /* @todo: Should be called in cleanup */
-    free_everything ();
-#endif
-}
-
-
-
 ATF_TC(lease_hash_basic_2hosts);
 
 ATF_TC_HEAD(lease_hash_basic_2hosts, tc) {
@@ -545,25 +489,8 @@ ATF_TC_BODY(lease_hash_negative1, tc) {
 }
 
 
-ATF_TC(lease_hash_negative2);
-
-ATF_TC_HEAD(lease_hash_negative2, tc) {
-    atf_tc_set_md_var(tc, "descr", "Negative tests for lease hash");
-}
-
-ATF_TC_BODY(lease_hash_negative2, tc) {
-
-    unsigned char clientid1[] = { 0x0 };
-    unsigned char clientid2[] = { 0x0 };
-    unsigned char clientid3[] = { 0x0 };
-
-    lease_hash_test_3hosts_negative(clientid1, 1, clientid2, 0, clientid3, 1);
-}
-
-
 
 ATF_TC(lease_hash_string_3hosts);
-
 ATF_TC_HEAD(lease_hash_string_3hosts, tc) {
     atf_tc_set_md_var(tc, "descr", "string-based lease hash tests");
     /*
@@ -572,7 +499,6 @@ ATF_TC_HEAD(lease_hash_string_3hosts, tc) {
      * host_hash_add(), host_hash_delete()
      */
 }
-
 ATF_TC_BODY(lease_hash_string_3hosts, tc) {
 
     unsigned char clientid1[] = "Alice";
@@ -584,7 +510,6 @@ ATF_TC_BODY(lease_hash_string_3hosts, tc) {
 
 
 ATF_TC(lease_hash_basic_3hosts);
-
 ATF_TC_HEAD(lease_hash_basic_3hosts, tc) {
     atf_tc_set_md_var(tc, "descr", "Basic lease hash tests");
     /*
@@ -593,7 +518,6 @@ ATF_TC_HEAD(lease_hash_basic_3hosts, tc) {
      * host_hash_add(), host_hash_delete()
      */
 }
-
 ATF_TC_BODY(lease_hash_basic_3hosts, tc) {
 
     unsigned char clientid1[] = { 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9 };
@@ -611,8 +535,10 @@ ATF_TC(uid_hash_rt29851);
 ATF_TC_HEAD(uid_hash_rt29851, tc) {
     atf_tc_set_md_var(tc, "descr", "Uid hash tests");
 
-    /* this test should last less than millisecond. If its execution
-       is longer than 3 second, we hit infinite loop. */
+    /*
+     * this test should last less than millisecond. If its execution
+     *  is longer than 3 second, we hit infinite loop.
+     */
     atf_tc_set_md_var(tc, "timeout", "3");
 }
 
@@ -632,7 +558,7 @@ ATF_TC_BODY(uid_hash_rt29851, tc) {
     dhcp_common_objects_setup ();
 
     ATF_CHECK(lease_id_new_hash(&lease_uid_hash, LEASE_HASH_SIZE, MDL));
-    
+
     ATF_CHECK(lease_allocate (&lease1, MDL) == ISC_R_SUCCESS);
     ATF_CHECK(lease_allocate (&lease2, MDL) == ISC_R_SUCCESS);
     ATF_CHECK(lease_allocate (&lease3, MDL) == ISC_R_SUCCESS);
@@ -646,15 +572,15 @@ ATF_TC_BODY(uid_hash_rt29851, tc) {
     lease3->uid_len = clientid3_len;
 
     uid_hash_add(lease1);
-    // uid_hash_delete(lease2); // not necessary for actual issue repro
+    /* uid_hash_delete(lease2); // not necessary for actual issue repro */
     uid_hash_add(lease3);
 
-    // lease2->uid_len = 0;     // not necessary for actual issue repro
-    // uid_hash_delete(lease2); // not necessary for actual issue repro
-    // uid_hash_delete(lease3); // not necessary for actual issue repro
+    /* lease2->uid_len = 0;     // not necessary for actual issue repro */
+    /* uid_hash_delete(lease2); // not necessary for actual issue repro */
+    /* uid_hash_delete(lease3); // not necessary for actual issue repro */
     uid_hash_delete(lease1);
 
-    // lease2->uid_len = 1;     // not necessary for actual issue repro
+    /* lease2->uid_len = 1;     // not necessary for actual issue repro */
     uid_hash_add(lease1);
     uid_hash_delete(lease2);
 }
@@ -670,7 +596,6 @@ ATF_TP_ADD_TCS(tp) {
     ATF_TP_ADD_TC(tp, lease_hash_string_2hosts);
     ATF_TP_ADD_TC(tp, lease_hash_string_3hosts);
     ATF_TP_ADD_TC(tp, lease_hash_negative1);
-    ATF_TP_ADD_TC(tp, lease_hash_negative2);
     ATF_TP_ADD_TC(tp, uid_hash_rt29851);
     return (atf_no_error());
 }
