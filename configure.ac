@@ -203,7 +203,8 @@ if test "$atf_path" != "no" ; then
 fi
 
 AM_CONDITIONAL(HAVE_ATF, test "$atf_pcp" != "")
-AM_COND_IF([HAVE_ATF], [AC_DEFINE([HAVE_ATF], [1], [ATF framework specified?])])
+### Uncomment this once docs.lab.isc.org upgrades to automake 1.11
+### AM_COND_IF([HAVE_ATF], [AC_DEFINE([HAVE_ATF], [1], [ATF framework specified?])])
 
 ###
 ### Path fun.  Older versions of DHCP were installed in /usr/sbin, so we
@@ -658,7 +659,6 @@ if test "$enable_atf" != "no"
 then
 echo "ATF_CFLAGS  : $ATF_CFLAGS" >> config.report
 echo "ATF_LDFLAGS : $ATF_LDFLAGS" >> config.report
-echo "ATF_LIBS    : $ATF_LIBS" >> config.report
 echo
 fi
 
