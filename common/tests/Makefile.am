@@ -1,6 +1,6 @@
 SUBDIRS = .
 
-AM_CPPFLAGS = $(ATF_CFLAGS) -I$(top_srcdir)/includes
+AM_CPPFLAGS = $(ATF_CFLAGS) -std=c99 -I$(top_srcdir)/includes
 
 ATF_TESTS = alloc_unittest
 

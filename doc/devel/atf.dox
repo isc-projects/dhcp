@@ -80,4 +80,13 @@ make check
 atf-run | atf-report
 @endverbatim
 
+@section testsAtfCoding ATF Coding Guidelines
+
+As unit-tests code is an evironment that works under a different regime than
+the production code, there are slight differences, compared to standard
+coding guidelines. In particular:
+
+- The code is written using C99. Double slash comments are allowed.
+- Please do not use tabs. Use 4 spaces for each indent level.
+
 */
