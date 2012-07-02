@@ -26,40 +26,43 @@
 #include <omapip/omapip_p.h>
 #include "dhcpd.h"
 
-#if 0
-/* copied from server/omapi.c:49 */
-omapi_object_type_t *dhcp_type_lease;
-omapi_object_type_t *dhcp_type_pool;
-omapi_object_type_t *dhcp_type_class;
-omapi_object_type_t *dhcp_type_subclass;
-omapi_object_type_t *dhcp_type_host;
-
-/* copied from server/salloc.c:138 */
-OMAPI_OBJECT_ALLOC (lease, struct lease, dhcp_type_lease)
-OMAPI_OBJECT_ALLOC (class, struct class, dhcp_type_class)
-OMAPI_OBJECT_ALLOC (subclass, struct class, dhcp_type_subclass)
-OMAPI_OBJECT_ALLOC (pool, struct pool, dhcp_type_pool)
-OMAPI_OBJECT_ALLOC (host, struct host_decl, dhcp_type_host)
-
-/* copied from server/mdb.c:2686 */
-HASH_FUNCTIONS(lease_ip, const unsigned char *, struct lease, lease_ip_hash_t,
-               lease_reference, lease_dereference, do_ip4_hash)
-HASH_FUNCTIONS(lease_id, const unsigned char *, struct lease, lease_id_hash_t,
-               lease_reference, lease_dereference, do_id_hash)
-HASH_FUNCTIONS (host, const unsigned char *, struct host_decl, host_hash_t,
-                host_reference, host_dereference, do_string_hash)
-HASH_FUNCTIONS (class, const char *, struct class, class_hash_t,
-                class_reference, class_dereference, do_string_hash)
-
-host_hash_t *host_hw_addr_hash;
-host_hash_t *host_uid_hash;
-host_hash_t *host_name_hash;
-lease_id_hash_t *lease_uid_hash;
-lease_ip_hash_t *lease_ip_addr_hash;
-lease_id_hash_t *lease_hw_addr_hash;
-#endif
-
-
+/*
+ * The following structures are kept here for reference only. As hash functions
+ * are somewhat convoluted, they are copied here for the reference. Original
+ * location is specified. Keep in mind that it may change over time:
+ *
+ * copied from server/omapi.c:49 *
+ * omapi_object_type_t *dhcp_type_lease;
+ * omapi_object_type_t *dhcp_type_pool;
+ * omapi_object_type_t *dhcp_type_class;
+ * omapi_object_type_t *dhcp_type_subclass;
+ * omapi_object_type_t *dhcp_type_host;
+ *
+ * copied from server/salloc.c:138
+ * OMAPI_OBJECT_ALLOC (lease, struct lease, dhcp_type_lease)
+ * OMAPI_OBJECT_ALLOC (class, struct class, dhcp_type_class)
+ * OMAPI_OBJECT_ALLOC (subclass, struct class, dhcp_type_subclass)
+ * OMAPI_OBJECT_ALLOC (pool, struct pool, dhcp_type_pool)
+ * OMAPI_OBJECT_ALLOC (host, struct host_decl, dhcp_type_host)
+ *
+ * copied from server/mdb.c:2686
+ * HASH_FUNCTIONS(lease_ip, const unsigned char *, struct lease, lease_ip_hash_t,
+ *                lease_reference, lease_dereference, do_ip4_hash)
+ * HASH_FUNCTIONS(lease_id, const unsigned char *, struct lease, lease_id_hash_t,
+ *                lease_reference, lease_dereference, do_id_hash)
+ * HASH_FUNCTIONS (host, const unsigned char *, struct host_decl, host_hash_t,
+ *                 host_reference, host_dereference, do_string_hash)
+ * HASH_FUNCTIONS (class, const char *, struct class, class_hash_t,
+ *                 class_reference, class_dereference, do_string_hash)
+ *
+ * copied from server/mdb.c:46
+ * host_hash_t *host_hw_addr_hash;
+ * host_hash_t *host_uid_hash;
+ * host_hash_t *host_name_hash;
+ * lease_id_hash_t *lease_uid_hash;
+ * lease_ip_hash_t *lease_ip_addr_hash;
+ * lease_id_hash_t *lease_hw_addr_hash;
+ */
 
 /**
  *  @brief sets client-id field in host declaration
