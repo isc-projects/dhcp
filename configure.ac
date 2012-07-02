@@ -50,7 +50,8 @@ AC_DEFINE_UNQUOTED([DHCP_BYTE_ORDER], [$byte_order],
 # Optional compile-time DEBUGging.
 AC_ARG_ENABLE(debug,
 	AC_HELP_STRING([--enable-debug],
-		[create a debug-only version of the software (default is no).]))
+		[create a debug-only version of the software (default is no).]),
+		[enable_debug=yes],[enable_debug=no])
 # This is very much off by default.
 if test "$enable_debug" = "yes" ; then
 	AC_DEFINE([DEBUG], [1],
@@ -650,12 +651,12 @@ Features:
   execute:       $enable_execute
 
 Developer:
-  ATF unittests : $enable_atf
+  ATF unittests : $atf_path
 
 END
 # TODO: Add Perl system tests
 
-if test "$enable_atf" != "no"
+if test "$atf_path" != "no"
 then
 echo "ATF_CFLAGS  : $ATF_CFLAGS" >> config.report
 echo "ATF_LDFLAGS : $ATF_LDFLAGS" >> config.report
