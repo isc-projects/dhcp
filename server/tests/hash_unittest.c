@@ -59,74 +59,217 @@ lease_ip_hash_t *lease_ip_addr_hash;
 lease_id_hash_t *lease_hw_addr_hash;
 #endif
 
-ATF_TC(lease_hash);
 
-ATF_TC_HEAD(lease_hash, tc) {
-    atf_tc_set_md_var(tc, "descr", "Basic hash functions tests");
 
-#if 0
-    host_hw_addr_hash = 0;
-    host_uid_hash = 0;
-    host_name_hash = 0;
-    lease_uid_hash = 0;
-    lease_ip_addr_hash = 0;
-    lease_hw_addr_hash = 0;
-#endif
+/**
+ *  @brief sets client-id field in host declaration
+ *
+ *  @param host pointer to host declaration
+ *  @param uid pointer to client-id data
+ *  @param uid_len length of the client-id data
+ *
+ *  @return 1 if successful, 0 otherwise
+ */
+int lease_set_clientid(struct host_decl *host, const unsigned char *uid, int uid_len) {
+    /* clean-up this mess and set client-identifier in a sane way */
+    memset(&host->client_identifier, 0, sizeof(host->client_identifier));
+    host->client_identifier.len = uid_len;
+    if (!buffer_allocate(&host->client_identifier.buffer, uid_len, MDL)) {
+        return 0;
+    }
+    host->client_identifier.data = host->client_identifier.buffer->data;
+    memcpy((char *)host->client_identifier.data, uid, uid_len);
+
+    return 1;
 }
 
-ATF_TC_BODY(lease_hash, tc) {
+ATF_TC(lease_hash_basic);
+
+ATF_TC_HEAD(lease_hash_basic, tc) {
+    atf_tc_set_md_var(tc, "descr", "Basic lease hash tests");
+    /*
+     * The following functions are tested:
+     * host_allocate(), host_new_hash(), buffer_allocate(), host_hash_lookup()
+     * host_hash_add(), host_hash_delete()
+     */
+}
+
+ATF_TC_BODY(lease_hash_basic, tc) {
+
+    unsigned char clientid1[] = { 0x1, 0x2, 0x3 };
+    unsigned char clientid2[] = { 0xff, 0xfe };
 
     dhcp_db_objects_setup ();
     dhcp_common_objects_setup ();
 
     /* check that there is actually zero hosts in the hash */
-    // host_hash_for_each(
+    /* @todo: host_hash_for_each() */
 
     struct host_decl *host1 = 0, *host2 = 0;
+    struct host_decl *check = 0;
+
+    /* === step 1: allocate hosts === */
     ATF_CHECK_MSG(host_allocate(&host1, MDL) == ISC_R_SUCCESS,
                   "Failed to allocate host");
     ATF_CHECK_MSG(host_allocate(&host2, MDL) == ISC_R_SUCCESS,
                   "Failed to allocate host");
 
-    /* check that there is actually two hosts in the hash */
-    // host_hash_for_each(...)
+    ATF_CHECK_MSG(host_new_hash(&host_uid_hash, HOST_HASH_SIZE, MDL) != 0,
+                  "Unable to create new hash");
 
-    if (!host_new_hash(&host_uid_hash, HOST_HASH_SIZE, MDL)) {
-        atf_tc_fail("Unable to create new hash");
-    } else {
-        printf("#### Hash created\n");
-    }
+    ATF_CHECK_MSG(buffer_allocate(&host1->client_identifier.buffer,
+                                  sizeof(clientid1), MDL) != 0,
+                  "Can't allocate uid buffer for host1");
 
-    /* Let's create client-identifier */
-    char buf[32];
-    memset(buf,0, 32);
-    for (int i = 0; i < 32; i++) {
-        buf[i] = i;
-    }
-    int bufLen = 16;
+    ATF_CHECK_MSG(buffer_allocate(&host2->client_identifier.buffer,
+                                  sizeof(clientid2), MDL) != 0,
+                  "Can't allocate uid buffer for host2");
 
-    /* clean-up this mess and set client-identifier in a sane way */
-    memset(&host1->client_identifier, 0, sizeof(host1->client_identifier));
-    host1->client_identifier.len = bufLen;
-    if (!buffer_allocate(&host1->client_identifier.buffer, bufLen, MDL)) {
-        atf_tc_fail("Can't allocate uid buffer");
-    }
-    host1->client_identifier.data = host1->client_identifier.buffer->data;
-    memcpy((char *)host1->client_identifier.data, buf, bufLen);
+    ATF_CHECK_MSG(lease_set_clientid(host1, clientid1, sizeof(clientid1)) != 0,
+                  "Failed to set client-id for host1");
 
-    /* actual test begins. Add hash */
+    ATF_CHECK_MSG(lease_set_clientid(host2, clientid2, sizeof(clientid2)) != 0,
+                  "Failed to set client-id for host2");
+
+    ATF_CHECK_MSG(host1->refcnt == 1, "Invalid refcnt for host1");
+    ATF_CHECK_MSG(host2->refcnt == 1, "Invalid refcnt for host2");
+
+    /* verify that our hosts are not in the hash yet */
+    ATF_CHECK_MSG(host_hash_lookup(&check, host_uid_hash, clientid1,
+                                   sizeof(clientid1), MDL) == 0,
+                   "Host1 is not supposed to be in the uid_hash.");
+
+    ATF_CHECK_MSG(!check, "Host1 is not supposed to be in the uid_hash.");
+
+    ATF_CHECK_MSG(host_hash_lookup(&check, host_uid_hash,
+                                   (unsigned char *)clientid2,
+                                   sizeof(clientid2), MDL) == 0,
+                  "Host2 is not supposed to be in the uid_hash.");
+    ATF_CHECK_MSG(!check, "Host2 is not supposed to be in the uid_hash.");
+
+
+    /* === step 2: add first host to the hash === */
     host_hash_add(host_uid_hash, host1->client_identifier.data,
                   host1->client_identifier.len, host1, MDL);
 
-    /** @todo: do some checks here */
+    /* 2 pointers expected: ours (host1) and the one stored in hash */
+    ATF_CHECK_MSG(host1->refcnt == 2, "Invalid refcnt for host1");
+    /* 1 pointer expected: just ours (host2) */
+    ATF_CHECK_MSG(host2->refcnt == 1, "Invalid refcnt for host2");
+
+    /* verify that host1 is really in the hash and the we can find it */
+    ATF_CHECK_MSG(host_hash_lookup(&check, host_uid_hash,
+                                   (unsigned char *)clientid1,
+                                   sizeof(clientid1), MDL),
+                  "Host1 was supposed to be in the uid_hash.");
+    ATF_CHECK_MSG(check, "Host1 was supposed to be in the uid_hash.");
+
+    /* Hey! That's not the host we were looking for! */
+    ATF_CHECK_MSG(check == host1, "Wrong host returned by host_hash_lookup");
+
+    /* 3 pointers: host1, (stored in hash), check */
+    ATF_CHECK_MSG(host1->refcnt == 3, "Invalid refcnt for host1");
+
+    /* reference count should be increased because we not have a pointer */
+
+    host_dereference(&check, MDL); /* we don't need it now */
+
+    ATF_CHECK_MSG(check == NULL, "check pointer is supposed to be NULL");
+
+    /* 2 pointers: host1, (stored in hash) */
+    ATF_CHECK_MSG(host1->refcnt == 2, "Invalid refcnt for host1");
+
+    /* verify that host2 is not in the hash */
+    ATF_CHECK_MSG(host_hash_lookup(&check, host_uid_hash,
+                                   (unsigned char *)clientid2,
+                                   sizeof(clientid2), MDL) == 0,
+                  "Host2 was not supposed to be in the uid_hash[2].");
+    ATF_CHECK_MSG(check == NULL, "Host2 was not supposed to be in the hash.");
+
+
+    /* === step 3: add second hot to the hash === */
+    host_hash_add(host_uid_hash, host2->client_identifier.data,
+                  host2->client_identifier.len, host2, MDL);
+
+    /* 2 pointers expected: ours (host1) and the one stored in hash */
+    ATF_CHECK_MSG(host2->refcnt == 2, "Invalid refcnt for host2");
+
+    ATF_CHECK_MSG(host_hash_lookup(&check, host_uid_hash,
+                                   (unsigned char *)clientid2,
+                                   sizeof(clientid2), MDL),
+                  "Host2 was supposed to be in the uid_hash.");
+    ATF_CHECK_MSG(check, "Host2 was supposed to be in the uid_hash.");
+
+    /* Hey! That's not the host we were looking for! */
+    ATF_CHECK_MSG(check == host2, "Wrong host returned by host_hash_lookup");
+
+    /* 3 pointers: host1, (stored in hash), check */
+    ATF_CHECK_MSG(host2->refcnt == 3, "Invalid refcnt for host1");
+
+    host_dereference(&check, MDL); /* we don't need it now */
+
+    /* now we have 2 hosts in the hash */
+
+    /* verify that host1 is still in the hash and the we can find it */
+    ATF_CHECK_MSG(host_hash_lookup(&check, host_uid_hash,
+                                   (unsigned char *)clientid1,
+                                   sizeof(clientid1), MDL),
+                  "Host1 was supposed to be in the uid_hash.");
+    ATF_CHECK_MSG(check, "Host1 was supposed to be in the uid_hash.");
+
+    /* Hey! That's not the host we were looking for! */
+    ATF_CHECK_MSG(check == host1, "Wrong host returned by host_hash_lookup");
+
+    /* 3 pointers: host1, (stored in hash), check */
+    ATF_CHECK_MSG(host1->refcnt == 3, "Invalid refcnt for host1");
+
+    host_dereference(&check, MDL); /* we don't need it now */
+
+
+    /**
+     * @todo check that there is actually two hosts in the hash.
+     * Use host_hash_for_each() for that.
+     */
+
+    /* === step 4: remove first host from the hash === */
 
     /* delete host from hash */
-    host_hash_delete(host_uid_hash,
-                     host1->client_identifier.data,
-                     host1->client_identifier.len,
-                     MDL);
+    host_hash_delete(host_uid_hash, (unsigned char *) clientid1,
+                     sizeof(clientid1), MDL);
 
-    /** @todo: do some checks here */
+    ATF_CHECK_MSG(host1->refcnt == 1, "Invalid refcnt for host1");
+    ATF_CHECK_MSG(host2->refcnt == 2, "Invalid refcnt for host2");
+
+    /* verify that host1 is no longer in the hash */
+    ATF_CHECK_MSG(host_hash_lookup(&check, host_uid_hash, clientid1,
+                                   sizeof(clientid1), MDL) == 0,
+                   "Host1 is not supposed to be in the uid_hash.");
+    ATF_CHECK_MSG(!check, "Host1 is not supposed to be in the uid_hash.");
+
+    /* host2 should be still there, though */
+    ATF_CHECK_MSG(host_hash_lookup(&check, host_uid_hash, clientid2,
+                                   sizeof(clientid2), MDL),
+                   "Host2 was supposed to still be in the uid_hash.");
+    host_dereference(&check, MDL);
+
+    /* === step 5: remove second host from the hash === */
+    host_hash_delete(host_uid_hash, (unsigned char *) clientid2,
+                     sizeof(clientid2), MDL);
+
+    ATF_CHECK_MSG(host1->refcnt == 1, "Invalid refcnt for host1");
+    ATF_CHECK_MSG(host2->refcnt == 1, "Invalid refcnt for host2");
+
+    ATF_CHECK_MSG(host_hash_lookup(&check, host_uid_hash, clientid2,
+                                   sizeof(clientid2), MDL) == 0,
+                   "Host2 was not supposed to be in the uid_hash anymore.");
+
+    host_dereference(&host1, MDL);
+    host_dereference(&host2, MDL);
+
+    /*
+     * No easy way to check if the host object were actually released.
+     * We could run it in valgrind and check for memory leaks.
+     */
 
 #if defined (DEBUG_MEMORY_LEAKAGE) && defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
     /* @todo: Should be called in cleanup */
@@ -136,7 +279,7 @@ ATF_TC_BODY(lease_hash, tc) {
 }
 
 ATF_TP_ADD_TCS(tp) {
-    ATF_TP_ADD_TC(tp, lease_hash);
+    ATF_TP_ADD_TC(tp, lease_hash_basic);
 
     return (atf_no_error());
 }
