@@ -605,18 +605,18 @@ ATF_TC_BODY(lease_hash_basic_3hosts, tc) {
                            clientid3, sizeof(clientid3));
 }
 
+/* this test is a direct reproduction of 29851 issue */
+ATF_TC(uid_hash_rt29851);
 
-ATF_TC(uid_hash);
-
-ATF_TC_HEAD(uid_hash, tc) {
+ATF_TC_HEAD(uid_hash_rt29851, tc) {
     atf_tc_set_md_var(tc, "descr", "Uid hash tests");
-    /*
-     * The following functions are tested:
-     * host_allocate(), host_new_hash(), uid_hash_add(), uid_hash_delete()
-     */
+
+    /* this test should last less than millisecond. If its execution
+       is longer than 1 second, we hit infinite loop. */
+    atf_tc_set_md_var(tc, "timeout", "1");
 }
 
-ATF_TC_BODY(uid_hash, tc) {
+ATF_TC_BODY(uid_hash_rt29851, tc) {
 
     unsigned char clientid1[] = { 0x0 };
     unsigned char clientid2[] = { 0x0 };
@@ -671,6 +671,6 @@ ATF_TP_ADD_TCS(tp) {
     ATF_TP_ADD_TC(tp, lease_hash_string_3hosts);
     ATF_TP_ADD_TC(tp, lease_hash_negative1);
     ATF_TP_ADD_TC(tp, lease_hash_negative2);
-    ATF_TP_ADD_TC(tp, uid_hash);
+    ATF_TP_ADD_TC(tp, uid_hash_rt29851);
     return (atf_no_error());
 }
