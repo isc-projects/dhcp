@@ -5,8 +5,8 @@
 
 @section testsAtf ATF unit-tests
 
-ATF stands for Automated Test Framework. We decided to use ATF as a base
-framework for all unit-tests. To enable unit-tests, use the following:
+ATF stands for Automated Test Framework, and is the framework used for
+all unit-tests.n ISC DHCP. To build the unit-tests, use the following:
 
 @verbatim
 ./configure --enable-atf
@@ -14,63 +14,70 @@ make
 make check
 @endverbatim
 
-Each code directory (e.g. server/) that has unit-tests developed has a
-sub-directory named tests (e.g. server/tests). You can execute make check in
-that directory to run specific subset of tests.
+Each code directory (e.g. server/) that has unit-tests has a sub-directory
+named tests (e.g. server/tests). You can execute "make check" in that
+directory to run specific subset of tests.
 
-Unit-tests are grouped into suites. Each suite is a separate executable. The
-typical way to run tests is:
+Unit-tests are grouped into suites, each suite being a separate
+executable. The typical way to run tests is:
 
+@verbatim
 atf-run | atf-report
+@endverbatim
 
-atf-run will read Atffile and execute all tests specified. Using atf-run rather
-than calling the test binary directly has several major benefits. First and
-foremost, atf-run is able to recover from test segfault and continue execution
-from the next case onwards. It is possible to run atf-run without passing its
-output to atf-report, but its output is somewhat convoluted. That is useful in
-some situations, e.g. when one wants to see test output.
+atf-run will read the Atffile in the current directory and execute
+all the tests specified in it. Using atf-run - rather than calling the
+test binary directly - has several major benefits. The main one is that
+atf-run is able to recover from test segfault and continue execution
+from the next case onwards.
 
-Finally, it is possible to run test binary directly. The only required parameter
-is the test case name. Binary will print out a warning that direct binary
-execution is not recommended as it won't be able to recover from crash. Such
-approach is convenient for running the test under debugger, though.
+It is possible to run atf-run without passing its output to atf-report,
+but its output is somewhat convoluted. That is useful in some situations,
+e.g. when one wants to see test output.
+
+It is possible to run test binary directly. The only required parameter
+is the test case name. The binary will print out a warning that direct
+binary execution is not recommended as it won't be able to recover
+from crash.  However, such an approach is convenient for running the
+test under the debugger.
 
 @section testsAtfAdding Adding new unit-tests
 
-There is a small number of unit-tests that are not ATF based. They will be
-converted to ATF soon. Please do not use any other frameworks.
+There are a small number of unit-tests that are not ATF based. They will
+be converted to ATF soon. Please do not use any other frameworks.
 
-Sadly, DHCP code is not written with unit-testing in mind. Therefore it often
-a non-standard approach is required for writing unit-tests. Existing code often
-has many dependencies that makes testing a single piece of code to unit test.
-For example, to test hash tables, one needs to also include OMAPI code. Rather
-than significantly refactoring the code (a huge task that could take months),
-we decided to link whatever is needed in the tests. If developing new test
-suite, it is recommended to take a look at existing tests and just copy them.
-In particular, the following things should be done for adding new tests:
+Sadly, the DHCP code was not written with unit-testing in mind: often a
+non-standard approach is required for writing unit-tests. The existing
+code often has many dependencies that make testing a single piece of code
+awkward to unit test.  For example, to test hash tables, one needs to
+also include the OMAPI code. Rather than significantly refactoring the
+code (a huge task that could take months), we decided to link whatever
+is needed in the tests. If developing new test suite, it is recommended
+that you take a look at existing tests and just copy them.  In particular,
+the following things should be done for adding new tests:
 
-1. create new file that will hold test code. It is recommended to follow
-(tested_feature_name)_unittest.c and put the file in specified tests directory.
-For example tests related to hash tables used on the server side should be named
-server/tests/hash_unittest.c. If in doubt, it is convenient to name the test
-code after the file that holds tested code, e.g. server/mdb6.c is tested in
-server/tests/mdb6_unittest.c.
+1. Create new file that will hold test code. It is recommended you
+name it (tested_feature_name)_unittest.c and put the file in specified
+tests directory.  For example tests related to hash tables used on the
+server side should be named server/tests/hash_unittest.c. If in doubt,
+it is convenient to name the test code after the file that holds tested
+code, e.g. server/mdb6.c is tested in server/tests/mdb6_unittest.c.
 
-2. Implement the test. It is recommended to take a look at an example in
-server/tests/simple_unittest.c. It explains the basic layout of the ATF tests.
-There may be many test cases in a single *_unittest.c file. Make sure that
-you register all your test cases using ATF_TP_ADD_TC() macro. Try to minimize
-modifications to the tested code if possible. Keep in mind that we are using
-modernized \ref codingGuidelines for test development. You are advised to
-also look at man 3 atf-c-api.
+2. Implement the test. The file server/tests/simple_unittest.c holds a
+template explaining the basic layout of the ATF tests.  There may be many
+test cases in a single *_unittest.c file. Make sure that you register
+all your test cases using ATF_TP_ADD_TC() macro, and try to minimize
+modifications to the tested code if possible. Keep in mind that we are
+using modernized \ref codingGuidelines for test development. You are
+advised to also look at atf-c-api(3).
 
 3. Extend Makefile.am to build your test. In particular, add your binary
-name to ATF_TESTS. tests directory will be built only in case where ATF is
-enabled, using --enable-atf during configure phase.
+name to ATF_TESTS. The tests directory will be built only in case where
+ATF is enabled, using --enable-atf during configure phase.
 
-4. Modify Atffile to include your new test binary, if needed. If you followed
-naming convention proposed in step 2, your test will be included and will
-be included automatically.
+4. Modify Atffile to include your new test binary, if needed. If you
+followed naming convention proposed in step 2, your test will be included
+and will be included automatically.
 
 5. Enjoy your improved confidence in the code, as you can run the tests after
 any change you may want to do:
@@ -82,8 +89,8 @@ atf-run | atf-report
 
 @section testsAtfCoding ATF Coding Guidelines
 
-As unit-tests code is an evironment that works under a different regime than
-the production code, there are slight differences, compared to standard
+As the unit-test code creates an evironment that works under a different
+regime than the production code, there are slight differences to standard
 coding guidelines. In particular:
 
 - The code is written using C99. Double slash comments are allowed.

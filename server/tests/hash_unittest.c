@@ -107,7 +107,8 @@ void lease_hash_test_2hosts(unsigned char clientid1[], size_t clientid1_len,
                             unsigned char clientid2[], size_t clientid2_len) {
 
     printf("Checking hash operation for 2 hosts: clientid1-len=%lu"
-           "clientid2-len=%lu\n", clientid1_len, clientid2_len);
+           "clientid2-len=%lu\n", (unsigned long) clientid1_len,
+           (unsigned long) clientid2_len);
 
     dhcp_db_objects_setup ();
     dhcp_common_objects_setup ();
@@ -300,7 +301,8 @@ void lease_hash_test_3hosts(unsigned char clientid1[], size_t clientid1_len,
 
     printf("Checking hash operation for 3 hosts: clientid1-len=%lu"
            " clientid2-len=%lu clientid3-len=%lu\n",
-           clientid1_len, clientid2_len, clientid3_len);
+           (unsigned long) clientid1_len, (unsigned long) clientid2_len,
+           (unsigned long) clientid3_len);
 
     dhcp_db_objects_setup ();
     dhcp_common_objects_setup ();
