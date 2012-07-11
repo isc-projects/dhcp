@@ -2403,6 +2403,8 @@ prepare_option_buffer(struct universe *universe, struct buffer *bp,
 
 	/* And let go of our references. */
       cleanup:
+	if (lbp != NULL)
+		buffer_dereference(&lbp, MDL);
 	option_dereference(&option, MDL);
 
 	return status;

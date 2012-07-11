@@ -1519,6 +1519,8 @@ lease_to_client(struct data_string *reply_ret,
 		packet_dereference(&reply.packet, MDL);
 	if (reply.client_id.data != NULL)
 		data_string_forget(&reply.client_id, MDL);
+	if (packet_oro.buffer != NULL)
+		data_string_forget(&packet_oro, MDL);
 	reply.renew = reply.rebind = reply.prefer = reply.valid = 0;
 	reply.cursor = 0;
 }

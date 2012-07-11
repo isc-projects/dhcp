@@ -78,6 +78,12 @@ work on other platforms. Please report any problems and suggested fixes to
   [ISC-Bugs #29852]
   CVE: CVE-2012-3570
 
+! A pair of memory leaks were found and fixed.  Thanks to
+  Glen Eustace of Massey University, New Zealand for finding
+  this issue.
+  [ISC-Bugs #30024]
+  CVE: CVE-2012-3954
+
 			Changes since 4.2.4rc2
 
 - None
