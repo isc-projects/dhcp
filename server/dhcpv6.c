@@ -1254,6 +1254,8 @@ lease_to_client(struct data_string *reply_ret,
 	isc_boolean_t no_resources_avail = ISC_FALSE;
 #endif
 
+	memset(&packet_oro, 0, sizeof(packet_oro));
+
 	/* Locate the client.  */
 	if (shared_network_from_packet6(&reply.shared,
 					packet) != ISC_R_SUCCESS)
@@ -1276,7 +1278,6 @@ lease_to_client(struct data_string *reply_ret,
 	 * Get the ORO from the packet, if any.
 	 */
 	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_ORO);
-	memset(&packet_oro, 0, sizeof(packet_oro));
 	if (oc != NULL) {
 		if (!evaluate_option_cache(&packet_oro, packet, 
 					   NULL, NULL, 
