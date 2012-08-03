@@ -365,7 +365,7 @@ This option specifies the number of seconds from the time a client gets
 an address until the client transitions to the REBINDING state.
 .PP
 This option is user configurable, but it will be ignored if the value is
-greater than the lease time.
+greater than or equal to the lease time.
 .PP
 To make DHCPv4+DHCPv6 migration easier in the future, any value configured
 in this option is also used as a DHCPv6 "T1" (renew) time.
@@ -379,7 +379,7 @@ This option specifies the number of seconds from the time a client gets
 an address until the client transitions to the RENEWING state.
 .PP
 This option is user configurable, but it will be ignored if the value is
-greater than the rebinding time, or lease time.
+greater than or equal to the rebinding time, or lease time.
 .PP
 To make DHCPv4+DHCPv6 migration easier in the future, any value configured
 in this option is also used as a DHCPv6 "T2" (rebind) time.
