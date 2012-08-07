@@ -6,13 +6,31 @@
 @section testsAtf ATF unit-tests
 
 ATF stands for Automated Test Framework, and is the framework used for
-all unit-tests.n ISC DHCP. To build the unit-tests, use the following:
+unit-tests in ISC DHCP and BIND9. ATF can be downloaded from
+http://code.google.com/p/kyua/wiki/ATF
+
+The ATF successor, called Kyua, is being developed. As of August 2012,
+the latest available release of Kyua is 0.5. It claims to offer
+feature parity with ATF. Migration to Kyua may be planned some time in
+the future. Such upgrade should be done in coordination with BIND. The
+latest tested version of ATF that DHCP's unittests were run against is
+0.15.
+
+To build the unit-tests, use the following:
 
 @verbatim
-./configure --enable-atf
+./configure --with-atf
 make
 make check
 @endverbatim
+
+The following syntax is supported as well:
+@verbatim
+./configure --with-atf=/path/to/your/atf/install
+@endverbatim
+
+but it seems to have troubles detecting ATF installation, at least
+with ATF 0.14 and Mac OS X 10.6.8.
 
 Each code directory (e.g. server/) that has unit-tests has a sub-directory
 named tests (e.g. server/tests). You can execute "make check" in that
