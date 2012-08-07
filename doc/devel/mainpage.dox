@@ -8,8 +8,21 @@
  http://www.isc.org/software/dhcp website.
 
  @section toc Table Of Contents
+  - @subpage archSrv
+  - @subpage archCli
   - @subpage tests
+    - @subpage testsOverview
+    - @subpage testsAtf
+    - @subpage testsAtfAdding
+    - @subpage testsAtfCoding
   - @subpage debug
+  - @subpage omapi
+    - @subpage omapiIntro
+    - @subpage omapiC
+    - @subpage dhcpctl
+  - @subpage contrib
+    - @subpage contribDir
+    - @subpage codingGuidelines
 
  Note: some of the links below may not work if corresponding logs are not available.<br/>
 
