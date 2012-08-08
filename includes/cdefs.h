@@ -54,7 +54,6 @@
 	do {				\
 		int ignore_return;	\
 		ignore_return = x;	\
-                (void)ignore_return;    \
 	} while (0)
 #endif
 
