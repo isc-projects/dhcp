@@ -5,16 +5,18 @@
 
 @section testsAtf ATF unit-tests
 
-ATF stands for Automated Test Framework, and is the framework used for
-unit-tests in ISC DHCP and BIND9. ATF can be downloaded from
-http://code.google.com/p/kyua/wiki/ATF
+ATF stands for Automated Test Framework, and is the framework used for unit
+tests in ISC DHCP and BIND9. ATF sources can be downloaded from
+http://code.google.com/p/kyua/wiki/ATF . ATF itself must be configured, compiled
+and then installed to be available during the DHCP configure procedure.  Please
+follow INSTALL file supplied with ATF sources (it's essentially the typical
+./configure && make && make install procedure).
 
-The ATF successor, called Kyua, is being developed. As of August 2012,
-the latest available release of Kyua is 0.5. It claims to offer
-feature parity with ATF. Migration to Kyua may be planned some time in
-the future. Such upgrade should be done in coordination with BIND. The
-latest tested version of ATF that DHCP's unittests were run against is
-0.15.
+The ATF successor, called Kyua, is being developed. As of August 2012, the
+latest available release of Kyua is 0.5. It claims to offer feature parity with
+ATF. Migration to Kyua may be planned some time in the future, but DHCP uses ATF
+for now. Such an upgrade should be done in coordination with BIND. The latest
+tested version of ATF that DHCP's unittests were run against is 0.15.
 
 To build the unit-tests, use the following:
 

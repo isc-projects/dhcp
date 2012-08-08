@@ -15,6 +15,10 @@
     - @subpage testsAtf
     - @subpage testsAtfAdding
     - @subpage testsAtfCoding
+  - @subpage qa
+    - @subpage qaTests
+    - @subpage cppcheck
+    - @subpage doxygen
   - @subpage debug
   - @subpage omapi
     - @subpage omapiIntro

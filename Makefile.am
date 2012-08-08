@@ -21,7 +21,7 @@ EXTRA_DIST = RELNOTES LICENSE \
 	     util/bindvar.sh \
 	     bind/Makefile bind/bind.tar.gz bind/version.tmp 
 
-SUBDIRS = bind includes tests common dst omapip client dhcpctl relay server
+SUBDIRS = bind includes tests common dst omapip client dhcpctl relay server doc
 
 nobase_include_HEADERS = dhcpctl/dhcpctl.h
 
