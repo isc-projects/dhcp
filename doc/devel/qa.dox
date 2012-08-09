@@ -81,4 +81,13 @@ See tests/tools/perfdhcp directory in BIND10 source code.
 href="http://tahi.org/logo/dhcpv6/">DHCPv6 conformance tests</a>. ISC plans to
 deploy and run them periodically in a near future.
 
+ @section valgrind Memory correctness using valgrind
+
+<a href="http://valgrind.org/">Valgrind</a> is a powerful tool for dynamic code
+analysis. It allows running existing code (often even without recompiling) in a
+special environment that tracks memory operations. In particular, it is able to
+detect: memory leaks, buffer overflows, usage of uninitialized memory, double
+frees and similar errors. We currently do not use valgrind in ISC DHCP testing,
+but there are plans for start using it.
+
 */

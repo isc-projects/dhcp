@@ -19,6 +19,7 @@
     - @subpage qaTests
     - @subpage cppcheck
     - @subpage doxygen
+    - @subpage valgrind
   - @subpage debug
   - @subpage omapi
     - @subpage omapiIntro
