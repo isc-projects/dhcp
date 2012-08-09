@@ -172,11 +172,11 @@ yourtest_unittest.c".
 name to ATF_TESTS. The tests directory will be built only in case where
 ATF is enabled, using --with-atf during configure phase.
 
-<b>4. Modify Atffile to include your new test</b>, if needed. Tests in specified
-directory must be registered in Atffile. See server/tests/Atffile for
-example. Currently every executable with name that falls into *_unittest pattern
-will be executed automatically. If you followed naming convention proposed in a
-previous step, your test will be included and will be included automatically.
+<b>4. Modify Atffile to include your new test</b>, if needed. Tests in the
+specified directory must be registered in Atffile. See server/tests/Atffile for
+an example. Currently every executable with name of the form *_unittest will be
+executed automatically. If you followed naming convention proposed in a previous
+step, your test will be included and will be included automatically.
 
 <b>5. Enjoy your improved confidence in the code</b>, as you can run the tests after
 any change you may want to do:
@@ -185,12 +185,8 @@ any change you may want to do:
 $ make check
 @endverbatim
 
-or run them manually
-
-@verbatim
-$ cd server/tests
-$ atf-run | atf-report
-@endverbatim
+to run all tests for all components. See \ref atfTests section for more details
+on running tests.
 
 @section testsAtfCoding ATF Coding Guidelines
 

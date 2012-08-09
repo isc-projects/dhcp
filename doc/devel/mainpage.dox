@@ -8,8 +8,6 @@
  http://www.isc.org/software/dhcp website.
 
  @section toc Table Of Contents
-  - @subpage archSrv
-  - @subpage archCli
   - @subpage tests
     - @subpage testsOverview
     - @subpage testsAtf
@@ -21,6 +19,10 @@
     - @subpage doxygen
     - @subpage valgrind
   - @subpage debug
+
+ Pages planned to be written:
+  - @subpage archSrv
+  - @subpage archCli
   - @subpage omapi
     - @subpage omapiIntro
     - @subpage omapiC
