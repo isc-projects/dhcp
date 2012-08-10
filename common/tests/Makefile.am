@@ -2,9 +2,11 @@ SUBDIRS = .
 
 AM_CPPFLAGS = $(ATF_CFLAGS) -std=c99 -I$(top_srcdir)/includes
 
-ATF_TESTS = alloc_unittest
+ATF_TESTS =
 
-check_PROGRAMS = $(ATF_TESTS)
+if HAVE_ATF
+
+ATF_TESTS += alloc_unittest
 
 alloc_unittest_SOURCES = test_alloc.c $(top_srcdir)/tests/t_api_dhcp.c
 alloc_unittest_LDADD = $(ATF_LDFLAGS)
@@ -12,5 +14,9 @@ alloc_unittest_LDADD += ../libdhcp.a  \
 	../../omapip/libomapi.a ../../bind/lib/libdns.a \
         ../../bind/lib/libisc.a
 
+endif
+
 check: $(ATF_TESTS)
 	atf-run | atf-report
+
+check_PROGRAMS = $(ATF_TESTS)

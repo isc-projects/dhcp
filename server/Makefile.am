@@ -1,10 +1,6 @@
-SUBDIRS = .
+SUBDIRS = . tests
 
 AM_CPPFLAGS = -I.. -DLOCALSTATEDIR='"@localstatedir@"'
-
-if HAVE_ATF
-  SUBDIRS += tests
-endif
 
 dist_sysconf_DATA = dhcpd.conf
 sbin_PROGRAMS = dhcpd

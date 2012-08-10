@@ -10,8 +10,4 @@ libdhcp_a_SOURCES = alloc.c bpf.c comapi.c conflex.c ctrace.c discover.c \
 man_MANS = dhcp-eval.5 dhcp-options.5
 EXTRA_DIST = $(man_MANS)
 
-SUBDIRS = .
-
-if HAVE_ATF
-  SUBDIRS += tests
-endif
+SUBDIRS = . tests
