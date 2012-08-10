@@ -29,7 +29,8 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
-check_PROGRAMS = $(am__EXEEXT_1)
+@HAVE_ATF_TRUE@am__append_1 = alloc_unittest
+check_PROGRAMS = $(am__EXEEXT_2)
 subdir = common/tests
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -39,13 +40,17 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/includes/config.h
 CONFIG_CLEAN_FILES =
-am__EXEEXT_1 = alloc_unittest$(EXEEXT)
-am_alloc_unittest_OBJECTS = test_alloc.$(OBJEXT) t_api_dhcp.$(OBJEXT)
+@HAVE_ATF_TRUE@am__EXEEXT_1 = alloc_unittest$(EXEEXT)
+am__EXEEXT_2 = $(am__EXEEXT_1)
+am__alloc_unittest_SOURCES_DIST = test_alloc.c \
+	$(top_srcdir)/tests/t_api_dhcp.c
+@HAVE_ATF_TRUE@am_alloc_unittest_OBJECTS = test_alloc.$(OBJEXT) \
+@HAVE_ATF_TRUE@	t_api_dhcp.$(OBJEXT)
 alloc_unittest_OBJECTS = $(am_alloc_unittest_OBJECTS)
 am__DEPENDENCIES_1 =
-alloc_unittest_DEPENDENCIES = $(am__DEPENDENCIES_1) ../libdhcp.a \
-	../../omapip/libomapi.a ../../bind/lib/libdns.a \
-	../../bind/lib/libisc.a
+@HAVE_ATF_TRUE@alloc_unittest_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+@HAVE_ATF_TRUE@	../libdhcp.a ../../omapip/libomapi.a \
+@HAVE_ATF_TRUE@	../../bind/lib/libdns.a ../../bind/lib/libisc.a
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/includes
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -54,7 +59,7 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 SOURCES = $(alloc_unittest_SOURCES)
-DIST_SOURCES = $(alloc_unittest_SOURCES)
+DIST_SOURCES = $(am__alloc_unittest_SOURCES_DIST)
 RECURSIVE_TARGETS = all-recursive check-recursive dvi-recursive \
 	html-recursive info-recursive install-data-recursive \
 	install-dvi-recursive install-exec-recursive \
@@ -163,11 +168,11 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 SUBDIRS = .
 AM_CPPFLAGS = $(ATF_CFLAGS) -std=c99 -I$(top_srcdir)/includes
-ATF_TESTS = alloc_unittest
-alloc_unittest_SOURCES = test_alloc.c $(top_srcdir)/tests/t_api_dhcp.c
-alloc_unittest_LDADD = $(ATF_LDFLAGS) ../libdhcp.a \
-	../../omapip/libomapi.a ../../bind/lib/libdns.a \
-	../../bind/lib/libisc.a
+ATF_TESTS = $(am__append_1)
+@HAVE_ATF_TRUE@alloc_unittest_SOURCES = test_alloc.c $(top_srcdir)/tests/t_api_dhcp.c
+@HAVE_ATF_TRUE@alloc_unittest_LDADD = $(ATF_LDFLAGS) ../libdhcp.a \
+@HAVE_ATF_TRUE@	../../omapip/libomapi.a ../../bind/lib/libdns.a \
+@HAVE_ATF_TRUE@	../../bind/lib/libisc.a
 all: all-recursive
 
 .SUFFIXES:

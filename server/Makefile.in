@@ -31,7 +31,6 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
-@HAVE_ATF_TRUE@am__append_1 = tests
 sbin_PROGRAMS = dhcpd$(EXEEXT)
 subdir = server
 DIST_COMMON = $(dist_sysconf_DATA) $(srcdir)/Makefile.am \
@@ -94,7 +93,7 @@ RECURSIVE_CLEAN_TARGETS = mostlyclean-recursive clean-recursive	\
   distclean-recursive maintainer-clean-recursive
 ETAGS = etags
 CTAGS = ctags
-DIST_SUBDIRS = . tests
+DIST_SUBDIRS = $(SUBDIRS)
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
@@ -189,7 +188,7 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-SUBDIRS = . $(am__append_1)
+SUBDIRS = . tests
 AM_CPPFLAGS = -I.. -DLOCALSTATEDIR='"@localstatedir@"'
 dist_sysconf_DATA = dhcpd.conf
 dhcpd_SOURCES = dhcpd.c dhcp.c bootp.c confpars.c db.c class.c failover.c \
