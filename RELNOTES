@@ -90,6 +90,13 @@ work on other platforms. Please report any problems and suggested fixes to
   [ISC-Bugs #30024]
   CVE: CVE-2012-3954
 
+- Existing legacy unit-tests have been migrated to Automated Test
+  Framework (ATF). Several new tests have been developed. To enable
+  unit-tests, please use --with-atf in configure script. A Developer's
+  Guide has been added. To generate it, please use make devel in
+  the doc directory. It is currently in early stages of development,
+  but is expected to grow in the near future. [ISC-Bugs 25901]
+
 			Changes since 4.1-ESV-R5rc2
 
 - None
