@@ -50,7 +50,8 @@ AC_DEFINE_UNQUOTED([DHCP_BYTE_ORDER], [$byte_order],
 # Optional compile-time DEBUGging.
 AC_ARG_ENABLE(debug,
 	AC_HELP_STRING([--enable-debug],
-		[create a debug-only version of the software (default is no).]))
+		[create a debug-only version of the software (default is no).]),
+		[enable_debug=yes],[enable_debug=no])
 # This is very much off by default.
 if test "$enable_debug" = "yes" ; then
 	AC_DEFINE([DEBUG], [1],
@@ -167,6 +168,44 @@ if test "$enable_use_sockets" = "yes"; then
 	AC_DEFINE([USE_SOCKETS], [1],
 		[Define to 1 to use the standard BSD socket API.])
 fi
+
+# Testing section
+
+atf_path="no"
+AC_ARG_WITH([atf],
+    AC_HELP_STRING([--with-atf=PATH],
+                   [specify location where atf was installed]),
+    [atf_path="$withval"])
+if test "$atf_path" != "no" ; then
+    # Config path for pkg-config
+    atf_pcp=""
+    if test "$atf_path" != "yes" ; then
+        if test -f $atf_path/lib/pkgconfig/atf-c.pc ; then
+            atf_pcp=$atf_path/lib/pkgconfig
+        fi
+    else
+        # Not specified, try some common paths
+        atf_dirs="/usr /usr/local /usr/pkg /opt /opt/local"
+        for d in $atf_dirs
+        do
+            if test -f $d/lib/pkgconfig/atf-c.pc ; then
+                atf_pcp=$d/lib/pkgconfig
+            fi
+        done
+    fi
+    if test "$atf_pcp" = "" ; then
+        AC_MSG_ERROR([Unable to find atf files in location specified])
+    else
+        ATF_CFLAGS="`PKG_CONFIG_PATH=$atf_pcp pkg-config --cflags atf-c` -DUNIT_TEST"
+        ATF_LDFLAGS="`PKG_CONFIG_PATH=$atf_pcp pkg-config --libs atf-c`"
+        AC_SUBST(ATF_CFLAGS)
+        AC_SUBST(ATF_LDFLAGS)
+    fi
+fi
+
+AM_CONDITIONAL(HAVE_ATF, test "$atf_pcp" != "")
+### Uncomment this once docs.lab.isc.org upgrades to automake 1.11
+### AM_COND_IF([HAVE_ATF], [AC_DEFINE([HAVE_ATF], [1], [ATF framework specified?])])
 
 ###
 ### Path fun.  Older versions of DHCP were installed in /usr/sbin, so we
@@ -597,6 +636,47 @@ AC_OUTPUT([
   relay/Makefile
   server/Makefile
   tests/Makefile
+  server/tests/Makefile
+  doc/devel/doxyfile
 ])
 
 sh util/bindvar.sh
+
+cat > config.report << END
+
+     ISC DHCP source configure results:
+    -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+Package:
+  Name:          $PACKAGE_NAME
+  Version:       $PACKAGE_VERSION
+
+C Compiler:      $CC
+
+Flags:
+  DEFS:          $DEFS
+  CFLAGS:        $CFLAGS
+
+Features:
+  debug:         $enable_debug
+  failover:      $enable_failover
+  execute:       $enable_execute
+
+Developer:
+  ATF unittests : $atf_path
+
+END
+# TODO: Add Perl system tests
+
+if test "$atf_path" != "no"
+then
+echo "ATF_CFLAGS  : $ATF_CFLAGS" >> config.report
+echo "ATF_LDFLAGS : $ATF_LDFLAGS" >> config.report
+echo
+fi
+
+cat config.report
+
+echo
+echo Now you can type "make" to build ISC DHCP
+echo
