@@ -1,6 +1,6 @@
 .\"	$Id: dhcp-eval.5,v 1.27.364.3.6.2 2012/05/17 15:52:27 sar Exp $
 .\"
-.\" Copyright (c) 2009-2011 by Internet Systems Consortium, Inc. ("ISC")
+.\" Copyright (c) 2009-2012 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
 .\"
@@ -34,35 +34,35 @@ dhcp-eval - ISC DHCP conditional evaluation
 .SH DESCRIPTION
 The Internet Systems Consortium DHCP client and server both provide
 the ability to perform conditional behavior depending on the contents
-of packets they receive.   The syntax for specifying this conditional
+of packets they receive.  The syntax for specifying this conditional
 behaviour is documented here.
 .SH REFERENCE: CONDITIONAL BEHAVIOUR
 Conditional behaviour is specified using the if statement and the else
-or elsif statements.   A conditional statement can appear anywhere
+or elsif statements.  A conditional statement can appear anywhere
 that a regular statement (e.g., an option statement) can appear, and
-can enclose one or more such statements.   A typical conditional
+can enclose one or more such statements.  A typical conditional
 statement in a server might be:
 .PP
 .nf
 if option dhcp-user-class = "accounting" {
   max-lease-time 17600;
   option domain-name "accounting.example.org";
-  option domain-name-servers ns1.accounting.example.org, 
+  option domain-name-servers ns1.accounting.example.org,
 			     ns2.accounting.example.org;
 } elsif option dhcp-user-class = "sales" {
   max-lease-time 17600;
   option domain-name "sales.example.org";
-  option domain-name-servers ns1.sales.example.org, 
+  option domain-name-servers ns1.sales.example.org,
 			     ns2.sales.example.org;
 } elsif option dhcp-user-class = "engineering" {
   max-lease-time 17600;
   option domain-name "engineering.example.org";
-  option domain-name-servers ns1.engineering.example.org, 
+  option domain-name-servers ns1.engineering.example.org,
 			     ns2.engineering.example.org;
 } else {
   max-lease-time 600;
   option domain-name "misc.example.org";
-  option domain-name-servers ns1.misc.example.org, 
+  option domain-name-servers ns1.misc.example.org,
 			     ns2.misc.example.org;
 }
 .fi
@@ -71,36 +71,36 @@ On the client side, an example of conditional evaluation might be:
 .PP
 .nf
 # example.org filters DNS at its firewall, so we have to use their DNS
-# servers when we connect to their network.   If we are not at
+# servers when we connect to their network.  If we are not at
 # example.org, prefer our own DNS server.
 if not option domain-name = "example.org" {
   prepend domain-name-servers 127.0.0.1;
 }
-.fi  
+.fi
 .PP
 The
 .B if
 statement and the
 .B elsif
 continuation statement both take boolean expressions as their
-arguments.   That is, they take expressions that, when evaluated,
-produce a boolean result.   If the expression evaluates to true, then
-the statements enclosed in braces following the 
+arguments.  That is, they take expressions that, when evaluated,
+produce a boolean result.  If the expression evaluates to true, then
+the statements enclosed in braces following the
 .B if
 statement are executed, and all subsequent
 .B elsif
 and
 .B else
-clauses are skipped.   Otherwise, each subsequent 
+clauses are skipped.  Otherwise, each subsequent 
 .B elsif
 clause's expression is checked, until an elsif clause is encountered
-whose test evaluates to true.   If such a clause is found, the
+whose test evaluates to true.  If such a clause is found, the
 statements in braces following it are executed, and then any
 subsequent
 .B elsif
 and
 .B else
-clauses are skipped.   If all the 
+clauses are skipped.  If all the 
 .B if
 and
 .B elsif
@@ -109,7 +109,7 @@ of their expressions evaluate true, then if there is an
 .B else
 clause, the statements enclosed in braces following the
 .B else
-are evaluated.   Boolean expressions that evaluate to null are
+are evaluated.  Boolean expressions that evaluate to null are
 treated as false in conditionals.
 .SH BOOLEAN EXPRESSIONS
 The following is the current list of boolean expressions that are
@@ -119,7 +119,7 @@ supported by the DHCP distribution.
 .RS 0.25i
 .PP
 The \fB=\fR operator compares the values of two data expressions,
-returning true if they are the same, false if they are not.   If
+returning true if they are the same, false if they are not.  If
 either the left-hand side or the right-hand side are null, the
 result is also null.
 .RE
@@ -132,7 +132,7 @@ The \fB~=\fR and \fB~~\fR operators (not available on all systems) perform
 extended regex(7) matching of the values of two data expressions, returning
 true if \fIdata-expression-1\fR matches against the regular expression
 evaluated by \fIdata-expression-2\fR, or false if it does not match or
-encounters some error.  If either the left-hand side or the right-hand side 
+encounters some error.  If either the left-hand side or the right-hand side
 are null or empty strings, the result is also false.  The \fB~~\fR operator
 differs from the \fB~=\fR operator in that it is case-insensitive.
 .RE
@@ -162,7 +162,7 @@ the right-hand side are null, the result is null.
 .RS 0.25i
 The \fBnot\fR operator evaluates to true if \fIboolean-expression\fR
 evaluates to false, and returns false if \fIboolean-expression\fR evaluates
-to true.   If \fIboolean-expression\fR evaluates to null, the result
+to true.  If \fIboolean-expression\fR evaluates to null, the result
 is also null.
 .RE
 .PP
@@ -188,7 +188,7 @@ address assignment.
 .RE
 .SH DATA EXPRESSIONS
 Several of the boolean expressions above depend on the results of
-evaluating data expressions.   A list of these expressions is provided
+evaluating data expressions.  A list of these expressions is provided
 here.
 .PP
 .B substring (\fIdata-expr\fB, \fIoffset\fB, \fIlength\fB)\fR
@@ -211,7 +211,7 @@ is returned.
 .PP
 .RS 0.25i
 The \fBsuffix\fR operator evaluates \fIdata-expr\fR and returns the
-last \fIlength\fR bytes of the result of that evaluation. \fILength\fR
+last \fIlength\fR bytes of the result of that evaluation.  \fILength\fR
 is a numeric expression.  If \fIdata-expr\fR or \fIlength\fR evaluate
 to null, then the result is also null.  If \fIsuffix\fR evaluates to a
 number greater than the length of the evaluated data, then the
@@ -222,7 +222,7 @@ evaluated data is returned.
 .PP
 .RS 0.25i
 The \fBlcase\fR function returns the result of evaluating
-\fIdata-expr\fR converted to lower case.   If \fIdata-expr\fR evaluates
+\fIdata-expr\fR converted to lower case.  If \fIdata-expr\fR evaluates
 to null, then the result is also null.
 .RE
 .PP
@@ -230,7 +230,7 @@ to null, then the result is also null.
 .PP
 .RS 0.25i
 The \fBucase\fR function returns the result of evaluating
-\fIdata-expr\fR converted to upper case.   If \fIdata-expr\fR evaluates
+\fIdata-expr\fR converted to upper case.  If \fIdata-expr\fR evaluates
 to null, then the result is also null.
 .RE
 .PP
@@ -253,10 +253,10 @@ that the DHCP client or server has been configured to send.
 .RS 0.25i
 The \fBhardware\fR operator returns a data string whose first element
 is the type of network interface indicated in packet being considered,
-and whose subsequent elements are client's link-layer address.   If
+and whose subsequent elements are client's link-layer address.  If
 there is no packet, or if the RFC2131 \fIhlen\fR field is invalid,
-then the result is null.   Hardware types include ethernet (1),
-token-ring (6), and fddi (8).   Hardware types are specified by the
+then the result is null.  Hardware types include ethernet (1),
+token-ring (6), and fddi (8).  Hardware types are specified by the
 IETF, and details on how the type numbers are defined can be found in
 RFC2131 (in the ISC DHCP distribution, this is included in the doc/
 subdirectory).
@@ -267,7 +267,7 @@ subdirectory).
 .RS 0.25i
 The \fBpacket\fR operator returns the specified portion of the packet
 being considered, or null in contexts where no packet is being
-considered.   \fIOffset\fR and \fIlength\fR are applied to the
+considered.  \fIOffset\fR and \fIlength\fR are applied to the
 contents packet as in the \fBsubstring\fR operator.
 .RE
 .PP
@@ -275,10 +275,10 @@ contents packet as in the \fBsubstring\fR operator.
 .PP
 .RS 0.25i
 A string, enclosed in quotes, may be specified as a data expression,
-and returns the text between the quotes, encoded in ASCII.   The
+and returns the text between the quotes, encoded in ASCII.  The
 backslash ('\\') character is treated specially, as in C programming: '\\t'
 means TAB, '\\r' means carriage return, '\\n' means newline, and '\\b' means
-bell.   Any octal value can be specified with '\\nnn', where nnn is any
+bell.  Any octal value can be specified with '\\nnn', where nnn is any
 positive octal number less than 0400.  Any hexadecimal value can be
 specified with '\\xnn', where nn is any positive hexadecimal number less
 than or equal to 0xff.
@@ -294,7 +294,7 @@ specified as a data expression.
 .B concat (\fIdata-expr1\fB, ..., \fIdata-exprN\fB)\fR
 .RS 0.25i
 The expressions are evaluated, and the results of each evaluation are
-concatenated in the sequence that the subexpressions are listed.   If
+concatenated in the sequence that the subexpressions are listed.  If
 any subexpression evaluates to null, the result of the concatenation
 is null.
 .RE
@@ -303,8 +303,8 @@ is null.
 .RS 0.25i
 The two expressions are evaluated, and then the result of evaluating
 the data expression is reversed in place, using hunks of the size
-specified in the numeric expression.   For example, if the numeric
-expression evaluates to four, and the data expression evaluates to 
+specified in the numeric expression.  For example, if the numeric
+expression evaluates to four, and the data expression evaluates to
 twelve bytes of data, then the reverse expression will evaluate to
 twelve bytes of data, consisting of the last four bytes of the the
 input data, followed by the middle four bytes, followed by the first
@@ -328,10 +328,10 @@ information).
 .RS 0.25i
 Converts the result of evaluating data-expr2 into a text string
 containing one number for each element of the result of evaluating
-data-expr2.   Each number is separated from the other by the result of
-evaluating data-expr1.   The result of evaluating numeric-expr1
+data-expr2.  Each number is separated from the other by the result of
+evaluating data-expr1.  The result of evaluating numeric-expr1
 specifies the base (2 through 16) into which the numbers should be
-converted.   The result of evaluating numeric-expr2 specifies the
+converted.  The result of evaluating numeric-expr2 specifies the
 width in bits of each number, which may be either 8, 16 or 32.
 .PP
 As an example of the preceding three types of expressions, to produce
@@ -358,10 +358,10 @@ also null.
 .B pick-first-value (\fIdata-expr1\fR [ ... \fIexpr\fRn ] \fB)\fR
 .RS 0.25i
 The pick-first-value function takes any number of data expressions as
-its arguments.   Each expression is evaluated, starting with the first
+its arguments.  Each expression is evaluated, starting with the first
 in the list, until an expression is found that does not evaluate to a
-null value.   That expression is returned, and none of the subsequent
-expressions are evaluated.   If all expressions evaluate to a null
+null value.  That expression is returned, and none of the subsequent
+expressions are evaluated.  If all expressions evaluate to a null
 value, the null value is returned.
 .RE
 .PP
@@ -369,10 +369,10 @@ value, the null value is returned.
 .RS 0.25i
 The host-decl-name function returns the name of the host declaration
 that matched the client whose request is currently being processed, if
-any.   If no host declaration matched, the result is the null value.
+any.  If no host declaration matched, the result is the null value.
 .RE
 .SH NUMERIC EXPRESSIONS
-Numeric expressions are expressions that evaluate to an integer.   In
+Numeric expressions are expressions that evaluate to an integer.  In
 general, the maximum size of such an integer should not be assumed to
 be representable in fewer than 32 bits, but the precision of such
 integers may be more than 32 bits.
@@ -382,8 +382,8 @@ integers may be more than 32 bits.
 .RS 0.25i
 The \fBextract-int\fR operator extracts an integer value in network
 byte order from the result of evaluating the specified data
-expression.   Width is the width in bits of the integer to extract.
-Currently, the only supported widths are 8, 16 and 32.   If the
+expression.  Width is the width in bits of the integer to extract.
+Currently, the only supported widths are 8, 16 and 32.  If the
 evaluation of the data expression doesn't provide sufficient bits to
 extract an integer of the specified size, the null value is returned.
 .RE
@@ -405,45 +405,45 @@ specified as a numeric expression.
 .B client-state
 .PP
 .RS 0.25i
-The current state of the client instance being processed.   This is
-only useful in DHCP client configuration files.   Possible values are:
+The current state of the client instance being processed.  This is
+only useful in DHCP client configuration files.  Possible values are:
 .TP 2
 .I \(bu
 Booting - DHCP client is in the INIT state, and does not yet have an
-IP address.   The next message transmitted will be a DHCPDISCOVER,
+IP address.  The next message transmitted will be a DHCPDISCOVER,
 which will be broadcast.
 .TP
 .I \(bu
-Reboot - DHCP client is in the INIT-REBOOT state.   It has an IP
-address, but is not yet using it.   The next message to be transmitted
-will be a DHCPREQUEST, which will be broadcast.   If no response is
+Reboot - DHCP client is in the INIT-REBOOT state.  It has an IP
+address, but is not yet using it.  The next message to be transmitted
+will be a DHCPREQUEST, which will be broadcast.  If no response is
 heard, the client will bind to its address and move to the BOUND state.
 .TP
 .I \(bu
 Select - DHCP client is in the SELECTING state - it has received at
 least one DHCPOFFER message, but is waiting to see if it may receive
-other DHCPOFFER messages from other servers.   No messages are sent in
+other DHCPOFFER messages from other servers.  No messages are sent in
 the SELECTING state.
 .TP
 .I \(bu
 Request - DHCP client is in the REQUESTING state - it has received at
 least one DHCPOFFER message, and has chosen which one it will
-request.   The next message to be sent will be a DHCPREQUEST message,
+request.  The next message to be sent will be a DHCPREQUEST message,
 which will be broadcast.
 .TP
 .I \(bu
-Bound - DHCP client is in the BOUND state - it has an IP address.   No
+Bound - DHCP client is in the BOUND state - it has an IP address.  No
 messages are transmitted in this state.
 .TP
 .I \(bu
 Renew - DHCP client is in the RENEWING state - it has an IP address,
-and is trying to contact the server to renew it.   The next message to
+and is trying to contact the server to renew it.  The next message to
 be sent will be a DHCPREQUEST message, which will be unicast directly
 to the server.
 .TP
 .I \(bu
 Rebind - DHCP client is in the REBINDING state - it has an IP address,
-and is trying to contact any server to renew it.   The next message to
+and is trying to contact any server to renew it.  The next message to
 be sent will be a DHCPREQUEST, which will be broadcast.
 .RE
 .SH REFERENCE: ACTION EXPRESSIONS
@@ -482,7 +482,7 @@ octal escapes ("\\nnn"), make sure your external command handles them as
 such.
 .PP
 It is possible to use the execute statement in any context, not only
-on events. If you put it in a regular scope in the configuration file
+on events.  If you put it in a regular scope in the configuration file
 you will execute that command every time a scope is evaluated.
 .RE
 .SH REFERENCE: DYNAMIC DNS UPDATES
