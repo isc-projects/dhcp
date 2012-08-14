@@ -58,6 +58,13 @@ work on other platforms. Please report any problems and suggested fixes to
   server code no longer use MAX_PATH constant that is not defined on
   GNU/Hurd systems. [ISC-Bugs 25979]
 
+- Existing legacy unit-tests have been migrated to Automated Test
+  Framework (ATF). Several new tests have been developed. To enable
+  unit-tests, please use --with-atf in configure script. A Developer's
+  Guide has been added. To generate it, please use make devel in
+  the doc directory. It is currently in early stages of development,
+  but is expected to grow in the near future. [ISC-Bugs 25901]
+
 			Changes since 4.2.4
 
 - Correct code to calculate timing values in client to compare
