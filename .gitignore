@@ -1,0 +1,4 @@
+*.o
+bind
+doc/html
+.deps

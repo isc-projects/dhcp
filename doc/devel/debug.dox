@@ -1,0 +1,21 @@
+/**
+ @page debug Debugging
+ This page enumerates various techniques useful for debugging ISC DHCP software.
+
+ @section debugTips Debugging Tips & Tricks
+
+ISC DHCP code is somewhat convoluted. Due to extensive macros use, it is often
+difficult to even find whole function, much less to understand what they
+actually do. One way to find such a macro-defined function is to compile the
+code with debugging symbols (-g), load the binary into gdb and set a breakpoint
+for such a function. gdb will print out exact place in the code where the
+function is defined. Presumably one will find a macro at that specific location.
+For example to find where \ref lease_reference function is defined do:
+
+@verbatim
+gdb
+file dhcpd
+b lease_reference
+@endverbatim
+
+*/
