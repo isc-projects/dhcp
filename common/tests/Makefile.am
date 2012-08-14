@@ -14,9 +14,9 @@ alloc_unittest_LDADD += ../libdhcp.a  \
 	../../omapip/libomapi.a ../../bind/lib/libdns.a \
         ../../bind/lib/libisc.a
 
-endif
-
 check: $(ATF_TESTS)
 	atf-run | atf-report
+
+endif
 
 check_PROGRAMS = $(ATF_TESTS)
