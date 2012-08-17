@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2011 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2007-2012 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -26,24 +26,26 @@
  * A brief description of the IPv6 structures as reverse engineered.
  *
  * There are three major data strucutes involved in the database:
- * ipv6_pool - this contains information about a pool of addresses or prefixes
+ *
+ * - ipv6_pool - this contains information about a pool of addresses or prefixes
  *             that the server is using.  This includes a hash table that
  *             tracks the active items and a pair of heap tables one for
  *             active items and one for non-active items.  The heap tables
  *             are used to determine the next items to be modified due to
  *             timing events (expire mostly).
- * ia_xx     - this contains information about a single IA from a request
+ * - ia_xx   - this contains information about a single IA from a request
  *             normally it will contain one pointer to a lease for the client
  *             but it may contain more in some circumstances.  There are 3
- *             hash tables to aid in accessing these one each for NA, TA and PD
- * iasubopt  - the v6 lease structure.  These are creaeted dynamically when
+ *             hash tables to aid in accessing these one each for NA, TA and PD.
+ * - iasubopt- the v6 lease structure.  These are created dynamically when
  *             a client asks for something and will eventually be destroyed
  *             if the client doesn't re-ask for that item.  A lease has space
  *             for backpointers to the IA and to the pool to which it belongs.
- *             The pool backpointer is always filled, the IA pointer may not be
+ *             The pool backpointer is always filled, the IA pointer may not be.
  *
  * In normal use we then have something like this:
  *
+ * \verbatim
  * ia hash tables
  *  ia_na_active                           +----------------+
  *  ia_ta_active          +------------+   | pool           |
@@ -53,6 +55,7 @@
  * |  iasubopt array |<---|  iaptr     |<--|  inactive heap |
  * |   lease ptr     |--->|            |   |                |
  * +-----------------+    +------------+   +----------------+
+ * \endverbatim
  *
  * For the pool either the inactive heap will have a pointer
  * or both the active heap and the active hash will have pointers.
@@ -936,7 +939,7 @@ create_lease6(struct ipv6_pool *pool, struct iasubopt **addr,
 }
 
 
-/*! \file server/mdb6.c
+/*!
  *
  * \brief Cleans up leases when reading from a lease file
  *
@@ -1237,29 +1240,49 @@ move_lease_to_active(struct ipv6_pool *pool, struct iasubopt *lease) {
 	return insert_result;
 }
 
-/*
- * Renew an lease in the pool.
+/*!
+ * \brief Renew a lease in the pool.
  *
- * To do this, first set the new hard_lifetime_end_time for the resource,
- * and then invoke renew_lease6() on it.
+ * The hard_lifetime_end_time of the lease should be set to
+ * the current expiration time.
+ * The soft_lifetime_end_time of the lease should be set to
+ * the desired expiration time.
  *
- * WARNING: lease times must only be extended, never reduced!!!
+ * This routine will compare the two and call the correct
+ * heap routine to move the lease.  If the lease is active
+ * and the new expiration time is greater (the normal case)
+ * then we call isc_heap_decreased() as a larger time is a
+ * lower priority.  If the new expiration time is less then
+ * we call isc_heap_increased().
+ *
+ * If the lease is abandoned then it will be on the active list
+ * and we will always call isc_heap_increased() as the previous
+ * expiration would have been all 1s (as close as we can get
+ * to infinite).
+ *
+ * If the lease is moving to active we call that routine
+ * which will move it from the inactive list to the active list.
+ *
+ * \param pool a pool the lease belongs to
+ * \param lease the lease to be renewed
+ *
+ * \return result of the renew operation (ISC_R_SUCCESS if successful,
+           ISC_R_NOMEMORY when run out of memory)
  */
 isc_result_t
 renew_lease6(struct ipv6_pool *pool, struct iasubopt *lease) {
-	/*
-	 * If we're already active, then we can just move our expiration
-	 * time down the heap. 
-	 *
-	 * If we're abandoned then we are already on the active list
-	 * but we need to retag the lease and move our expiration
-	 * from infinite to the current value
-	 *
-	 * Otherwise, we have to move from the inactive heap to the 
-	 * active heap.
-	 */
+	time_t old_end_time = lease->hard_lifetime_end_time;
+	lease->hard_lifetime_end_time = lease->soft_lifetime_end_time;
+	lease->soft_lifetime_end_time = 0;
+
 	if (lease->state == FTS_ACTIVE) {
-		isc_heap_decreased(pool->active_timeouts, lease->heap_index);
+		if (old_end_time <= lease->hard_lifetime_end_time) {
+			isc_heap_decreased(pool->active_timeouts,
+					   lease->heap_index);
+		} else {
+			isc_heap_increased(pool->active_timeouts,
+					   lease->heap_index);
+		}
 		return ISC_R_SUCCESS;
 	} else if (lease->state == FTS_ABANDONED) {
 		char tmp_addr[INET6_ADDRSTRLEN];
@@ -1922,9 +1945,8 @@ change_leases(struct ia_xx *ia,
 /*
  * Renew all leases in an IA from all pools.
  *
- * The new hard_lifetime_end_time should be updated for the addresses/prefixes.
- *
- * WARNING: lease times must only be extended, never reduced!!!
+ * The new lifetime should be in the soft_lifetime_end_time
+ * and will be moved to hard_lifetime_end_time by renew_lease6.
  */
 isc_result_t 
 renew_leases(struct ia_xx *ia) {
