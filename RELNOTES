@@ -91,6 +91,13 @@ work on other platforms. Please report any problems and suggested fixes to
   the doc directory. It is currently in early stages of development,
   but is expected to grow in the near future. [ISC-Bugs 25901]
 
+! An issue with the use of lease times was found and fixed.  Making
+  certain chagnes to the end time of an IPv6 lease could cause the
+  server to abort.  Thanks to Glen Eustace of Massey University,
+  New Zealand for finding this issue.
+  [ISC-Bugs #30281]
+  CVE: CVE-2012-3955
+
 			Changes since 4.2.4rc2
 
 - None

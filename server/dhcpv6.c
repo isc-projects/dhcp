@@ -1837,9 +1837,6 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 			ia_reference(&tmp->ia, reply->ia, MDL);
 
 			/* Commit 'hard' bindings. */
-			tmp->hard_lifetime_end_time =
-				tmp->soft_lifetime_end_time;
-			tmp->soft_lifetime_end_time = 0;
 			renew_lease6(tmp->ipv6_pool, tmp);
 			schedule_lease_timeout(tmp->ipv6_pool);
 
@@ -2498,9 +2495,6 @@ reply_process_ia_ta(struct reply_state *reply, struct option_cache *ia) {
 			ia_reference(&tmp->ia, reply->ia, MDL);
 
 			/* Commit 'hard' bindings. */
-			tmp->hard_lifetime_end_time =
-				tmp->soft_lifetime_end_time;
-			tmp->soft_lifetime_end_time = 0;
 			renew_lease6(tmp->ipv6_pool, tmp);
 			schedule_lease_timeout(tmp->ipv6_pool);
 
@@ -3370,9 +3364,6 @@ reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia) {
 			ia_reference(&tmp->ia, reply->ia, MDL);
 
 			/* Commit 'hard' bindings. */
-			tmp->hard_lifetime_end_time =
-				tmp->soft_lifetime_end_time;
-			tmp->soft_lifetime_end_time = 0;
 			renew_lease6(tmp->ipv6_pool, tmp);
 			schedule_lease_timeout(tmp->ipv6_pool);
 		}
