@@ -39,6 +39,15 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and may not
 work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
+			Changes since 4.2.4-P1
+
+! An issue with the use of lease times was found and fixed.  Making
+  certain changes to the end time of an IPv6 lease could cause the
+  server to abort.  Thanks to Glen Eustace of Massey University,
+  New Zealand for finding this issue.
+  [ISC-Bugs #30281]
+  CVE: CVE-2012-3955
+
 			Changes since 4.2.4
 
 ! Previously the server code was relaxed to allow packets with zero
