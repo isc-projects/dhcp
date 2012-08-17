@@ -111,7 +111,7 @@ work on other platforms. Please report any problems and suggested fixes to
   but is expected to grow in the near future. [ISC-Bugs 25901]
 
 ! An issue with the use of lease times was found and fixed.  Making
-  certain chagnes to the end time of an IPv6 lease could cause the
+  certain changes to the end time of an IPv6 lease could cause the
   server to abort.  Thanks to Glen Eustace of Massey University,
   New Zealand for finding this issue.
   [ISC-Bugs #30281]
