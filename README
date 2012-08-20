@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-		           Version 4.1-ESV-R6
-			      23 July 2012
+		           Version 4.1-ESV-R7
+			   10 September 2012
 
 			      README FILE
 
@@ -96,7 +96,7 @@ directory, it may not have up-to-date information).
 
 			    RELEASE STATUS
 
-This is ISC DHCP 4.1-ESV-R6, an extended support (ESV) release that
+This is ISC DHCP 4.1-ESV-R7, an extended support (ESV) release that
 provides patches for some security issues and several bugs.
 
 ESVs are intended for users who have longer upgrade constraints 
@@ -137,12 +137,12 @@ information.   On Digital Unix, type ``man pfilt''.
 To build the DHCP Distribution, unpack the compressed tar file using
 the tar utility and the gzip command - type something like:
 
-	gunzip dhcp-4.1-ESV-R6.tar.gz
-	tar xvf dhcp-4.1-ESV-R6.tar
+	gunzip dhcp-4.1-ESV-R7.tar.gz
+	tar xvf dhcp-4.1-ESV-R7.tar
 
 			    CONFIGURING IT
 
-Now, cd to the dhcp-4.1-ESV-R6 subdirectory that you've just created and
+Now, cd to the dhcp-4.1-ESV-R7 subdirectory that you've just created and
 configure the source tree by typing:
 
 	./configure
