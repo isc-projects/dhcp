@@ -167,6 +167,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 SUBDIRS = .
 AM_CPPFLAGS = $(ATF_CFLAGS) -std=c99 -I$(top_srcdir)/includes
+EXTRA_DIST = Atffile
 ATF_TESTS = $(am__append_1)
 @HAVE_ATF_TRUE@alloc_unittest_SOURCES = test_alloc.c $(top_srcdir)/tests/t_api_dhcp.c
 @HAVE_ATF_TRUE@alloc_unittest_LDADD = $(ATF_LDFLAGS) ../libdhcp.a \

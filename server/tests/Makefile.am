@@ -4,6 +4,8 @@ AM_CPPFLAGS = $(ATF_CFLAGS) -DUNIT_TEST -I$(top_srcdir)/includes
 AM_CPPFLAGS += -std=c99 -I$(top_srcdir)/bind/include -I$(top_srcdir)
 AM_CPPFLAGS += -DLOCALSTATEDIR='"."' -Wno-unused-function -Wno-error=unused-variable
 
+EXTRA_DIST = Atffile
+
 # for autotools debugging only
 info:
 	@echo "ATF_CFLAGS=$(ATF_CFLAGS)"
