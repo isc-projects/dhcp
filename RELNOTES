@@ -106,6 +106,9 @@ work on other platforms. Please report any problems and suggested fixes to
   [ISC-Bugs #30024]
   CVE: CVE-2012-3954
 
+- Update the memory leakage debug code to work with v6.
+  [ISC-Bugs #30297]
+
 			Changes since 4.1-ESV-R5rc2
 
 - None

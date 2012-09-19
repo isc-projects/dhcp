@@ -18,4 +18,16 @@ file dhcpd
 b lease_reference
 @endverbatim
 
+DEBUG_MEMORY_LEAKAGE may be defined in includes/site.h to enable some debugging
+code to help with debugging memory issues.  This code keeps a running total
+of the outstanding memory that has been allocated and a list of the outstanding
+allocations.  Both are updated whent he memory is freed.  Status information is
+printed when do_packet() and do_packet6() complete processing.  The outstanding
+value is expected to grow when new structures are used - for example when a new
+IPv6 lease is created.  It is not expected to grow when a structure is reused
+for example when an IPv6 lease is renewed.
+
+DEBUG_RC_HISTORY and DEBUG_RC_HISTORY_EXHAUSTIVELY can also be defined to provide
+more verbose information about reference counts on objects.
+
 */
