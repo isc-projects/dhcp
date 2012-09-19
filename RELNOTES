@@ -117,6 +117,9 @@ work on other platforms. Please report any problems and suggested fixes to
   [ISC-Bugs #30281]
   CVE: CVE-2012-3955
 
+- Update the memory leakage debug code to work with v6.
+  [ISC-Bugs #30297]
+
 			Changes since 4.2.3
 
 ! Add a check for a null pointer before calling the regexec function.

@@ -3,7 +3,8 @@
    Memory allocation for the DHCP server... */
 
 /*
- * Copyright (c) 2004-2007,2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009,2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -61,7 +62,9 @@ void relinquish_lease_hunks ()
 		if (!c) {
 		    log_info ("lease %s refcnt %d",
 			      piaddr (n [i].ip_addr), n [i].refcnt);
+#if defined (DEBUG_RC_HISTORY)
 		    dump_rc_history (&n [i]);
+#endif
 		}
 	    }
 	}
