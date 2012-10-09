@@ -52,6 +52,17 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and may not
 work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
+			Changes since 4.1-ESV-R7
+
+- Update the memory leakage debug code to work with v6.
+  [ISC-Bugs #30297]
+
+- Modify the failover code to handle incorrect peer names
+  better.  Previously the structure holding the name might
+  have been freed inappropriately in some cases and not
+  freed in other cases.
+  [ISC-Bugs #30320]
+
 			Changes since 4.1-ESV-R6
 
 - Existing legacy unit-tests have been migrated to Automated Test
@@ -105,9 +116,6 @@ work on other platforms. Please report any problems and suggested fixes to
   this issue.
   [ISC-Bugs #30024]
   CVE: CVE-2012-3954
-
-- Update the memory leakage debug code to work with v6.
-  [ISC-Bugs #30297]
 
 			Changes since 4.1-ESV-R5rc2
 
