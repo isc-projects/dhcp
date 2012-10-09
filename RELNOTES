@@ -127,6 +127,12 @@ work on other platforms. Please report any problems and suggested fixes to
   the TXT record alone.  This relaxation was codified in RFC 4703.
   [ISC-Bugs #30734]
 
+- Modify the failover code to handle incorrect peer names
+  better.  Previously the structure holding the name might
+  have been freed inappropriately in some cases and not
+  freed in other cases.
+  [ISC-Bugs #30320]
+
 			Changes since 4.2.3
 
 ! Add a check for a null pointer before calling the regexec function.

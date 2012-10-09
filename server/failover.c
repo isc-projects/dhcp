@@ -4452,7 +4452,9 @@ isc_result_t dhcp_failover_send_connectack (omapi_object_t *l,
 	       ? dhcp_failover_make_option(FTO_RELATIONSHIP_NAME, FMA,
 					   strlen(state->name), state->name)
 	       : (link->imsg->options_present & FTB_RELATIONSHIP_NAME)
-		  ? &link->imsg->relationship_name
+		  ? dhcp_failover_make_option(FTO_RELATIONSHIP_NAME, FMA,
+					      link->imsg->relationship_name.count,
+					      link->imsg->relationship_name.data)
 		  : &skip_failover_option,
 	      state
 	       ? dhcp_failover_make_option (FTO_MAX_UNACKED, FMA,
@@ -6333,6 +6335,8 @@ static isc_result_t failover_message_dereference (failover_message_t **mp,
 			dfree (m -> hba.data, file, line);
 		if (m -> message.data)
 			dfree (m -> message.data, file, line);
+		if (m -> relationship_name.data)
+			dfree (m -> relationship_name.data, file, line);
 		if (m -> reply_options.data)
 			dfree (m -> reply_options.data, file, line);
 		if (m -> request_options.data)
