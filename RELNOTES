@@ -101,6 +101,13 @@ work on other platforms. Please report any problems and suggested fixes to
 - Update the memory leakage debug code to work with v6.
   [ISC-Bugs #30297]
 
+- Relax the requirements for deleting an A or AAAA record.
+  Previously the DDNS removal code required both the A or AAAA
+  record and the TXT record to exist.  This requirement could
+  cause problems if something interrupted the removal leaving
+  the TXT record alone.  This relaxation was codified in RFC 4703.
+  [ISC-Bugs #30734]
+
 			Changes since 4.2.4rc2
 
 - None

@@ -1186,9 +1186,12 @@ ddns_modify_fwd_add2(dhcp_ddns_cb_t   *ddns_cb,
  * expired or been released.
  *   -- "Interaction between DHCP and DNS"
  *
+ * RFC 4703 has relaxed the prereqisites to only checking the DHCID RR
+ * and we have adopted that to minizmie problems due to interruptions
+ * when doing a deletion.  
+ *
  * First try has:
  * DHCID RR exists, and matches client identity.
- * A RR matches the expiring lease.
  * Delete appropriate A RR.
  */
 
@@ -1206,17 +1209,6 @@ ddns_modify_fwd_rem1(dhcp_ddns_cb_t   *ddns_cb,
 				  dataspace, 
 				  (unsigned char *)ddns_cb->dhcid.data,
 				  ddns_cb->dhcid.len, 0);
-	if (result != ISC_R_SUCCESS) {
-		return(result);
-	}
-	ISC_LIST_APPEND(pname->list, &dataspace->rdataset, link);
-	dataspace++;
-
-	/* The A RR matches the expiring lease */
-	result = make_dns_dataset(dns_rdataclass_in, ddns_cb->address_type,
-				  dataspace, 
-				  (unsigned char *)ddns_cb->address.iabuf,
-				  ddns_cb->address.len, 0);
 	if (result != ISC_R_SUCCESS) {
 		return(result);
 	}
