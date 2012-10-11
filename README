@@ -148,6 +148,11 @@ system; otherwise, it will complain.  If it can't figure out what
 system you are using, that system is not supported - you are on
 your own.
 
+Several options may be enabled or disabled via the configure command.
+You can get a list of these by typing:
+
+	./configure --help
+
 			 DYNAMIC DNS UPDATES
 
 A fully-featured implementation of dynamic DNS updates is included in

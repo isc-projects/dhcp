@@ -5840,38 +5840,52 @@ int load_balance_mine (struct packet *packet, dhcp_failover_state_t *state)
 	struct data_string ds;
 	unsigned char hbaix;
 	int hm;
+	u_int16_t ec; 
 
-	if (state -> load_balance_max_secs < ntohs (packet -> raw -> secs)) {
-		return 1;
+	ec = ntohs(packet->raw->secs);
+
+#if defined(SECS_BYTEORDER)
+	/*
+	 * If desired check to see if the secs field may have been byte
+	 * swapped.  We assume it has if the high order byte isn't cleared
+	 * while the low order byte is cleared.  In this case we swap the
+	 * bytes and continue processing.
+	 */
+	if ((ec > 255) && ((ec & 0xff) == 0)) {
+		ec = (ec >> 8) | (ec << 8);
+	}
+#endif
+
+	if (state->load_balance_max_secs < ec) {
+		return (1);
 	}
 
 	/* If we don't have a hash bucket array, we can't tell if this
 	   one's ours, so we assume it's not. */
-	if (!state -> hba)
-		return 0;
+	if (!state->hba)
+		return (0);
 
-	oc = lookup_option (&dhcp_universe, packet -> options,
-			    DHO_DHCP_CLIENT_IDENTIFIER);
-	memset (&ds, 0, sizeof ds);
+	oc = lookup_option(&dhcp_universe, packet->options,
+			   DHO_DHCP_CLIENT_IDENTIFIER);
+	memset(&ds, 0, sizeof ds);
 	if (oc &&
-	    evaluate_option_cache (&ds, packet, (struct lease *)0,
-				   (struct client_state *)0,
-				   packet -> options, (struct option_state *)0,
-				   &global_scope, oc, MDL)) {
-		hbaix = loadb_p_hash (ds.data, ds.len);
+	    evaluate_option_cache(&ds, packet, NULL, NULL,
+				  packet->options, NULL,
+				  &global_scope, oc, MDL)) {
+		hbaix = loadb_p_hash(ds.data, ds.len);
 
 		data_string_forget(&ds, MDL);
 	} else {
-		hbaix = loadb_p_hash (packet -> raw -> chaddr,
-				      packet -> raw -> hlen);
+		hbaix = loadb_p_hash(packet->raw->chaddr,
+				     packet->raw->hlen);
 	}
 
 	hm = state->hba[(hbaix >> 3) & 0x1F] & (1 << (hbaix & 0x07));
 
-	if (state -> i_am == primary)
-		return hm;
+	if (state->i_am == primary)
+		return (hm);
 	else
-		return !hm;
+		return (!hm);
 }
 
 /* The inverse of load_balance_mine ("load balance theirs").  We can't
