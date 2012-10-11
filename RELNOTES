@@ -63,6 +63,15 @@ work on other platforms. Please report any problems and suggested fixes to
   freed in other cases.
   [ISC-Bugs #30320]
 
+- Add a compile time option, enable-secs-byteorder, to deal with
+  clients that do the byte ordering on the secs field incorrectly.
+  This field should be in network byte order but some clients
+  get it wrong.  When this option is enabled the server will examine
+  the secs field and if it looks wrong (high byte non zero and low
+  byte zero) swap the bytes.  The default is disabled.  This option
+  is only useful when doing load balancing within failover.
+  [ISC-Bugs #26108]
+
 			Changes since 4.1-ESV-R6
 
 - Existing legacy unit-tests have been migrated to Automated Test
