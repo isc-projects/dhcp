@@ -1309,6 +1309,8 @@ Optional Features:
   --enable-ipv4-pktinfo   enable use of pktinfo on IPv4 sockets (default is
                           no)
   --enable-use-sockets    use the standard BSD socket API (default is no)
+  --enable-secs-byteorder Correct bad byteorders in the secs field (default is
+                          no).
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -4830,6 +4832,22 @@ if test "$enable_use_sockets" = "yes"; then
 
 cat >>confdefs.h <<\_ACEOF
 #define USE_SOCKETS 1
+_ACEOF
+
+fi
+
+# Try to hnadle incorrect byte order for secs field
+# This is off by default
+# Check whether --enable-secs_byteorder was given.
+if test "${enable_secs_byteorder+set}" = set; then
+  enableval=$enable_secs_byteorder;
+fi
+
+
+if test "$enable_secs_byteorder" = "yes" ; then
+
+cat >>confdefs.h <<\_ACEOF
+#define SECS_BYTEORDER 1
 _ACEOF
 
 fi

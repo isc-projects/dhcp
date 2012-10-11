@@ -30,7 +30,7 @@ NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
 TESTS =
-@HAVE_ATF_TRUE@am__append_1 = dhcpd_unittests legacy_unittests hash_unittests
+@HAVE_ATF_TRUE@am__append_1 = dhcpd_unittests legacy_unittests hash_unittests load_bal_unittests
 check_PROGRAMS = $(am__EXEEXT_2) $(am__EXEEXT_3)
 subdir = server/tests
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
@@ -43,7 +43,8 @@ CONFIG_HEADER = $(top_builddir)/includes/config.h
 CONFIG_CLEAN_FILES =
 @HAVE_ATF_TRUE@am__EXEEXT_1 = dhcpd_unittests$(EXEEXT) \
 @HAVE_ATF_TRUE@	legacy_unittests$(EXEEXT) \
-@HAVE_ATF_TRUE@	hash_unittests$(EXEEXT)
+@HAVE_ATF_TRUE@	hash_unittests$(EXEEXT) \
+@HAVE_ATF_TRUE@	load_bal_unittests$(EXEEXT)
 am__EXEEXT_2 = $(am__EXEEXT_1)
 am__EXEEXT_3 =
 am__dhcpd_unittests_SOURCES_DIST = ../dhcp.c ../bootp.c ../confpars.c \
@@ -85,6 +86,16 @@ am__legacy_unittests_SOURCES_DIST = ../dhcp.c ../bootp.c ../confpars.c \
 legacy_unittests_OBJECTS = $(am_legacy_unittests_OBJECTS)
 @HAVE_ATF_TRUE@legacy_unittests_DEPENDENCIES = $(DHCPLIBS) \
 @HAVE_ATF_TRUE@	$(am__DEPENDENCIES_1)
+am__load_bal_unittests_SOURCES_DIST = ../dhcp.c ../bootp.c \
+	../confpars.c ../db.c ../class.c ../failover.c ../omapi.c \
+	../mdb.c ../stables.c ../salloc.c ../ddns.c \
+	../dhcpleasequery.c ../dhcpv6.c ../mdb6.c ../ldap.c \
+	../ldap_casa.c ../dhcpd.c load_bal_unittest.c
+@HAVE_ATF_TRUE@am_load_bal_unittests_OBJECTS = $(am__objects_1) \
+@HAVE_ATF_TRUE@	load_bal_unittest.$(OBJEXT)
+load_bal_unittests_OBJECTS = $(am_load_bal_unittests_OBJECTS)
+@HAVE_ATF_TRUE@load_bal_unittests_DEPENDENCIES = $(DHCPLIBS) \
+@HAVE_ATF_TRUE@	$(am__DEPENDENCIES_1)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/includes
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -93,10 +104,11 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 SOURCES = $(dhcpd_unittests_SOURCES) $(hash_unittests_SOURCES) \
-	$(legacy_unittests_SOURCES)
+	$(legacy_unittests_SOURCES) $(load_bal_unittests_SOURCES)
 DIST_SOURCES = $(am__dhcpd_unittests_SOURCES_DIST) \
 	$(am__hash_unittests_SOURCES_DIST) \
-	$(am__legacy_unittests_SOURCES_DIST)
+	$(am__legacy_unittests_SOURCES_DIST) \
+	$(am__load_bal_unittests_SOURCES_DIST)
 RECURSIVE_TARGETS = all-recursive check-recursive dvi-recursive \
 	html-recursive info-recursive install-data-recursive \
 	install-dvi-recursive install-exec-recursive \
@@ -228,6 +240,8 @@ ATF_TESTS = $(am__append_1)
 # This is a legacy unittest. It replaces main() with something that was in mdb6.c
 @HAVE_ATF_TRUE@legacy_unittests_SOURCES = $(DHCPSRC) mdb6_unittest.c
 @HAVE_ATF_TRUE@legacy_unittests_LDADD = $(DHCPLIBS) $(ATF_LDFLAGS)
+@HAVE_ATF_TRUE@load_bal_unittests_SOURCES = $(DHCPSRC) load_bal_unittest.c
+@HAVE_ATF_TRUE@load_bal_unittests_LDADD = $(DHCPLIBS) $(ATF_LDFLAGS)
 all: all-recursive
 
 .SUFFIXES:
@@ -273,6 +287,9 @@ hash_unittests$(EXEEXT): $(hash_unittests_OBJECTS) $(hash_unittests_DEPENDENCIES
 legacy_unittests$(EXEEXT): $(legacy_unittests_OBJECTS) $(legacy_unittests_DEPENDENCIES) 
 	@rm -f legacy_unittests$(EXEEXT)
 	$(LINK) $(legacy_unittests_OBJECTS) $(legacy_unittests_LDADD) $(LIBS)
+load_bal_unittests$(EXEEXT): $(load_bal_unittests_OBJECTS) $(load_bal_unittests_DEPENDENCIES) 
+	@rm -f load_bal_unittests$(EXEEXT)
+	$(LINK) $(load_bal_unittests_OBJECTS) $(load_bal_unittests_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -293,6 +310,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hash_unittest.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ldap.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ldap_casa.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/load_bal_unittest.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mdb.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mdb6.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mdb6_unittest.Po@am__quote@
