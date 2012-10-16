@@ -4,6 +4,7 @@ static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/dst_support.c,v 1.7 
 /*
  * Portions Copyright (c) 1995-1998 by Trusted Information Systems, Inc.
  * Portions Copyright (c) 2007,2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Portions Copyright (c) 2012 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -58,6 +59,7 @@ dst_s_conv_bignum_u8_to_b64(char *out_buf, const unsigned out_len,
 {
 	const u_char *bp = bin_data;
 	char *op = out_buf;
+	int res = 0;
 	unsigned lenh = 0, len64 = 0;
 	unsigned local_in_len = bin_len;
 	unsigned local_out_len = out_len;
@@ -81,9 +83,10 @@ dst_s_conv_bignum_u8_to_b64(char *out_buf, const unsigned out_len,
 		local_out_len -= lenh;
 		op += lenh;
 	}
-	len64 = b64_ntop(bp, local_in_len, op, local_out_len - 2);
-	if (len64 < 0)
+	res = b64_ntop(bp, local_in_len, op, local_out_len - 2);
+	if (res < 0)
 		return (-1);
+	len64 = (unsigned) res;
 	op += len64++;
 	*(op++) = '\n';		/* put CR in the output */
 	*op = '\0';		/* make sure output is 0 terminated */
@@ -150,6 +153,7 @@ dst_s_conv_bignum_b64_to_u8(const char **buf,
 	unsigned blen;
 	char *bp;
 	u_char bstr[RAW_KEY_SIZE];
+	int res = 0;
 
 	if (buf == NULL || *buf == NULL) {	/* error checks */
 		EREPORT(("dst_s_conv_bignum_b64_to_u8: null input buffer.\n"));
@@ -159,12 +163,13 @@ dst_s_conv_bignum_b64_to_u8(const char **buf,
 	if (bp != NULL)
 		*bp = '\0';
 
-	blen = b64_pton(*buf, bstr, sizeof(bstr));
-	if (blen <= 0) {
+	res = b64_pton(*buf, bstr, sizeof(bstr));
+	if (res <= 0) {
 		EREPORT(("dst_s_conv_bignum_b64_to_u8: decoded value is null.\n"));
 		return (0);
 	}
-	else if (loclen < blen) {
+	blen = (unsigned) res;
+	if (loclen < blen) {
 		EREPORT(("dst_s_conv_bignum_b64_to_u8: decoded value is longer than output buffer.\n"));
 		return (0);
 	}
@@ -429,7 +434,7 @@ dst_s_fopen(const char *filename, const char *mode, unsigned perm)
 	unsigned plen = sizeof(pathname);
 
 	if (*dst_path != '\0') {
-		strcpy(pathname, dst_path);
+		strncpy(pathname, dst_path, PATH_MAX);
 		plen -= strlen(pathname);
 	}
 	else 

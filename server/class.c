@@ -3,7 +3,8 @@
    Handling for client classes. */
 
 /*
- * Copyright (c) 2004,2007,2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009,2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1998-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -185,7 +186,7 @@ int check_collection (packet, lease, collection)
 					}
 					memset (nc -> billed_leases, 0,
 						(nc -> lease_limit *
-						 sizeof nc -> billed_leases));
+						 sizeof (struct lease *)));
 				}
 				data_string_copy (&nc -> hash_string, &data,
 						  MDL);

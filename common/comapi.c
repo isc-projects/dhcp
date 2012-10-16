@@ -692,7 +692,6 @@ isc_result_t dhcp_subnet_signal_handler (omapi_object_t *h,
 	/* In this function h should be a (struct subnet *) */
 
 	isc_result_t status;
-	int updatep = 0;
 
 	if (h -> type != dhcp_type_subnet)
 		return DHCP_R_INVALIDARG;
@@ -706,8 +705,7 @@ isc_result_t dhcp_subnet_signal_handler (omapi_object_t *h,
 		if (status == ISC_R_SUCCESS)
 			return status;
 	}
-	if (updatep)
-		return ISC_R_SUCCESS;
+
 	return ISC_R_NOTFOUND;
 }
 
@@ -861,7 +859,6 @@ isc_result_t dhcp_shared_network_signal_handler (omapi_object_t *h,
 	/* In this function h should be a (struct shared_network *) */
 
 	isc_result_t status;
-	int updatep = 0;
 
 	if (h -> type != dhcp_type_shared_network)
 		return DHCP_R_INVALIDARG;
@@ -875,8 +872,7 @@ isc_result_t dhcp_shared_network_signal_handler (omapi_object_t *h,
 		if (status == ISC_R_SUCCESS)
 			return status;
 	}
-	if (updatep)
-		return ISC_R_SUCCESS;
+
 	return ISC_R_NOTFOUND;
 }
 

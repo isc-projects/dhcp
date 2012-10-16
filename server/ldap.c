@@ -1988,7 +1988,7 @@ find_subclass_in_ldap (struct class *class, struct class **newclass,
               return (0);
             }
           memset ((*newclass)->billed_leases, 0, 
-                ((*newclass)->lease_limit * sizeof (*newclass)->billed_leases));
+		  ((*newclass)->lease_limit * sizeof (struct lease *)));
         }
 
       data_string_copy (&(*newclass)->hash_string, data, MDL);
