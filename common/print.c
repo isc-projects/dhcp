@@ -1134,6 +1134,7 @@ static unsigned print_subexpression (expr, buf, len)
 			buf [rv] = 0;
 			return rv;
 		}
+		break;
 
 	      default:
 		log_fatal("Impossible case at %s:%d (undefined expression "
@@ -1238,7 +1239,12 @@ int token_print_indent (FILE *file, int col, int indent,
 			const char *prefix,
 			const char *suffix, const char *buf)
 {
-	int len = strlen (buf) + strlen (prefix);
+	int len = 0;
+	if (prefix != NULL)
+		len = strlen (prefix);
+	if (buf != NULL)
+		len += strlen (buf);
+
 	if (col + len > 79) {
 		if (indent + len < 79) {
 			indent_spaces (file, indent);
@@ -1251,8 +1257,10 @@ int token_print_indent (FILE *file, int col, int indent,
 		fputs (prefix, file);
 		col += strlen (prefix);
 	}
-	fputs (buf, file);
-	col += len;
+	if ((buf != NULL) && (*buf != 0)) {
+		fputs (buf, file);
+		col += strlen(buf);
+	}
 	if (suffix && *suffix) {
 		if (col + strlen (suffix) > 79) {
 			indent_spaces (file, indent);

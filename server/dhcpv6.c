@@ -571,6 +571,7 @@ valid_client_info_req(struct packet *packet, struct data_string *server_id) {
 
 	ret_val = 0;
 	memset(server_id, 0, sizeof(*server_id));
+	memset(&client_id, 0, sizeof(client_id));
 
 	/*
 	 * Make a string that we can print out to give more 
@@ -2669,9 +2670,11 @@ find_client_temporaries(struct reply_state *reply) {
 		if (status != ISC_R_SUCCESS) {
 			goto cleanup;
 		}
-		if (reply->lease != NULL) {
-			iasubopt_dereference(&reply->lease, MDL);
-		}
+		/*
+		 * reply->lease can't be null as we use it above
+		 * add check if that changes
+		 */
+		iasubopt_dereference(&reply->lease, MDL);
 	}
 
       cleanup:

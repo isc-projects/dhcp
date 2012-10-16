@@ -72,6 +72,11 @@ work on other platforms. Please report any problems and suggested fixes to
   is only useful when doing load balancing within failover.
   [ISC-Bugs #26108]
 
+- Fix a set of issues that were discovered via a code inspection
+  tool.  Thanks to Jiri Popelka and Tomas Hozza Red Hat for the logs
+  and patches.
+  [ISC-Bugs #23833]
+
 			Changes since 4.1-ESV-R6
 
 - Existing legacy unit-tests have been migrated to Automated Test

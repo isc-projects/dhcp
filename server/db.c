@@ -66,10 +66,9 @@ write_binding_scope(FILE *db_file, struct binding *bnd, char *prepend) {
 				errno = 0;
 				fprintf(db_file, "%sset %s = \"%s\";",
 					prepend, bnd->name, s);
+				dfree(s, MDL);
 				if (errno)
 					return ISC_R_FAILURE;
-
-				dfree(s, MDL);
 			} else {
 			    return ISC_R_FAILURE;
 			}

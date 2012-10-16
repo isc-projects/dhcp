@@ -1062,7 +1062,6 @@ void parse_failover_peer (cfile, group, type)
 			if (hba_len != 32) {
 				parse_warn (cfile,
 					    "HBA must be exactly 32 bytes.");
-				dfree (hba, MDL);
 				break;
 			}
 		      make_hba:
@@ -2140,7 +2139,7 @@ int parse_class_declaration (cp, cfile, group, type)
 					log_fatal ("no memory for billing");
 				memset (class -> billed_leases, 0,
 					(class -> lease_limit *
-					 sizeof class -> billed_leases));
+					 sizeof (struct lease *)));
 			}
 			data_string_copy (&class -> hash_string, &data, MDL);
 			if (!pc -> hash &&
@@ -2336,7 +2335,7 @@ int parse_class_declaration (cp, cfile, group, type)
 				log_fatal ("no memory for billed leases.");
 			memset (class -> billed_leases, 0,
 				(class -> lease_limit *
-				 sizeof class -> billed_leases));
+				 sizeof (struct lease *)));
 			have_billing_classes = 1;
 			parse_semi (cfile);
 		} else {
@@ -2400,7 +2399,9 @@ void parse_shared_net_declaration (cfile, group)
 	if (status != ISC_R_SUCCESS)
 		log_fatal ("Can't allocate shared subnet: %s",
 			   isc_result_totext (status));
-	clone_group (&share -> group, group, MDL);
+	if (clone_group (&share -> group, group, MDL) == 0) {
+		log_fatal ("Can't clone group for shared net");
+	}
 	shared_network_reference (&share -> group -> shared_network,
 				  share, MDL);
 
@@ -2811,9 +2812,9 @@ void parse_group_declaration (cfile, group)
 					  val, isc_result_totext(status));
 			group_reference(&t->group, g, MDL);
 			t->name = name;
+			/* no need to include deletedp as it's handled above */
 			t->flags = ((staticp ? GROUP_OBJECT_STATIC : 0) |
-				    (dynamicp ? GROUP_OBJECT_DYNAMIC : 0) |
-				    (deletedp ? GROUP_OBJECT_DELETED : 0));
+				    (dynamicp ? GROUP_OBJECT_DYNAMIC : 0));
 			supersede_group(t, 0);
 		}
 		if (t != NULL)

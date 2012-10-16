@@ -1689,7 +1689,6 @@ isc_result_t dhcp_pool_signal_handler (omapi_object_t *h,
 {
 	/* h should point to (struct pool *) */
 	isc_result_t status;
-	int updatep = 0;
 
 	if (h -> type != dhcp_type_pool)
 		return ISC_R_INVALIDARG;
@@ -1703,8 +1702,7 @@ isc_result_t dhcp_pool_signal_handler (omapi_object_t *h,
 		if (status == ISC_R_SUCCESS)
 			return status;
 	}
-	if (updatep)
-		return ISC_R_SUCCESS;
+
 	return ISC_R_NOTFOUND;
 }
 

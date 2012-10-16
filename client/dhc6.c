@@ -211,8 +211,10 @@ dhcpv6_client_assignments(void)
 	memset(&DHCPv6DestAddr, 0, sizeof(DHCPv6DestAddr));
 	DHCPv6DestAddr.sin6_family = AF_INET6;
 	DHCPv6DestAddr.sin6_port = remote_port;
-	inet_pton(AF_INET6, All_DHCP_Relay_Agents_and_Servers,
-		  &DHCPv6DestAddr.sin6_addr);
+	if (inet_pton(AF_INET6, All_DHCP_Relay_Agents_and_Servers,
+		      &DHCPv6DestAddr.sin6_addr) <= 0) {
+		log_fatal("Bad address %s", All_DHCP_Relay_Agents_and_Servers);
+	}
 
 	code = D6O_CLIENTID;
 	if (!option_code_hash_lookup(&clientid_option,
@@ -653,7 +655,8 @@ dhc6_leaseify(struct packet *packet)
 	 * not sure based on what additional keys now).
 	 */
 	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_SERVERID);
-	if (!evaluate_option_cache(&lease->server_id, packet, NULL, NULL,
+	if ((oc == NULL) ||
+	    !evaluate_option_cache(&lease->server_id, packet, NULL, NULL,
 				   lease->options, NULL, &global_scope,
 				   oc, MDL) ||
 	    lease->server_id.len == 0) {
