@@ -307,16 +307,13 @@ isc_result_t enter_host (hd, dynamicp, commit)
 	/* See if there's a statement that sets the client identifier.
 	   This is a kludge - the client identifier really shouldn't be
 	   set with an executable statement. */
-	esp = (struct executable_statement *)0;
-	if (executable_statement_foreach (hd -> group -> statements,
+	esp = NULL;
+	if (executable_statement_foreach (hd->group->statements,
 					  find_uid_statement, &esp, 0)) {
-		evaluate_option_cache (&hd -> client_identifier,
-				       (struct packet *)0,
-				       (struct lease *)0,
-				       (struct client_state *)0,
-				       (struct option_state *)0,
-				       (struct option_state *)0, &global_scope,
-				       esp -> data.option, MDL);
+		(void) evaluate_option_cache (&hd->client_identifier,
+					      NULL, NULL, NULL, NULL, NULL, 
+					      &global_scope,
+					      esp->data.option, MDL);
 	}
 
 	/* If we got a client identifier, hash this entry by
@@ -1421,10 +1418,11 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 
 void make_binding_state_transition (struct lease *lease)
 {
+
 #if defined (FAILOVER_PROTOCOL)
 	dhcp_failover_state_t *peer;
 
-	if (lease && lease -> pool && lease -> pool -> failover_peer)
+	if (lease -> pool && lease -> pool -> failover_peer)
 		peer = lease -> pool -> failover_peer;
 	else
 		peer = (dhcp_failover_state_t *)0;
@@ -1571,17 +1569,18 @@ void make_binding_state_transition (struct lease *lease)
 	      case FTS_RELEASED:
 	      case FTS_ABANDONED:
 	      case FTS_RESET:
-		lease -> next_binding_state = FTS_FREE;
+		lease->next_binding_state = FTS_FREE;
 #if defined(FAILOVER_PROTOCOL)
 		/* If we are not in partner_down, leases don't go from
 		   EXPIRED to FREE on a timeout - only on an update.
 		   If we're in partner_down, they expire at mclt past
 		   the time we entered partner_down. */
-		if (lease -> pool -> failover_peer &&
-		    lease -> pool -> failover_peer -> me.state == partner_down)
-			lease -> tsfp =
-			    (lease -> pool -> failover_peer -> me.stos +
-			     lease -> pool -> failover_peer -> mclt);
+		if ((lease->pool != NULL) &&
+		    (lease->pool->failover_peer != NULL) &&
+		    (lease->pool->failover_peer->me.state == partner_down))
+			lease->tsfp =
+			    (lease->pool->failover_peer->me.stos +
+			     lease->pool->failover_peer->mclt);
 #endif /* FAILOVER_PROTOCOL */
 		break;
 

@@ -2902,10 +2902,17 @@ int evaluate_numeric_expression (result, packet, lease, client_state,
 	return 0;
 }
 
-/* Return data hanging off of an option cache structure, or if there
-   isn't any, evaluate the expression hanging off of it and return the
-   result of that evaluation.   There should never be both an expression
-   and a valid data_string. */
+/*
+ * Return data hanging off of an option cache structure, or if there
+ * isn't any, evaluate the expression hanging off of it and return the
+ * result of that evaluation.   There should never be both an expression
+ * and a valid data_string.
+ *
+ * returns 0 if there wasn't an expression or it couldn't be evaluated
+ * returns non-zero if there was an expression or string that was evaluated
+ * When it returns zero the arguements, in particualr resutl,  should not
+ * be modified
+ */
 
 int evaluate_option_cache (result, packet, lease, client_state,
 			   in_options, cfg_options, scope, oc, file, line)
@@ -3613,6 +3620,7 @@ int write_expression (file, expr, col, indent, firstp)
 		col = write_expression (file, expr -> data.suffix.len,
 					col, scol, 0);
 		col = token_print_indent (file, col, indent, "", "", ")");
+		break;
 
 	      case expr_lcase:
 		col = token_print_indent(file, col, indent, "", "", "lcase");
@@ -4148,10 +4156,10 @@ int fundef_dereference (ptr, file, line)
 	const char *file;
 	int line;
 {
-	struct fundef *bp = *ptr;
+	struct fundef *bp;
 	struct string_list *sp, *next;
 
-	if (!ptr) {
+	if ((ptr == NULL) || (*ptr == NULL)) {
 		log_error ("%s(%d): null pointer", file, line);
 #if defined (POINTER_DEBUG)
 		abort ();
@@ -4160,15 +4168,7 @@ int fundef_dereference (ptr, file, line)
 #endif
 	}
 
-	if (!bp) {
-		log_error ("%s(%d): null pointer", file, line);
-#if defined (POINTER_DEBUG)
-		abort ();
-#else
-		return 0;
-#endif
-	}
-
+	bp = *ptr;
 	bp -> refcnt--;
 	rc_register (file, line, ptr, bp, bp -> refcnt, 1, RC_MISC);
 	if (bp -> refcnt < 0) {
@@ -4440,11 +4440,11 @@ int find_bound_string (struct data_string *value,
 	if (binding -> value -> value.data.terminated) {
 		data_string_copy (value, &binding -> value -> value.data, MDL);
 	} else {
-		buffer_allocate (&value -> buffer,
-				 binding -> value -> value.data.len,
-				 MDL);
-		if (!value -> buffer)
+		if (buffer_allocate (&value->buffer,
+				     binding->value->value.data.len,
+				     MDL) == 0) {
 			return 0;
+		}
 
 		memcpy (value -> buffer -> data,
 			binding -> value -> value.data.data,

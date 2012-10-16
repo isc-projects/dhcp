@@ -1092,7 +1092,12 @@ ddns_update_lease_ptr(struct lease    *lease,
 {
 	char ddns_address[MAX_ADDRESS_STRING_LEN];
 	sprintf(ddns_address, "unknown");
-	if (ddns_cb) {
+	if (ddns_cb == NULL) {
+		log_info("%s(%d): No control block for lease update",
+			 file, line);
+		return (ISC_R_FAILURE);
+	}
+	else {
 		strncpy(ddns_address, piaddr(ddns_cb->address), 
 			MAX_ADDRESS_STRING_LEN);
 	}

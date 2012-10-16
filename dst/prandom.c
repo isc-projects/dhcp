@@ -452,12 +452,12 @@ digest_file(dst_work *work)
 	struct timeval tv;
 	u_char buf[1024];
 
+	name = files[f_cnt++]; 
 	if (f_round == 0 || files[f_cnt] == NULL || work->file_digest == NULL) 
 		if (gettimeofday(&tv, NULL)) /* only do this if needed */
 			return (0);
 	if (f_round == 0)   /* first time called set to one hour ago */
 		f_round = (tv.tv_sec - MAX_OLD); 
-	name = files[f_cnt++]; 
 	if (files[f_cnt] == NULL) {  /* end of list of files */
 		if(f_cnt <= 1)       /* list is too short */
 			return (0);
@@ -675,8 +675,10 @@ get_hmac_key(int step, int block)
 	new->step = step;
 	new->block = block;
 	new->key = new_key;
-	if (dst_sign_data(SIG_MODE_INIT, new_key, &new->ctx, NULL, 0, NULL, 0))
+	if (dst_sign_data(SIG_MODE_INIT, new_key, &new->ctx, NULL, 0, NULL, 0)) {
+		SAFE_FREE(new);
 		return (NULL);
+	}
 
 	return (new);
 }
@@ -820,8 +822,10 @@ dst_s_random(u_char *output, unsigned size)
 						    DST_HASH_SIZE *
 						    DST_NUM_HASHES);
 		my_work->file_digest = NULL;
-		if (my_work->output == NULL)
+		if (my_work->output == NULL) {
+			SAFE_FREE(my_work);
 			return (n);
+		}
 		memset(my_work->output, 0x0, my_work->needed);
 /* allocate upto 4 different HMAC hash functions out of order */
 #if DST_NUM_HASHES >= 3
@@ -834,8 +838,17 @@ dst_s_random(u_char *output, unsigned size)
 		my_work->hash[3] = get_hmac_key(5, DST_RANDOM_BLOCK_SIZE / 4);
 #endif
 		my_work->hash[0] = get_hmac_key(1, DST_RANDOM_BLOCK_SIZE);
-		if (my_work->hash[0] == NULL)	/* if failure bail out */
+		if (my_work->hash[0] == NULL) {	/* if failure bail out */
+			for (i = 1; i < DST_NUM_HASHES; i++) {
+				if (my_work->hash[i] != NULL) {
+					dst_free_key(my_work->hash[i]->key);
+					SAFE_FREE(my_work->hash[i]);
+				}
+			}
+			SAFE_FREE(my_work->output);
+			SAFE_FREE(my_work);
 			return (n);
+		}
 		s = own_random(my_work);
 /* if more generated than needed store it for future use */
 		if (s >= my_work->needed) {
@@ -845,6 +858,9 @@ dst_s_random(u_char *output, unsigned size)
 			n += my_work->needed;
 			/* saving unused data for next time */
 			unused = s - my_work->needed;
+			if (unused > sizeof(old_unused)) {
+				unused = sizeof(old_unused);
+			}
 			memcpy(old_unused, &my_work->output[my_work->needed],
 			       unused);
 		} else {
@@ -856,8 +872,10 @@ dst_s_random(u_char *output, unsigned size)
 
 /* delete the allocated work area */
 		for (i = 0; i < DST_NUM_HASHES; i++) {
-			dst_free_key(my_work->hash[i]->key);
-			SAFE_FREE(my_work->hash[i]);
+			if (my_work->hash[i] != NULL) {
+				dst_free_key(my_work->hash[i]->key);
+				SAFE_FREE(my_work->hash[i]);
+			}
 		}
 		SAFE_FREE(my_work->output);
 		SAFE_FREE(my_work);
@@ -891,7 +909,7 @@ dst_s_semi_random(u_char *output, unsigned size)
 	prand_hash *hash;
 	unsigned out = 0;
 	unsigned i;
-	int n;
+	int n, res;
 
 	if (output == NULL || size <= 0)
 		return (-2);
@@ -940,9 +958,13 @@ dst_s_semi_random(u_char *output, unsigned size)
 		for (n = 0; n < DST_NUMBER_OF_COUNTERS; n++)
 			i = (int) counter[n]++;
 
-		i = dst_sign_data(SIG_MODE_ALL, my_key, NULL, 
+		res = dst_sign_data(SIG_MODE_ALL, my_key, NULL, 
 				  (u_char *) counter, hb_size,
 				  semi_old, sizeof(semi_old));
+		if (res < 0) {
+			return res;
+		}
+		i = (unsigned) res;
 		if (i != hb_size)
 			EREPORT(("HMAC SIGNATURE FAILURE %d\n", i));
 		cnt++;

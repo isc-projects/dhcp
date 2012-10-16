@@ -84,7 +84,14 @@ isc_result_t omapi_listen_addr (omapi_object_t *h,
 	obj = (omapi_listener_object_t *)0;
 	status = omapi_listener_allocate (&obj, MDL);
 	if (status != ISC_R_SUCCESS)
-		return status;
+		/*
+		 * we could simply return here but by going to
+		 * error_exit we keep the code check tools happy
+		 * without removing the NULL check on obj at
+		 * the exit, which we could skip curently but
+		 * might want in the future.
+		 */
+		goto error_exit;
 	obj->socket = -1;
 
 	/* Connect this object to the inner object. */

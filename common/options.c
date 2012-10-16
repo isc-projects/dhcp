@@ -258,9 +258,14 @@ int parse_option_buffer (options, buffer, length, universe)
 				option_cache_reference(&op->next, nop, MDL);
 				option_cache_dereference(&nop, MDL);
 			} else {
-				save_option_buffer(universe, options, bp,
-						   bp->data + offset, len,
-						   code, 1);
+				if (save_option_buffer(universe, options, bp,
+						       bp->data + offset, len,
+						       code, 1) == 0) {
+					log_error("parse_option_buffer: "
+						  "save_option_buffer failed");
+					buffer_dereference(&bp, MDL);
+					return 0;
+				}
 			}
 		}
 		option_dereference(&option, MDL);
@@ -517,6 +522,8 @@ int fqdn_universe_decode (struct option_state *options,
  * Load all options into a buffer, and then split them out into the three
  * separate fields in the dhcp packet (options, file, and sname) where
  * options can be stored.
+ *
+ * returns 0 on error, length of packet on success
  */
 int
 cons_options(struct packet *inpacket, struct dhcp_packet *outpacket,
@@ -553,10 +560,10 @@ cons_options(struct packet *inpacket, struct dhcp_packet *outpacket,
 
 	if (inpacket &&
 	    (op = lookup_option(&dhcp_universe, inpacket->options,
-				 DHO_DHCP_MAX_MESSAGE_SIZE))) {
-		evaluate_option_cache(&ds, inpacket,
-				       lease, client_state, in_options,
-				       cfg_options, scope, op, MDL);
+				DHO_DHCP_MAX_MESSAGE_SIZE)) &&
+	    (evaluate_option_cache(&ds, inpacket, lease,
+				   client_state, in_options,
+				   cfg_options, scope, op, MDL) != 0)) {
 		if (ds.len >= sizeof (u_int16_t)) {
 			i = getUShort(ds.data);
 			if(!mms || (i < mms))
@@ -679,7 +686,7 @@ cons_options(struct packet *inpacket, struct dhcp_packet *outpacket,
 		 * in the packet if there is space.  Note that the option
 		 * may only be included if the client supplied one.
 		 */
-		if ((priority_len < PRIORITY_COUNT) &&
+		if ((inpacket != NULL) && (priority_len < PRIORITY_COUNT) &&
 		    (lookup_option(&fqdn_universe, inpacket->options,
 				   FQDN_ENCODED) != NULL))
 			priority_list[priority_len++] = DHO_FQDN;
@@ -695,7 +702,7 @@ cons_options(struct packet *inpacket, struct dhcp_packet *outpacket,
 		 * DHCPINFORM or DHCPLEASEQUERY responses (if the client
 		 * didn't request it).
 		 */
-		if ((priority_len < PRIORITY_COUNT) &&
+		if ((inpacket != NULL) && (priority_len < PRIORITY_COUNT) &&
 		    ((inpacket->packet_type == DHCPDISCOVER) ||
 		     (inpacket->packet_type == DHCPREQUEST)))
 			priority_list[priority_len++] = DHO_SUBNET_MASK;
@@ -1266,11 +1273,12 @@ store_options(int *ocount,
 						 cfg_options,
 						 vendor_cfg_option -> code);
 			    if (tmp)
-				evaluate_option_cache (&name, packet, lease,
-						       client_state,
-						       in_options,
-						       cfg_options,
-						       scope, tmp, MDL);
+				/* No need to check the return as we check name.len below */
+				(void) evaluate_option_cache (&name, packet, lease,
+							      client_state,
+							      in_options,
+							      cfg_options,
+							      scope, tmp, MDL);
 			} else if (vuname) {
 			    name.data = (unsigned char *)s;
 			    name.len = strlen (s);
@@ -1308,9 +1316,10 @@ store_options(int *ocount,
 	    /* Find the value of the option... */
 	    od.len = 0;
 	    if (oc) {
-		evaluate_option_cache (&od, packet,
-				       lease, client_state, in_options,
-				       cfg_options, scope, oc, MDL);
+		/* No need to check the return as we check od.len below */
+		(void) evaluate_option_cache (&od, packet,
+					      lease, client_state, in_options,
+					      cfg_options, scope, oc, MDL);
 
 		/* If we have encapsulation for this option, and an oc
 		 * lookup succeeded, but the evaluation failed, it is
@@ -3143,9 +3152,11 @@ int fqdn_option_space_encapsulate (result, packet, lease, client_state,
 		struct option_cache *oc = (struct option_cache *)(ocp -> car);
 		if (oc -> option -> code > FQDN_SUBOPTION_COUNT)
 			continue;
-		evaluate_option_cache (&results [oc -> option -> code],
-				       packet, lease, client_state, in_options,
-				       cfg_options, scope,  oc, MDL);
+		/* No need to check the return code, we check the length later */
+		(void) evaluate_option_cache (&results[oc->option->code],
+					      packet, lease, client_state,
+					      in_options, cfg_options, scope,
+					      oc, MDL);
 	}
 	/* We add a byte for the flags field.
 	 * We add two bytes for the two RCODE fields.
@@ -3310,10 +3321,10 @@ fqdn6_option_space_encapsulate(struct data_string *result,
 		oc = (struct option_cache *)(ocp->car);
 		if (oc->option->code > FQDN_SUBOPTION_COUNT)
 			log_fatal("Impossible condition at %s:%d.", MDL);
-
-		evaluate_option_cache(&results[oc->option->code], packet,
-				      lease, client_state, in_options,
-				      cfg_options, scope, oc, MDL);
+		/* No need to check the return code, we check the length later */
+		(void) evaluate_option_cache(&results[oc->option->code], packet,
+					     lease, client_state, in_options,
+					     cfg_options, scope, oc, MDL);
 	}
 
 	/* We add a byte for the flags field at the start of the option.

@@ -675,7 +675,23 @@ void parse_lease_time (cfile, timep)
    the token specified in separator.  If max is zero, any number of
    numbers will be parsed; otherwise, exactly max numbers are
    expected.  Base and size tell us how to internalize the numbers
-   once they've been tokenized. */
+   once they've been tokenized.
+
+   buf - A pointer to space to return the parsed value, if it is null
+   then the function will allocate space for the return.
+
+   max - The maximum number of items to store.  If zero there is no
+   maximum.  When buf is null and the function needs to allocate space
+   it will do an allocation of max size at the beginning if max is non
+   zero.  If max is zero then the allocation will be done later, after
+   the function has determined the size necessary for the incoming
+   string.
+
+   returns NULL on errors or a pointer to the value string on success.
+   The pointer will either be buf if it was non-NULL or newly allocated
+   space if buf was NULL
+ */
+
 
 unsigned char *parse_numeric_aggregate (cfile, buf,
 					max, separator, base, size)
@@ -696,9 +712,8 @@ unsigned char *parse_numeric_aggregate (cfile, buf,
 		bufp = (unsigned char *)dmalloc (*max * size / 8, MDL);
 		if (!bufp)
 			log_fatal ("no space for numeric aggregate");
-		s = 0;
-	} else
-		s = bufp;
+	}
+	s = bufp;
 
 	do {
 		if (count) {
@@ -713,6 +728,9 @@ unsigned char *parse_numeric_aggregate (cfile, buf,
 				parse_warn (cfile, "too few numbers.");
 				if (token != SEMI)
 					skip_to_semi (cfile);
+				/* free bufp if it was allocated */
+				if ((bufp != NULL) && (bufp != buf))
+					dfree(bufp, MDL);
 				return (unsigned char *)0;
 			}
 			token = next_token (&val, (unsigned *)0, cfile);
@@ -729,7 +747,17 @@ unsigned char *parse_numeric_aggregate (cfile, buf,
 		    (base != 16 || token != NUMBER_OR_NAME)) {
 			parse_warn (cfile, "expecting numeric value.");
 			skip_to_semi (cfile);
-			return (unsigned char *)0;
+			/* free bufp if it was allocated */
+			if ((bufp != NULL) && (bufp != buf))
+				dfree(bufp, MDL);
+			/* free any linked numbers we may have allocated */
+			while (c) {
+				pair cdr = c->cdr;
+				dfree(c->car, MDL);
+				dfree(c, MDL);
+				c = cdr;
+			}
+			return (NULL);
 		}
 		/* If we can, convert the number now; otherwise, build
 		   a linked list of all the numbers. */
@@ -747,6 +775,10 @@ unsigned char *parse_numeric_aggregate (cfile, buf,
 
 	/* If we had to cons up a list, convert it now. */
 	if (c) {
+		/*
+		 * No need to cleanup bufp, to get here we didn't allocate
+		 * bufp above
+		 */
 		bufp = (unsigned char *)dmalloc (count * size / 8, MDL);
 		if (!bufp)
 			log_fatal ("no space for numeric aggregate.");
@@ -1870,7 +1902,7 @@ int parse_base64 (data, cfile)
 		parse_warn (cfile, "can't allocate buffer for base64 data.");
 		data -> len = 0;
 		data -> data = (unsigned char *)0;
-		return 0;
+		goto out;
 	}
 		
 	j = k = 0;
@@ -5258,6 +5290,8 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 			return 0;
 		}
 		*fmt = g;
+		/* FALL THROUGH */
+		/* to get string value for the option */
 	      case 'X':
 		token = peek_token (&val, (unsigned *)0, cfile);
 		if (token == NUMBER_OR_NAME || token == NUMBER) {
@@ -5549,6 +5583,8 @@ int parse_option_decl (oc, cfile)
 						    "encapsulation format");
 					goto parse_exit;
 				}
+				/* FALL THROUGH */
+				/* to get string value for the option */
 			      case 'X':
 				len = parse_X (cfile, &hunkbuf [hunkix],
 					       sizeof hunkbuf - hunkix);
@@ -5760,8 +5796,6 @@ int parse_option_decl (oc, cfile)
 	bp = (struct buffer *)0;
 	if (!buffer_allocate (&bp, hunkix + nul_term, MDL))
 		log_fatal ("no memory to store option declaration.");
-	if (!bp -> data)
-		log_fatal ("out of memory allocating option data.");
 	memcpy (bp -> data, hunkbuf, hunkix + nul_term);
 	
 	if (!option_cache_allocate (oc, MDL))

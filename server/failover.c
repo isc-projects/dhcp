@@ -5046,7 +5046,7 @@ failover_lease_is_better(dhcp_failover_state_t *state, struct lease *lease,
 isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 					       failover_message_t *msg)
 {
-	struct lease *lt, *lease;
+	struct lease *lt = NULL, *lease = NULL;
 	struct iaddr ia;
 	int reason = FTR_MISC_REJECT;
 	const char *message;
@@ -5067,8 +5067,6 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 	ia.len = sizeof msg -> assigned_addr;
 	memcpy (ia.iabuf, &msg -> assigned_addr, ia.len);
 
-	lease = (struct lease *)0;
-	lt = (struct lease *)0;
 	if (!find_lease_by_ip_addr (&lease, ia, MDL)) {
 		message = "unknown IP address";
 		reason = FTR_ILLEGAL_IP_ADDR;

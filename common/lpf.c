@@ -4,7 +4,8 @@
    Support Services in Vancouver, B.C. */
 
 /*
- * Copyright (c) 2004,2007,2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009,2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -456,9 +457,9 @@ get_hw_addr(const char *name, struct hardware *hw) {
 			memcpy(&hw->hbuf[1], sa->sa_data, 6);
 			break;
 		case ARPHRD_FDDI:
-			hw->hlen = 17;
+			hw->hlen = 7;
 			hw->hbuf[0] = HTYPE_FDDI;
-			memcpy(&hw->hbuf[1], sa->sa_data, 16);
+			memcpy(&hw->hbuf[1], sa->sa_data, 6);
 			break;
 		default:
 			log_fatal("Unsupported device type %ld for \"%s\"",
