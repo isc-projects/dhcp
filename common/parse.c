@@ -1867,11 +1867,12 @@ int parse_base64 (data, cfile)
 			     33, 34, 35, 36, 37, 38, 39, 40,  /* hijklmno */
 			     41, 42, 43, 44, 45, 46, 47, 48,  /* pqrstuvw */
 			     49, 50, 51, 64, 64, 64, 64, 64}; /* xyz{|}~  */
-	struct string_list *bufs = (struct string_list *)0,
-			   *last = (struct string_list *)0,
+	struct string_list *bufs = NULL,
+			   *last = NULL,
 			   *t;
 	int cc = 0;
 	int terminated = 0;
+	int valid_base64;
 	
 	/* It's possible for a + or a / to cause a base64 quantity to be
 	   tokenized into more than one token, so we have to parse them all
@@ -1879,55 +1880,64 @@ int parse_base64 (data, cfile)
 	do {
 		unsigned l;
 
-		token = next_token (&val, &l, cfile);
-		t = dmalloc (l + sizeof *t, MDL);
-		if (!t)
-			log_fatal ("no memory for base64 buffer.");
-		memset (t, 0, (sizeof *t) - 1);
-		memcpy (t -> string, val, l + 1);
+		token = next_token(&val, &l, cfile);
+		t = dmalloc(l + sizeof(*t), MDL);
+		if (t == NULL)
+			log_fatal("no memory for base64 buffer.");
+		memset(t, 0, (sizeof(*t)) - 1);
+		memcpy(t->string, val, l + 1);
 		cc += l;
 		if (last)
-			last -> next = t;
+			last->next = t;
 		else
 			bufs = t;
 		last = t;
-		token = peek_token (&val, (unsigned *)0, cfile);
-	} while (token == NUMBER_OR_NAME || token == NAME || token == EQUAL ||
-		 token == NUMBER || token == PLUS || token == SLASH ||
-		 token == STRING);
+		token = peek_token(&val, NULL, cfile);
+		valid_base64 = 1;
+		for (i = 0; val[i]; i++) {
+			/* Check to see if the character is valid.  It
+			   may be out of range or within the right range
+			   but not used in the mapping */
+			if (((val[i] < ' ') || (val[i] > 'z')) ||
+			    ((from64[val[i] - ' '] > 63) && (val[i] != '='))) {
+				valid_base64 = 0;
+				break; /* no need to continue for loop */
+			}
+		}
+	} while (valid_base64);
 
-	data -> len = cc;
-	data -> len = (data -> len * 3) / 4;
-	if (!buffer_allocate (&data -> buffer, data -> len, MDL)) {
+	data->len = cc;
+	data->len = (data->len * 3) / 4;
+	if (!buffer_allocate(&data->buffer, data->len, MDL)) {
 		parse_warn (cfile, "can't allocate buffer for base64 data.");
-		data -> len = 0;
-		data -> data = (unsigned char *)0;
+		data->len = 0;
+		data->data = NULL;
 		goto out;
 	}
 		
 	j = k = 0;
-	for (t = bufs; t; t = t -> next) {
-	    for (i = 0; t -> string [i]; i++) {
-		unsigned foo = t -> string [i];
+	for (t = bufs; t; t = t->next) {
+	    for (i = 0; t->string[i]; i++) {
+		unsigned foo = t->string[i];
 		if (terminated && foo != '=') {
-			parse_warn (cfile,
-				    "stuff after base64 '=' terminator: %s.",
-				    &t -> string [i]);
+			parse_warn(cfile,
+				   "stuff after base64 '=' terminator: %s.",
+				   &t->string[i]);
 			goto bad;
 		}
-		if (foo < ' ' || foo > 'z') {
+		if ((foo < ' ') || (foo > 'z')) {
 		      bad64:
-			parse_warn (cfile,
-				    "invalid base64 character %d.",
-				    t -> string [i]);
+			parse_warn(cfile,
+				   "invalid base64 character %d.",
+				   t->string[i]);
 		      bad:
-			data_string_forget (data, MDL);
+			data_string_forget(data, MDL);
 			goto out;
 		}
 		if (foo == '=')
 			terminated = 1;
 		else {
-			foo = from64 [foo - ' '];
+			foo = from64[foo - ' '];
 			if (foo == 64)
 				goto bad64;
 			acc = (acc << 6) + foo;
@@ -1935,16 +1945,16 @@ int parse_base64 (data, cfile)
 			      case 0:
 				break;
 			      case 1:
-				data -> buffer -> data [j++] = (acc >> 4);
+				data->buffer->data[j++] = (acc >> 4);
 				acc = acc & 0x0f;
 				break;
 				
 			      case 2:
-				data -> buffer -> data [j++] = (acc >> 2);
+				data->buffer->data[j++] = (acc >> 2);
 				acc = acc & 0x03;
 				break;
 			      case 3:
-				data -> buffer -> data [j++] = acc;
+				data->buffer->data[j++] = acc;
 				acc = 0;
 				break;
 			}
@@ -1954,19 +1964,19 @@ int parse_base64 (data, cfile)
 	}
 	if (k % 4) {
 		if (acc) {
-			parse_warn (cfile,
-				    "partial base64 value left over: %d.",
-				    acc);
+			parse_warn(cfile,
+				   "partial base64 value left over: %d.",
+				   acc);
 		}
 	}
-	data -> len = j;
-	data -> data = data -> buffer -> data;
+	data->len = j;
+	data->data = data->buffer->data;
       out:
 	for (t = bufs; t; t = last) {
-		last = t -> next;
-		dfree (t, MDL);
+		last = t->next;
+		dfree(t, MDL);
 	}
-	if (data -> len)
+	if (data->len)
 		return 1;
 	else
 		return 0;

@@ -77,6 +77,9 @@ work on other platforms. Please report any problems and suggested fixes to
   and patches.
   [ISC-Bugs #23833]
 
+- Parsing unquoted base64 strings improved. Parser now properly handles 
+  strings that contain reserved names. [ISC-Bugs #23048]
+
 			Changes since 4.1-ESV-R6
 
 - Existing legacy unit-tests have been migrated to Automated Test
