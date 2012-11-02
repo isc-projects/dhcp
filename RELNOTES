@@ -150,6 +150,10 @@ work on other platforms. Please report any problems and suggested fixes to
 - Parsing unquoted base64 strings improved. Parser now properly handles 
   strings that contain reserved names. [ISC-Bugs #23048]
 
+- Modify the nak_lease function to make some attempts to find a
+  server-identifier option to use for the NAK.
+  [ISC-Bugs #25689]
+
 			Changes since 4.2.3
 
 ! Add a check for a null pointer before calling the regexec function.
