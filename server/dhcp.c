@@ -1336,6 +1336,7 @@ void nak_lease (packet, cip)
 	struct sockaddr_in to;
 	struct in_addr from;
 	int result;
+	int got_source = 0;
 	struct dhcp_packet raw;
 	unsigned char nak = DHCPNAK;
 	struct packet outgoing;
@@ -1386,8 +1387,96 @@ void nak_lease (packet, cip)
 				&i, 0, MDL);
 	save_option (&dhcp_universe, options, oc);
 	option_cache_dereference (&oc, MDL);
-		     
-	get_server_source_address(&from, options, packet);
+
+#if defined(SERVER_ID_FOR_NAK)
+	/*
+	 * Check to see if there is a server id we should use for the NAK.
+	 * In order to minimize the effort involved we only check the
+	 * global, shared_network and first subnet and pool on the
+	 * shared_network (if they exist).  We skip the other subnets
+	 * and pools and don't check on the host declarations.
+	 *
+	 * We get the shared subnet from the packet and execute the statements
+	 * then check for a server id.  As we only want the server ID we
+	 * execute the statements into a separate options area and then
+	 * free that area when we finish
+	 */
+	if (packet->shared_network != NULL) {
+		struct option_state *sid_options = NULL;
+		struct data_string d;
+		struct option_cache *soc = NULL;
+
+		option_state_allocate (&sid_options, MDL);
+		/*
+		 * If we have a subnet and group start with that else start
+		 * with the shared network group.  The first will recurse and
+		 * include the second.
+		 */
+		if ((packet->shared_network->subnets != NULL) &&
+		    (packet->shared_network->subnets->group != NULL)) {
+			execute_statements_in_scope(NULL, packet, NULL, NULL,
+					packet->options, sid_options,
+					&global_scope,
+					packet->shared_network->subnets->group,
+					NULL);
+		} else {
+			execute_statements_in_scope(NULL, packet, NULL, NULL,
+					packet->options, sid_options,
+					&global_scope,
+					packet->shared_network->group,
+					NULL);
+		}
+
+		/* do the pool if there is one */
+		if (packet->shared_network->pools != NULL) {
+			execute_statements_in_scope(NULL, packet, NULL, NULL,
+					packet->options, sid_options,
+					&global_scope,
+					packet->shared_network->pools->group,
+					packet->shared_network->group);
+		}
+
+		memset(&d, 0, sizeof(d));
+
+		i = DHO_DHCP_SERVER_IDENTIFIER;
+		oc = lookup_option(&dhcp_universe, sid_options, i);
+		if ((oc != NULL) &&
+		    (evaluate_option_cache(&d, packet, NULL, NULL,
+					   packet->options, sid_options, 
+					   &global_scope, oc, MDL))) {
+			if (d.len == sizeof(from)) {
+				/* We have a server id and it's the proper length
+				 * for an address save the address and try to add
+				 * it to the options list we are building for the
+				 * response packet.
+				 */
+				memcpy(&from, d.data, sizeof(from));
+				got_source = 1;
+
+				if (option_cache_allocate(&soc, MDL) &&
+				    (make_const_data(&soc->expression,
+						     (unsigned char *)&from,
+						     sizeof(from),
+						     0, 1, MDL))) {
+					option_code_hash_lookup(&soc->option,
+							dhcp_universe.code_hash,
+							&i, 0, MDL);
+					save_option(&dhcp_universe, options,
+						    soc);
+				}
+				if (soc != NULL)
+					option_cache_dereference(&soc, MDL);
+			}
+			data_string_forget(&d, MDL);
+		}
+		oc = NULL;
+		option_state_dereference (&sid_options, MDL);
+	}
+#endif /* if defined(SERVER_ID_FOR_NAK) */
+
+	if (got_source == 0) {
+		get_server_source_address(&from, options, packet);
+	}
 
 	/* If there were agent options in the incoming packet, return
 	 * them.  We do not check giaddr to detect the presence of a
@@ -2568,10 +2657,10 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 			if (oc -> option)
 				option_reference(&(noc->option), oc->option,
 						 MDL);
-		}
 
-		save_option (&dhcp_universe, state -> options, noc);
-		option_cache_dereference (&noc, MDL);
+			save_option (&dhcp_universe, state -> options, noc);
+			option_cache_dereference (&noc, MDL);
+		}
 	}
 
 	/* Now, if appropriate, put in DHCP-specific options that
