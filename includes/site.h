@@ -217,3 +217,14 @@
    require the original functionality. */
 
 /* #define RFC3315_PRE_ERRATA_2010_08 */
+
+/* In previous versions of the code when the server generates a NAK
+   it doesn't attempt to determine if the configuration included a
+   server ID for that client.  Defining this option causes the server
+   to make a modest effort to determine the server id when building
+   a NAK as a response.  This effort will only check the first subnet
+   and pool associated with a shared subnet and will not check for
+   host declarations.  With some configurations the server id
+   computed for a NAK may not match that computed for an ACK. */
+
+/* #define SERVER_ID_FOR_NAK */

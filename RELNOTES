@@ -80,6 +80,12 @@ work on other platforms. Please report any problems and suggested fixes to
 - Parsing unquoted base64 strings improved. Parser now properly handles 
   strings that contain reserved names. [ISC-Bugs #23048]
 
+- Modify the nak_lease function to make some attempts to find a
+  server-identifier option to use for the NAK.  This feature is
+  enabled by defining SERVER_ID_FOR_NAK in includes/site.h and
+  currently defaults to disabled.
+  [ISC-Bugs #25689]
+
 			Changes since 4.1-ESV-R6
 
 - Existing legacy unit-tests have been migrated to Automated Test
