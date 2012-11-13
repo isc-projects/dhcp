@@ -86,6 +86,13 @@ work on other platforms. Please report any problems and suggested fixes to
   currently defaults to disabled.
   [ISC-Bugs #25689]
 
+- The client now passes information about the options it requested
+  from the server to the script code via environment variables.
+  These variables are of the form requested_<option_name>=1 with
+  the option name being the same as used in the new_* and old_*
+  variables.
+  [ISC-Bugs #29068]
+
 			Changes since 4.1-ESV-R6
 
 - Existing legacy unit-tests have been migrated to Automated Test
