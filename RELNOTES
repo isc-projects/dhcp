@@ -159,6 +159,7 @@ work on other platforms. Please report any problems and suggested fixes to
   These variables are of the form requested_<option_name>=1 with
   the option name being the same as used in the new_* and old_*
   variables.
+  [ISC-Bugs #29068]
 
 			Changes since 4.2.3
 
