@@ -2181,7 +2181,11 @@ unsigned cons_agent_information_options (struct option_state *,
 					 unsigned, unsigned);
 void get_server_source_address(struct in_addr *from,
 			       struct option_state *options,
+			       struct option_state *out_options,
 			       struct packet *packet);
+void setup_server_source_address(struct in_addr *from,
+				 struct option_state *options,
+				 struct packet *packet);
 
 /* dhcpleasequery.c */
 void dhcpleasequery (struct packet *, int);
