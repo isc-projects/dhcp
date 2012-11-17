@@ -152,6 +152,9 @@ work on other platforms. Please report any problems and suggested fixes to
   enabling it.
   [ISC-Bugs #31463]
 
+- Tidy up some compiler issues in the debug code
+  [ISC-Bugs #26460]
+
 			Changes since 4.2.4rc2
 
 - None
