@@ -327,6 +327,7 @@ int execute_statements (result, packet, lease, client_state,
 
 		      case set_statement:
 		      case define_statement:
+			status = 1;
 			if (!scope) {
 				log_error("set %s: no scope",
 					   r->data.set.name);
@@ -418,30 +419,31 @@ int execute_statements (result, packet, lease, client_state,
 
 		      case let_statement:
 #if defined (DEBUG_EXPRESSIONS)
-			log_debug ("exec: let %s", r -> data.let.name);
+			log_debug("exec: let %s", r->data.let.name);
 #endif
-			ns = (struct binding_scope *)0;
+			status = 0;
+			ns = NULL;
 			binding_scope_allocate (&ns, MDL);
 			e = r;
 
 		      next_let:
 			if (ns) {
-				binding = dmalloc (sizeof *binding, MDL);
-				memset (binding, 0, sizeof *binding);
+				binding = dmalloc(sizeof(*binding), MDL);
+				memset(binding, 0, sizeof(*binding));
 				if (!binding) {
 				   blb:
-				    binding_scope_dereference (&ns, MDL);
+				    binding_scope_dereference(&ns, MDL);
 				} else {
-				    binding -> name =
-					    dmalloc (strlen
-						     (e -> data.let.name + 1),
-						     MDL);
-				    if (binding -> name)
-					strcpy (binding -> name,
-						e -> data.let.name);
+				    binding->name =
+					    dmalloc(strlen
+						    (e->data.let.name + 1),
+						    MDL);
+				    if (binding->name)
+					strcpy(binding->name,
+					       e->data.let.name);
 				    else {
-					dfree (binding, MDL);
-					binding = (struct binding *)0;
+					dfree(binding, MDL);
+					binding = NULL;
 					goto blb;
 				    }
 				}
@@ -450,35 +452,35 @@ int execute_statements (result, packet, lease, client_state,
 
 			if (ns && binding) {
 				status = (evaluate_expression
-					  (&binding -> value, packet, lease,
+					  (&binding->value, packet, lease,
 					   client_state,
 					   in_options, out_options,
-					   scope, e -> data.set.expr, MDL));
-				binding -> next = ns -> bindings;
-				ns -> bindings = binding;
+					   scope, e->data.set.expr, MDL));
+				binding->next = ns->bindings;
+				ns->bindings = binding;
 			}
 
 #if defined (DEBUG_EXPRESSIONS)
-			log_debug ("exec: let %s%s", e -> data.let.name,
-				   (binding && status ? "" : "failed"));
+			log_debug("exec: let %s%s", e->data.let.name,
+				  (binding && status ? "" : "failed"));
 #endif
-			if (!e -> data.let.statements) {
-			} else if (e -> data.let.statements -> op ==
+			if (!e->data.let.statements) {
+			} else if (e->data.let.statements->op ==
 				   let_statement) {
-				e = e -> data.let.statements;
+				e = e->data.let.statements;
 				goto next_let;
 			} else if (ns) {
 				if (scope && *scope)
-				    	binding_scope_reference (&ns -> outer,
-								 *scope, MDL);
+				    	binding_scope_reference(&ns->outer,
+								*scope, MDL);
 				execute_statements
 				      (result, packet, lease,
 				       client_state,
 				       in_options, out_options,
-				       &ns, e -> data.let.statements);
+				       &ns, e->data.let.statements);
 			}
 			if (ns)
-				binding_scope_dereference (&ns, MDL);
+				binding_scope_dereference(&ns, MDL);
 			break;
 
 		      case log_statement:
