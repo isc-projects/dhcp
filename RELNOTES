@@ -93,6 +93,14 @@ work on other platforms. Please report any problems and suggested fixes to
   variables.
   [ISC-Bugs #29068]
 
+- Add support for a simple check that the server id in a request message
+  to a failover peer matches the server id of the server.  This support
+  is enabled by editing the file includes/site.h and uncommenting the
+  definition for SERVER_ID_CHECK.  The option has several restrictions
+  and issues - please read the comment in the site.h file before
+  enabling it.
+  [ISC-Bugs #31463]
+
 			Changes since 4.1-ESV-R6
 
 - Existing legacy unit-tests have been migrated to Automated Test

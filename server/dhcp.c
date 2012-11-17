@@ -461,8 +461,10 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 		 * safe.
 		 */
 		sprintf (smbuf, " (%s)", piaddr (sip));
-	} else
+	} else {
 		smbuf [0] = 0;
+		sip.len = 0;
+	}
 
 	/* %Audit% This is log output. %2004.06.17,Safe%
 	 * If we truncate we hope the user can get a hint from the log.
@@ -537,6 +539,27 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 			nak_lease (packet, &cip);
 			goto out;
 		}
+
+#if defined(SERVER_ID_CHECK)
+		/* Do a quick check on the server source address to see if
+		   it is ours.  sip is the incoming servrer id.  To avoid
+		   problems with confused clients we do some sanity checks
+		   to verify sip's length and that it isn't all zeros.
+		   We then get the server id we would likely use for this
+		   packet and compare them.  If they don't match it we assume
+		   we didn't send the offer and so we don't process the request.
+		*/
+
+		if ((sip.len == 4) &&
+		    (memcmp(sip.iabuf, "\0\0\0\0", sip.len) != 0)) {
+			struct in_addr from;
+			setup_server_source_address(&from, NULL, packet);
+			if (memcmp(sip.iabuf, &from, sip.len) != 0) {
+				log_debug("%s: not our server id", msgbuf);
+				goto out;
+			}
+		}
+#endif /* if defined(SERVER_ID_CHECK) */
 
 		/* At this point it's possible that we will get a broadcast
 		   DHCPREQUEST for a lease that we didn't offer, because
@@ -1121,7 +1144,7 @@ void dhcpinform (packet, ms_nulltp)
 		option_cache_dereference (&oc, MDL);
 	}
 
-	get_server_source_address(&from, options, packet);
+	get_server_source_address(&from, options, options, packet);
 
 	/* Use the subnet mask from the subnet declaration if no other
 	   mask has been provided. */
@@ -1318,7 +1341,6 @@ void nak_lease (packet, cip)
 	struct sockaddr_in to;
 	struct in_addr from;
 	int result;
-	int got_source = 0;
 	struct dhcp_packet raw;
 	unsigned char nak = DHCPNAK;
 	struct packet outgoing;
@@ -1371,95 +1393,22 @@ void nak_lease (packet, cip)
 	save_option (&dhcp_universe, options, oc);
 	option_cache_dereference (&oc, MDL);
 
-#if defined(SERVER_ID_FOR_NAK)
 	/*
-	 * Check to see if there is a server id we should use for the NAK.
-	 * In order to minimize the effort involved we only check the
-	 * global, shared_network and first subnet and pool on the
-	 * shared_network (if they exist).  We skip the other subnets
-	 * and pools and don't check on the host declarations.
-	 *
-	 * We get the shared subnet from the packet and execute the statements
-	 * then check for a server id.  As we only want the server ID we
-	 * execute the statements into a separate options area and then
-	 * free that area when we finish
+	 * If we are configured to do so we try to find a server id
+	 * option even for NAKS by calling setup_server_source_address().
+	 * This function will set up an options list from the global
+	 * and subnet scopes before trying to get the source address.
+	 * 
+	 * Otherwise we simply call get_server_source_address()
+	 * directly, without a server options list, this means
+	 * we'll get the source address from the interface address.
 	 */
-	if (packet->shared_network != NULL) {
-		struct option_state *sid_options = NULL;
-		struct data_string d;
-		struct option_cache *soc = NULL;
-
-		option_state_allocate (&sid_options, MDL);
-		/*
-		 * If we have a subnet and group start with that else start
-		 * with the shared network group.  The first will recurse and
-		 * include the second.
-		 */
-		if ((packet->shared_network->subnets != NULL) &&
-		    (packet->shared_network->subnets->group != NULL)) {
-			execute_statements_in_scope(NULL, packet, NULL, NULL,
-					packet->options, sid_options,
-					&global_scope,
-					packet->shared_network->subnets->group,
-					NULL);
-		} else {
-			execute_statements_in_scope(NULL, packet, NULL, NULL,
-					packet->options, sid_options,
-					&global_scope,
-					packet->shared_network->group,
-					NULL);
-		}
-
-		/* do the pool if there is one */
-		if (packet->shared_network->pools != NULL) {
-			execute_statements_in_scope(NULL, packet, NULL, NULL,
-					packet->options, sid_options,
-					&global_scope,
-					packet->shared_network->pools->group,
-					packet->shared_network->group);
-		}
-
-		memset(&d, 0, sizeof(d));
-
-		i = DHO_DHCP_SERVER_IDENTIFIER;
-		oc = lookup_option(&dhcp_universe, sid_options, i);
-		if ((oc != NULL) &&
-		    (evaluate_option_cache(&d, packet, NULL, NULL,
-					   packet->options, sid_options, 
-					   &global_scope, oc, MDL))) {
-			if (d.len == sizeof(from)) {
-				/* We have a server id and it's the proper length
-				 * for an address save the address and try to add
-				 * it to the options list we are building for the
-				 * response packet.
-				 */
-				memcpy(&from, d.data, sizeof(from));
-				got_source = 1;
-
-				if (option_cache_allocate(&soc, MDL) &&
-				    (make_const_data(&soc->expression,
-						     (unsigned char *)&from,
-						     sizeof(from),
-						     0, 1, MDL))) {
-					option_code_hash_lookup(&soc->option,
-							dhcp_universe.code_hash,
-							&i, 0, MDL);
-					save_option(&dhcp_universe, options,
-						    soc);
-				}
-				if (soc != NULL)
-					option_cache_dereference(&soc, MDL);
-			}
-			data_string_forget(&d, MDL);
-		}
-		oc = NULL;
-		option_state_dereference (&sid_options, MDL);
-	}
+#if defined(SERVER_ID_FOR_NAK)
+	setup_server_source_address(&from, options, packet);
+#else
+	get_server_source_address(&from, NULL, options, packet);
 #endif /* if defined(SERVER_ID_FOR_NAK) */
 
-	if (got_source == 0) {
-		get_server_source_address(&from, options, packet);
-	}
 
 	/* If there were agent options in the incoming packet, return
 	 * them.  We do not check giaddr to detect the presence of a
@@ -2576,7 +2525,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 				     offer == DHCPACK, offer == DHCPACK)) {
 #else /* defined(DELAYED_ACK) */
 		/* Install the new information on 'lt' onto the lease at
-		 * 'lease'.  We will not 'commit' this information to disk
+		 * 'lease'.  We will not 'commit' this information to disk
 		 * yet (fsync()), we will 'propogate' the information if
 		 * this is BOOTP or a DHCPACK, but we will not 'pimmediate'ly
 		 * transmit failover binding updates (this is delayed until
@@ -2684,7 +2633,8 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 			option_cache_dereference (&oc, MDL);
 		}
 
-		get_server_source_address(&from, state->options, packet);
+		get_server_source_address(&from, state->options,
+					  state->options, packet);
 		memcpy(state->from.iabuf, &from, sizeof(from));
 		state->from.len = sizeof(from);
 
@@ -4376,54 +4326,160 @@ int locate_network (packet)
 /*
  * Try to figure out the source address to send packets from.
  *
- * If the packet we received specified the server address, then we
- * will use that.
+ * from is the address structure we use to return any address
+ * we find.
  *
- * Otherwise, use the first address from the interface. If we do
- * this, we also save this into the option cache as the server
- * address.
+ * options is the option cache to search.  This may include
+ * options from the incoming packet and configuration information.
+ *
+ * out_options is the outgoing option cache.  This cache
+ * may be the same as options.  If send_options isn't NULL
+ * we may save the server address option into it.  We do so
+ * if send_options is different than options or if the option
+ * wasn't in options and we needed to find the address elsewhere.
+ *
+ * packet is the state structure for the incoming packet
+ *
+ * When finding the address we first check to see if it is
+ * in the options list.  If it isn't we use the first address
+ * from the interface.
+ *
+ * While this is slightly more complicated than I'd like it allows
+ * us to use the same code in several different places.  ack,
+ * inform and lease query use it to find the address and fill
+ * in the options if we get the address from the interface.
+ * nack uses it to find the address and copy it to the outgoing
+ * cache.  dhcprequest uses it to find the address for comparison
+ * and doesn't need to add it to an outgoing list.
  */
+
 void
 get_server_source_address(struct in_addr *from,
 			  struct option_state *options,
+			  struct option_state *out_options,
 			  struct packet *packet) {
 	unsigned option_num;
-	struct option_cache *oc;
+	struct option_cache *oc = NULL;
 	struct data_string d;
-	struct in_addr *a;
+	struct in_addr *a = NULL;
+	isc_boolean_t found = ISC_FALSE;
+	int allocate = 0;
 
 	memset(&d, 0, sizeof(d));
+	memset(from, 0, sizeof(*from));
 
        	option_num = DHO_DHCP_SERVER_IDENTIFIER;
        	oc = lookup_option(&dhcp_universe, options, option_num);
-       	if ((oc != NULL) &&
-	    evaluate_option_cache(&d, packet, NULL, NULL, packet->options,
-				  options, &global_scope, oc, MDL)) {
-		if (d.len == sizeof(*from)) {
-			memcpy(from, d.data, sizeof(*from));
+       	if (oc != NULL) {
+		if (evaluate_option_cache(&d, packet, NULL, NULL, 
+					  packet->options, options, 
+					  &global_scope, oc, MDL)) {
+			if (d.len == sizeof(*from)) {
+				found = ISC_TRUE;
+				memcpy(from, d.data, sizeof(*from));
+
+				/*
+				 * Arrange to save a copy of the data
+				 * to the outgoing list.
+				 */
+				if ((out_options != NULL) &&
+				    (options != out_options)) {
+					a = from;
+					allocate = 1;
+				}
+			}
 			data_string_forget(&d, MDL);
-			return;
 		}
-		data_string_forget(&d, MDL);
+		oc = NULL;
 	}
 
-	if (packet->interface->address_count > 0) {
-		if (option_cache_allocate(&oc, MDL)) {
-			a = &packet->interface->addresses[0];
-			if (make_const_data(&oc->expression,
-					    (unsigned char *)a, sizeof(*a),
-					    0, 0, MDL)) {
-				option_code_hash_lookup(&oc->option, 
-							dhcp_universe.code_hash,
-							&option_num, 0, MDL);
-				save_option(&dhcp_universe, options, oc);
-			}
-			option_cache_dereference(&oc, MDL);
-		}
+	if ((found == ISC_FALSE) &&
+	    (packet->interface->address_count > 0)) {
 		*from = packet->interface->addresses[0];
-	} else {
-       		memset(from, 0, sizeof(*from));
+
+		if (out_options != NULL) {
+			a = &packet->interface->addresses[0];
+		}
 	}
+
+	if ((a != NULL) &&
+	    (option_cache_allocate(&oc, MDL))) {
+		if (make_const_data(&oc->expression,
+				    (unsigned char *)a, sizeof(*a),
+				    0, allocate, MDL)) {
+			option_code_hash_lookup(&oc->option, 
+						dhcp_universe.code_hash,
+						&option_num, 0, MDL);
+			save_option(&dhcp_universe, out_options, oc);
+		}
+		option_cache_dereference(&oc, MDL);
+	}
+
+	return;
+}
+
+/*
+ * Set up an option state list to try and find a server option.
+ * We don't go through all possible options - in particualr we
+ * skip the hosts and we don't include the lease to avoid 
+ * making changes to it.  This means that we won't get the
+ * correct server id if the admin puts them on hosts or
+ * builds the server id with information from the lease.
+ *
+ * As this is a fallback function (used to handle NAKs or
+ * sort out server id mismatch in failover) and requires
+ * configuration by the admin, it should be okay.
+ */
+ 
+void
+setup_server_source_address(struct in_addr *from,
+			    struct option_state *options,
+			    struct packet *packet) {
+
+	struct option_state *sid_options = NULL;
+
+	if (packet->shared_network != NULL) {
+		option_state_allocate (&sid_options, MDL);
+
+		/*
+		 * If we have a subnet and group start with that else start
+		 * with the shared network group.  The first will recurse and
+		 * include the second.
+		 */
+		if ((packet->shared_network->subnets != NULL) &&
+		    (packet->shared_network->subnets->group != NULL)) {
+			execute_statements_in_scope(NULL, packet, NULL, NULL,
+					packet->options, sid_options,
+					&global_scope,
+					packet->shared_network->subnets->group,
+					NULL);
+		} else {
+			execute_statements_in_scope(NULL, packet, NULL, NULL,
+					packet->options, sid_options,
+					&global_scope,
+					packet->shared_network->group,
+					NULL);
+		}
+
+		/* do the pool if there is one */
+		if (packet->shared_network->pools != NULL) {
+			execute_statements_in_scope(NULL, packet, NULL, NULL,
+					packet->options, sid_options,
+					&global_scope,
+					packet->shared_network->pools->group,
+					packet->shared_network->group);
+		}
+
+		/* currently we don't bother with classes or hosts as
+		 * neither seems to be useful in this case */
+	}
+
+	/* Make the call to get the server address */
+	get_server_source_address(from, sid_options, options, packet);
+
+	/* get rid of the option cache */
+	if (sid_options != NULL)
+		option_state_dereference(&sid_options, MDL);
 }
 
 /*

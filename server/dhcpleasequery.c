@@ -616,7 +616,7 @@ dhcpleasequery(struct packet *packet, int ms_nulltp) {
 	/*
 	 * Figure out which address to use to send from.
 	 */
-	get_server_source_address(&siaddr, options, packet);
+	get_server_source_address(&siaddr, options, options, packet);
 
 	/* 
 	 * Set up the option buffer.
