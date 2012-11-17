@@ -1212,17 +1212,15 @@ int evaluate_boolean_expression (result, packet, lease, client_state,
 		return 0;
 
 	      case expr_not:
-		sleft = evaluate_boolean_expression (&bleft, packet, lease,
-						     client_state,
-						     in_options, cfg_options,
-						     scope,
-						     expr -> data.not);
+		sleft = evaluate_boolean_expression(&bleft, packet, lease,
+						    client_state,
+						    in_options, cfg_options,
+						    scope,
+						    expr->data.not);
 #if defined (DEBUG_EXPRESSIONS)
-		log_debug ("bool: not (%s) = %s",
-		      sleft ? (bleft ? "true" : "false") : "NULL",
-		      ((sleft && sright)
-		       ? (!bleft ? "true" : "false") : "NULL"));
-
+		log_debug("bool: not (%s) = %s",
+			  sleft ? (bleft ? "true" : "false") : "NULL",
+			  sleft ? (!bleft ? "true" : "false") : "NULL");
 #endif
 		if (sleft) {
 			*result = !bleft;
@@ -2474,24 +2472,26 @@ int evaluate_numeric_expression (result, packet, lease, client_state,
 		return status;
 
 	      case expr_extract_int16:
-		memset (&data, 0, sizeof data);
+		memset(&data, 0, sizeof(data));
 		status = (evaluate_data_expression
 			  (&data, packet, lease, client_state, in_options,
-			   cfg_options, scope, expr -> data.extract_int, MDL));
+			   cfg_options, scope, expr->data.extract_int, MDL));
 		if (status && data.len >= 2) {
-			*result = getUShort (data.data);
+			*result = getUShort(data.data);
 			rc = 1;
 		}
 #if defined (DEBUG_EXPRESSIONS)
 		if (rc == 1) {
-			log_debug ("num: extract_int16 (%s) = %ld",
-				   print_hex_1(data.len, data.data, 60)
-				   *result);
+			log_debug("num: extract_int16 (%s) = %ld",
+				  print_hex_1(data.len, data.data, 60),
+				  *result);
 		} else {
-			log_debug ("num: extract_int16 (NULL) = NULL");
+			log_debug("num: extract_int16 (NULL) = NULL");
 		}
 #endif
-		if (status) data_string_forget (&data, MDL);
+		if (status)
+			data_string_forget(&data, MDL);
+
 		return (rc);
 
 	      case expr_extract_int32:
@@ -2524,22 +2524,22 @@ int evaluate_numeric_expression (result, packet, lease, client_state,
 
 	      case expr_lease_time:
 		if (!lease) {
-			log_error ("data: leased_lease: not available");
-			return 0;
+			log_error("data: leased_lease: not available");
+			return (0);
 		}
-		if (lease -> ends < cur_time) {
-			log_error ("%s %lu when it is now %lu",
-				   "data: lease_time: lease ends at",
-				   (long)(lease -> ends), (long)cur_time);
-			return 0;
+		if (lease->ends < cur_time) {
+			log_error("%s %lu when it is now %lu",
+				  "data: lease_time: lease ends at",
+				  (long)(lease->ends), (long)cur_time);
+			return (0);
 		}
-		*result = lease -> ends - cur_time;
+		*result = lease->ends - cur_time;
 #if defined (DEBUG_EXPRESSIONS)
-		log_debug ("number: lease-time = (%lu - %lu) = %ld",
-			   lease -> ends,
-			   cur_time, *result);
+		log_debug("number: lease-time = (%lu - %lu) = %ld",
+			  (long unsigned)lease->ends,
+			  (long unsigned)cur_time, *result);
 #endif
-		return 1;
+		return (1);
  
 	      case expr_dns_transaction:
 #if !defined (NSUPDATE_OLD)
