@@ -6,7 +6,7 @@ SUBDIRS = . tests
 
 AM_CPPFLAGS = -I.. -DLOCALSTATEDIR='"@localstatedir@"'
 
-dist_sysconf_DATA = dhcpd.conf
+dist_sysconf_DATA = dhcpd.conf.example
 sbin_PROGRAMS = dhcpd
 dhcpd_SOURCES = dhcpd.c dhcp.c bootp.c confpars.c db.c class.c failover.c \
 		omapi.c mdb.c stables.c salloc.c ddns.c dhcpleasequery.c \

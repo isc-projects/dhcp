@@ -58,8 +58,8 @@ DHCP server documentation is in the dhcpd man page.  Information about
 the DHCP server lease database is in the dhcpd.leases man page.
 Server configuration documentation is in the dhcpd.conf man page as
 well as the dhcp-options man page.   A sample DHCP server
-configuration is in the file server/dhcpd.conf.   The source for the
-dhcpd, dhcpd.leases and dhcpd.conf man pages is in the server/ sub-
+configuration is in the file server/dhcpd.conf.example.   The source for
+the dhcpd, dhcpd.leases and dhcpd.conf man pages is in the server/ sub-
 directory in the distribution.   The source for the dhcp-options.5
 man page is in the common/ subdirectory.
 
