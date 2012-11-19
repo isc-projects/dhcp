@@ -155,6 +155,12 @@ work on other platforms. Please report any problems and suggested fixes to
 - Tidy up some compiler issues in the debug code
   [ISC-Bugs #26460]
 
+- Move the dhcpd.conf exmample file to dhcpd.conf.example to avoid
+  overwriting the dhcpd.conf file when installing a new version of
+  ISC DHCP.  The user will now need to manual copy and edit the
+  dhcpd.conf file as desired.
+  [ISC-Bugs #19337]
+
 			Changes since 4.2.4rc2
 
 - None
