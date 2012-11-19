@@ -188,7 +188,7 @@ top_srcdir = @top_srcdir@
 # production code. Sadly, we are not there yet.
 SUBDIRS = . tests
 AM_CPPFLAGS = -I.. -DLOCALSTATEDIR='"@localstatedir@"'
-dist_sysconf_DATA = dhcpd.conf
+dist_sysconf_DATA = dhcpd.conf.example
 dhcpd_SOURCES = dhcpd.c dhcp.c bootp.c confpars.c db.c class.c failover.c \
 		omapi.c mdb.c stables.c salloc.c ddns.c dhcpleasequery.c \
 		dhcpv6.c mdb6.c

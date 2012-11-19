@@ -167,7 +167,7 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-dist_sysconf_DATA = dhclient.conf
+dist_sysconf_DATA = dhclient.conf.example
 dhclient_SOURCES = clparse.c dhclient.c dhc6.c \
 		   scripts/bsdos scripts/freebsd scripts/linux scripts/macos \
 		   scripts/netbsd scripts/nextstep scripts/openbsd \
