@@ -161,6 +161,12 @@ work on other platforms. Please report any problems and suggested fixes to
   dhcpd.conf file as desired.
   [ISC-Bugs #19337]
 
+- Check the status value when trying to read from a connection to
+  see if it may have been closed.  If it appears closed don't try
+  to read from it again.  This avoids a potential busy-wait like
+  loop when the peer names are mismatched.
+  [ISC-Bugs #31231]
+
 			Changes since 4.2.4rc2
 
 - None
