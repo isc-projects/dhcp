@@ -171,8 +171,15 @@ omapi_iscsock_cb(isc_task_t   *task,
 	if ((flags == ISC_SOCKFDWATCH_READ) &&
 	    (obj->reader != NULL) &&
 	    (obj->inner != NULL)) {
-		obj->reader(obj->inner);
-		/* We always ask for more when reading */
+		status = obj->reader(obj->inner);
+		/* 
+		 * If we are shutting down (basically tried to
+		 * read and got no bytes) we don't need to try
+		 * again.
+		 */
+		if (status == ISC_R_SHUTTINGDOWN)
+			return (0);
+		/* Otherwise We always ask for more when reading */
 		return (1);
 	} else if ((flags == ISC_SOCKFDWATCH_WRITE) &&
 		 (obj->writer != NULL) &&
