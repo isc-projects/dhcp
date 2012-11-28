@@ -1850,7 +1850,6 @@ int parse_base64 (data, cfile)
 	struct data_string *data;
 	struct parse *cfile;
 {
-	enum dhcp_token token;
 	const char *val;
 	int i, j, k;
 	unsigned acc = 0;
@@ -1880,7 +1879,7 @@ int parse_base64 (data, cfile)
 	do {
 		unsigned l;
 
-		token = next_token(&val, &l, cfile);
+		(void)next_token(&val, &l, cfile);
 		t = dmalloc(l + sizeof(*t), MDL);
 		if (t == NULL)
 			log_fatal("no memory for base64 buffer.");
@@ -1892,7 +1891,7 @@ int parse_base64 (data, cfile)
 		else
 			bufs = t;
 		last = t;
-		token = peek_token(&val, NULL, cfile);
+		(void)peek_token(&val, NULL, cfile);
 		valid_base64 = 1;
 		for (i = 0; val[i]; i++) {
 			/* Check to see if the character is valid.  It

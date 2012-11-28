@@ -110,6 +110,9 @@ work on other platforms. Please report any problems and suggested fixes to
   dhcpd.conf file as desired.
   [ISC-Bugs #19337]
 
+- Remove an unused variable to keep compilers happy
+  [ISC-Bugs #31983]
+
 			Changes since 4.1-ESV-R6
 
 - Existing legacy unit-tests have been migrated to Automated Test
