@@ -184,6 +184,9 @@ work on other platforms. Please report any problems and suggested fixes to
   loop when the peer names are mismatched.
   [ISC-Bugs #31231]
 
+- Remove an unused variable to keep compilers happy
+  [ISC-Bugs #31983]
+
 			Changes since 4.2.3
 
 ! Add a check for a null pointer before calling the regexec function.
