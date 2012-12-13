@@ -6,10 +6,11 @@
 
 			      NEW FEATURES
 
-Version 4.1-ESV-R8b1 is a maintenance release of an extended support version (ESV)
-release.  ESVs are intended for users who have longer upgrade constraints.
-Please see our web page http://www.isc.org/downloads/extended-support for
-more information on ESVs.
+Version 4.1-ESV-R8b1 is a maintenance release of an extended support version
+(ESV) release.  ESVs are intended for users who have longer upgrade
+constraints.  Please see our web page
+http://www.isc.org/downloads/extended-support
+for more information on ESVs.
 
 ISC DHCP 4.1.x includes several new DHCPv6 features that were not included
 in DHCP 4.0.x.  These include:
@@ -63,7 +64,7 @@ work on other platforms. Please report any problems and suggested fixes to
   freed in other cases.
   [ISC-Bugs #30320]
 
-- Add a compile time option, enable-secs-byteorder, to deal with
+- Add a configue option, enable-secs-byteorder, to deal with
   clients that do the byte ordering on the secs field incorrectly.
   This field should be in network byte order but some clients
   get it wrong.  When this option is enabled the server will examine
@@ -101,7 +102,7 @@ work on other platforms. Please report any problems and suggested fixes to
   enabling it.
   [ISC-Bugs #31463]
 
-- Tidy up some compiler issues in the debug code
+- Tidy up some compiler issues in the debug code.
   [ISC-Bugs #26460]
 
 - Move the dhcpd.conf exmample file to dhcpd.conf.example to avoid
@@ -110,7 +111,7 @@ work on other platforms. Please report any problems and suggested fixes to
   dhcpd.conf file as desired.
   [ISC-Bugs #19337]
 
-- Remove an unused variable to keep compilers happy
+- Remove an unused variable to keep compilers happy.
   [ISC-Bugs #31983]
 
 			Changes since 4.1-ESV-R6
