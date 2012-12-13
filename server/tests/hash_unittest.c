@@ -531,6 +531,12 @@ ATF_TC_BODY(lease_hash_basic_3hosts, tc) {
                            clientid3, sizeof(clientid3));
 }
 
+#if 0
+/* This test is disabled as we solved the issue by prohibiting
+   the code from using an improper client id earlier and restoring
+   the hash code to its previous state.  As we may choose to
+   redo the hash code again this test hasn't been deleted.
+*/   
 /* this test is a direct reproduction of 29851 issue */
 ATF_TC(uid_hash_rt29851);
 
@@ -586,11 +592,7 @@ ATF_TC_BODY(uid_hash_rt29851, tc) {
     uid_hash_add(lease1);
     uid_hash_delete(lease2);
 }
-
-
-
-
-
+#endif
 
 ATF_TP_ADD_TCS(tp) {
     ATF_TP_ADD_TC(tp, lease_hash_basic_2hosts);
@@ -598,6 +600,8 @@ ATF_TP_ADD_TCS(tp) {
     ATF_TP_ADD_TC(tp, lease_hash_string_2hosts);
     ATF_TP_ADD_TC(tp, lease_hash_string_3hosts);
     ATF_TP_ADD_TC(tp, lease_hash_negative1);
+#if 0 /* see comment in function */
     ATF_TP_ADD_TC(tp, uid_hash_rt29851);
+#endif
     return (atf_no_error());
 }

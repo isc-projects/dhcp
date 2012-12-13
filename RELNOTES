@@ -53,6 +53,12 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and may not
 work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
+			Changes since 4.1-ESV-R8b1
+
+- Modify test makefiles to be more similar to standard makefiles
+  and comment out a currently unused test.
+  [ISC-Bugs #32089]
+
 			Changes since 4.1-ESV-R7
 
 - Update the memory leakage debug code to work with v6.
