@@ -187,6 +187,9 @@ work on other platforms. Please report any problems and suggested fixes to
 - Remove an unused variable to keep compilers happy.
   [ISC-Bugs #31983]
 
+- Modify test makefiles to be more similar to standard makefiles
+  and comment out a currently unused test.
+
 			Changes since 4.2.3
 
 ! Add a check for a null pointer before calling the regexec function.
