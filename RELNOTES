@@ -114,7 +114,7 @@ work on other platforms. Please report any problems and suggested fixes to
   freed in other cases.
   [ISC-Bugs #30320]
 
-- Add a compile time option, enable-secs-byteorder, to deal with
+- Add a configure option, enable-secs-byteorder, to deal with
   clients that do the byte ordering on the secs field incorrectly.
   This field should be in network byte order but some clients
   get it wrong.  When this option is enabled the server will examine
@@ -152,7 +152,7 @@ work on other platforms. Please report any problems and suggested fixes to
   enabling it.
   [ISC-Bugs #31463]
 
-- Tidy up some compiler issues in the debug code
+- Tidy up some compiler issues in the debug code.
   [ISC-Bugs #26460]
 
 - Move the dhcpd.conf exmample file to dhcpd.conf.example to avoid
@@ -167,7 +167,7 @@ work on other platforms. Please report any problems and suggested fixes to
   loop when the peer names are mismatched.
   [ISC-Bugs #31231]
 
-- Remove an unused variable to keep compilers happy
+- Remove an unused variable to keep compilers happy.
   [ISC-Bugs #31983]
 
 			Changes since 4.2.4rc2
