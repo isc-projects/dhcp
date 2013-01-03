@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-			     Version 4.2.5rc1
-			     18 December 2012
+			     Version 4.2.5
+			     8 January 2013
 
 			      Release Notes
 
@@ -39,6 +39,9 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and may not
 work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
+			Changes since 4.2.5rc1
+
+- None
 			Changes since 4.2.5b1
 
 - Modify test makefiles to be more similar to standard makefiles
