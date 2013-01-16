@@ -59,6 +59,9 @@ work on other platforms. Please report any problems and suggested fixes to
   some options in the dhcp universe instead of all universes.
   [ISC-Bugs #32309]
 
+- Add check for 64-bit package for atf.
+  [ISC-BUGS #32206]
+
 			Changes since 4.1-ESV-R8rc1
 
 - None
