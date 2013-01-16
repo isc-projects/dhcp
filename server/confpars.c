@@ -764,10 +764,11 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 			 * XXX: We may want to include a "blacklist" of 
 			 *      options we ignore in the future, as a table.
 			 */
-			if ((option->code == DHO_DHCP_LEASE_TIME) ||
-			    ((local_family != AF_INET6) && 
-			     ((option->code == DHO_DHCP_RENEWAL_TIME) ||
-			      (option->code == DHO_DHCP_REBINDING_TIME))))
+			if ((option->universe == &dhcp_universe) && 
+			    ((option->code == DHO_DHCP_LEASE_TIME) ||
+			      ((local_family != AF_INET6) && 
+			       ((option->code == DHO_DHCP_RENEWAL_TIME) ||
+				(option->code == DHO_DHCP_REBINDING_TIME)))))
 			{
 				log_error("WARNING: server ignoring option %s "
 				          "in configuration file.",
