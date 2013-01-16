@@ -4861,6 +4861,8 @@ if test "$atf_path" != "no" ; then
     if test "$atf_path" != "yes" ; then
         if test -f $atf_path/lib/pkgconfig/atf-c.pc ; then
             atf_pcp=$atf_path/lib/pkgconfig
+        elif test -f $atf_path/lib64/pkgconfig/atf-c.pc ; then
+            atf_pcp=$atf_path/lib64/pkgconfig
         fi
     else
         # Not specified, try some common paths
@@ -4869,6 +4871,8 @@ if test "$atf_path" != "no" ; then
         do
             if test -f $d/lib/pkgconfig/atf-c.pc ; then
                 atf_pcp=$d/lib/pkgconfig
+            elif test -f $d/lib64/pkgconfig/atf-c.pc ; then
+                atf_pcp=$d/lib64/pkgconfig
             fi
         done
     fi
