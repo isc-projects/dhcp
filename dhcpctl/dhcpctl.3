@@ -297,8 +297,8 @@ functions all set a value on the object handle.
 .Pp
 .Fn dhcpctl_object_update
 function queues a request for
-all the changes made to the object handle be be sent to the remote
-for processing. The changes made to the atributes on the handle will be
+all the changes made to the object handle be sent to the remote
+for processing. The changes made to the attributes on the handle will be
 applied to remote object if permitted.
 .\"
 .\"
@@ -352,7 +352,7 @@ from how the value appears in the dhcpd.conf file.
 .\"
 .Pp
 .Fn dhcpctl_new_object
-creates a local handle for an object on the the server. The 
+creates a local handle for an object on the server. The 
 .Dq object_type
 parameter is the ascii name of the type of object being accessed. e.g. 
 .Qq lease .
@@ -418,7 +418,7 @@ released.
 The following program will connect to the DHCP server running on the local
 host and will get the details of the existing lease for IP address
 10.0.0.101. It will then print out the time the lease is due to expire. Note
-that most error checking has been ommitted for brevity.  
+that most error checking has been omitted for brevity.  
 .Bd -literal -offset indent
 #include <sys/time.h>
 #include <stdio.h>

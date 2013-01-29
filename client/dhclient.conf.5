@@ -267,7 +267,7 @@ or DHCPv6.  The exact same syntax is used for both.
 .PP
 To make it work, you have to declare a key and zone as in the DHCP
 server (see \fBdhcpd.conf\fR(5) for details).  You also need to
-configure the fqdn option on the client, as follows:
+configure the \fIfqdn\fR option on the client, as follows:
 .PP
 .nf
   send fqdn.fqdn "grosse.fugue.com.";
@@ -569,7 +569,7 @@ The \fBdb-time-format\fR option determines which of two output methods are
 used for printing times in leases files.  The \fIdefault\fR format provides
 day-and-time in UTC, whereas \fIlocal\fR uses a seconds-since-epoch to store
 the time value, and helpfully places a local timezone time in a comment on
-the same line.  The formats are described in detail in this manpage, whithin
+the same line.  The formats are described in detail in this manpage, within
 the LEASE DECLARATIONS section.
 .PP
  \fBreject \fIcidr-ip-address\fR [\fB,\fR \fI...\fB \fIcidr-ip-address\fR ] \fB;\fR
