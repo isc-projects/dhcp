@@ -3,7 +3,7 @@
    DHCP Protocol engine. */
 
 /*
- * Copyright (c) 2004-2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2013 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -1560,9 +1560,6 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 	struct in_addr from;
 	TIME remaining_time;
 	struct iaddr cip;
-#if defined(DELAYED_ACK)
-	isc_boolean_t enqueue = ISC_TRUE;
-#endif
 
 	unsigned i, j;
 	int s1;
