@@ -48,6 +48,9 @@ work on other platforms. Please report any problems and suggested fixes to
   when the --enable-delated-ack configuration option was specified.
   [ISC-BUGS #32701]
 
+- Use newer auto* tool packages and turn on RFC_3542 support on Mac OS.
+  [ISC-Bugs #26303]
+
 			Changes since 4.2.5rc1
 
 - None
