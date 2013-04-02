@@ -588,9 +588,6 @@ AC_CHECK_MEMBER(struct msghdr.msg_control,,
 # AC_TRY_COMPILE & etc).
 CFLAGS="$CFLAGS $STD_CWARNINGS"
 
-# Try to add the bind include directory
-CFLAGS="$CFLAGS -I$libbind/include"
-
 case "$host" in
 *-darwin*)
     CFLAGS="$CFLAGS -D__APPLE_USE_RFC_3542" ;;

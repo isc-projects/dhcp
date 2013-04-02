@@ -6343,17 +6343,11 @@ fi
 # AC_TRY_COMPILE & etc).
 CFLAGS="$CFLAGS $STD_CWARNINGS"
 
-<<<<<<< HEAD
-=======
-# Try to add the bind include directory
-CFLAGS="$CFLAGS -I$libbind/include"
-
 case "$host" in
 *-darwin*)
     CFLAGS="$CFLAGS -D__APPLE_USE_RFC_3542" ;;
 esac
 
->>>>>>> 9fc3e9f... - Use newer auto* tool packages and turn on RFC_3542 support on Mac OS.
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for flexible array members" >&5
 $as_echo_n "checking for flexible array members... " >&6; }
