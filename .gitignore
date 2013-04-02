@@ -2,3 +2,5 @@
 bind
 doc/html
 .deps
+Makefile
+autom4te.cache

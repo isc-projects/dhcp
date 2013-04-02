@@ -11,6 +11,8 @@ AM_INIT_AUTOMAKE([foreign])
 # might fail if they don't have the correct tools.
 AM_MAINTAINER_MODE 
 
+AC_CANONICAL_HOST
+
 # We want to turn on warnings if we are using gcc and the user did 
 # not specify CFLAGS. The autoconf check for the C compiler sets the
 # CFLAGS if gcc is used, so we will save it before we run that check.
@@ -585,6 +587,14 @@ AC_CHECK_MEMBER(struct msghdr.msg_control,,
 # Append selected warning levels to CFLAGS before substitution (but after
 # AC_TRY_COMPILE & etc).
 CFLAGS="$CFLAGS $STD_CWARNINGS"
+
+# Try to add the bind include directory
+CFLAGS="$CFLAGS -I$libbind/include"
+
+case "$host" in
+*-darwin*)
+    CFLAGS="$CFLAGS -D__APPLE_USE_RFC_3542" ;;
+esac
 
 AC_C_FLEXIBLE_ARRAY_MEMBER
 

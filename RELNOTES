@@ -62,6 +62,9 @@ work on other platforms. Please report any problems and suggested fixes to
 - Add check for 64-bit package for atf.
   [ISC-BUGS #32206]
 
+- Use newer auto* tool packages and turn on RFC_3542 support on Mac OS.
+  [ISC-Bugs #26303]
+
 			Changes since 4.1-ESV-R8rc1
 
 - None
