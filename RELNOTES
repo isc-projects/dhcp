@@ -65,6 +65,10 @@ work on other platforms. Please report any problems and suggested fixes to
 - Use newer auto* tool packages and turn on RFC_3542 support on Mac OS.
   [ISC-Bugs #26303]
 
+- Remove a variable when it isn't being used due to #ifdefs to avoid
+  a compiler warning on Solaris using GCC.
+  [ISC-Bugs #33032]
+
 			Changes since 4.1-ESV-R8rc1
 
 - None
