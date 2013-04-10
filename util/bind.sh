@@ -50,7 +50,10 @@ case $# in
 	### be used to chdir down into the directory that is unpacked.
 	###
 	v4_2) noSNAP=snapshot BINDTAG=v9_8 ;;
-	HEAD|v[0-9]_[0-9].*) noSNAP=snapshot BINDTAG=HEAD ;;
+	### change to using the head of v9_9 until we upgrade DHCP
+	### to use shared libraries
+	HEAD|v[0-9]_[0-9].*) noSNAP=snapshot BINDTAG=v9_9 ;;
+	### HEAD|v[0-9]_[0-9].*) noSNAP=snapshot BINDTAG=HEAD ;;
 	###
 	### For ease of use, this records the sticky tag of versions
 	### released with each point release.
