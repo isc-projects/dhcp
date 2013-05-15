@@ -3,7 +3,7 @@
    Turn data structures into printable text. */
 
 /*
- * Copyright (c) 2009-2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2013 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
@@ -1193,7 +1193,7 @@ int token_print_indent_concat (FILE *file, int col,  int indent,
 	}
 	va_end (list);
 	
-	len = token_print_indent (file, col, indent,
+	col = token_print_indent (file, col, indent,
 				  prefix, suffix, t);
 	dfree (t, MDL);
 	return col;
@@ -1248,7 +1248,7 @@ int token_print_indent (FILE *file, int col, int indent,
 {
 	int len = 0;
 	if (prefix != NULL)
-		len = strlen (prefix);
+		len += strlen (prefix);
 	if (buf != NULL)
 		len += strlen (buf);
 

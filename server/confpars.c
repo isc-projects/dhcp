@@ -3,7 +3,7 @@
    Parser for dhcpd config file... */
 
 /*
- * Copyright (c) 2004-2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2013 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -253,7 +253,7 @@ isc_result_t conf_file_subparse (struct parse *cfile, struct group *group,
 					       (struct host_decl *)0,
 					       declaration);
 	} while (1);
-	token = next_token (&val, (unsigned *)0, cfile);
+	skip_token(&val, (unsigned *)0, cfile);
 
 	status = cfile->warnings_occurred ? DHCP_R_BADPARSE : ISC_R_SUCCESS;
 	return status;
@@ -373,7 +373,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 
 	switch (token) {
 	      case INCLUDE:
-		next_token (&val, (unsigned *)0, cfile);
+		skip_token(&val, (unsigned *)0, cfile);
 		token = next_token (&val, (unsigned *)0, cfile);
 		if (token != STRING) {
 			parse_warn (cfile, "filename string expected.");
@@ -387,7 +387,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		return 1;
 		
 	      case HOST:
-		next_token (&val, (unsigned *)0, cfile);
+		skip_token(&val, (unsigned *)0, cfile);
 		if (type != HOST_DECL && type != CLASS_DECL) {
 			if (global_host_once &&
 			    (type == SUBNET_DECL || type == SHARED_NET_DECL)) {
@@ -406,7 +406,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		return 1;
 
 	      case GROUP:
-		next_token (&val, (unsigned *)0, cfile);
+		skip_token(&val, (unsigned *)0, cfile);
 		if (type != HOST_DECL && type != CLASS_DECL)
 			parse_group_declaration (cfile, group);
 		else {
@@ -417,7 +417,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		return 1;
 
 	      case SHARED_NETWORK:
-		next_token (&val, (unsigned *)0, cfile);
+		skip_token(&val, (unsigned *)0, cfile);
 		if (type == SHARED_NET_DECL ||
 		    type == HOST_DECL ||
 		    type == SUBNET_DECL ||
@@ -433,7 +433,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 
 	      case SUBNET:
 	      case SUBNET6:
-		next_token (&val, (unsigned *)0, cfile);
+		skip_token(&val, (unsigned *)0, cfile);
 		if (type == HOST_DECL || type == SUBNET_DECL ||
 		    type == CLASS_DECL) {
 			parse_warn (cfile,
@@ -515,7 +515,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		return 1;
 
 	      case VENDOR_CLASS:
-		next_token (&val, (unsigned *)0, cfile);
+		skip_token(&val, (unsigned *)0, cfile);
 		if (type == CLASS_DECL) {
 			parse_warn (cfile,
 				    "class declarations not allowed here.");
@@ -526,7 +526,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		return 1;
 
 	      case USER_CLASS:
-		next_token (&val, (unsigned *)0, cfile);
+		skip_token(&val, (unsigned *)0, cfile);
 		if (type == CLASS_DECL) {
 			parse_warn (cfile,
 				    "class declarations not allowed here.");
@@ -537,7 +537,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		return 1;
 
 	      case CLASS:
-		next_token (&val, (unsigned *)0, cfile);
+		skip_token(&val, (unsigned *)0, cfile);
 		if (type == CLASS_DECL) {
 			parse_warn (cfile,
 				    "class declarations not allowed here.");
@@ -548,7 +548,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		return 1;
 
 	      case SUBCLASS:
-		next_token (&val, (unsigned *)0, cfile);
+		skip_token(&val, (unsigned *)0, cfile);
 		if (type == CLASS_DECL) {
 			parse_warn (cfile,
 				    "class declarations not allowed here.");
@@ -560,7 +560,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		return 1;
 
 	      case HARDWARE:
-		next_token (&val, (unsigned *)0, cfile);
+		skip_token(&val, (unsigned *)0, cfile);
 		memset (&hardware, 0, sizeof hardware);
 		if (host_decl && memcmp(&hardware, &(host_decl->interface),
 					sizeof(hardware)) != 0) {
@@ -579,7 +579,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 
 	      case FIXED_ADDR:
 	      case FIXED_ADDR6:
-		next_token(&val, NULL, cfile);
+		skip_token(&val, NULL, cfile);
 		cache = NULL;
 		if (parse_fixed_addr_param(&cache, cfile, token)) {
 			if (host_decl) {
@@ -601,7 +601,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		break;
 
 	      case POOL:
-		next_token (&val, (unsigned *)0, cfile);
+		skip_token(&val, (unsigned *)0, cfile);
 		if (type == POOL_DECL) {
 			parse_warn (cfile, "pool declared within pool.");
 			skip_to_semi(cfile);
@@ -614,7 +614,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		return declaration;
 
 	      case RANGE:
-		next_token (&val, (unsigned *)0, cfile);
+		skip_token(&val, (unsigned *)0, cfile);
 		if (type != SUBNET_DECL || !group -> subnet) {
 			parse_warn (cfile,
 				    "range declaration not allowed here.");
@@ -627,7 +627,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 
 #ifdef DHCPv6
 	      case RANGE6:
-		next_token(NULL, NULL, cfile);
+		skip_token(NULL, NULL, cfile);
 	        if ((type != SUBNET_DECL) || (group->subnet == NULL)) {
 			parse_warn (cfile,
 				    "range6 declaration not allowed here.");
@@ -638,7 +638,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		return declaration;
 
 	      case PREFIX6:
-		next_token(NULL, NULL, cfile);
+		skip_token(NULL, NULL, cfile);
 		if ((type != SUBNET_DECL) || (group->subnet == NULL)) {
 			parse_warn (cfile,
 				    "prefix6 declaration not allowed here.");
@@ -649,7 +649,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		return declaration;
 
 	      case FIXED_PREFIX6:
-		next_token(&val, NULL, cfile);
+		skip_token(&val, NULL, cfile);
 		if (!host_decl) {
 			parse_warn (cfile,
 				    "fixed-prefix6 declaration not "
@@ -663,7 +663,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 #endif /* DHCPv6 */
 
 	      case TOKEN_NOT:
-		token = next_token (&val, (unsigned *)0, cfile);
+		skip_token(&val, (unsigned *)0, cfile);
 		token = next_token (&val, (unsigned *)0, cfile);
 		switch (token) {
 		      case AUTHORITATIVE:
@@ -676,7 +676,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		}
 		break;
 	      case AUTHORITATIVE:
-		token = next_token (&val, (unsigned *)0, cfile);
+		skip_token(&val, (unsigned *)0, cfile);
 		group -> authoritative = 1;
 	      authoritative:
 		if (type == HOST_DECL)
@@ -692,11 +692,11 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 					     &code, 0, MDL))
 			log_fatal("Server identifier not in hash (%s:%d).",
 				  MDL);
-		token = next_token (&val, (unsigned *)0, cfile);
+		skip_token(&val, (unsigned *)0, cfile);
 		goto finish_option;
 
 	      case OPTION:
-		token = next_token (&val, (unsigned *)0, cfile);
+		skip_token(&val, (unsigned *)0, cfile);
 		token = peek_token (&val, (unsigned *)0, cfile);
 		if (token == SPACE) {
 			if (type != ROOT_GROUP) {
@@ -723,7 +723,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 					option_dereference(&option, MDL);
 					break;
 				}
-				next_token (&val, (unsigned *)0, cfile);
+				skip_token(&val, (unsigned *)0, cfile);
 
 				/*
 				 * If the option was known, remove it from the
@@ -1465,7 +1465,7 @@ void parse_pool_statement (cfile, group, type)
 		token = peek_token (&val, (unsigned *)0, cfile);
 		switch (token) {
 		      case TOKEN_NO:
-			next_token (&val, (unsigned *)0, cfile);
+			skip_token(&val, (unsigned *)0, cfile);
 			token = next_token (&val, (unsigned *)0, cfile);
 			if (token != FAILOVER ||
 			    (token = next_token (&val, (unsigned *)0,
@@ -1484,7 +1484,7 @@ void parse_pool_statement (cfile, group, type)
 				
 #if defined (FAILOVER_PROTOCOL)
 		      case FAILOVER:
-			next_token (&val, (unsigned *)0, cfile);
+			skip_token(&val, (unsigned *)0, cfile);
 			token = next_token (&val, (unsigned *)0, cfile);
 			if (token != PEER) {
 				parse_warn (cfile, "expecting 'peer'.");
@@ -1513,7 +1513,7 @@ void parse_pool_statement (cfile, group, type)
 #endif
 
 		      case RANGE:
-			next_token (&val, (unsigned *)0, cfile);
+			skip_token(&val, (unsigned *)0, cfile);
 			parse_address_range (cfile, group, type,
 					     pool, &lpchain);
 			break;
@@ -1525,7 +1525,7 @@ void parse_pool_statement (cfile, group, type)
 			permit = new_permit (MDL);
 			if (!permit)
 				log_fatal ("no memory for permit");
-			next_token (&val, (unsigned *)0, cfile);
+			skip_token(&val, (unsigned *)0, cfile);
 			token = next_token (&val, (unsigned *)0, cfile);
 			switch (token) {
 			      case UNKNOWN:
@@ -1639,7 +1639,7 @@ void parse_pool_statement (cfile, group, type)
 			goto get_permit;
 			
 		      case RBRACE:
-			next_token (&val, (unsigned *)0, cfile);
+			skip_token(&val, (unsigned *)0, cfile);
 			done = 1;
 			break;
 
@@ -1783,11 +1783,11 @@ void parse_host_declaration (cfile, group)
 	do {
 		token = peek_token (&val, (unsigned *)0, cfile);
 		if (token == RBRACE) {
-			token = next_token (&val, (unsigned *)0, cfile);
+			skip_token(&val, (unsigned *)0, cfile);
 			break;
 		}
 		if (token == END_OF_FILE) {
-			token = next_token (&val, (unsigned *)0, cfile);
+			skip_token(&val, (unsigned *)0, cfile);
 			parse_warn (cfile, "unexpected end of file");
 			break;
 		}
@@ -1795,7 +1795,7 @@ void parse_host_declaration (cfile, group)
 		   remember to save it. */
 		if (token == DYNAMIC) {
 			dynamicp = 1;
-			token = next_token (&val, (unsigned *)0, cfile);
+			skip_token(&val, (unsigned *)0, cfile);
 			if (!parse_semi (cfile))
 				break;
 			continue;
@@ -1804,7 +1804,7 @@ void parse_host_declaration (cfile, group)
 		   remember to save it. */
 		if (token == TOKEN_DELETED) {
 			deleted = 1;
-			token = next_token (&val, (unsigned *)0, cfile);
+			skip_token(&val, (unsigned *)0, cfile);
 			if (!parse_semi (cfile))
 				break;
 			continue;
@@ -1812,7 +1812,7 @@ void parse_host_declaration (cfile, group)
 
 		if (token == GROUP) {
 			struct group_object *go;
-			token = next_token (&val, (unsigned *)0, cfile);
+			skip_token(&val, (unsigned *)0, cfile);
 			token = next_token (&val, (unsigned *)0, cfile);
 			if (token != STRING && !is_identifier (token)) {
 				parse_warn (cfile,
@@ -1843,7 +1843,7 @@ void parse_host_declaration (cfile, group)
 			unsigned char *t = 0;
 			unsigned len;
 
-			token = next_token (&val, (unsigned *)0, cfile);
+			skip_token(&val, (unsigned *)0, cfile);
 			data_string_forget (&host -> client_identifier, MDL);
 
 			if (host->client_identifier.len != 0) {
@@ -1856,7 +1856,7 @@ void parse_host_declaration (cfile, group)
 			/* See if it's a string or a cshl. */
 			token = peek_token (&val, (unsigned *)0, cfile);
 			if (token == STRING) {
-				token = next_token (&val, &len, cfile);
+				skip_token(&val, &len, cfile);
 				s = val;
 				host -> client_identifier.terminated = 1;
 			} else {
@@ -1897,7 +1897,7 @@ void parse_host_declaration (cfile, group)
 				skip_to_rbrace(cfile, 1);
 				break;
 			}
-	      		next_token(&val, NULL, cfile);
+	      		skip_token(&val, NULL, cfile);
 			token = next_token(&val, NULL, cfile);
 			if (token != OPTION) {
 				parse_warn(cfile, 
@@ -2072,7 +2072,7 @@ int parse_class_declaration (cp, cfile, group, type)
 	if (type == CLASS_TYPE_SUBCLASS) {
 		token = peek_token (&val, (unsigned *)0, cfile);
 		if (token == STRING) {
-			token = next_token (&val, &data.len, cfile);
+			skip_token(&val, &data.len, cfile);
 			data.buffer = (struct buffer *)0;
 			if (!buffer_allocate (&data.buffer,
 					      data.len + 1, MDL)) {
@@ -2174,7 +2174,7 @@ int parse_class_declaration (cp, cfile, group, type)
 	if (class -> superclass) {
 		token = peek_token (&val, (unsigned *)0, cfile);
 		if (token == SEMI) {
-			next_token (&val, (unsigned *)0, cfile);
+			skip_token(&val, (unsigned *)0, cfile);
 			if (cp)
 				status = class_reference (cp, class, MDL);
 			class_dereference (&class, MDL);
@@ -2198,21 +2198,21 @@ int parse_class_declaration (cp, cfile, group, type)
 	do {
 		token = peek_token (&val, (unsigned *)0, cfile);
 		if (token == RBRACE) {
-			token = next_token (&val, (unsigned *)0, cfile);
+			skip_token(&val, (unsigned *)0, cfile);
 			break;
 		} else if (token == END_OF_FILE) {
-			token = next_token (&val, (unsigned *)0, cfile);
+			skip_token(&val, (unsigned *)0, cfile);
 			parse_warn (cfile, "unexpected end of file");
 			break;
 		} else if (token == DYNAMIC) {
 			class->flags |= CLASS_DECL_DYNAMIC;
-			token = next_token (&val, (unsigned *)0, cfile);
+			skip_token(&val, (unsigned *)0, cfile);
 			if (!parse_semi (cfile))
 				break;
 			continue;
 		} else if (token == TOKEN_DELETED) {
 			class->flags |= CLASS_DECL_DELETED;
-			token = next_token (&val, (unsigned *)0, cfile);
+			skip_token(&val, (unsigned *)0, cfile);
 			if (!parse_semi (cfile))
 				break;
 			continue;
@@ -2223,11 +2223,11 @@ int parse_class_declaration (cp, cfile, group, type)
 				skip_to_semi (cfile);
 				break;
 			}
-			token = next_token (&val, (unsigned *)0, cfile);
+			skip_token(&val, (unsigned *)0, cfile);
 			token = peek_token (&val, (unsigned *)0, cfile);
 			if (token != IF)
 				goto submatch;
-			token = next_token (&val, (unsigned *)0, cfile);
+			skip_token(&val, (unsigned *)0, cfile);
 			if (matchedonce) {
 				parse_warn(cfile, "A class may only have "
 						  "one 'match if' clause.");
@@ -2252,7 +2252,7 @@ int parse_class_declaration (cp, cfile, group, type)
 				parse_semi (cfile);
 			}
 		} else if (token == SPAWN) {
-			token = next_token (&val, (unsigned *)0, cfile);
+			skip_token(&val, (unsigned *)0, cfile);
 			if (pc) {
 				parse_warn (cfile,
 					    "invalid spawn in subclass.");
@@ -2293,7 +2293,7 @@ int parse_class_declaration (cp, cfile, group, type)
 				parse_semi (cfile);
 			}
 		} else if (token == LEASE) {
-			next_token (&val, (unsigned *)0, cfile);
+			skip_token(&val, (unsigned *)0, cfile);
 			token = next_token (&val, (unsigned *)0, cfile);
 			if (token != LIMIT) {
 				parse_warn (cfile, "expecting \"limit\"");
@@ -2391,7 +2391,7 @@ void parse_shared_net_declaration (cfile, group)
 	/* Get the name of the shared network... */
 	token = peek_token (&val, (unsigned *)0, cfile);
 	if (token == STRING) {
-		token = next_token (&val, (unsigned *)0, cfile);
+		skip_token(&val, (unsigned *)0, cfile);
 
 		if (val [0] == 0) {
 			parse_warn (cfile, "zero-length shared network name");
@@ -2421,7 +2421,7 @@ void parse_shared_net_declaration (cfile, group)
 	do {
 		token = peek_token (&val, (unsigned *)0, cfile);
 		if (token == RBRACE) {
-			token = next_token (&val, (unsigned *)0, cfile);
+			skip_token(&val, (unsigned *)0, cfile);
 			if (!share -> subnets)
 				parse_warn (cfile,
 					    "empty shared-network decl");
@@ -2430,11 +2430,11 @@ void parse_shared_net_declaration (cfile, group)
 			shared_network_dereference (&share, MDL);
 			return;
 		} else if (token == END_OF_FILE) {
-			token = next_token (&val, (unsigned *)0, cfile);
+			skip_token(&val, (unsigned *)0, cfile);
 			parse_warn (cfile, "unexpected end of file");
 			break;
 		} else if (token == INTERFACE) {
-			token = next_token (&val, (unsigned *)0, cfile);
+			skip_token(&val, (unsigned *)0, cfile);
 			token = next_token (&val, (unsigned *)0, cfile);
 			new_shared_network_interface (cfile, share, val);
 			if (!parse_semi (cfile))
@@ -2470,14 +2470,14 @@ common_subnet_parsing(struct parse *cfile,
 	do {
 		token = peek_token(&val, NULL, cfile);
 		if (token == RBRACE) {
-			token = next_token(&val, NULL, cfile);
+			skip_token(&val, NULL, cfile);
 			break;
 		} else if (token == END_OF_FILE) {
-			token = next_token(&val, NULL, cfile);
+			skip_token(&val, NULL, cfile);
 			parse_warn (cfile, "unexpected end of file");
 			break;
 		} else if (token == INTERFACE) {
-			token = next_token(&val, NULL, cfile);
+			skip_token(&val, NULL, cfile);
 			token = next_token(&val, NULL, cfile);
 			new_shared_network_interface(cfile, share, val);
 			if (!parse_semi(cfile))
@@ -2738,7 +2738,7 @@ void parse_group_declaration (cfile, group)
 
 	token = peek_token(&val, NULL, cfile);
 	if (is_identifier (token) || token == STRING) {
-		next_token(&val, NULL, cfile);
+		skip_token(&val, NULL, cfile);
 		
 		name = dmalloc(strlen(val) + 1, MDL);
 		if (!name)
@@ -2754,22 +2754,22 @@ void parse_group_declaration (cfile, group)
 	do {
 		token = peek_token(&val, NULL, cfile);
 		if (token == RBRACE) {
-			token = next_token(&val, NULL, cfile);
+			skip_token(&val, NULL, cfile);
 			break;
 		} else if (token == END_OF_FILE) {
-			token = next_token(&val, NULL, cfile);
+			skip_token(&val, NULL, cfile);
 			parse_warn(cfile, "unexpected end of file");
 			break;
 		} else if (token == TOKEN_DELETED) {
-			token = next_token(&val, NULL, cfile);
+			skip_token(&val, NULL, cfile);
 			parse_semi(cfile);
 			deletedp = 1;
 		} else if (token == DYNAMIC) {
-			token = next_token(&val, NULL, cfile);
+			skip_token(&val, NULL, cfile);
 			parse_semi(cfile);
 			dynamicp = 1;
 		} else if (token == STATIC) {
-			token = next_token(&val, NULL, cfile);
+			skip_token(&val, NULL, cfile);
 			parse_semi(cfile);
 			staticp = 1;
 		}
@@ -2986,7 +2986,7 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 			token = peek_token (&val, (unsigned *)0, cfile);
 			if (token == STRING) {
 				unsigned char *tuid;
-				token = next_token (&val, &buflen, cfile);
+				skip_token(&val, &buflen, cfile);
 				if (buflen < sizeof lease -> uid_buf) {
 					tuid = lease -> uid_buf;
 					lease -> uid_max =
@@ -3446,7 +3446,7 @@ parse_binding_value(struct parse *cfile, struct binding_value *value)
 
 	token = peek_token(&val, NULL, cfile);
 	if (token == STRING) {
-		token = next_token(&val, &buflen, cfile);
+		skip_token(&val, &buflen, cfile);
 
 		value->type = binding_data;
 		value->value.data.len = buflen;
@@ -3482,7 +3482,7 @@ parse_binding_value(struct parse *cfile, struct binding_value *value)
 			dfree (s, MDL);
 		}
 	} else if (token == PERCENT) {
-		token = next_token(&val, NULL, cfile);
+		skip_token(&val, NULL, cfile);
 		token = next_token(&val, NULL, cfile);
 		if (token != NUMBER) {
 			parse_warn(cfile, "expecting decimal number.");
@@ -3538,7 +3538,7 @@ void parse_address_range (cfile, group, type, inpool, lpchain)
 
 	if ((token = peek_token (&val,
 				 (unsigned *)0, cfile)) == DYNAMIC_BOOTP) {
-		token = next_token (&val, (unsigned *)0, cfile);
+		skip_token(&val, (unsigned *)0, cfile);
 		dynamic = 1;
 	}
 
@@ -3792,7 +3792,7 @@ parse_address_range6(struct parse *cfile, struct group *group) {
 		/*
 		 * '/' means CIDR notation, so read the bits we want.
 		 */
-		next_token(NULL, NULL, cfile);
+		skip_token(NULL, NULL, cfile);
 		token = next_token(&val, NULL, cfile);
 		if (token != NUMBER) { 
 			parse_warn(cfile, "expecting number");
@@ -3820,7 +3820,7 @@ parse_address_range6(struct parse *cfile, struct group *group) {
 				parse_warn(cfile, "temporary mask too short");
 			if (bits == 128)
 				parse_warn(cfile, "temporary singleton?");
-			token = next_token(NULL, NULL, cfile);
+			skip_token(NULL, NULL, cfile);
 			type = D6O_IA_TA;
 		}
 
@@ -3832,7 +3832,7 @@ parse_address_range6(struct parse *cfile, struct group *group) {
 		 * temporary (RFC 4941)
 		 */
 		type = D6O_IA_TA;
-		next_token(NULL, NULL, cfile);
+		skip_token(NULL, NULL, cfile);
 		bits = 64;
 		if (!is_cidr_mask_valid(&lo, bits)) {
 			parse_warn(cfile, "network mask too short");
@@ -4282,7 +4282,7 @@ parse_ia_na_declaration(struct parse *cfile) {
 				 */
 				token = peek_token(&val, NULL, cfile);
 				if (token == SEMI) {
-					token = next_token(&val, NULL, cfile);
+					skip_token(&val, NULL, cfile);
 				} else {
 					parse_warn(cfile,
 						   "corrupt lease file; "
@@ -4310,7 +4310,7 @@ parse_ia_na_declaration(struct parse *cfile) {
 				 */
 				token = peek_token(&val, NULL, cfile);
 				if (token == SEMI) {
-					token = next_token(&val, NULL, cfile);
+					skip_token(&val, NULL, cfile);
 				} else {
 					parse_warn(cfile,
 						   "corrupt lease file; "
@@ -4663,7 +4663,7 @@ parse_ia_ta_declaration(struct parse *cfile) {
 				 */
 				token = peek_token(&val, NULL, cfile);
 				if (token == SEMI) {
-					token = next_token(&val, NULL, cfile);
+					skip_token(&val, NULL, cfile);
 				} else {
 					parse_warn(cfile,
 						   "corrupt lease file; "
@@ -4691,7 +4691,7 @@ parse_ia_ta_declaration(struct parse *cfile) {
 				 */
 				token = peek_token(&val, NULL, cfile);
 				if (token == SEMI) {
-					token = next_token(&val, NULL, cfile);
+					skip_token(&val, NULL, cfile);
 				} else {
 					parse_warn(cfile,
 						   "corrupt lease file; "
@@ -5045,7 +5045,7 @@ parse_ia_pd_declaration(struct parse *cfile) {
 				 */
 				token = peek_token(&val, NULL, cfile);
 				if (token == SEMI) {
-					token = next_token(&val, NULL, cfile);
+					skip_token(&val, NULL, cfile);
 				} else {
 					parse_warn(cfile,
 						   "corrupt lease file; "
@@ -5073,7 +5073,7 @@ parse_ia_pd_declaration(struct parse *cfile) {
 				 */
 				token = peek_token(&val, NULL, cfile);
 				if (token == SEMI) {
-					token = next_token(&val, NULL, cfile);
+					skip_token(&val, NULL, cfile);
 				} else {
 					parse_warn(cfile,
 						   "corrupt lease file; "
@@ -5333,7 +5333,7 @@ parse_server_duid_conf(struct parse *cfile) {
 	/*
 	 * Consume the SERVER_DUID token.
 	 */
-	token = next_token(NULL, NULL, cfile);
+	skip_token(NULL, NULL, cfile);
 
 	/*
 	 * Obtain the DUID type.

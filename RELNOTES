@@ -41,6 +41,9 @@ work on other platforms. Please report any problems and suggested fixes to
 
 			Changes since 4.2.5
 
+- Silence benign static analysis warnings.
+  [ISC-Bugs #33428]
+
 - Add check for 64-bit package for atf.
   [ISC-BUGS #32206]
 

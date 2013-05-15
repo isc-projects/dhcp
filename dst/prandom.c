@@ -2,7 +2,8 @@
 static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/prandom.c,v 1.8.6.2 2012/03/09 11:28:11 tomasz Exp $";
 #endif
 /*
- * Portions Copyright (c) 2007,2009,2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Portions Copyright (c) 2012,2013 by Internet Systems Consortium, Inc. ("ISC")
+ * Portions Copyright (c) 2007,2009 by Internet Systems Consortium, Inc. ("ISC")
  * Portions Copyright (c) 1995-1998 by Trusted Information Systems, Inc.
  *
  * Permission to use, copy modify, and distribute this software for any
@@ -335,7 +336,7 @@ do_ls(dst_work *work)
 	static int i = 0;
 	static unsigned long d_round = 0;
 	struct timeval tv;
-	int n = 0, tb_i = 0, out = 0;
+	int n = 0, out = 0;
 	unsigned dir_len;
 
 	char file_name[1024];
@@ -359,7 +360,6 @@ do_ls(dst_work *work)
 	EREPORT(("do_ls i %d filled %4d in_temp %4d\n",
 		 i-1, work->filled, work->in_temp));
 	memcpy(tmp_buff, &buf, sizeof(buf)); 
-	tb_i += sizeof(buf);
 
 
 	if ((dir = opendir(dirs[i-1])) == NULL)/* open it for read */
@@ -662,7 +662,6 @@ get_hmac_key(int step, int block)
 	if (n < size) {
 		temp = dst_s_quick_random((int) buff[n - 1]);
 		memcpy(&buff[n], &temp, sizeof(temp));
-		n += sizeof(temp);
 	}
 /* covert this into a HMAC key */
 	new_key = dst_buffer_to_key("", KEY_HMAC_MD5, 0, 0, buff, size);

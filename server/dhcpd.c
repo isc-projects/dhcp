@@ -834,17 +834,17 @@ main(int argc, char **argv) {
 
 	if (daemon) {
 		/* Become session leader and get pid... */
-		pid = setsid();
+		(void) setsid();
 
                 /* Close standard I/O descriptors. */
-                close(0);
-                close(1);
-                close(2);
+                (void) close(0);
+                (void) close(1);
+                (void) close(2);
 
                 /* Reopen them on /dev/null. */
-                open("/dev/null", O_RDWR);
-                open("/dev/null", O_RDWR);
-                open("/dev/null", O_RDWR);
+                (void) open("/dev/null", O_RDWR);
+                (void) open("/dev/null", O_RDWR);
+                (void) open("/dev/null", O_RDWR);
                 log_perror = 0; /* No sense logging to /dev/null. */
 
        		IGNORE_RET (chdir("/"));

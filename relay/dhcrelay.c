@@ -437,10 +437,8 @@ main(int argc, char **argv) {
 		log_info(copyright);
 		log_info(arr);
 		log_info(url);
-	} else {
-		quiet = 0;
+	} else 
 		log_perror = 0;
-	}
 
 	/* Set default port */
 	if (local_family == AF_INET) {
@@ -563,10 +561,10 @@ main(int argc, char **argv) {
 			}
 		}
 
-		close(0);
-		close(1);
-		close(2);
-		pid = setsid();
+		(void) close(0);
+		(void) close(1);
+		(void) close(2);
+		(void) setsid();
 
 		IGNORE_RET (chdir("/"));
 	}
@@ -1052,9 +1050,11 @@ add_relay_agent_options(struct interface_info *ip, struct dhcp_packet *packet,
 	if (end_pad != NULL)
 		sp = end_pad;
 
+#if 0
 	/* Remember where the end of the packet was after parsing
 	   it. */
 	op = sp;
+#endif
 
 	/* Sanity check.  Had better not ever happen. */
 	if ((ip->circuit_id_len > 255) ||(ip->circuit_id_len < 1))
@@ -1557,7 +1557,7 @@ process_down6(struct packet *packet) {
 		}
 	}
 	/* Why bother when there is no choice. */
-	if (!dp && !downstreams->next)
+	if (!dp && downstreams && !downstreams->next)
 		dp = downstreams;
 	if (!dp) {
 		log_info("Can't find the down interface.");
