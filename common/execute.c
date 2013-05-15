@@ -3,7 +3,7 @@
    Support for executable statements. */
 
 /*
- * Copyright (c) 2009,2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009,2013 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1998-2003 by Internet Software Consortium
  *
@@ -181,6 +181,8 @@ int execute_statements (result, packet, lease, client_state,
 #if defined (DEBUG_EXPRESSIONS)
 			log_debug ("exec: evaluate: %s",
 				   (status ? "succeeded" : "failed"));
+#else
+			POST(status);
 #endif
 			break;
 
@@ -272,6 +274,8 @@ int execute_statements (result, packet, lease, client_state,
 #if defined (DEBUG_EXPRESSIONS)
 			log_debug ("exec: return: %s",
 				   (status ? "succeeded" : "failed"));
+#else
+			POST(status);
 #endif
 			break;
 
@@ -331,20 +335,20 @@ int execute_statements (result, packet, lease, client_state,
 			if (!scope) {
 				log_error("set %s: no scope",
 					   r->data.set.name);
-				status = 0;
 				break;
 			}
 			if (!*scope) {
 			    if (!binding_scope_allocate(scope, MDL)) {
 				log_error("set %s: can't allocate scope",
 					  r->data.set.name);
-				status = 0;
 				break;
 			    }
 			}
 			binding = find_binding(*scope, r->data.set.name);
 #if defined (DEBUG_EXPRESSIONS)
 			log_debug("exec: set %s", r->data.set.name);
+#else
+			POST(status);
 #endif
 			if (binding == NULL) {
 				binding = dmalloc(sizeof(*binding), MDL);
@@ -395,14 +399,14 @@ int execute_statements (result, packet, lease, client_state,
 #if defined (DEBUG_EXPRESSIONS)
 			log_debug ("exec: set %s%s", r -> data.set.name,
 				   (binding && status ? "" : " (failed)"));
+#else
+			POST(status);
 #endif
 			break;
 
 		      case unset_statement:
-			if (!scope || !*scope) {
-				status = 0;
+			if (!scope || !*scope)
 				break;
-			}
 			binding = find_binding (*scope, r -> data.unset);
 			if (binding) {
 				if (binding -> value)
@@ -414,6 +418,8 @@ int execute_statements (result, packet, lease, client_state,
 #if defined (DEBUG_EXPRESSIONS)
 			log_debug ("exec: unset %s: %s", r -> data.unset,
 				   (status ? "found" : "not found"));
+#else
+			POST(status);
 #endif
 			break;
 
@@ -463,6 +469,8 @@ int execute_statements (result, packet, lease, client_state,
 #if defined (DEBUG_EXPRESSIONS)
 			log_debug("exec: let %s%s", e->data.let.name,
 				  (binding && status ? "" : "failed"));
+#else
+			POST(status);
 #endif
 			if (!e->data.let.statements) {
 			} else if (e->data.let.statements->op ==
@@ -758,11 +766,11 @@ void write_statements (file, statements, indent)
 			}
 			if (r -> data.on.evtypes & ON_COMMIT) {
 				fprintf (file, "%scommit", s);
-				s = "or";
+				s = " or ";
 			}
 			if (r -> data.on.evtypes & ON_RELEASE) {
 				fprintf (file, "%srelease", s);
-				s = "or";
+				/* s = " or "; */
 			}
 			if (r -> data.on.statements) {
 				fprintf (file, " {");
@@ -842,7 +850,7 @@ void write_statements (file, statements, indent)
 		      case eval_statement:
 			indent_spaces (file, indent);
 			fprintf (file, "eval ");
-			col = write_expression (file, r -> data.eval,
+			(void) write_expression (file, r -> data.eval,
 						indent + 5, indent + 5, 1);
 			fprintf (file, ";");
 			break;
@@ -916,11 +924,11 @@ void write_statements (file, statements, indent)
 			fprintf (file, "set ");
 			col = token_print_indent (file, indent + 4, indent + 4,
 						  "", "", r -> data.set.name);
-			col = token_print_indent (file, col, indent + 4,
+			(void) token_print_indent (file, col, indent + 4,
 						  " ", " ", "=");
 			col = write_expression (file, r -> data.set.expr,
 						indent + 3, indent + 3, 0);
-			col = token_print_indent (file, col, indent + 4,
+			(void) token_print_indent (file, col, indent + 4,
 						  " ", "", ";");
 			break;
 			
@@ -929,7 +937,7 @@ void write_statements (file, statements, indent)
 			fprintf (file, "unset ");
 			col = token_print_indent (file, indent + 6, indent + 6,
 						  "", "", r -> data.set.name);
-			col = token_print_indent (file, col, indent + 6,
+			(void) token_print_indent (file, col, indent + 6,
 						  " ", "", ";");
 			break;
 
@@ -940,29 +948,29 @@ void write_statements (file, statements, indent)
 						  "", "", "(");
 			switch (r -> data.log.priority) {
 			case log_priority_fatal:
-				col = token_print_indent
+				(void) token_print_indent
 					(file, col, indent + 4, "",
 					 " ", "fatal,");
 				break;
 			case log_priority_error:
-				col = token_print_indent
+				(void) token_print_indent
 					(file, col, indent + 4, "",
 					 " ", "error,");
 				break;
 			case log_priority_debug:
-				col = token_print_indent
+				(void) token_print_indent
 					(file, col, indent + 4, "",
 					 " ", "debug,");
 				break;
 			case log_priority_info:
-				col = token_print_indent
+				(void) token_print_indent
 					(file, col, indent + 4, "",
 					 " ", "info,");
 				break;
 			}
 			col = write_expression (file, r -> data.log.expr,
 						indent + 4, indent + 4, 0);
-			col = token_print_indent (file, col, indent + 4,
+			(void) token_print_indent (file, col, indent + 4,
 						  "", "", ");");
 
 			break;
@@ -979,7 +987,7 @@ void write_statements (file, statements, indent)
                         	col = token_print_indent(file, col, indent + 4, "", " ", ",");
                                 col = write_expression (file, expr->data.arg.val, col, indent + 4, 0);
                         }
-                        col = token_print_indent(file, col, indent + 4, "", "", ");");
+                        (void) token_print_indent(file, col, indent + 4, "", "", ");");
 #else /* !ENABLE_EXECUTE */
 		        log_fatal("Impossible case at %s:%d (ENABLE_EXECUTE "
                                   "is not defined).", MDL);

@@ -3,7 +3,7 @@
    Subroutines for dealing with connections. */
 
 /*
- * Copyright (c) 2009-2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2013 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
@@ -99,7 +99,6 @@ isc_result_t omapi_connect (omapi_object_t *c,
 		addrs -> addresses [0].addrlen = sizeof foo;
 		memcpy (addrs -> addresses [0].address, &foo, sizeof foo);
 		addrs -> addresses [0].port = port;
-		hix = 1;
 	}
 	status = omapi_connect_list (c, addrs, (omapi_addr_t *)0);
 	omapi_addr_list_dereference (&addrs, MDL);
@@ -355,6 +354,7 @@ static void trace_connect_input (trace_type_t *ttype,
 	s += sizeof remote.sin_addr;
 	memcpy (&local.sin_addr, s, sizeof local.sin_addr);
 	s += sizeof local.sin_addr;
+	POST(s);
 
 	connect_index = ntohl (connect_index);
 	listener_index = ntohl (listener_index);

@@ -3,7 +3,7 @@
    Definitions for dhcpd... */
 
 /*
- * Copyright (c) 2004-2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2013 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -1888,6 +1888,12 @@ enum dhcp_token next_raw_token(const char **rval, unsigned *rlen,
 			       struct parse *cfile);
 enum dhcp_token peek_raw_token(const char **rval, unsigned *rlen,
 			       struct parse *cfile);
+/*
+ * Use skip_token when we are skipping a token we have previously
+ * used peek_token on as we know what the result will be in this case.
+ */
+#define skip_token(a,b,c) ((void) next_token((a),(b),(c)))
+
 
 /* confpars.c */
 void parse_trace_setup (void);

@@ -3,7 +3,7 @@
    Routines for manipulating parse trees... */
 
 /*
- * Copyright (c) 2011-2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2011-2013 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2007,2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
@@ -587,7 +587,6 @@ int evaluate_expression (result, packet, lease, client_state,
 					strcpy (nb -> name, s -> string);
 				else {
 					dfree (nb, MDL);
-					nb = (struct binding *)0;
 					goto blb;
 				}
 			}

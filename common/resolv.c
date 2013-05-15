@@ -3,7 +3,8 @@
    Parser for /etc/resolv.conf file. */
 
 /*
- * Copyright (c) 2004-2007,2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009,2013 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -89,7 +90,6 @@ void read_resolv_conf (parse_time)
 						(struct domain_search_list *)0;
 					*dp = nd;
 					nd -> domain = dn;
-					dn = (char *)0;
 				}
 				nd -> rcdate = parse_time;
 				token = peek_token (&val,
@@ -100,7 +100,7 @@ void read_resolv_conf (parse_time)
 					    "junk after domain declaration");
 				skip_to_semi (cfile);
 			}
-			token = next_token (&val, (unsigned *)0, cfile);
+			skip_token(&val, (unsigned *)0, cfile);
 		} else if (token == NAMESERVER) {
 			struct name_server *ns, **sp;
 			struct iaddr iaddr;
@@ -136,7 +136,7 @@ void read_resolv_conf (parse_time)
 		} else
 			skip_to_semi (cfile); /* Ignore what we don't grok. */
 	} while (1);
-	token = next_token (&val, (unsigned *)0, cfile);
+	skip_token(&val, (unsigned *)0, cfile);
 
 	/* Lose servers that are no longer in /etc/resolv.conf. */
 	sl = (struct name_server *)0;
