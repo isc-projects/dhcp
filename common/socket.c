@@ -3,7 +3,7 @@
    BSD socket interface code... */
 
 /*
- * Copyright (c) 2004-2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2013 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -736,6 +736,7 @@ ssize_t send_packet6(struct interface_info *interface,
 	m.msg_control = control_buf;
 	m.msg_controllen = control_buf_len;
 	cmsg = CMSG_FIRSTHDR(&m);
+	INSIST(cmsg != NULL);
 	cmsg->cmsg_level = IPPROTO_IPV6;
 	cmsg->cmsg_type = IPV6_PKTINFO;
 	cmsg->cmsg_len = CMSG_LEN(sizeof(*pktinfo));

@@ -4,7 +4,7 @@
    way... */
 
 /*
- * Copyright (c) 2011 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2011,2013 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2007-2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004,2005 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
@@ -198,7 +198,6 @@ addr_match(addr, match)
 	if (addr->len != match->addr.len)
 		return 0;
 	
-	i = 0;
 	for (i = 0 ; i < addr->len ; i++) {
 		if ((addr->iabuf[i] & match->mask.iabuf[i]) !=
 							match->addr.iabuf[i])

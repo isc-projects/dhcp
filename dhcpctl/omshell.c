@@ -3,7 +3,7 @@
    Examine and modify omapi objects. */
 
 /*
- * Copyright (c) 2009-2011 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2011,2013 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2001-2003 by Internet Software Consortium
  *
@@ -455,8 +455,12 @@ main(int argc, char **argv) {
 			    break;
 		    }
 
-		    s1[0] = '\0';
-		    strncat (s1, val, sizeof(s1)-1);
+#ifdef HAVE_STRLCPY
+		    strlcpy (s1, val, sizeof(s1));
+#else
+		    s1[0] = 0;
+		    strncat (s1, val, sizeof(s1)-strlen(s1)-1);
+#endif
 		    
 		    token = next_token (&val, (unsigned *)0, cfile);
 		    if (token != EQUAL)
@@ -559,8 +563,12 @@ main(int argc, char **argv) {
 			    break;
 		    }
 
-		    s1[0] = '\0';
-		    strncat (s1, val, sizeof(s1)-1);
+#if HAVE_STRLCPY
+		    strlcpy (s1, val, sizeof(s1));
+#else
+		    s1[0] = 0;
+		    strncat (s1, val, sizeof(s1)-strlen(s1)-1);
+#endif
 		    
 		    token = next_token (&val, (unsigned *)0, cfile);
 		    if (token != END_OF_FILE && token != EOL)

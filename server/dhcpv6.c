@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2006-2013 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -2741,7 +2741,6 @@ find_client_address(struct reply_state *reply) {
 		send_addr.len = 16;
 		memcpy(send_addr.iabuf, reply->fixed.data, 16);
 
-		status = ISC_R_SUCCESS;
 		scope = &global_scope;
 		group = reply->subnet->group;
 		goto send_addr;
@@ -3745,7 +3744,6 @@ find_client_prefix(struct reply_state *reply) {
 		}
 		memcpy(&send_pref, &l->cidrnet, sizeof(send_pref));
 
-		status = ISC_R_SUCCESS;
 		scope = &global_scope;
 		goto send_pref;
 	}

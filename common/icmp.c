@@ -4,7 +4,7 @@
    responses. */
 
 /*
- * Copyright (c) 2011 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2011,2013 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004,2007,2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
@@ -289,17 +289,15 @@ void trace_icmp_input_stop (trace_type_t *ttype) { }
 
 void trace_icmp_output_input (trace_type_t *ttype, unsigned length, char *buf)
 {
-	struct icmp *icmp;
 	struct iaddr ia;
 
-	if (length != (sizeof (*icmp) + (sizeof ia))) {
+	if (length != (sizeof (struct icmp) + sizeof (ia))) {
 		log_error ("trace_icmp_output_input: data size mismatch %d:%d",
-			   length, (int)((sizeof (*icmp)) + (sizeof ia)));
+			   length, (int)(sizeof (struct icmp) + sizeof (ia)));
 		return;
 	}
 	ia.len = 4;
 	memcpy (ia.iabuf, buf, 4);
-	icmp = (struct icmp *)(buf + 1);
 
 	log_error ("trace_icmp_output_input: unsent ping to %s", piaddr (ia));
 }

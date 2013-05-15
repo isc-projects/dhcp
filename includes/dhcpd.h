@@ -3,7 +3,7 @@
    Definitions for dhcpd... */
 
 /*
- * Copyright (c) 2004-2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2013 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -1352,6 +1352,18 @@ typedef unsigned char option_mask [16];
 #define MAX_TIME 0x7fffffff
 #define MIN_TIME 0
 
+#ifndef INSIST
+#define INSIST assert
+#include <assert.h>
+#endif
+
+#ifndef POST
+/*
+ * Used to silence static analysers warnings about unused results.
+ */
+#define POST(x) ((void)(x))
+#endif
+
 						/* these are referenced */
 typedef struct hash_table ia_hash_t;
 typedef struct hash_table iasubopt_hash_t;
@@ -1698,6 +1710,12 @@ enum dhcp_token next_raw_token(const char **rval, unsigned *rlen,
 			       struct parse *cfile);
 enum dhcp_token peek_raw_token(const char **rval, unsigned *rlen,
 			       struct parse *cfile);
+/*
+ * Use skip_token when we are skipping a token we have previously
+ * used peek_token on as we know what the result will be in this case.
+ */
+#define skip_token(a,b,c) ((void) next_token((a),(b),(c)))
+
 
 /* confpars.c */
 void parse_trace_setup (void);

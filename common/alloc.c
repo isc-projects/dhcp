@@ -3,7 +3,7 @@
    Memory allocation... */
 
 /*
- * Copyright (c) 2009,2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009,2013 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
@@ -143,7 +143,6 @@ int option_chain_head_dereference (ptr, file, line)
 			option_cache_dereference ((struct option_cache **)
 						  (&car -> car), MDL);
 		dfree (car, MDL);
-		car = cdr;
 	}
 
 	dfree (option_chain_head, file, line);

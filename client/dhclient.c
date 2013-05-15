@@ -390,7 +390,6 @@ main(int argc, char **argv) {
 		long temp;
 		int e;
 
-		oldpid = 0;
 		if ((pidfd = fopen(path_dhclient_pid, "r")) != NULL) {
 			e = fscanf(pidfd, "%ld\n", &temp);
 			oldpid = (pid_t)temp;
@@ -3459,17 +3458,17 @@ void go_daemon ()
 	else if (pid)
 		exit (0);
 	/* Become session leader and get pid... */
-	pid = setsid ();
+	(void) setsid ();
 
 	/* Close standard I/O descriptors. */
-	close(0);
-	close(1);
-	close(2);
+	(void) close(0);
+	(void) close(1);
+	(void) close(2);
 
 	/* Reopen them on /dev/null. */
-	open("/dev/null", O_RDWR);
-	open("/dev/null", O_RDWR);
-	open("/dev/null", O_RDWR);
+	(void) open("/dev/null", O_RDWR);
+	(void) open("/dev/null", O_RDWR);
+	(void) open("/dev/null", O_RDWR);
 
 	write_client_pid_file ();
 
@@ -3892,6 +3891,7 @@ isc_result_t client_dns_update (struct client_state *client, int addp,
 	memset (&ddns_dhcid, 0, sizeof ddns_dhcid);
 
 	result = 0;
+	POST(result);
 	memset(&client_identifier, 0, sizeof(client_identifier));
 	if (client->active_lease != NULL) {
 		if (((oc =

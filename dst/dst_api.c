@@ -5,7 +5,7 @@ static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/dst_api.c,v 1.6.220.
 /*
  * Portions Copyright (c) 1995-1998 by Trusted Information Systems, Inc.
  * Portions Copyright (c) 2007,2009 by Internet Systems Consortium, Inc. ("ISC")
- * Portions Copyright (c) 2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Portions Copyright (c) 2012-2013 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -99,7 +99,6 @@ dst_init()
 	done_init = 1;
 
 	s = getenv("DSTKEYPATH");
-	len = 0;
 	if (s) {
 		struct stat statbuf;
 
@@ -366,7 +365,7 @@ dst_read_key(const char *in_keyname, const unsigned in_id,
 					pubkey->dk_alg) == 0)
 		dg_key = dst_free_key(dg_key);
 
-	pubkey = dst_free_key(pubkey);
+	(void) dst_free_key(pubkey);
 	return (dg_key);
 }
 

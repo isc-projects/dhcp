@@ -3,7 +3,7 @@
    Lexical scanner for dhcpd config file... */
 
 /*
- * Copyright (c) 2011-2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2011-2013 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
@@ -528,7 +528,6 @@ static enum dhcp_token read_string (cfile)
 				goto again;
 			      default:
 				cfile -> tokbuf [i] = c;
-				bs = 0;
 				break;
 			}
 			bs = 0;

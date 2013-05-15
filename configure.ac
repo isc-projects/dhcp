@@ -535,6 +535,8 @@ AC_SEARCH_LIBS(inet_aton, [socket nsl], ,
 # Check for a standalone regex library.
 AC_SEARCH_LIBS(regcomp, [regex])
 
+AC_CHECK_FUNCS(strlcat)
+
 # For HP/UX we need -lipv6 for if_nametoindex, perhaps others.
 AC_SEARCH_LIBS(if_nametoindex, [ipv6])
 
