@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004,2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004,2009,2013 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -88,7 +88,7 @@ ns_sign(u_char *msg, unsigned *msglen, unsigned msgsize, int error, void *k,
 	u_char *cp = msg + *msglen, *eob = msg + msgsize;
 	u_char *lenp;
 	u_char *name, *alg;
-	unsigned n;
+	int n;
 	time_t timesigned;
 
 	dst_init();
@@ -142,7 +142,7 @@ ns_sign(u_char *msg, unsigned *msglen, unsigned msgsize, int error, void *k,
 	if (key != NULL && error != ns_r_badsig && error != ns_r_badkey) {
 		void *ctx;
 		u_char buf[MAXDNAME], *cp2;
-		unsigned n;
+		int n;
 
 		dst_sign_data(SIG_MODE_INIT, key, &ctx, NULL, 0, NULL, 0);
 
@@ -190,8 +190,10 @@ ns_sign(u_char *msg, unsigned *msglen, unsigned msgsize, int error, void *k,
 			PUTSHORT(0, cp2);	/* Top 16 bits of time */
 			PUTLONG(timesigned, cp2);
 		}
-		dst_sign_data(SIG_MODE_UPDATE, key, &ctx,
-			      buf, (unsigned)(cp2-buf), NULL, 0);
+		n = dst_sign_data(SIG_MODE_UPDATE, key, &ctx,
+			          buf, (unsigned)(cp2-buf), NULL, 0);
+		if (n < 0)
+			return ISC_R_BADKEY;
 
 		n = dst_sign_data(SIG_MODE_FINAL, key, &ctx, NULL, 0,
 				  sig, *siglen);

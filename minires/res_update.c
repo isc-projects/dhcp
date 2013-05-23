@@ -3,7 +3,7 @@ static const char rcsid[] = "$Id: res_update.c,v 1.17 2009/11/24 02:06:57 sar Ex
 #endif /* not lint */
 
 /*
- * Copyright (c) 2004,2007,2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004,2007,2009,2013 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -180,7 +180,7 @@ res_nupdate(res_state statp, ns_updrec *rrecp_in) {
  undone:
 	/* Restore resolver's nameserver set. */
 	statp->nscount = nscopy(statp->nsaddr_list, nsaddrs, nscount);
-	nscount = 0;
+
  done:
 	if (zptr) {
 		if ((zptr->z_flags & ZG_F_ZONESECTADDED) != 0)

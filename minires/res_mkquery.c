@@ -52,7 +52,7 @@
  */
 
 /*
- * Portions Copyright (c) 2004,2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Portions Copyright (c) 2004,2009,2013 by Internet Systems Consortium, Inc. ("ISC")
  * Portions Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -139,8 +139,9 @@ res_nmkquery(res_state statp,
 	switch (op) {
 	case QUERY:	/*FALLTHROUGH*/
 	case NS_NOTIFY_OP:
-		if ((buflen -= QFIXEDSZ) < 0)
+		if (buflen < QFIXEDSZ )
 			return ISC_R_NOSPACE;
+		buflen -= QFIXEDSZ;
 		if ((n = dn_comp(dname, cp, buflen, dnptrs, lastdnptr)) < 0)
 			return ISC_R_NOSPACE;
 		cp += n;
@@ -155,6 +156,8 @@ res_nmkquery(res_state statp,
 		/*
 		 * Make an additional record for completion domain.
 		 */
+		if (buflen < RRFIXEDSZ)
+			return ISC_R_NOSPACE;
 		buflen -= RRFIXEDSZ;
 		n = dn_comp((const char *)data, cp, buflen, dnptrs, lastdnptr);
 		if (n < 0)

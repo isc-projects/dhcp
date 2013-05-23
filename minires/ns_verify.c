@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004,2007,2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004,2007,2009,2013 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -148,13 +148,13 @@ ns_verify(u_char *msg, unsigned *msglen, void *k,
 	char name[MAXDNAME], alg[MAXDNAME];
 	u_char *recstart, *rdatastart;
 	u_char *sigstart, *otherstart;
-	unsigned n;
+	int n;
 	int error;
 	u_int16_t type, length;
 	u_int16_t fudge, sigfieldlen, id, otherfieldlen;
 
 	dst_init();
-	if (msg == NULL || msglen == NULL || *msglen < 0)
+	if (msg == NULL || msglen == NULL)
 		return ISC_R_INVALIDARG;
 
 	eom = msg + *msglen;

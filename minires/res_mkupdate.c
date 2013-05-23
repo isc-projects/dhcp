@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004,2007-2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004,2007-2009,2013 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -108,7 +108,7 @@ res_nmkupdate(res_state statp,
 	u_int16_t rtype, rclass;
 	u_int32_t n1, rttl;
 	u_char *dnptrs[20], **dpp, **lastdnptr;
-	unsigned certlen;
+	int certlen;
 	int keylen;
 	unsigned buflen = *blp;
 	u_char *buf = (unsigned char *)bp;
