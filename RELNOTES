@@ -60,7 +60,7 @@ work on other platforms. Please report any problems and suggested fixes to
   [ISC-Bugs #32309]
 
 - Address static analysis warnings.
-  [ISC-Bugs #33510]
+  [ISC-Bugs #33510] [ISC-Bugs #33511]
 
 - Silence benign static analysis warnings.
   [ISC-Bugs #33428]
