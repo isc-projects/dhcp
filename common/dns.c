@@ -3,7 +3,7 @@
    Domain Name Service subroutines. */
 
 /*
- * Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2010,2013 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2001-2003 by Internet Software Consortium
  *
@@ -837,7 +837,7 @@ ddns_remove_fwd(struct data_string *ddns_fwd_name,
 		struct data_string *ddns_dhcid) {
 	ns_updque updqueue;
 	ns_updrec *updrec;
-	isc_result_t result = SERVFAIL;
+	isc_result_t result = ISC_R_SERVFAIL;
 	char ddns_address[
 		sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
 	int ddns_address_type;

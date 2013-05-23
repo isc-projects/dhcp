@@ -3,7 +3,7 @@ static const char rcsid[] = "$Id: res_findzonecut.c,v 1.16.786.3.6.2 2012/03/09 
 #endif /* not lint */
 
 /*
- * Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2010,2013 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
@@ -295,7 +295,7 @@ get_soa(res_state statp, const char *dname, ns_class class,
 			const u_char *rdata;
 			ns_rr rr;
 
-			rcode = ns_parserr(&msg, sect, i, &rr) < 0;
+			rcode = ns_parserr(&msg, sect, i, &rr);
 			if (rcode != ISC_R_SUCCESS) {
 				DPRINTF(("get_soa: ns_parserr(%s, %d) failed",
 					 p_section(sect, ns_o_query), i));
@@ -589,7 +589,7 @@ do_query(res_state statp, const char *dname, ns_class class, ns_type qtype,
 		DPRINTF(("do_query: res_nsend returned 0"));
 		return ISC_R_NOTFOUND;
 	}
-	if (ns_initparse((u_char *)resp, n, msg) < 0) {
+	if (ns_initparse((u_char *)resp, n, msg) != ISC_R_SUCCESS) {
 		DPRINTF(("do_query: ns_initparse failed"));
 		return ISC_R_NOSPACE;
 	}
