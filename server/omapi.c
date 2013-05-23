@@ -3,7 +3,7 @@
    OMAPI object interfaces for the DHCP server. */
 
 /*
- * Copyright (c) 2004-2009,2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2009,2012,2013 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -2418,7 +2418,6 @@ isc_result_t binding_scope_set_value (struct binding_scope *scope, int createp,
 		}
 		memset (bp, 0, sizeof *bp);
 		bp -> name = nname;
-		nname = (char *)0;
 		bp -> next = scope -> bindings;
 		scope -> bindings = bp;
 	} else {
@@ -2534,6 +2533,8 @@ isc_result_t binding_scope_stuff_values (omapi_object_t *c,
 		    status = (omapi_connection_put_uint32
 			      (c,
 			       ((u_int32_t)(bp -> value -> value.boolean))));
+		    if (status != ISC_R_SUCCESS)
+			    return status;
 		    break;
 
 		  case binding_data:
@@ -2558,6 +2559,8 @@ isc_result_t binding_scope_stuff_values (omapi_object_t *c,
 		    status = (omapi_connection_put_uint32
 			      (c, ((u_int32_t)
 				   (bp -> value -> value.intval))));
+		    if (status != ISC_R_SUCCESS)
+			    return status;
 		    break;
 
 
