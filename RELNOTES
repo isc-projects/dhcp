@@ -61,6 +61,11 @@ work on other platforms. Please report any problems and suggested fixes to
   a compiler warning on Solaris using GCC.
   [ISC-Bugs #33032]
 
+- Add a check for too much whitespace in a config or lease file.
+  Thanks to Paolo Pellegrino for finding the issue and a suggestion
+  for the patch.
+  [ISC-Bugs #33351]
+
 			Changes since 4.2.5rc1
 
 - None

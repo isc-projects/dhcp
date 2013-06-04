@@ -470,6 +470,16 @@ read_whitespace(int c, struct parse *cfile) {
 	 */
 	ofs = 0;
 	do {
+		if (ofs >= sizeof(cfile->tokbuf)) {
+			/*
+			 * As the file includes a huge amount of whitespace,
+			 * it's probably broken.
+			 * Print out a warning and bail out.
+			 */
+			parse_warn(cfile,
+				   "whitespace too long, buffer overflow.");
+			log_fatal("Exiting");
+		}
 		cfile->tokbuf[ofs++] = c;
 		c = get_char(cfile);
 	} while (!((c == '\n') && cfile->eol_token) && 
