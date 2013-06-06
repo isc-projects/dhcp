@@ -87,6 +87,11 @@ work on other platforms. Please report any problems and suggested fixes to
   Thanks to Paolo Pellegrino for finding the issue and a suggestion
   for the patch.
   [ISC-Bugs #33351]
+
+- Fix several problems with using OMAPI to manipulate class and subclass
+  objects.
+  [ISC-Bugs #27452]
+
 			Changes since 4.2.4
 
 - Correct code to calculate timing values in client to compare

@@ -1995,13 +1995,13 @@ int parse_class_declaration (cp, cfile, group, type)
 {
 	const char *val;
 	enum dhcp_token token;
-	struct class *class = (struct class *)0, *pc = (struct class *)0;
+	struct class *class = NULL, *pc = NULL;
 	int declaration = 0;
 	int lose = 0;
 	struct data_string data;
 	char *name;
 	const char *tname;
-	struct executable_statement *stmt = (struct executable_statement *)0;
+	struct executable_statement *stmt = NULL;
 	int new = 1;
 	isc_result_t status = ISC_R_FAILURE;
 	int matchedonce = 0;
@@ -2014,7 +2014,7 @@ int parse_class_declaration (cp, cfile, group, type)
 			  "for DHCPv6.");
 	}
 
-	token = next_token (&val, (unsigned *)0, cfile);
+	token = next_token (&val, NULL, cfile);
 	if (token != STRING) {
 		parse_warn (cfile, "Expecting class name");
 		skip_to_semi (cfile);
@@ -2047,7 +2047,7 @@ int parse_class_declaration (cp, cfile, group, type)
 	   the vendor class or user class. */
 	if ((type == CLASS_TYPE_VENDOR) || (type == CLASS_TYPE_USER)) {
 		data.len = strlen (val);
-		data.buffer = (struct buffer *)0;
+		data.buffer = NULL;
 		if (!buffer_allocate (&data.buffer, data.len + 1, MDL))
 			log_fatal ("no memory for class name.");
 		data.data = &data.buffer -> data [0];
@@ -2057,7 +2057,7 @@ int parse_class_declaration (cp, cfile, group, type)
 	} else if (type == CLASS_TYPE_CLASS) {
 		tname = val;
 	} else {
-		tname = (const char *)0;
+		tname = NULL;
 	}
 
 	if (tname) {
@@ -2066,14 +2066,15 @@ int parse_class_declaration (cp, cfile, group, type)
 			log_fatal ("No memory for class name %s.", tname);
 		strcpy (name, val);
 	} else
-		name = (char *)0;
+		name = NULL;
 
 	/* If this is a straight subclass, parse the hash string. */
 	if (type == CLASS_TYPE_SUBCLASS) {
-		token = peek_token (&val, (unsigned *)0, cfile);
+		token = peek_token (&val, NULL, cfile);
 		if (token == STRING) {
 			skip_token(&val, &data.len, cfile);
-			data.buffer = (struct buffer *)0;
+			data.buffer = NULL;
+
 			if (!buffer_allocate (&data.buffer,
 					      data.len + 1, MDL)) {
 				if (pc)
@@ -2109,7 +2110,11 @@ int parse_class_declaration (cp, cfile, group, type)
 	/* If we didn't find an existing class, allocate a new one. */
 	if (!class) {
 		/* Allocate the class structure... */
-		status = class_allocate (&class, MDL);
+		if (type == CLASS_TYPE_SUBCLASS) {
+			status = subclass_allocate (&class, MDL);
+		} else {
+			status = class_allocate (&class, MDL);
+		}
 		if (pc) {
 			group_reference (&class -> group, pc -> group, MDL);
 			class_reference (&class -> superclass, pc, MDL);
@@ -2143,7 +2148,7 @@ int parse_class_declaration (cp, cfile, group, type)
 		   statement that causes the vendor or user class ID to
 		   be sent back in the reply. */
 		if (type == CLASS_TYPE_VENDOR || type == CLASS_TYPE_USER) {
-			stmt = (struct executable_statement *)0;
+			stmt = NULL;
 			if (!executable_statement_allocate (&stmt, MDL))
 				log_fatal ("no memory for class statement.");
 			stmt -> op = supersede_option_statement;
@@ -2172,9 +2177,10 @@ int parse_class_declaration (cp, cfile, group, type)
 
 	/* Spawned classes don't have to have their own settings. */
 	if (class -> superclass) {
-		token = peek_token (&val, (unsigned *)0, cfile);
+		token = peek_token (&val, NULL, cfile);
 		if (token == SEMI) {
-			skip_token(&val, (unsigned *)0, cfile);
+			skip_token(&val, NULL, cfile);
+
 			if (cp)
 				status = class_reference (cp, class, MDL);
 			class_dereference (&class, MDL);
@@ -2196,23 +2202,23 @@ int parse_class_declaration (cp, cfile, group, type)
 	}
 
 	do {
-		token = peek_token (&val, (unsigned *)0, cfile);
+		token = peek_token (&val, NULL, cfile);
 		if (token == RBRACE) {
-			skip_token(&val, (unsigned *)0, cfile);
+			skip_token(&val, NULL, cfile);
 			break;
 		} else if (token == END_OF_FILE) {
-			skip_token(&val, (unsigned *)0, cfile);
+			skip_token(&val, NULL, cfile);
 			parse_warn (cfile, "unexpected end of file");
 			break;
 		} else if (token == DYNAMIC) {
 			class->flags |= CLASS_DECL_DYNAMIC;
-			skip_token(&val, (unsigned *)0, cfile);
+			skip_token(&val, NULL, cfile);
 			if (!parse_semi (cfile))
 				break;
 			continue;
 		} else if (token == TOKEN_DELETED) {
 			class->flags |= CLASS_DECL_DELETED;
-			skip_token(&val, (unsigned *)0, cfile);
+			skip_token(&val, NULL, cfile);
 			if (!parse_semi (cfile))
 				break;
 			continue;
@@ -2223,11 +2229,11 @@ int parse_class_declaration (cp, cfile, group, type)
 				skip_to_semi (cfile);
 				break;
 			}
-			skip_token(&val, (unsigned *)0, cfile);
-			token = peek_token (&val, (unsigned *)0, cfile);
+			skip_token(&val, NULL, cfile);
+			token = peek_token (&val, NULL, cfile);
 			if (token != IF)
 				goto submatch;
-			skip_token(&val, (unsigned *)0, cfile);
+			skip_token(&val, NULL, cfile);
 			if (matchedonce) {
 				parse_warn(cfile, "A class may only have "
 						  "one 'match if' clause.");
@@ -2252,7 +2258,7 @@ int parse_class_declaration (cp, cfile, group, type)
 				parse_semi (cfile);
 			}
 		} else if (token == SPAWN) {
-			skip_token(&val, (unsigned *)0, cfile);
+			skip_token(&val, NULL, cfile);
 			if (pc) {
 				parse_warn (cfile,
 					    "invalid spawn in subclass.");
@@ -2260,7 +2266,7 @@ int parse_class_declaration (cp, cfile, group, type)
 				break;
 			}
 			class -> spawning = 1;
-			token = next_token (&val, (unsigned *)0, cfile);
+			token = next_token (&val, NULL, cfile);
 			if (token != WITH) {
 				parse_warn (cfile,
 					    "expecting with after spawn");
@@ -2293,15 +2299,15 @@ int parse_class_declaration (cp, cfile, group, type)
 				parse_semi (cfile);
 			}
 		} else if (token == LEASE) {
-			skip_token(&val, (unsigned *)0, cfile);
-			token = next_token (&val, (unsigned *)0, cfile);
+			skip_token(&val, NULL, cfile);
+			token = next_token (&val, NULL, cfile);
 			if (token != LIMIT) {
 				parse_warn (cfile, "expecting \"limit\"");
 				if (token != SEMI)
 					skip_to_semi (cfile);
 				break;
 			}
-			token = next_token (&val, (unsigned *)0, cfile);
+			token = next_token (&val, NULL, cfile);
 			if (token != NUMBER) {
 				parse_warn (cfile, "expecting a number");
 				if (token != SEMI)
@@ -2323,8 +2329,7 @@ int parse_class_declaration (cp, cfile, group, type)
 			parse_semi (cfile);
 		} else {
 			declaration = parse_statement (cfile, class -> group,
-						       CLASS_DECL,
-						       (struct host_decl *)0,
+						       CLASS_DECL, NULL,
 						       declaration);
 		}
 	} while (1);

@@ -3,7 +3,7 @@
    Server-specific in-memory database support. */
 
 /*
- * Copyright (c) 2011-2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2011-2013 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
@@ -443,9 +443,18 @@ isc_result_t delete_class (cp, commit)
 			return ISC_R_IOERROR;
 	}
 	
-	unlink_class(&cp);		/* remove from collections */
+	/*
+	 * If this is a subclass remove it from the class's hash table
+	 */
+	if (cp->superclass) {
+		class_hash_delete(cp->superclass->hash, 
+				  (const char *)cp->hash_string.data,
+				  cp->hash_string.len,
+				  MDL);
+	}
 
-	class_dereference(&cp, MDL);
+	/* remove from collections */
+	unlink_class(&cp);
 
 	return ISC_R_SUCCESS;
 }

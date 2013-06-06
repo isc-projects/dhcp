@@ -3,7 +3,7 @@
    Buffer access functions for the object management protocol... */
 
 /*
- * Copyright (c) 2009,2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009,2012-2013 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004,2005,2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
@@ -720,3 +720,22 @@ isc_result_t omapi_connection_put_handle (omapi_object_t *c, omapi_object_t *h)
 		return status;
 	return omapi_connection_put_uint32 (c, handle);
 }
+
+isc_result_t omapi_connection_put_named_uint32 (omapi_object_t *c,
+						const char *name,
+						u_int32_t value)
+{
+	isc_result_t status;
+
+	status = omapi_connection_put_name(c, name);
+	if (status != ISC_R_SUCCESS)
+		return (status);
+
+	status = omapi_connection_put_uint32(c, sizeof(u_int32_t));
+	if (status != ISC_R_SUCCESS)
+		return (status);
+
+	status = omapi_connection_put_uint32(c, value);
+	return (status);
+}
+
