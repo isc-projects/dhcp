@@ -28,6 +28,8 @@
  * by Brian Murrell.
  */
 
+#include "config.h"
+
 #include <time.h>
 #include <sys/time.h>
 #include <stdio.h>
