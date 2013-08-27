@@ -395,8 +395,16 @@ main(int argc, char **argv) {
 			oldpid = (pid_t)temp;
 
 			if (e != 0 && e != EOF) {
-				if (oldpid)
-					kill(oldpid, SIGTERM);
+				if (oldpid && (kill(oldpid, SIGTERM) == 0)) {
+					/*
+					 * wait for the old process to
+					 * cleanly terminate.
+					 * Note kill() with sig=0 could
+					 * detect termination but only
+					 * the parent can be signaled...
+					 */
+					sleep(1);
+				}
 			}
 			fclose(pidfd);
 		}
