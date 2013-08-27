@@ -3,7 +3,7 @@
    DHCP Protocol engine. */
 
 /*
- * Copyright (c) 2004-2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2013 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -1561,7 +1561,8 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 	TIME remaining_time;
 	struct iaddr cip;
 #if defined(DELAYED_ACK)
-	isc_boolean_t enqueue = ISC_TRUE;
+	/* By default we don't do the enqueue */
+	isc_boolean_t enqueue = ISC_FALSE;
 #endif
 	int use_old_lease = 0;
 
@@ -2541,7 +2542,14 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 			data_string_forget(&d1, MDL);
 		}
 
-		if ((thresh > 0) && (offer == DHCPACK) &&
+		/*
+		 * We check on ddns_cb to see if the ddns code has
+		 * updated the lt structure.  We could probably simply
+		 * copy the ddns_cb pointer in that case but lets be
+		 * simple and safe and update the entire lease.
+		 */
+		if ((lt->ddns_cb == NULL) &&
+		    (thresh > 0) && (offer == DHCPACK) &&
 		    (lease->binding_state == FTS_ACTIVE)) {
 			int limit;
 			int prev_lease = lease->ends - lease->starts;
@@ -2569,18 +2577,16 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		 * the same lease to another client later, and that would be
 		 * a conflict.
 		 */
-		if (!use_old_lease && !supersede_lease(lease, lt, commit,
+		if ((use_old_lease == 0) &&
+		    !supersede_lease(lease, lt, commit,
 				     offer == DHCPACK, offer == DHCPACK)) {
 #else /* defined(DELAYED_ACK) */
 		/*
 		 * If there already isn't a need for a lease commit, and we
 		 * can just answer right away, set a flag to indicate this.
 		 */
-		if (commit && !(lease->flags & STATIC_LEASE) &&
-		    (!offer || (offer == DHCPACK)))
+		if (commit)
 			enqueue = ISC_TRUE;
-		else
-			enqueue = ISC_FALSE;
 
 		/* Install the new information on 'lt' onto the lease at
 		 * 'lease'.  We will not 'commit' this information to disk
@@ -2591,8 +2597,9 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		 * BOOTREPLY either); we may give the same lease out to a
 		 * different client, and that would be a conflict.
 		 */
-		if (!supersede_lease(lease, lt, 0, !offer || offer == DHCPACK,
-				     0)) {
+		if ((use_old_lease == 0) &&
+		    !supersede_lease(lease, lt, 0,
+				     !offer || offer == DHCPACK, 0)) {
 #endif
 			log_info ("%s: database update failed", msg);
 			free_lease_state (state, MDL);

@@ -47,6 +47,10 @@ work on other platforms. Please report any problems and suggested fixes to
   than extend or renew the lease.  This absolves the server of needing
   to perform an fsync() operation on the lease database before reply,
   which improves performance. [ISC-Bugs #22228]
+  Update this patch to support asynchronous DDNS.  If the server is
+  attempting to do DDNS on a lease it should be udpated and written to
+  disk even if that wouldn't be necessary due to the thresholding
+  [ISC-Bugs #26311]
 
 - The 'no available billing' log line now also logs the name of the last
   matching billing class tried before failing to provide a billing.
