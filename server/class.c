@@ -3,7 +3,7 @@
    Handling for client classes. */
 
 /*
- * Copyright (c) 2009,2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009,2012-2013 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1998-2003 by Internet Software Consortium
  *
@@ -69,10 +69,8 @@ void classification_setup ()
 void classify_client (packet)
 	struct packet *packet;
 {
-	execute_statements ((struct binding_value **)0, packet,
-			    (struct lease *)0, (struct client_state *)0,
-			    packet -> options, (struct option_state *)0,
-			    &global_scope, default_classification_rules);
+	execute_statements (NULL, packet, NULL, NULL, packet->options, NULL,
+			    &global_scope, default_classification_rules, NULL);
 }
 
 int check_collection (packet, lease, collection)

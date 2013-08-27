@@ -81,6 +81,9 @@ struct reply_state {
 	/* Index into the data field that has been consumed. */
 	unsigned cursor;
 
+	/* Space for the on commit statements for a fixed host */
+	struct on_star on_star;
+
 	union reply_buffer {
 		unsigned char data[65536];
 		struct dhcpv6_packet reply;
@@ -230,7 +233,8 @@ set_server_duid_from_option(void) {
 	}
 
 	execute_statements_in_scope(NULL, NULL, NULL, NULL, NULL,
-				    opt_state, &global_scope, root_group, NULL);
+				    opt_state, &global_scope, root_group,
+				    NULL, NULL);
 
 	oc = lookup_option(&dhcpv6_universe, opt_state, D6O_SERVERID);
 	if (oc == NULL) {
@@ -820,7 +824,7 @@ start_reply(struct packet *packet,
 	}
 	execute_statements_in_scope(NULL, packet, NULL, NULL,
 				    packet->options, *opt_state,
-				    &global_scope, root_group, NULL);
+				    &global_scope, root_group, NULL, NULL);
 
 	/*
 	 * A small bit of special handling for Solicit messages.
@@ -1405,16 +1409,18 @@ lease_to_client(struct data_string *reply_ret,
 		execute_statements_in_scope(NULL, reply.packet, NULL, NULL,
 					    reply.packet->options,
 					    reply.opt_state, &global_scope,
-					    reply.shared->group, root_group);
+					    reply.shared->group, root_group,
+					    NULL);
 
 		/* Bring in any configuration from a host record. */
 		if (reply.host != NULL)
-			execute_statements_in_scope(NULL, reply.packet, NULL,
-						    NULL, reply.packet->options,
+			execute_statements_in_scope(NULL, reply.packet,
+						    NULL, NULL,
+						    reply.packet->options,
 						    reply.opt_state,
 						    &global_scope,
 						    reply.host->group,
-						    reply.shared->group);
+						    reply.shared->group, NULL);
 	}
 
 	/*
@@ -1841,6 +1847,19 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 			renew_lease6(tmp->ipv6_pool, tmp);
 			schedule_lease_timeout(tmp->ipv6_pool);
 
+			/* If we have anything to do on commit do it now */
+			if (tmp->on_star.on_commit != NULL) {
+				execute_statements(NULL, reply->packet,
+						   NULL, NULL, 
+						   reply->packet->options,
+						   reply->opt_state,
+						   &reply->lease->scope,
+						   tmp->on_star.on_commit,
+						   &tmp->on_star);
+				executable_statement_dereference
+					(&tmp->on_star.on_commit, MDL);
+			}
+
 #if defined (NSUPDATE)
 			/*
 			 * Perform ddns updates.
@@ -1878,6 +1897,20 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 		write_ia(reply->ia);
 	}
 
+	/*
+	 * If this would be a hard binding for a static lease
+	 * run any commit statements that we have
+	 */
+	if ((status != ISC_R_CANCELED) && reply->static_lease &&
+	    (reply->buf.reply.msg_type == DHCPV6_REPLY) &&
+	    (reply->on_star.on_commit != NULL)) {
+		execute_statements(NULL, reply->packet, NULL, NULL, 
+				   reply->packet->options, reply->opt_state,
+				   NULL, reply->on_star.on_commit, NULL);
+		executable_statement_dereference
+			(&reply->on_star.on_commit, MDL);
+	}
+
       cleanup:
 	if (packet_ia != NULL)
 		option_state_dereference(&packet_ia, MDL);
@@ -1897,6 +1930,12 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 		data_string_forget(&reply->fixed, MDL);
 	if (reply->subnet != NULL)
 		subnet_dereference(&reply->subnet, MDL);
+	if (reply->on_star.on_expiry != NULL)
+		executable_statement_dereference
+			(&reply->on_star.on_expiry, MDL);
+	if (reply->on_star.on_release != NULL)
+		executable_statement_dereference
+			(&reply->on_star.on_release, MDL);
 
 	/*
 	 * ISC_R_CANCELED is a status code used by the addr processing to
@@ -2499,6 +2538,19 @@ reply_process_ia_ta(struct reply_state *reply, struct option_cache *ia) {
 			renew_lease6(tmp->ipv6_pool, tmp);
 			schedule_lease_timeout(tmp->ipv6_pool);
 
+			/* If we have anything to do on commit do it now */
+			if (tmp->on_star.on_commit != NULL) {
+				execute_statements(NULL, reply->packet,
+						   NULL, NULL, 
+						   reply->packet->options,
+						   reply->opt_state,
+						   &reply->lease->scope,
+						   tmp->on_star.on_commit,
+						   &tmp->on_star);
+				executable_statement_dereference
+					(&tmp->on_star.on_commit, MDL);
+			}
+
 #if defined (NSUPDATE)
 			/*
 			 * Perform ddns updates.
@@ -2832,9 +2884,37 @@ reply_process_is_addressed(struct reply_state *reply,
 	isc_result_t status = ISC_R_SUCCESS;
 	struct data_string data;
 	struct option_cache *oc;
+	struct option_state *tmp_options = NULL;
+	struct on_star *on_star;
 
 	/* Initialize values we will cleanup. */
 	memset(&data, 0, sizeof(data));
+
+	/*
+	 * Find the proper on_star block to use.  We use the
+	 * one in the lease if we have a lease or the one in
+	 * the reply if we don't have a lease because this is
+	 * a static instance
+	 */
+	if (reply->lease) {
+		on_star = &reply->lease->on_star;
+	} else {
+		on_star = &reply->on_star;
+	}
+
+	/*
+	 * Bring in the root configuration.  We only do this to bring
+	 * in the on * statements, as we didn't have the lease available
+	 * we did it the first time.
+	 */
+	option_state_allocate(&tmp_options, MDL);
+	execute_statements_in_scope(NULL, reply->packet, NULL, NULL,
+				    reply->packet->options, tmp_options,
+				    &global_scope, root_group, NULL,
+				    on_star);
+	if (tmp_options != NULL) {
+		option_state_dereference(&tmp_options, MDL);
+	}
 
 	/*
 	 * Bring configured options into the root packet level cache - start
@@ -2843,7 +2923,7 @@ reply_process_is_addressed(struct reply_state *reply,
 	 */
 	execute_statements_in_scope(NULL, reply->packet, NULL, NULL,
 				    reply->packet->options, reply->opt_state,
-				    scope, group, root_group);
+				    scope, group, root_group, on_star);
 
 	/*
 	 * If there is a host record, over-ride with values configured there,
@@ -2854,7 +2934,8 @@ reply_process_is_addressed(struct reply_state *reply,
 		execute_statements_in_scope(NULL, reply->packet, NULL, NULL,
 					    reply->packet->options,
 					    reply->opt_state, scope,
-					    reply->host->group, group);
+					    reply->host->group, group,
+					    on_star);
 
 	/* Determine valid lifetime. */
 	if (reply->client_valid == 0)
@@ -2960,7 +3041,7 @@ reply_process_is_addressed(struct reply_state *reply,
 	/* Bring a copy of the relevant options into the IA scope. */
 	execute_statements_in_scope(NULL, reply->packet, NULL, NULL,
 				    reply->packet->options, reply->reply_ia,
-				    scope, group, root_group);
+				    scope, group, root_group, NULL);
 
 	/*
 	 * And bring in host record configuration, if any, but not to overlap
@@ -2970,7 +3051,7 @@ reply_process_is_addressed(struct reply_state *reply,
 		execute_statements_in_scope(NULL, reply->packet, NULL, NULL,
 					    reply->packet->options,
 					    reply->reply_ia, scope,
-					    reply->host->group, group);
+					    reply->host->group, group, NULL);
 
       cleanup:
 	if (data.data != NULL)
@@ -3368,6 +3449,19 @@ reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia) {
 			/* Commit 'hard' bindings. */
 			renew_lease6(tmp->ipv6_pool, tmp);
 			schedule_lease_timeout(tmp->ipv6_pool);
+
+			/* If we have anything to do on commit do it now */
+			if (tmp->on_star.on_commit != NULL) {
+				execute_statements(NULL, reply->packet,
+						   NULL, NULL, 
+						   reply->packet->options,
+						   reply->opt_state,
+						   &reply->lease->scope,
+						   tmp->on_star.on_commit,
+						   &tmp->on_star);
+				executable_statement_dereference
+					(&tmp->on_star.on_commit, MDL);
+			}
 		}
 
 		/* Remove any old ia from the hash. */
@@ -3388,6 +3482,20 @@ reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia) {
 		write_ia(reply->ia);
 	}
 
+	/*
+	 * If this would be a hard binding for a static lease
+	 * run any commit statements that we have
+	 */
+	if ((status != ISC_R_CANCELED) && reply->static_prefixes != 0 &&
+	    (reply->buf.reply.msg_type == DHCPV6_REPLY) &&
+	    (reply->on_star.on_commit != NULL)) {
+		execute_statements(NULL, reply->packet, NULL, NULL, 
+				   reply->packet->options, reply->opt_state,
+				   NULL, reply->on_star.on_commit, NULL);
+		executable_statement_dereference
+			(&reply->on_star.on_commit, MDL);
+	}
+
       cleanup:
 	if (packet_ia != NULL)
 		option_state_dereference(&packet_ia, MDL);
@@ -3403,6 +3511,12 @@ reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia) {
 		ia_dereference(&reply->old_ia, MDL);
 	if (reply->lease != NULL)
 		iasubopt_dereference(&reply->lease, MDL);
+	if (reply->on_star.on_expiry != NULL)
+		executable_statement_dereference
+			(&reply->on_star.on_expiry, MDL);
+	if (reply->on_star.on_release != NULL)
+		executable_statement_dereference
+			(&reply->on_star.on_release, MDL);
 
 	/*
 	 * ISC_R_CANCELED is a status code used by the prefix processing to
@@ -3833,9 +3947,37 @@ reply_process_is_prefixed(struct reply_state *reply,
 	isc_result_t status = ISC_R_SUCCESS;
 	struct data_string data;
 	struct option_cache *oc;
+	struct option_state *tmp_options = NULL;
+	struct on_star *on_star;
 
 	/* Initialize values we will cleanup. */
 	memset(&data, 0, sizeof(data));
+
+	/*
+	 * Find the proper on_star block to use.  We use the
+	 * one in the lease if we have a lease or the one in
+	 * the reply if we don't have a lease because this is
+	 * a static instance
+	 */
+	if (reply->lease) {
+		on_star = &reply->lease->on_star;
+	} else {
+		on_star = &reply->on_star;
+	}
+
+	/*
+	 * Bring in the root configuration.  We only do this to bring
+	 * in the on * statements, as we didn't have the lease available
+	 * we we did it the first time.
+	 */
+	option_state_allocate(&tmp_options, MDL);
+	execute_statements_in_scope(NULL, reply->packet, NULL, NULL,
+				    reply->packet->options, tmp_options,
+				    &global_scope, root_group, NULL,
+				    on_star);
+	if (tmp_options != NULL) {
+		option_state_dereference(&tmp_options, MDL);
+	}
 
 	/*
 	 * Bring configured options into the root packet level cache - start
@@ -3844,7 +3986,7 @@ reply_process_is_prefixed(struct reply_state *reply,
 	 */
 	execute_statements_in_scope(NULL, reply->packet, NULL, NULL,
 				    reply->packet->options, reply->opt_state,
-				    scope, group, root_group);
+				    scope, group, root_group, on_star);
 
 	/*
 	 * If there is a host record, over-ride with values configured there,
@@ -3855,7 +3997,8 @@ reply_process_is_prefixed(struct reply_state *reply,
 		execute_statements_in_scope(NULL, reply->packet, NULL, NULL,
 					    reply->packet->options,
 					    reply->opt_state, scope,
-					    reply->host->group, group);
+					    reply->host->group, group,
+					    on_star);
 
 	/* Determine valid lifetime. */
 	if (reply->client_valid == 0)
@@ -3946,7 +4089,7 @@ reply_process_is_prefixed(struct reply_state *reply,
 	/* Bring a copy of the relevant options into the IA_PD scope. */
 	execute_statements_in_scope(NULL, reply->packet, NULL, NULL,
 				    reply->packet->options, reply->reply_ia,
-				    scope, group, root_group);
+				    scope, group, root_group, NULL);
 
 	/*
 	 * And bring in host record configuration, if any, but not to overlap
@@ -3956,7 +4099,7 @@ reply_process_is_prefixed(struct reply_state *reply,
 		execute_statements_in_scope(NULL, reply->packet, NULL, NULL,
 					    reply->packet->options,
 					    reply->reply_ia, scope,
-					    reply->host->group, group);
+					    reply->host->group, group, NULL);
 
       cleanup:
 	if (data.data != NULL)
@@ -4683,7 +4826,7 @@ iterate_over_ia_na(struct data_string *reply_ret,
 	}
 	execute_statements_in_scope(NULL, packet, NULL, NULL, 
 				    packet->options, opt_state, 
-				    &global_scope, root_group, NULL);
+				    &global_scope, root_group, NULL, NULL);
 
 	/* 
 	 * RFC 3315, section 18.2.7 tells us which options to include.
@@ -5197,7 +5340,7 @@ iterate_over_ia_pd(struct data_string *reply_ret,
 	}
 	execute_statements_in_scope(NULL, packet, NULL, NULL, 
 				    packet->options, opt_state, 
-				    &global_scope, root_group, NULL);
+				    &global_scope, root_group, NULL, NULL);
 
 	/*
 	 * Loop through the IA_PD reported by the client, and deal with

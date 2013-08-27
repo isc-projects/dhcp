@@ -907,21 +907,18 @@ void dhcpdecline (packet, ms_nulltp)
 
 	/* Execute statements in scope starting with the subnet scope. */
 	if (lease)
-		execute_statements_in_scope ((struct binding_value **)0,
-					     packet, (struct lease *)0,
-					     (struct client_state *)0,
-					     packet -> options, options,
-					     &global_scope,
-					     lease -> subnet -> group,
-					     (struct group *)0);
+		execute_statements_in_scope(NULL, packet, NULL, NULL,
+					    packet->options, options,
+					    &global_scope,
+					    lease->subnet->group,
+					    NULL, NULL);
 
 	/* Execute statements in the class scopes. */
 	for (i = packet -> class_count; i > 0; i--) {
 		execute_statements_in_scope
-			((struct binding_value **)0, packet, (struct lease *)0,
-			 (struct client_state *)0, packet -> options, options,
-			 &global_scope, packet -> classes [i - 1] -> group,
-			 lease ? lease -> subnet -> group : (struct group *)0);
+			(NULL, packet, NULL, NULL, packet->options, options,
+			 &global_scope, packet->classes[i - 1]->group,
+			 lease ? lease->subnet->group : NULL, NULL);
 	}
 
 	/* Drop the request if dhcpdeclines are being ignored. */
@@ -1082,20 +1079,19 @@ void dhcpinform (packet, ms_nulltp)
 
 	/* Execute statements in scope starting with the subnet scope. */
 	if (subnet)
-		execute_statements_in_scope ((struct binding_value **)0,
-					     packet, (struct lease *)0,
-					     (struct client_state *)0,
-					     packet -> options, options,
-					     &global_scope, subnet -> group,
-					     (struct group *)0);
+		execute_statements_in_scope (NULL, packet, NULL, NULL,
+					     packet->options, options,
+					     &global_scope, subnet->group,
+					     NULL, NULL);
 
 	/* Execute statements in the class scopes. */
 	for (i = packet -> class_count; i > 0; i--) {
-		execute_statements_in_scope
-			((struct binding_value **)0, packet, (struct lease *)0,
-			 (struct client_state *)0, packet -> options, options,
-			 &global_scope, packet -> classes [i - 1] -> group,
-			 subnet ? subnet -> group : (struct group *)0);
+		execute_statements_in_scope(NULL, packet, NULL, NULL,
+					    packet->options, options,
+					    &global_scope,
+					    packet->classes[i - 1]->group,
+					    subnet ? subnet->group : NULL,
+					    NULL);
 	}
 
 	/* Figure out the filename. */
@@ -1604,47 +1600,45 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 	   REQUEST our offer, it will expire in 2 minutes, overriding the
 	   expire time in the currently in force lease.  We want the expire
 	   events to be executed at that point. */
-	if (lease -> ends <= cur_time && offer != DHCPOFFER) {
+	if (lease->ends <= cur_time && offer != DHCPOFFER) {
 		/* Get rid of any old expiry or release statements - by
 		   executing the statements below, we will be inserting new
 		   ones if there are any to insert. */
-		if (lease -> on_expiry)
-			executable_statement_dereference (&lease -> on_expiry,
-							  MDL);
-		if (lease -> on_commit)
-			executable_statement_dereference (&lease -> on_commit,
-							  MDL);
-		if (lease -> on_release)
-			executable_statement_dereference (&lease -> on_release,
-							  MDL);
+		if (lease->on_star.on_expiry)
+			executable_statement_dereference
+				(&lease->on_star.on_expiry, MDL);
+		if (lease->on_star.on_commit)
+			executable_statement_dereference
+				(&lease->on_star.on_commit, MDL);
+		if (lease->on_star.on_release)
+			executable_statement_dereference
+				(&lease->on_star.on_release, MDL);
 	}
 
 	/* Execute statements in scope starting with the subnet scope. */
-	execute_statements_in_scope ((struct binding_value **)0,
-				     packet, lease, (struct client_state *)0,
-				     packet -> options,
-				     state -> options, &lease -> scope,
-				     lease -> subnet -> group,
-				     (struct group *)0);
+	execute_statements_in_scope (NULL, packet, lease,
+				     NULL, packet->options,
+				     state->options, &lease->scope,
+				     lease->subnet->group, NULL, NULL);
 
 	/* If the lease is from a pool, run the pool scope. */
-	if (lease -> pool)
-		(execute_statements_in_scope
-		 ((struct binding_value **)0, packet, lease,
-		  (struct client_state *)0, packet -> options,
-		  state -> options, &lease -> scope, lease -> pool -> group,
-		  lease -> pool -> shared_network -> group));
+	if (lease->pool)
+		(execute_statements_in_scope(NULL, packet, lease, NULL,
+					     packet->options, state->options,
+					     &lease->scope, lease->pool->group,
+					     lease->pool->
+						shared_network->group,
+					     NULL));
 
 	/* Execute statements from class scopes. */
 	for (i = packet -> class_count; i > 0; i--) {
-		execute_statements_in_scope
-			((struct binding_value **)0,
-			 packet, lease, (struct client_state *)0,
-			 packet -> options, state -> options,
-			 &lease -> scope, packet -> classes [i - 1] -> group,
-			 (lease -> pool
-			  ? lease -> pool -> group
-			  : lease -> subnet -> group));
+		execute_statements_in_scope(NULL, packet, lease, NULL,
+					    packet->options, state->options,
+					    &lease->scope,
+					    packet->classes[i - 1]->group,
+					    (lease->pool ? lease->pool->group
+					     : lease->subnet->group),
+					    NULL);
 	}
 
 	/* See if the client is only supposed to have one lease at a time,
@@ -1829,7 +1823,8 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 				host_dereference(&hp, MDL);
 		}
 		if (!host) {
-			find_hosts_by_option(&hp, packet, packet->options, MDL);
+			find_hosts_by_option(&hp, packet,
+					     packet->options, MDL);
 			for (h = hp; h; h = h -> n_ipaddr) {
 				if (!h -> fixed_addr)
 					break;
@@ -1844,15 +1839,13 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 	/* If we have a host_decl structure, run the options associated
 	   with its group.  Whether the host decl struct is old or not. */
 	if (host)
-		execute_statements_in_scope ((struct binding_value **)0,
-					     packet, lease,
-					     (struct client_state *)0,
-					     packet -> options,
-					     state -> options, &lease -> scope,
-					     host -> group,
-					     (lease -> pool
-					      ? lease -> pool -> group
-					      : lease -> subnet -> group));
+		execute_statements_in_scope (NULL, packet, lease, NULL,
+					     packet->options, state->options,
+					     &lease->scope, host->group,
+					     (lease->pool
+					      ? lease->pool->group
+					      : lease->subnet->group),
+					     NULL);
 
 	/* Drop the request if it's not allowed for this client.   By
 	   default, unknown clients are allowed. */
@@ -2485,15 +2478,13 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 
 	/* If there are statements to execute when the lease is
 	   committed, execute them. */
-	if (lease -> on_commit && (!offer || offer == DHCPACK)) {
-		execute_statements ((struct binding_value **)0,
-				    packet, lt, (struct client_state *)0,
-				    packet -> options,
-				    state -> options, &lt -> scope,
-				    lease -> on_commit);
-		if (lease -> on_commit)
-			executable_statement_dereference (&lease -> on_commit,
-							  MDL);
+	if (lease->on_star.on_commit && (!offer || offer == DHCPACK)) {
+		execute_statements (NULL, packet, lt, NULL, packet->options,
+				    state->options, &lt->scope,
+				    lease->on_star.on_commit, NULL);
+		if (lease->on_star.on_commit)
+			executable_statement_dereference
+				(&lease->on_star.on_commit, MDL);
 	}
 
 #ifdef NSUPDATE
@@ -4593,13 +4584,13 @@ setup_server_source_address(struct in_addr *from,
 					packet->options, sid_options,
 					&global_scope,
 					packet->shared_network->subnets->group,
-					NULL);
+					NULL, NULL);
 		} else {
 			execute_statements_in_scope(NULL, packet, NULL, NULL,
 					packet->options, sid_options,
 					&global_scope,
 					packet->shared_network->group,
-					NULL);
+					NULL, NULL);
 		}
 
 		/* do the pool if there is one */
@@ -4608,7 +4599,8 @@ setup_server_source_address(struct in_addr *from,
 					packet->options, sid_options,
 					&global_scope,
 					packet->shared_network->pools->group,
-					packet->shared_network->group);
+					packet->shared_network->group,
+					NULL);
 		}
 
 		/* currently we don't bother with classes or hosts as

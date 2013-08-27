@@ -497,6 +497,16 @@ typedef u_int8_t binding_state_t;
 /* FTS_LAST is the highest value that is valid for a lease binding state. */
 #define FTS_LAST FTS_BACKUP
 
+/*
+ * A block for the on statements so we can share the structure
+ * between v4 and v6
+ */
+struct on_star {
+	struct executable_statement *on_expiry;
+	struct executable_statement *on_commit;
+	struct executable_statement *on_release;
+};
+
 /* A dhcp lease declaration structure. */
 struct lease {
 	OMAPI_OBJECT_PREAMBLE;
@@ -513,9 +523,8 @@ struct lease {
 	struct class *billing_class;
 	struct option_chain_head *agent_options;
 
-	struct executable_statement *on_expiry;
-	struct executable_statement *on_commit;
-	struct executable_statement *on_release;
+	/* insert the structure directly */
+	struct on_star on_star;
 
 	unsigned char *uid;
 	unsigned short uid_len;
@@ -1503,6 +1512,8 @@ struct iasubopt {
 	 */
 	struct dhcp_ddns_cb *ddns_cb;
 
+	/* space for the on * executable statements */
+	struct on_star on_star;
 };
 
 struct ia_xx {
@@ -2079,7 +2090,8 @@ int evaluate_data_expression (struct data_string *,
 			      struct option_state *,
 			      struct option_state *,
 			      struct binding_scope **,
-			      struct expression *, const char *, int);
+			      struct expression *,
+			      const char *, int);
 int evaluate_numeric_expression (unsigned long *, struct packet *,
 				 struct lease *, struct client_state *,
 				 struct option_state *, struct option_state *,
@@ -2944,14 +2956,16 @@ int execute_statements (struct binding_value **result,
 			struct client_state *,
 			struct option_state *, struct option_state *,
 			struct binding_scope **,
-			struct executable_statement *);
+			struct executable_statement *,
+			struct on_star *);
 void execute_statements_in_scope (struct binding_value **result,
 				  struct packet *, struct lease *,
 				  struct client_state *,
 				  struct option_state *,
 				  struct option_state *,
 				  struct binding_scope **,
-				  struct group *, struct group *);
+				  struct group *, struct group *,
+				  struct on_star *);
 int executable_statement_dereference (struct executable_statement **,
 				      const char *, int);
 void write_statements (FILE *, struct executable_statement *, int);

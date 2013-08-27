@@ -1,7 +1,7 @@
 /* dhc6.c - DHCPv6 client routines. */
 
 /*
- * Copyright (c) 2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2012-2013 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2006-2010 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -4947,7 +4947,7 @@ make_client6_options(struct client_state *client, struct option_state **op,
 					    lease ? lease->options : NULL,
 					    *op, &global_scope,
 					    client->config->on_transmission,
-					    NULL);
+					    NULL, NULL);
 
 	/* Rapid-commit is only for SOLICITs. */
 	if (message != DHCPV6_SOLICIT)

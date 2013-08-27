@@ -883,14 +883,9 @@ void postconf_initialization (int quiet)
 	/* Now try to get the lease file name. */
 	option_state_allocate (&options, MDL);
 
-	execute_statements_in_scope ((struct binding_value **)0,
-				     (struct packet *)0,
-				     (struct lease *)0,
-				     (struct client_state *)0,
-				     (struct option_state *)0,
-				     options, &global_scope,
-				     root_group,
-				     (struct group *)0);
+	execute_statements_in_scope(NULL, NULL, NULL, NULL, NULL,
+				    options, &global_scope, root_group,
+				    NULL, NULL);
 	memset (&db, 0, sizeof db);
 	oc = lookup_option (&server_universe, options, SV_LEASE_FILE_NAME);
 	if (oc &&

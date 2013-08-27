@@ -408,71 +408,71 @@ isc_result_t dhcp_lease_destroy (omapi_object_t *h, const char *file, int line)
 {
 	struct lease *lease;
 
-	if (h -> type != dhcp_type_lease)
+	if (h->type != dhcp_type_lease)
 		return DHCP_R_INVALIDARG;
 	lease = (struct lease *)h;
 
-	if (lease -> uid)
+	if (lease-> uid)
 		uid_hash_delete (lease);
 	hw_hash_delete (lease);
 
-	if (lease -> on_release)
-		executable_statement_dereference (&lease -> on_release,
+	if (lease->on_star.on_release)
+		executable_statement_dereference (&lease->on_star.on_release,
 						  file, line);
-	if (lease -> on_expiry)
-		executable_statement_dereference (&lease -> on_expiry,
+	if (lease->on_star.on_expiry)
+		executable_statement_dereference (&lease->on_star.on_expiry,
 						  file, line);
-	if (lease -> on_commit)
-		executable_statement_dereference (&lease -> on_commit,
+	if (lease->on_star.on_commit)
+		executable_statement_dereference (&lease->on_star.on_commit,
 						  file, line);
-	if (lease -> scope)
-		binding_scope_dereference (&lease -> scope, file, line);
+	if (lease->scope)
+		binding_scope_dereference (&lease->scope, file, line);
 
-	if (lease -> agent_options)
-		option_chain_head_dereference (&lease -> agent_options,
+	if (lease->agent_options)
+		option_chain_head_dereference (&lease->agent_options,
 					       file, line);
-	if (lease -> uid && lease -> uid != lease -> uid_buf) {
-		dfree (lease -> uid, MDL);
-		lease -> uid = &lease -> uid_buf [0];
-		lease -> uid_len = 0;
+	if (lease->uid && lease->uid != lease->uid_buf) {
+		dfree (lease->uid, MDL);
+		lease->uid = &lease->uid_buf [0];
+		lease->uid_len = 0;
 	}
 
-	if (lease -> client_hostname) {
-		dfree (lease -> client_hostname, MDL);
-		lease -> client_hostname = (char *)0;
+	if (lease->client_hostname) {
+		dfree (lease->client_hostname, MDL);
+		lease->client_hostname = (char *)0;
 	}
 
-	if (lease -> host)
-		host_dereference (&lease -> host, file, line);
-	if (lease -> subnet)
-		subnet_dereference (&lease -> subnet, file, line);
-	if (lease -> pool)
-		pool_dereference (&lease -> pool, file, line);
+	if (lease->host)
+		host_dereference (&lease->host, file, line);
+	if (lease->subnet)
+		subnet_dereference (&lease->subnet, file, line);
+	if (lease->pool)
+		pool_dereference (&lease->pool, file, line);
 
-	if (lease -> state) {
-		free_lease_state (lease -> state, file, line);
-		lease -> state = (struct lease_state *)0;
+	if (lease->state) {
+		free_lease_state (lease->state, file, line);
+		lease->state = (struct lease_state *)0;
 
 		cancel_timeout (lease_ping_timeout, lease);
 		--outstanding_pings; /* XXX */
 	}
 
-	if (lease -> billing_class)
+	if (lease->billing_class)
 		class_dereference
-			(&lease -> billing_class, file, line);
+			(&lease->billing_class, file, line);
 
 #if defined (DEBUG_MEMORY_LEAKAGE) || \
 		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 	/* XXX we should never be destroying a lease with a next
 	   XXX pointer except on exit... */
-	if (lease -> next)
-		lease_dereference (&lease -> next, file, line);
-	if (lease -> n_hw)
-		lease_dereference (&lease -> n_hw, file, line);
-	if (lease -> n_uid)
-		lease_dereference (&lease -> n_uid, file, line);
-	if (lease -> next_pending)
-		lease_dereference (&lease -> next_pending, file, line);
+	if (lease->next)
+		lease_dereference (&lease->next, file, line);
+	if (lease->n_hw)
+		lease_dereference (&lease->n_hw, file, line);
+	if (lease->n_uid)
+		lease_dereference (&lease->n_uid, file, line);
+	if (lease->next_pending)
+		lease_dereference (&lease->next_pending, file, line);
 #endif
 
 	return ISC_R_SUCCESS;

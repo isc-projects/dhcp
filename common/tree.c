@@ -618,7 +618,7 @@ int evaluate_expression (result, packet, lease, client_state,
 		status = (execute_statements
 			  (&bv, packet,
 			   lease, client_state, in_options, cfg_options, &ns,
-			   binding -> value -> value.fundef -> statements));
+			   binding->value->value.fundef->statements, NULL));
 		binding_scope_dereference (&ns, MDL);
 
 		if (!bv)

@@ -1191,28 +1191,29 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 	comp -> client_hostname = lease -> client_hostname;
 	lease -> client_hostname = (char *)0;
 
-	if (lease -> on_expiry) {
-		if (comp -> on_expiry)
-			executable_statement_dereference (&comp -> on_expiry,
-							  MDL);
-		executable_statement_reference (&comp -> on_expiry,
-						lease -> on_expiry,
+	if (lease->on_star.on_expiry) {
+		if (comp->on_star.on_expiry)
+			executable_statement_dereference
+				(&comp->on_star.on_expiry, MDL);
+		executable_statement_reference (&comp->on_star.on_expiry,
+						lease->on_star.on_expiry,
 						MDL);
 	}
-	if (lease -> on_commit) {
-		if (comp -> on_commit)
-			executable_statement_dereference (&comp -> on_commit,
-							  MDL);
-		executable_statement_reference (&comp -> on_commit,
-						lease -> on_commit,
+	if (lease->on_star.on_commit) {
+		if (comp->on_star.on_commit)
+			executable_statement_dereference
+				(&comp->on_star.on_commit, MDL);
+		executable_statement_reference (&comp->on_star.on_commit,
+						lease->on_star.on_commit,
 						MDL);
 	}
-	if (lease -> on_release) {
-		if (comp -> on_release)
-			executable_statement_dereference (&comp -> on_release,
-							  MDL);
-		executable_statement_reference (&comp -> on_release,
-						lease -> on_release, MDL);
+	if (lease->on_star.on_release) {
+		if (comp->on_star.on_release)
+			executable_statement_dereference
+				(&comp->on_star.on_release, MDL);
+		executable_statement_reference (&comp->on_star.on_release,
+						lease->on_star.on_release,
+						MDL);
 	}
 
 	/* Record the lease in the uid hash if necessary. */
@@ -1455,23 +1456,21 @@ void make_binding_state_transition (struct lease *lease)
 #if defined (NSUPDATE)
 		(void) ddns_removals(lease, NULL, NULL, ISC_TRUE);
 #endif
-		if (lease -> on_expiry) {
-			execute_statements ((struct binding_value **)0,
-					    (struct packet *)0, lease,
-					    (struct client_state *)0,
-					    (struct option_state *)0,
-					    (struct option_state *)0, /* XXX */
-					    &lease -> scope,
-					    lease -> on_expiry);
-			if (lease -> on_expiry)
+		if (lease->on_star.on_expiry) {
+			execute_statements(NULL, NULL, lease,
+					   NULL, NULL, NULL,
+					   &lease->scope,
+					   lease->on_star.on_expiry,
+					   NULL);
+			if (lease->on_star.on_expiry)
 				executable_statement_dereference
-					(&lease -> on_expiry, MDL);
+					(&lease->on_star.on_expiry, MDL);
 		}
 		
 		/* No sense releasing a lease after it's expired. */
-		if (lease -> on_release)
-			executable_statement_dereference (&lease -> on_release,
-							  MDL);
+		if (lease->on_star.on_release)
+			executable_statement_dereference
+				(&lease->on_star.on_release, MDL);
 		/* Get rid of client-specific bindings that are only
 		   correct when the lease is active. */
 		if (lease -> billing_class)
@@ -1521,22 +1520,20 @@ void make_binding_state_transition (struct lease *lease)
 		 */
 		(void) ddns_removals(lease, NULL, NULL, ISC_TRUE);
 #endif
-		if (lease -> on_release) {
-			execute_statements ((struct binding_value **)0,
-					    (struct packet *)0, lease,
-					    (struct client_state *)0,
-					    (struct option_state *)0,
-					    (struct option_state *)0, /* XXX */
-					    &lease -> scope,
-					    lease -> on_release);
-			executable_statement_dereference (&lease -> on_release,
-							  MDL);
+		if (lease->on_star.on_release) {
+			execute_statements(NULL, NULL, lease,
+					   NULL, NULL, NULL,
+					   &lease->scope,
+					   lease->on_star.on_release,
+					   NULL);
+			executable_statement_dereference
+				(&lease->on_star.on_release, MDL);
 		}
 		
 		/* A released lease can't expire. */
-		if (lease -> on_expiry)
-			executable_statement_dereference (&lease -> on_expiry,
-							  MDL);
+		if (lease->on_star.on_expiry)
+			executable_statement_dereference
+				(&lease->on_star.on_expiry, MDL);
 
 		/* Get rid of client-specific bindings that are only
 		   correct when the lease is active. */
@@ -1656,17 +1653,17 @@ int lease_copy (struct lease **lp,
 	class_reference (&lt -> billing_class,
 			 lease -> billing_class, file, line);
 	lt -> hardware_addr = lease -> hardware_addr;
-	if (lease -> on_expiry)
-		executable_statement_reference (&lt -> on_expiry,
-						lease -> on_expiry,
+	if (lease->on_star.on_expiry)
+		executable_statement_reference (&lt->on_star.on_expiry,
+						lease->on_star.on_expiry,
 						file, line);
-	if (lease -> on_commit)
-		executable_statement_reference (&lt -> on_commit,
-						lease -> on_commit,
+	if (lease->on_star.on_commit)
+		executable_statement_reference (&lt->on_star.on_commit,
+						lease->on_star.on_commit,
 						file, line);
-	if (lease -> on_release)
-		executable_statement_reference (&lt -> on_release,
-						lease -> on_release,
+	if (lease->on_star.on_release)
+		executable_statement_reference (&lt->on_star.on_release,
+						lease->on_star.on_release,
 						file, line);
 	lt->flags = lease->flags;
 	lt->tstp = lease->tstp;
@@ -1691,31 +1688,31 @@ void release_lease (lease, packet)
 #if defined (NSUPDATE)
 	(void) ddns_removals(lease, NULL, NULL, ISC_FALSE);
 #endif
-	if (lease -> on_release) {
-		execute_statements ((struct binding_value **)0,
-				    packet, lease, (struct client_state *)0,
-				    packet -> options,
-				    (struct option_state *)0, /* XXX */
-				    &lease -> scope, lease -> on_release);
-		if (lease -> on_release)
-			executable_statement_dereference (&lease -> on_release,
-							  MDL);
+	if (lease->on_star.on_release) {
+		execute_statements (NULL, packet, lease,
+				    NULL, packet->options,
+				    NULL, &lease->scope,
+				    lease->on_star.on_release, NULL);
+		if (lease->on_star.on_release)
+			executable_statement_dereference
+				(&lease->on_star.on_release, MDL);
 	}
 
 	/* We do either the on_release or the on_expiry events, but
 	   not both (it's possible that they could be the same,
 	   in any case). */
-	if (lease -> on_expiry)
-		executable_statement_dereference (&lease -> on_expiry, MDL);
+	if (lease->on_star.on_expiry)
+		executable_statement_dereference
+			(&lease->on_star.on_expiry, MDL);
 
 	if (lease -> binding_state != FTS_FREE &&
 	    lease -> binding_state != FTS_BACKUP &&
 	    lease -> binding_state != FTS_RELEASED &&
 	    lease -> binding_state != FTS_EXPIRED &&
 	    lease -> binding_state != FTS_RESET) {
-		if (lease -> on_commit)
-			executable_statement_dereference (&lease -> on_commit,
-							  MDL);
+		if (lease->on_star.on_commit)
+			executable_statement_dereference
+				(&lease->on_star.on_commit, MDL);
 
 		/* Blow away any bindings. */
 		if (lease -> scope)

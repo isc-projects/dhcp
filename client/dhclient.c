@@ -1727,13 +1727,10 @@ struct client_lease *packet_to_lease (packet, client)
 		}
 	}
 
-	execute_statements_in_scope ((struct binding_value **)0,
-				     (struct packet *)packet,
-				     (struct lease *)0, client,
-				     lease -> options, lease -> options,
-				     &global_scope,
-				     client -> config -> on_receipt,
-				     (struct group *)0);
+	execute_statements_in_scope(NULL, (struct packet *)packet, NULL,
+				    client, lease->options, lease->options,
+				    &global_scope, client->config->on_receipt,
+				    NULL, NULL);
 
 	return lease;
 }
@@ -2377,14 +2374,12 @@ make_client_options(struct client_state *client, struct client_lease *lease,
 	}
 
 	/* Run statements that need to be run on transmission. */
-	if (client -> config -> on_transmission)
-		execute_statements_in_scope
-			((struct binding_value **)0,
-			 (struct packet *)0, (struct lease *)0, client,
-			 (lease ? lease -> options : (struct option_state *)0),
-			 *op, &global_scope,
-			 client -> config -> on_transmission,
-			 (struct group *)0);
+	if (client->config->on_transmission)
+		execute_statements_in_scope(NULL, NULL, NULL, client,
+					    (lease ? lease->options : NULL),
+					    *op, &global_scope,
+					    client->config->on_transmission,
+					    NULL, NULL);
 }
 
 void make_discover (client, lease)

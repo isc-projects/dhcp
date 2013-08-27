@@ -4,7 +4,7 @@
 
 /*
  * 
- * Copyright (c) 2009-2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2013 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2000-2003 by Internet Software Consortium
  *
@@ -275,16 +275,20 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 			   So if the expiry and release events look like
 			   they're the same, run them.   This should delete
 			   the old DDNS data. */
-			if (old -> on_expiry == old -> on_release) {
+			if (old->on_star.on_expiry ==
+			    old->on_star.on_release) {
 				execute_statements(NULL, NULL, lease, NULL,
 						   NULL, NULL, scope,
-						   old->on_expiry);
-				if (old -> on_expiry)
+						   old->on_star.on_expiry,
+						   NULL);
+				if (old->on_star.on_expiry)
 					executable_statement_dereference
-						(&old -> on_expiry, MDL);
-				if (old -> on_release)
+						(&old->on_star.on_expiry,
+						 MDL);
+				if (old->on_star.on_release)
 					executable_statement_dereference
-						(&old -> on_release, MDL);
+						(&old->on_star.on_release,
+						 MDL);
 				/* Now, install the DDNS data the new way. */
 				goto in;
 			}

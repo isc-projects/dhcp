@@ -3248,19 +3248,19 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 				return 0;
 			}
 			seenbit = 0;
-			if ((on -> data.on.evtypes & ON_EXPIRY) &&
-			    on -> data.on.statements) {
+			if ((on->data.on.evtypes & ON_EXPIRY) &&
+			    on->data.on.statements) {
 				seenbit |= 16384;
 				executable_statement_reference
-					(&lease -> on_expiry,
-					 on -> data.on.statements, MDL);
+					(&lease->on_star.on_expiry,
+					 on->data.on.statements, MDL);
 			}
-			if ((on -> data.on.evtypes & ON_RELEASE) &&
-			    on -> data.on.statements) {
+			if ((on->data.on.evtypes & ON_RELEASE) &&
+			    on->data.on.statements) {
 				seenbit |= 32768;
 				executable_statement_reference
-					(&lease -> on_release,
-					 on -> data.on.statements, MDL);
+					(&lease->on_star.on_release,
+					 on->data.on.statements, MDL);
 			}
 			executable_statement_dereference (&on, MDL);
 			break;
@@ -3400,31 +3400,31 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 
 	/* If no binding state is specified, make one up. */
 	if (!(seenmask & 256)) {
-		if (lease -> ends > cur_time ||
-		    lease -> on_expiry || lease -> on_release)
-			lease -> binding_state = FTS_ACTIVE;
+		if (lease->ends > cur_time ||
+		    lease->on_star.on_expiry || lease->on_star.on_release)
+			lease->binding_state = FTS_ACTIVE;
 #if defined (FAILOVER_PROTOCOL)
-		else if (lease -> pool && lease -> pool -> failover_peer)
-			lease -> binding_state = FTS_EXPIRED;
+		else if (lease->pool && lease->pool->failover_peer)
+			lease->binding_state = FTS_EXPIRED;
 #endif
 		else
-			lease -> binding_state = FTS_FREE;
-		if (lease -> binding_state == FTS_ACTIVE) {
+			lease->binding_state = FTS_FREE;
+		if (lease->binding_state == FTS_ACTIVE) {
 #if defined (FAILOVER_PROTOCOL)
-			if (lease -> pool && lease -> pool -> failover_peer)
-				lease -> next_binding_state = FTS_EXPIRED;
+			if (lease->pool && lease->pool->failover_peer)
+				lease->next_binding_state = FTS_EXPIRED;
 			else
 #endif
-				lease -> next_binding_state = FTS_FREE;
+				lease->next_binding_state = FTS_FREE;
 		} else
-			lease -> next_binding_state = lease -> binding_state;
+			lease->next_binding_state = lease->binding_state;
 
 		/* The most conservative rewind state implies no rewind. */
 		lease->rewind_binding_state = lease->binding_state;
 	}
 
 	if (!(seenmask & 65536))
-		lease -> tstp = lease -> ends;
+		lease->tstp = lease->ends;
 
 	lease_reference (lp, lease, MDL);
 	lease_dereference (&lease, MDL);
@@ -4146,9 +4146,11 @@ parse_ia_na_declaration(struct parse *cfile) {
 	struct ipv6_pool *pool;
 	char addr_buf[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
 	isc_boolean_t newbinding;
-	struct binding_scope *scope=NULL;
+	struct binding_scope *scope = NULL;
 	struct binding *bnd;
-	struct binding_value *nv=NULL;
+	struct binding_value *nv = NULL;
+	struct executable_statement *on_star[2] = {NULL, NULL};
+	int lose, i;
 
         if (local_family != AF_INET6) {
                 parse_warn(cfile, "IA_NA is only supported in DHCPv6 mode.");
@@ -4409,6 +4411,41 @@ parse_ia_na_declaration(struct parse *cfile) {
 				parse_semi(cfile);
 				break;
 
+			      case ON:
+				lose = 0;
+				/*
+				 * Depending on the user config we may
+				 * have one or two on statements.  We
+				 * need to save information about both
+				 * of them until we allocate the
+				 * iasubopt to hold them.
+				 */
+				if (on_star[0] == NULL) {
+					if (!parse_on_statement (&on_star[0],
+								 cfile,
+								 &lose)) {
+						parse_warn(cfile,
+							   "corrupt lease "
+							   "file; bad ON "
+							   "statement");
+						skip_to_rbrace (cfile, 1);
+						return;
+					}
+				} else {
+					if (!parse_on_statement (&on_star[1],
+								 cfile,
+								 &lose)) {
+						parse_warn(cfile,
+							   "corrupt lease "
+							   "file; bad ON "
+							   "statement");
+						skip_to_rbrace (cfile, 1);
+						return;
+					}
+				}
+
+				break;
+			  
 			      default:
 				parse_warn(cfile, "corrupt lease file; "
 						  "expecting ia_na contents, "
@@ -4446,6 +4483,30 @@ parse_ia_na_declaration(struct parse *cfile) {
 			binding_scope_dereference(&scope, MDL);
 		}
 
+		/*
+		 * Check on both on statements.  Because of how we write the
+		 * lease file we know which is which if we have two but it's
+		 * easier to write the code to be independent.  We do assume
+		 * that the statements won't overlap.
+		 */
+		for (i = 0;
+		     (i < 2) && on_star[i] != NULL ;
+		     i++) {
+			if ((on_star[i]->data.on.evtypes & ON_EXPIRY) &&
+			    on_star[i]->data.on.statements) {
+				executable_statement_reference
+					(&iaaddr->on_star.on_expiry,
+					 on_star[i]->data.on.statements, MDL);
+			}
+			if ((on_star[i]->data.on.evtypes & ON_RELEASE) &&
+			    on_star[i]->data.on.statements) {
+				executable_statement_reference
+					(&iaaddr->on_star.on_release,
+					 on_star[i]->data.on.statements, MDL);
+			}
+			executable_statement_dereference (&on_star[i], MDL);
+		}
+			
 		/* find the pool this address is in */
 		pool = NULL;
 		if (find_ipv6_pool(&pool, D6O_IA_NA,
@@ -4527,9 +4588,11 @@ parse_ia_ta_declaration(struct parse *cfile) {
 	struct ipv6_pool *pool;
 	char addr_buf[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
 	isc_boolean_t newbinding;
-	struct binding_scope *scope=NULL;
+	struct binding_scope *scope = NULL;
 	struct binding *bnd;
-	struct binding_value *nv=NULL;
+	struct binding_value *nv = NULL;
+	struct executable_statement *on_star[2] = {NULL, NULL};
+	int lose, i;
 
         if (local_family != AF_INET6) {
                 parse_warn(cfile, "IA_TA is only supported in DHCPv6 mode.");
@@ -4790,6 +4853,41 @@ parse_ia_ta_declaration(struct parse *cfile) {
 				parse_semi(cfile);
 				break;
 
+			      case ON:
+				lose = 0;
+				/*
+				 * Depending on the user config we may
+				 * have one or two on statements.  We
+				 * need to save information about both
+				 * of them until we allocate the
+				 * iasubopt to hold them.
+				 */
+				if (on_star[0] == NULL) {
+					if (!parse_on_statement (&on_star[0],
+								 cfile,
+								 &lose)) {
+						parse_warn(cfile,
+							   "corrupt lease "
+							   "file; bad ON "
+							   "statement");
+						skip_to_rbrace (cfile, 1);
+						return;
+					}
+				} else {
+					if (!parse_on_statement (&on_star[1],
+								 cfile,
+								 &lose)) {
+						parse_warn(cfile,
+							   "corrupt lease "
+							   "file; bad ON "
+							   "statement");
+						skip_to_rbrace (cfile, 1);
+						return;
+					}
+				}
+					
+				break;
+			  
 			      default:
 				parse_warn(cfile, "corrupt lease file; "
 						  "expecting ia_ta contents, "
@@ -4827,6 +4925,30 @@ parse_ia_ta_declaration(struct parse *cfile) {
 			binding_scope_dereference(&scope, MDL);
 		}
 
+		/*
+		 * Check on both on statements.  Because of how we write the
+		 * lease file we know which is which if we have two but it's
+		 * easier to write the code to be independent.  We do assume
+		 * that the statements won't overlap.
+		 */
+		for (i = 0;
+		     (i < 2) && on_star[i] != NULL ;
+		     i++) {
+			if ((on_star[i]->data.on.evtypes & ON_EXPIRY) &&
+			    on_star[i]->data.on.statements) {
+				executable_statement_reference
+					(&iaaddr->on_star.on_expiry,
+					 on_star[i]->data.on.statements, MDL);
+			}
+			if ((on_star[i]->data.on.evtypes & ON_RELEASE) &&
+			    on_star[i]->data.on.statements) {
+				executable_statement_reference
+					(&iaaddr->on_star.on_release,
+					 on_star[i]->data.on.statements, MDL);
+			}
+			executable_statement_dereference (&on_star[i], MDL);
+		}
+			
 		/* find the pool this address is in */
 		pool = NULL;
 		if (find_ipv6_pool(&pool, D6O_IA_TA,
@@ -4909,9 +5031,11 @@ parse_ia_pd_declaration(struct parse *cfile) {
 	struct ipv6_pool *pool;
 	char addr_buf[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
 	isc_boolean_t newbinding;
-	struct binding_scope *scope=NULL;
+	struct binding_scope *scope = NULL;
 	struct binding *bnd;
-	struct binding_value *nv=NULL;
+	struct binding_value *nv = NULL;
+	struct executable_statement *on_star[2] = {NULL, NULL};
+	int lose, i;
 
         if (local_family != AF_INET6) {
                 parse_warn(cfile, "IA_PD is only supported in DHCPv6 mode.");
@@ -5172,6 +5296,41 @@ parse_ia_pd_declaration(struct parse *cfile) {
 				parse_semi(cfile);
 				break;
 
+			      case ON:
+				lose = 0;
+				/*
+				 * Depending on the user config we may
+				 * have one or two on statements.  We
+				 * need to save information about both
+				 * of them until we allocate the
+				 * iasubopt to hold them.
+				 */
+				if (on_star[0] == NULL) {
+					if (!parse_on_statement (&on_star[0],
+								 cfile,
+								 &lose)) {
+						parse_warn(cfile,
+							   "corrupt lease "
+							   "file; bad ON "
+							   "statement");
+						skip_to_rbrace (cfile, 1);
+						return;
+					}
+				} else {
+					if (!parse_on_statement (&on_star[1],
+								 cfile,
+								 &lose)) {
+						parse_warn(cfile,
+							   "corrupt lease "
+							   "file; bad ON "
+							   "statement");
+						skip_to_rbrace (cfile, 1);
+						return;
+					}
+				}
+
+				break;
+			  
 			      default:
 				parse_warn(cfile, "corrupt lease file; "
 						  "expecting ia_pd contents, "
@@ -5209,6 +5368,30 @@ parse_ia_pd_declaration(struct parse *cfile) {
 			binding_scope_dereference(&scope, MDL);
 		}
 
+		/*
+		 * Check on both on statements.  Because of how we write the
+		 * lease file we know which is which if we have two but it's
+		 * easier to write the code to be independent.  We do assume
+		 * that the statements won't overlap.
+		 */
+		for (i = 0;
+		     (i < 2) && on_star[i] != NULL ;
+		     i++) {
+			if ((on_star[i]->data.on.evtypes & ON_EXPIRY) &&
+			    on_star[i]->data.on.statements) {
+				executable_statement_reference
+					(&iapref->on_star.on_expiry,
+					 on_star[i]->data.on.statements, MDL);
+			}
+			if ((on_star[i]->data.on.evtypes & ON_RELEASE) &&
+			    on_star[i]->data.on.statements) {
+				executable_statement_reference
+					(&iapref->on_star.on_release,
+					 on_star[i]->data.on.statements, MDL);
+			}
+			executable_statement_dereference (&on_star[i], MDL);
+		}
+			
 		/* find the pool this address is in */
 		pool = NULL;
 		if (find_ipv6_pool(&pool, D6O_IA_PD,

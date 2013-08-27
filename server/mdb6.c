@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2007-2013 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -197,6 +197,20 @@ iasubopt_dereference(struct iasubopt **iasubopt, const char *file, int line) {
 		if (tmp->scope != NULL) {
 			binding_scope_dereference(&tmp->scope, file, line);
 		}
+
+		if (tmp->on_star.on_expiry != NULL) {
+			executable_statement_dereference
+				(&tmp->on_star.on_expiry, MDL);
+		}
+		if (tmp->on_star.on_commit != NULL) {
+			executable_statement_dereference
+				(&tmp->on_star.on_commit, MDL);
+		}
+		if (tmp->on_star.on_release != NULL) {
+			executable_statement_dereference
+				(&tmp->on_star.on_release, MDL);
+		}
+
 		dfree(tmp, file, line);
 	}
 
@@ -1309,6 +1323,38 @@ move_lease_to_inactive(struct ipv6_pool *pool, struct iasubopt *lease,
 	old_heap_index = lease->heap_index;
 	insert_result = isc_heap_insert(pool->inactive_timeouts, lease);
 	if (insert_result == ISC_R_SUCCESS) {
+		/*
+		 * Handle expire and release statements
+		 * To get here we must be active and have done a commit so
+		 * we should run the proper statements if they exist, though
+		 * that will change when we remove the inactive heap.
+		 * In addition we get rid of the references for both as we
+		 * can only do one (expire or release) on a lease
+		 */
+		if (lease->on_star.on_expiry != NULL) {
+			if (state == FTS_EXPIRED) {
+				execute_statements(NULL, NULL, NULL,
+						   NULL, NULL, NULL,
+						   &lease->scope,
+						   lease->on_star.on_expiry,
+						   &lease->on_star);
+			}
+			executable_statement_dereference
+				(&lease->on_star.on_expiry, MDL);
+		}
+
+		if (lease->on_star.on_release != NULL) {
+			if (state == FTS_RELEASED) {
+				execute_statements(NULL, NULL, NULL,
+						   NULL, NULL, NULL,
+						   &lease->scope,
+						   lease->on_star.on_release,
+						   &lease->on_star);
+			}
+			executable_statement_dereference
+				(&lease->on_star.on_release, MDL);
+		}
+
 #if defined (NSUPDATE)
 		/* Process events upon expiration. */
 		if (pool->pool_type != D6O_IA_PD) {
