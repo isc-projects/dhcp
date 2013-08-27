@@ -92,6 +92,11 @@ work on other platforms. Please report any problems and suggested fixes to
   objects.
   [ISC-Bugs #27452]
 
+- Added a sleep call after killing the old client to allow time
+  for the sockets to be cleaned.  This should allow the -r option
+  to work more consistently.
+  [ISC-Bugs #18175]
+
 			Changes since 4.2.4
 
 - Correct code to calculate timing values in client to compare
