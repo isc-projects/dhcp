@@ -72,6 +72,9 @@ work on other platforms. Please report any problems and suggested fixes to
 - Add support in v6 for on-commit, on-expire and on-release.
   [ISC-Bugs #27912
 
+- Add support for using classes with v6.
+  [ISC-Bugs #26510]
+
 			Changes since 4.2.5
 
 - Address static analysis warnings.

@@ -265,8 +265,8 @@ group {
 .SH ADDRESS POOLS
 .PP
 The
-.B pool
-declaration can be used to specify a pool of addresses that will be
+\fBpool\fR and \fBpool6\fR
+declarations can be used to specify a pool of addresses that will be
 treated differently than another pool of addresses, even on the same
 network segment or subnet.  For example, you may want to provide a
 large set of addresses that can be assigned to DHCP clients that are
@@ -316,6 +316,14 @@ deny list, then only those clients that do not match any entries on
 the deny list will be eligible.   If both permit and deny lists exist
 for a pool, then only clients that match the permit list and do not
 match the deny list will be allowed access.
+.PP
+The \fBpool6\fR declaration is similar to the \fBpool6\fR declaration.
+Currently it is only allowed within a \fBsubnet6\fR declaration, and
+may not be included directly in a shared network declaration.
+In addition to the \fBrange6\fR statement it allows the \fBprefix6\fR
+statement to be included.  You may include \fBrange6\fR statements
+for both NA and TA and \fBprefixy6\fR statements in a single
+\fBpool6\fR statement.
 .SH DYNAMIC ADDRESS ALLOCATION
 Address allocation is actually only done when a client is in the INIT
 state and has sent a DHCPDISCOVER message.  If the client thinks it
@@ -442,7 +450,7 @@ this last method, change the "my state" line to:
 .PP
 .nf
 .B failover peer "\fIname\fB" state {
-.B   my   state partner-down;
+.B   my   state partner-down;.
 .B   peer state \fIstate\fB at \fIdate\fB;
 .B }
 .fi
@@ -893,6 +901,10 @@ the class declaration.  It is possible to specify a limit on the
 total number of clients within a particular class or subclass that may
 hold leases at one time, and it is possible to specify automatic
 subclassing based on the contents of the client packet.
+.PP
+Classing support for DHCPv6 clients was addded in 4.3.0.  It follows
+the same rules as for DHCPv4 except that support for billing classes
+has not been added yet.
 .PP
 To add clients to classes based on conditional evaluation, you can
 specify a matching expression in the class statement:

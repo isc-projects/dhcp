@@ -32,6 +32,8 @@
  * ``http://www.nominum.com''.
  */
 
+/*! \file includes/dhcpd.h */
+
 #include "config.h"
 
 #ifndef __CYGWIN32__
@@ -933,9 +935,7 @@ struct shared_network {
 	struct subnet *subnets;
 	struct interface_info *interface;
 	struct pool *pools;
-	struct ipv6_pool **ipv6_pools;		/* NULL-terminated array */
-	int last_ipv6_pool;			/* offset of last IPv6 pool
-						   used to issue a lease */
+	struct ipv6_pond *ipv6_pond;
 	struct group *group;
 #if defined (FAILOVER_PROTOCOL)
 	dhcp_failover_state_t *failover_peer;
@@ -1530,6 +1530,26 @@ extern ia_hash_t *ia_na_active;
 extern ia_hash_t *ia_ta_active;
 extern ia_hash_t *ia_pd_active;
 
+/*!
+ *
+ * \brief ipv6_pool structure
+ *
+ * This structure is part of a range of addresses or prefixes.
+ * A range6 or prefix6 statement will map to one or more of these
+ * with each pool being a simple block of the form xxxx/yyy and
+ * all the pools adding up to comprise the entire range.  When
+ * choosing an address or prefix the code will walk through the
+ * pools until it finds one that is available.
+ *
+ * The naming for this structure is unfortunate as there is also
+ * a v4 pool structure and the two are not equivalent.  The v4
+ * pool matches the ipv6_pond structure.  I considered changing the
+ * name of this structure but concluded that doing so would be worse
+ * than leaving it as is.  Changing it adds some risk and makes for
+ * larger differences between the 4.1 & 4.2 code and the 4.3 code.
+ *
+ */
+
 struct ipv6_pool {
 	int refcnt;				/* reference count */
 	u_int16_t pool_type;			/* IA_xx */
@@ -1545,6 +1565,34 @@ struct ipv6_pool {
 	struct shared_network *shared_network;	/* shared_network for
 						   this pool */
 	struct subnet *subnet;			/* subnet for this pool */
+	struct ipv6_pond *ipv6_pond;		/* pond for this pool */
+};
+
+/*!
+ *
+ * \brief ipv6_pond structure
+ *
+ * This structure is the ipv6 version of the v4 pool structure.
+ * It contains the address and prefix information via the pointers
+ * to the ipv6_pools and the allowability of this pool for a given
+ * client via the permit lists and the valid TIMEs.
+ *
+ */
+
+struct ipv6_pond {
+	int refcnt;
+	struct ipv6_pond *next;
+	struct group *group;
+	struct shared_network *shared_network; /* backpointer to the enclosing
+						  shared network */
+	struct permit *permit_list;	/* allow clients from this list */
+	struct permit *prohibit_list;	/* deny clients from this list */
+	TIME valid_from;		/* deny pool use before this date */
+	TIME valid_until;		/* deny pool use after this date */
+
+	struct ipv6_pool **ipv6_pools;	/* NULL-terminated array */
+	int last_ipv6_pool;		/* offset of last IPv6 pool
+					   used to issue a lease */
 };
 
 /* Flags and state for dhcp_ddns_cb_t */
@@ -1945,14 +1993,17 @@ int parse_ip6_addr_expr(struct expression **, struct parse *);
 int parse_ip6_prefix(struct parse *, struct iaddr *, u_int8_t *);
 void parse_address_range (struct parse *, struct group *, int,
 			  struct pool *, struct lease **);
-void parse_address_range6(struct parse *cfile, struct group *group);
-void parse_prefix6(struct parse *cfile, struct group *group);
+void parse_address_range6(struct parse *cfile, struct group *group,
+			  struct ipv6_pond *);
+void parse_prefix6(struct parse *cfile, struct group *group,
+			  struct ipv6_pond *);
 void parse_fixed_prefix6(struct parse *cfile, struct host_decl *host_decl);
 void parse_ia_na_declaration(struct parse *);
 void parse_ia_ta_declaration(struct parse *);
 void parse_ia_pd_declaration(struct parse *);
 void parse_server_duid(struct parse *cfile);
 void parse_server_duid_conf(struct parse *cfile);
+void parse_pool6_statement (struct parse *, struct group *, int);
 
 /* ddns.c */
 int ddns_updates(struct packet *, struct lease *, struct lease *,
@@ -3549,6 +3600,13 @@ isc_result_t find_ipv6_pool(struct ipv6_pool **pool, u_int16_t type,
 			    const struct in6_addr *addr);
 isc_boolean_t ipv6_in_pool(const struct in6_addr *addr,
 			   const struct ipv6_pool *pool);
+isc_result_t ipv6_pond_allocate(struct ipv6_pond **pond,
+				const char *file, int line);
+isc_result_t ipv6_pond_reference(struct ipv6_pond **pond,
+				 struct ipv6_pond *src,
+				 const char *file, int line);
+isc_result_t ipv6_pond_dereference(struct ipv6_pond **pond,
+				   const char *file, int line);
 
 isc_result_t renew_leases(struct ia_xx *ia);
 isc_result_t release_leases(struct ia_xx *ia);

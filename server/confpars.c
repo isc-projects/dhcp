@@ -32,10 +32,11 @@
  * ``http://www.nominum.com''.
  */
 
+/*! \file server/confpars.c */
+
 #include "dhcpd.h"
 
 static unsigned char global_host_once = 1;
-static unsigned char dhcpv6_class_once = 1;
 
 static int parse_binding_value(struct parse *cfile,
 				struct binding_value *value);
@@ -634,7 +635,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 			skip_to_semi(cfile);
 			return declaration;
 		}
-	      	parse_address_range6(cfile, group);
+	      	parse_address_range6(cfile, group, NULL);
 		return declaration;
 
 	      case PREFIX6:
@@ -645,7 +646,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 			skip_to_semi(cfile);
 			return declaration;
 		}
-	      	parse_prefix6(cfile, group);
+	      	parse_prefix6(cfile, group, NULL);
 		return declaration;
 
 	      case FIXED_PREFIX6:
@@ -659,6 +660,19 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		}
 		parse_fixed_prefix6(cfile, host_decl);
 		break;
+
+	      case POOL6:
+		skip_token(&val, NULL, cfile);
+		if (type == POOL_DECL) {
+			parse_warn (cfile, "pool declared within pool.");
+			skip_to_semi(cfile);
+		} else if (type != SUBNET_DECL) {
+			parse_warn (cfile, "pool declared outside of network");
+			skip_to_semi(cfile);
+		} else 
+			parse_pool6_statement (cfile, group, type);
+
+		return declaration;
 
 #endif /* DHCPv6 */
 
@@ -1377,6 +1391,163 @@ void parse_failover_state (cfile, state, stos)
 }
 #endif /* defined (FAILOVER_PROTOCOL) */
 
+/*! 
+ * 
+ * \brief Parse allow and deny statements
+ *
+ * This function handles the common processing code for permit and deny
+ * statements in the parse_pool_statement and parse_pool6_statement functions.
+ * It reads in the configuration and constructs a new permit structure that it
+ * attachs to the permit_head passed in from the caller.
+ * 
+ * The allow or deny token should already be consumed, this function expects
+ * one of the following:
+ *   known-clients;
+ *   unknown-clients;
+ *   known clients;
+ *   unknown clients;
+ *   authenticated clients;
+ *   unauthenticated clients;
+ *   all clients;
+ *   dynamic bootp clients;
+ *   members of <class name>;
+ *   after <date>;
+ *
+ * \param[in] cfile       = the configuration file being parsed
+ * \param[in] permit_head = the head of the permit list (permit or prohibit)
+ *			    to which to attach the newly created  permit structure
+ * \param[in] is_allow    = 1 if this is being invoked for an allow statement
+ *			  = 0 if this is being invoked for a deny statement
+ * \param[in] valid_from   = pointers to the time values from the enclosing pool
+ * \param[in] valid_until    or pond structure. One of them will be filled in if
+ *			     the configuration includes an "after" clause
+ */
+
+void get_permit(cfile, permit_head, is_allow, valid_from, valid_until)
+	struct parse *cfile;
+	struct permit **permit_head;
+	int is_allow;
+	TIME *valid_from, *valid_until;
+{
+	enum dhcp_token token;
+	struct permit *permit;
+	const char *val;
+	int need_clients = 1;
+	TIME t;
+
+	/* Create our permit structure */
+	permit = new_permit(MDL);
+	if (!permit)
+		log_fatal ("no memory for permit");
+
+	token = next_token(&val, NULL, cfile);
+	switch (token) {
+	      case UNKNOWN:
+		permit->type = permit_unknown_clients;
+		break;
+				
+	      case KNOWN_CLIENTS:
+		need_clients = 0;
+		permit->type = permit_known_clients;
+		break;
+
+	      case UNKNOWN_CLIENTS:
+		need_clients = 0;
+		permit->type = permit_unknown_clients;
+		break;
+
+	      case KNOWN:
+		permit->type = permit_known_clients;
+		break;
+				
+	      case AUTHENTICATED:
+		permit->type = permit_authenticated_clients;
+		break;
+				
+	      case UNAUTHENTICATED:
+		permit->type = permit_unauthenticated_clients;
+		break;
+
+	      case ALL:
+		permit->type = permit_all_clients;
+		break;
+				
+	      case DYNAMIC:
+		permit->type = permit_dynamic_bootp_clients;
+		if (next_token (&val, NULL, cfile) != TOKEN_BOOTP) {
+			parse_warn (cfile, "expecting \"bootp\"");
+			skip_to_semi (cfile);
+			free_permit (permit, MDL);
+			return;
+		}
+		break;
+
+	      case MEMBERS:
+		need_clients = 0;
+		if (next_token (&val, NULL, cfile) != OF) {
+			parse_warn (cfile, "expecting \"of\"");
+			skip_to_semi (cfile);
+			free_permit (permit, MDL);
+			return;
+		}
+		if (next_token (&val, NULL, cfile) != STRING) {
+			parse_warn (cfile, "expecting class name.");
+			skip_to_semi (cfile);
+			free_permit (permit, MDL);
+			return;
+		}
+		permit->type = permit_class;
+		permit->class = NULL;
+		find_class(&permit->class, val, MDL);
+		if (!permit->class)
+			parse_warn(cfile, "no such class: %s", val);
+		break;
+
+	      case AFTER:
+		need_clients = 0;
+		if (*valid_from || *valid_until) {
+			parse_warn(cfile, "duplicate \"after\" clause.");
+			skip_to_semi(cfile);
+			free_permit(permit, MDL);
+			return;
+		}
+		t = parse_date_core(cfile);
+		permit->type = permit_after;
+		permit->after = t;
+		if (is_allow) {
+			*valid_from = t;
+		} else {
+			*valid_until = t;
+		}
+		break;
+
+	      default:
+		parse_warn (cfile, "expecting permit type.");
+		skip_to_semi (cfile);
+		free_permit (permit, MDL);
+		return;
+	}
+
+	/*
+	 * The need_clients flag is set if we are expecting the
+	 * CLIENTS token
+	 */
+	if ((need_clients != 0)  &&
+	    (next_token (&val, NULL, cfile) != CLIENTS)) {
+		parse_warn (cfile, "expecting \"clients\"");
+		skip_to_semi (cfile);
+		free_permit (permit, MDL);
+		return;
+	}
+
+	while (*permit_head)
+		permit_head = &((*permit_head)->next);
+	*permit_head = permit;
+	parse_semi (cfile);
+
+	return;
+}
+
 /* Permit_list_match returns 1 if every element of the permit list in lhs
    also appears in rhs.   Note that this doesn't by itself mean that the
    two lists are equal - to check for equality, permit_list_match has to
@@ -1407,6 +1578,25 @@ int permit_list_match (struct permit *lhs, struct permit *rhs)
 	return 1;
 }
 
+/*!
+ *
+ * \brief Parse a pool statement
+ *
+ * Pool statements are used to group declarations and permit & deny information
+ * with a specific address range.  They must be declared within a shared network
+ * or subnet and there may be multiple pools withing a shared network or subnet.
+ * Each pool may have a different set of permit or deny options.
+ *
+ * \param[in] cfile = the configuration file being parsed
+ * \param[in] group = the group structure for this pool
+ * \param[in] type  = the type of the enclosing statement.  This must be
+ *		      SHARED_NET_DECL or SUBNET_DECL for this function.
+ *
+ * \return
+ * void - This function either parses the statement and updates the structures
+ *        or it generates an error message and possible halts the program if
+ *        it encounters a problem.
+ */
 void parse_pool_statement (cfile, group, type)
 	struct parse *cfile;
 	struct group *group;
@@ -1416,27 +1606,23 @@ void parse_pool_statement (cfile, group, type)
 	const char *val;
 	int done = 0;
 	struct pool *pool, **p, *pp;
-	struct permit *permit;
-	struct permit **permit_head;
 	int declaration = 0;
 	isc_result_t status;
-	struct lease *lpchain = (struct lease *)0, *lp;
-	TIME t;
-	int is_allow = 0;
+	struct lease *lpchain = NULL, *lp;
 
-	pool = (struct pool *)0;
-	status = pool_allocate (&pool, MDL);
+	pool = NULL;
+	status = pool_allocate(&pool, MDL);
 	if (status != ISC_R_SUCCESS)
 		log_fatal ("no memory for pool: %s",
 			   isc_result_totext (status));
 
 	if (type == SUBNET_DECL)
-		shared_network_reference (&pool -> shared_network,
-					  group -> subnet -> shared_network,
-					  MDL);
+		shared_network_reference(&pool->shared_network,
+					 group->subnet->shared_network,
+					 MDL);
 	else if (type == SHARED_NET_DECL)
-		shared_network_reference (&pool -> shared_network,
-					  group -> shared_network, MDL);
+		shared_network_reference(&pool->shared_network,
+					 group->shared_network, MDL);
 	else {
 		parse_warn(cfile, "Dynamic pools are only valid inside "
 				  "subnet or shared-network statements.");
@@ -1450,196 +1636,86 @@ void parse_pool_statement (cfile, group, type)
 
 #if defined (FAILOVER_PROTOCOL)
 	/* Inherit the failover peer from the shared network. */
-	if (pool -> shared_network -> failover_peer)
+	if (pool->shared_network->failover_peer)
 	    dhcp_failover_state_reference
-		    (&pool -> failover_peer, 
-		     pool -> shared_network -> failover_peer, MDL);
+		    (&pool->failover_peer, 
+		     pool->shared_network->failover_peer, MDL);
 #endif
 
-	if (!parse_lbrace (cfile)) {
-		pool_dereference (&pool, MDL);
+	if (!parse_lbrace(cfile)) {
+		pool_dereference(&pool, MDL);
 		return;
 	}
 
 	do {
-		token = peek_token (&val, (unsigned *)0, cfile);
+		token = peek_token(&val, NULL, cfile);
 		switch (token) {
 		      case TOKEN_NO:
-			skip_token(&val, (unsigned *)0, cfile);
-			token = next_token (&val, (unsigned *)0, cfile);
+			skip_token(&val, NULL, cfile);
+			token = next_token(&val, NULL, cfile);
 			if (token != FAILOVER ||
-			    (token = next_token (&val, (unsigned *)0,
-						 cfile)) != PEER) {
-				parse_warn (cfile,
-					    "expecting \"failover peer\".");
-				skip_to_semi (cfile);
+			    (token = next_token(&val, NULL, cfile)) != PEER) {
+				parse_warn(cfile,
+					   "expecting \"failover peer\".");
+				skip_to_semi(cfile);
 				continue;
 			}
 #if defined (FAILOVER_PROTOCOL)
-			if (pool -> failover_peer)
+			if (pool->failover_peer)
 				dhcp_failover_state_dereference
-					(&pool -> failover_peer, MDL);
+					(&pool->failover_peer, MDL);
 #endif
 			break;
 				
 #if defined (FAILOVER_PROTOCOL)
 		      case FAILOVER:
-			skip_token(&val, (unsigned *)0, cfile);
-			token = next_token (&val, (unsigned *)0, cfile);
+			skip_token(&val, NULL, cfile);
+			token = next_token (&val, NULL, cfile);
 			if (token != PEER) {
-				parse_warn (cfile, "expecting 'peer'.");
-				skip_to_semi (cfile);
+				parse_warn(cfile, "expecting 'peer'.");
+				skip_to_semi(cfile);
 				break;
 			}
-			token = next_token (&val, (unsigned *)0, cfile);
+			token = next_token(&val, NULL, cfile);
 			if (token != STRING) {
-				parse_warn (cfile, "expecting string.");
-				skip_to_semi (cfile);
+				parse_warn(cfile, "expecting string.");
+				skip_to_semi(cfile);
 				break;
 			}
-			if (pool -> failover_peer)
+			if (pool->failover_peer)
 				dhcp_failover_state_dereference
-					(&pool -> failover_peer, MDL);
-			status = find_failover_peer (&pool -> failover_peer,
-						     val, MDL);
+					(&pool->failover_peer, MDL);
+			status = find_failover_peer(&pool->failover_peer,
+						    val, MDL);
 			if (status != ISC_R_SUCCESS)
-				parse_warn (cfile,
-					    "failover peer %s: %s", val,
-					    isc_result_totext (status));
+				parse_warn(cfile,
+					   "failover peer %s: %s", val,
+					   isc_result_totext (status));
 			else
-				pool -> failover_peer -> pool_count++;
-			parse_semi (cfile);
+				pool->failover_peer->pool_count++;
+			parse_semi(cfile);
 			break;
 #endif
 
 		      case RANGE:
-			skip_token(&val, (unsigned *)0, cfile);
+			skip_token(&val, NULL, cfile);
 			parse_address_range (cfile, group, type,
 					     pool, &lpchain);
 			break;
 		      case ALLOW:
-			permit_head = &pool -> permit_list;
-			/* remember the clause which leads to get_permit */
-			is_allow = 1;
-		      get_permit:
-			permit = new_permit (MDL);
-			if (!permit)
-				log_fatal ("no memory for permit");
-			skip_token(&val, (unsigned *)0, cfile);
-			token = next_token (&val, (unsigned *)0, cfile);
-			switch (token) {
-			      case UNKNOWN:
-				permit -> type = permit_unknown_clients;
-			      get_clients:
-				if (next_token (&val, (unsigned *)0,
-						cfile) != CLIENTS) {
-					parse_warn (cfile,
-						    "expecting \"clients\"");
-					skip_to_semi (cfile);
-					free_permit (permit, MDL);
-					continue;
-				}
-				break;
-				
-			      case KNOWN_CLIENTS:
-				permit -> type = permit_known_clients;
-				break;
-
-			      case UNKNOWN_CLIENTS:
-				permit -> type = permit_unknown_clients;
-				break;
-
-			      case KNOWN:
-				permit -> type = permit_known_clients;
-				goto get_clients;
-				
-			      case AUTHENTICATED:
-				permit -> type = permit_authenticated_clients;
-				goto get_clients;
-				
-			      case UNAUTHENTICATED:
-				permit -> type =
-					permit_unauthenticated_clients;
-				goto get_clients;
-
-			      case ALL:
-				permit -> type = permit_all_clients;
-				goto get_clients;
-				break;
-				
-			      case DYNAMIC:
-				permit -> type = permit_dynamic_bootp_clients;
-				if (next_token (&val, (unsigned *)0,
-						cfile) != TOKEN_BOOTP) {
-					parse_warn (cfile,
-						    "expecting \"bootp\"");
-					skip_to_semi (cfile);
-					free_permit (permit, MDL);
-					continue;
-				}
-				goto get_clients;
-				
-			      case MEMBERS:
-				if (next_token (&val, (unsigned *)0,
-						cfile) != OF) {
-					parse_warn (cfile, "expecting \"of\"");
-					skip_to_semi (cfile);
-					free_permit (permit, MDL);
-					continue;
-				}
-				if (next_token (&val, (unsigned *)0,
-						cfile) != STRING) {
-					parse_warn (cfile,
-						    "expecting class name.");
-					skip_to_semi (cfile);
-					free_permit (permit, MDL);
-					continue;
-				}
-				permit -> type = permit_class;
-				permit -> class = (struct class *)0;
-				find_class (&permit -> class, val, MDL);
-				if (!permit -> class)
-					parse_warn (cfile,
-						    "no such class: %s", val);
-				break;
-
-			      case AFTER:
-				if (pool->valid_from || pool->valid_until) {
-					parse_warn(cfile,
-						    "duplicate \"after\" clause.");
-					skip_to_semi(cfile);
-					free_permit(permit, MDL);
-					continue;
-				}
-				t = parse_date_core(cfile);
-				permit->type = permit_after;
-				permit->after = t;
-				if (is_allow) {
-					pool->valid_from = t;
-				} else {
-					pool->valid_until = t;
-				}
-				break;
-
-			      default:
-				parse_warn (cfile, "expecting permit type.");
-				skip_to_semi (cfile);
-				break;
-			}
-			while (*permit_head)
-				permit_head = &((*permit_head) -> next);
-			*permit_head = permit;
-			parse_semi (cfile);
+			skip_token(&val, NULL, cfile);
+			get_permit(cfile, &pool->permit_list, 1,
+				   &pool->valid_from, &pool->valid_until);
 			break;
 
 		      case DENY:
-			permit_head = &pool -> prohibit_list;
-			/* remember the clause which leads to get_permit */
-			is_allow = 0; 
-			goto get_permit;
+			skip_token(&val, NULL, cfile);
+			get_permit(cfile, &pool->prohibit_list, 0,
+				   &pool->valid_from, &pool->valid_until);
+			break;
 			
 		      case RBRACE:
-			skip_token(&val, (unsigned *)0, cfile);
+			skip_token(&val, NULL, cfile);
 			done = 1;
 			break;
 
@@ -1653,37 +1729,36 @@ void parse_pool_statement (cfile, group, type)
 			goto cleanup;
 
 		      default:
-			declaration = parse_statement (cfile, pool -> group,
-						       POOL_DECL,
-						       (struct host_decl *)0,
+			declaration = parse_statement(cfile, pool->group,
+						      POOL_DECL, NULL,
 						       declaration);
 			break;
 		}
 	} while (!done);
 
 	/* See if there's already a pool into which we can merge this one. */
-	for (pp = pool -> shared_network -> pools; pp; pp = pp -> next) {
-		if (pp -> group -> statements != pool -> group -> statements)
+	for (pp = pool->shared_network->pools; pp; pp = pp->next) {
+		if (pp->group->statements != pool->group->statements)
 			continue;
 #if defined (FAILOVER_PROTOCOL)
-		if (pool -> failover_peer != pp -> failover_peer)
+		if (pool->failover_peer != pp->failover_peer)
 			continue;
 #endif
-		if (!permit_list_match (pp -> permit_list,
-					pool -> permit_list) ||
-		    !permit_list_match (pool -> permit_list,
-					pp -> permit_list) ||
-		    !permit_list_match (pp -> prohibit_list,
-					pool -> prohibit_list) ||
-		    !permit_list_match (pool -> prohibit_list,
-					pp -> prohibit_list))
+		if (!permit_list_match(pp->permit_list,
+				       pool->permit_list) ||
+		    !permit_list_match(pool->permit_list,
+				       pp->permit_list) ||
+		    !permit_list_match(pp->prohibit_list,
+				       pool->prohibit_list) ||
+		    !permit_list_match(pool->prohibit_list,
+				       pp->prohibit_list))
 			continue;
 
 		/* Okay, we can merge these two pools.    All we have to
 		   do is fix up the leases, which all point to their pool. */
-		for (lp = lpchain; lp; lp = lp -> next) {
-			pool_dereference (&lp -> pool, MDL);
-			pool_reference (&lp -> pool, pp, MDL);
+		for (lp = lpchain; lp; lp = lp->next) {
+			pool_dereference(&lp->pool, MDL);
+			pool_reference(&lp->pool, pp, MDL);
 		}
 		break;
 	}
@@ -1691,33 +1766,33 @@ void parse_pool_statement (cfile, group, type)
 	/* If we didn't succeed in merging this pool into another, put
 	   it on the list. */
 	if (!pp) {
-		p = &pool -> shared_network -> pools;
-		for (; *p; p = &((*p) -> next))
+		p = &pool->shared_network->pools;
+		for (; *p; p = &((*p)->next))
 			;
-		pool_reference (p, pool, MDL);
+		pool_reference(p, pool, MDL);
 	}
 
 	/* Don't allow a pool declaration with no addresses, since it is
 	   probably a configuration error. */
 	if (!lpchain) {
-		parse_warn (cfile, "Pool declaration with no address range.");
-		log_error ("Pool declarations must always contain at least");
-		log_error ("one range statement.");
+		parse_warn(cfile, "Pool declaration with no address range.");
+		log_error("Pool declarations must always contain at least");
+		log_error("one range statement.");
 	}
 
 cleanup:
 	/* Dereference the lease chain. */
-	lp = (struct lease *)0;
+	lp = NULL;
 	while (lpchain) {
-		lease_reference (&lp, lpchain, MDL);
-		lease_dereference (&lpchain, MDL);
-		if (lp -> next) {
-			lease_reference (&lpchain, lp -> next, MDL);
-			lease_dereference (&lp -> next, MDL);
-			lease_dereference (&lp, MDL);
+		lease_reference(&lp, lpchain, MDL);
+		lease_dereference(&lpchain, MDL);
+		if (lp->next) {
+			lease_reference(&lpchain, lp->next, MDL);
+			lease_dereference(&lp->next, MDL);
+			lease_dereference(&lp, MDL);
 		}
 	}
-	pool_dereference (&pool, MDL);
+	pool_dereference(&pool, MDL);
 }
 
 /* Expect a left brace; if there isn't one, skip over the rest of the
@@ -2007,12 +2082,6 @@ int parse_class_declaration (cp, cfile, group, type)
 	int matchedonce = 0;
 	int submatchedonce = 0;
 	unsigned code;
-
-	if (dhcpv6_class_once && local_family == AF_INET6) {
-		dhcpv6_class_once = 0;
-		log_error("WARNING: class declarations are not supported "
-			  "for DHCPv6.");
-	}
 
 	token = next_token (&val, NULL, cfile);
 	if (token != STRING) {
@@ -3688,14 +3757,12 @@ void parse_address_range (cfile, group, type, inpool, lpchain)
 #ifdef DHCPv6
 static void
 add_ipv6_pool_to_subnet(struct subnet *subnet, u_int16_t type,
-			struct iaddr *lo_addr, int bits, int units) {
+			struct iaddr *lo_addr, int bits, int units,
+			struct ipv6_pond *pond) {
 	struct ipv6_pool *pool;
-	struct shared_network *share;
 	struct in6_addr tmp_in6_addr;
 	int num_pools;
 	struct ipv6_pool **tmp;
-
-	share = subnet->shared_network;
 
 	/*
 	 * Create our pool.
@@ -3724,16 +3791,19 @@ add_ipv6_pool_to_subnet(struct subnet *subnet, u_int16_t type,
 	pool->subnet = NULL;
 	subnet_reference(&pool->subnet, subnet, MDL);
 	pool->shared_network = NULL;
-	shared_network_reference(&pool->shared_network, share, MDL);
+	shared_network_reference(&pool->shared_network,
+				 subnet->shared_network, MDL);
+	pool->ipv6_pond = NULL;
+	ipv6_pond_reference(&pool->ipv6_pond, pond, MDL);
 
 	/* 
-	 * Increase our array size for ipv6_pools in the shared_network.
+	 * Increase our array size for ipv6_pools in the pond
 	 */
-	if (share->ipv6_pools == NULL) {
+	if (pond->ipv6_pools == NULL) {
 		num_pools = 0;
 	} else {
 		num_pools = 0;
-		while (share->ipv6_pools[num_pools] != NULL) {
+		while (pond->ipv6_pools[num_pools] != NULL) {
 			num_pools++;
 		}
 	}
@@ -3742,34 +3812,114 @@ add_ipv6_pool_to_subnet(struct subnet *subnet, u_int16_t type,
 		log_fatal("Out of memory");
 	}
 	if (num_pools > 0) {
-		memcpy(tmp, share->ipv6_pools, 
+		memcpy(tmp, pond->ipv6_pools, 
 		       sizeof(struct ipv6_pool *) * num_pools);
 	}
-	if (share->ipv6_pools != NULL) {
-		dfree(share->ipv6_pools, MDL);
+	if (pond->ipv6_pools != NULL) {
+		dfree(pond->ipv6_pools, MDL);
 	}
-	share->ipv6_pools = tmp;
+	pond->ipv6_pools = tmp;
 
 	/* 
 	 * Record this pool in our array of pools for this shared network.
 	 */
-	ipv6_pool_reference(&share->ipv6_pools[num_pools], pool, MDL);
-	share->ipv6_pools[num_pools+1] = NULL;
+	ipv6_pool_reference(&pond->ipv6_pools[num_pools], pool, MDL);
+	pond->ipv6_pools[num_pools+1] = NULL;
 }
+
+/*!
+ *
+ * \brief Find or create a default pond
+ *
+ * Find or create an ipv6_pond on which to attach the ipv6_pools.  We
+ * check the shared network to see if there is a general purpose
+ * entry - this will have an empty prohibit list and a permit list
+ * with a single entry that permits all clients.  If the shared
+ * network doesn't have one of them create it and attach it to
+ * the shared network and the return argument.
+ * 
+ * This function is used when we have a range6 or prefix6 statement
+ * inside a subnet6 statement but outside of a pool6 statement.
+ * This routine constructs the missing ipv6_pond structure so
+ * we always have 
+ * shared_network -> ipv6_pond -> ipv6_pool
+ *
+ * \param[in] group     = a pointer to the group structure from which
+ *                        we can find the subnet and shared netowrk
+ *                        structures
+ * \param[out] ret_pond = a pointer to space for the pointer to
+ *                        the structure to return
+ *
+ * \return
+ * void
+ */
+static void
+add_ipv6_pond_to_network(struct group *group,
+			 struct ipv6_pond **ret_pond) {
+
+	struct ipv6_pond *pond = NULL, *last = NULL;
+	struct permit *p;
+	isc_result_t status;
+	struct shared_network *shared = group->subnet->shared_network;
+
+	for (pond = shared->ipv6_pond; pond; pond = pond->next) {
+		if ((pond->group->statements == group->statements) &&
+		    (pond->prohibit_list == NULL) &&
+		    (pond->permit_list != NULL) &&
+		    (pond->permit_list->next == NULL) &&
+		    (pond->permit_list->type == permit_all_clients)) {
+			ipv6_pond_reference(ret_pond, pond, MDL);
+			return;
+		}
+		last = pond;
+	}
+
+	/* no pond available, make one */
+	status = ipv6_pond_allocate(&pond, MDL);
+	if (status != ISC_R_SUCCESS) 
+		log_fatal ("no memory for ad-hoc ipv6 pond: %s",
+			   isc_result_totext (status));
+	p = new_permit (MDL);
+	if (p == NULL)
+		log_fatal ("no memory for ad-hoc ipv6 permit.");
+
+	/* we permit all clients */
+	p->type = permit_all_clients;
+	pond->permit_list = p;
+
+	/* and attach the pond to the return argument and the shared network */
+	ipv6_pond_reference(ret_pond, pond, MDL);
+
+	if (shared->ipv6_pond)
+		ipv6_pond_reference(&last->next, pond, MDL);
+	else 
+		ipv6_pond_reference(&shared->ipv6_pond, pond, MDL);
+
+	shared_network_reference(&pond->shared_network, shared, MDL);
+	if (!clone_group (&pond->group, group, MDL))
+		log_fatal ("no memory for anon pool group.");
+
+	ipv6_pond_dereference(&pond, MDL);
+	return;
+}
+
 
 /* address-range6-declaration :== ip-address6 ip-address6 SEMI
 			       | ip-address6 SLASH number SEMI
 			       | ip-address6 [SLASH number] TEMPORARY SEMI */
 
 void 
-parse_address_range6(struct parse *cfile, struct group *group) {
+parse_address_range6(struct parse *cfile,
+		     struct group *group,
+		     struct ipv6_pond *inpond) {
 	struct iaddr lo, hi;
 	int bits;
 	enum dhcp_token token;
 	const char *val;
-	struct iaddrcidrnetlist *nets;
+	struct iaddrcidrnetlist *nets, net;
 	struct iaddrcidrnetlist *p;
 	u_int16_t type = D6O_IA_NA;
+	struct ipv6_pond *pond = NULL;
 
         if (local_family != AF_INET6) {
                 parse_warn(cfile, "range6 statement is only supported "
@@ -3789,6 +3939,12 @@ parse_address_range6(struct parse *cfile, struct group *group) {
 		return;
 	}
 
+	/*
+	 * zero out the net entry in case we use it
+	 */
+	memset(&net, 0, sizeof(net));
+	net.cidrnet.lo_addr = lo;
+
 	/* 
 	 * See if we we're using range or CIDR notation or TEMPORARY
 	 */
@@ -3804,13 +3960,15 @@ parse_address_range6(struct parse *cfile, struct group *group) {
 			skip_to_semi(cfile);
 			return;
 		}
-		bits = atoi(val);
+		net.cidrnet.bits = atoi(val);
+		bits = net.cidrnet.bits;
 		if ((bits < 0) || (bits > 128)) {
 			parse_warn(cfile, "networks have 0 to 128 bits");
 			skip_to_semi(cfile);
 			return;
 		}
-		if (!is_cidr_mask_valid(&lo, bits)) {
+
+		if (!is_cidr_mask_valid(&net.cidrnet.lo_addr, bits)) {
 			parse_warn(cfile, "network mask too short");
 			skip_to_semi(cfile);
 			return;
@@ -3829,8 +3987,7 @@ parse_address_range6(struct parse *cfile, struct group *group) {
 			type = D6O_IA_TA;
 		}
 
-		add_ipv6_pool_to_subnet(group->subnet, type, &lo,
-					bits, 128);
+		nets = &net;
 
 	} else if (token == TEMPORARY) {
 		/*
@@ -3838,15 +3995,16 @@ parse_address_range6(struct parse *cfile, struct group *group) {
 		 */
 		type = D6O_IA_TA;
 		skip_token(NULL, NULL, cfile);
-		bits = 64;
-		if (!is_cidr_mask_valid(&lo, bits)) {
+		net.cidrnet.bits = 64;
+		if (!is_cidr_mask_valid(&net.cidrnet.lo_addr,
+					net.cidrnet.bits)) {
 			parse_warn(cfile, "network mask too short");
 			skip_to_semi(cfile);
 			return;
 		}
 
-		add_ipv6_pool_to_subnet(group->subnet, type, &lo,
-					bits, 128);
+		nets = &net;
+
 	} else {
 		/*
 		 * No '/', so we are looking for the end address of 
@@ -3864,14 +4022,32 @@ parse_address_range6(struct parse *cfile, struct group *group) {
 			log_fatal("Error converting range to CIDR networks");
 		}
 
-		for (p=nets; p != NULL; p=p->next) {
-			add_ipv6_pool_to_subnet(group->subnet, type,
-						&p->cidrnet.lo_addr, 
-						p->cidrnet.bits, 128);
-		}
-
-		free_iaddrcidrnetlist(&nets);
 	}
+
+	/*
+	 * See if we have a pond for this set of pools.
+	 * If the caller supplied one we use it, otherwise
+	 * check the shared network
+	 */
+
+	if (inpond != NULL) {
+		ipv6_pond_reference(&pond, inpond, MDL);
+	} else {
+		add_ipv6_pond_to_network(group, &pond);
+	}
+
+	/* Now that we have a pond add the nets we have parsed */
+	for (p=nets; p != NULL; p=p->next) {
+		add_ipv6_pool_to_subnet(group->subnet, type,
+					&p->cidrnet.lo_addr, 
+					p->cidrnet.bits, 128, pond);
+	}
+
+	/* if we allocated a list free it now */
+	if (nets != &net) 
+		free_iaddrcidrnetlist(&nets);
+
+	ipv6_pond_dereference(&pond, MDL);
 
 	token = next_token(NULL, NULL, cfile);
 	if (token != SEMI) {
@@ -3884,13 +4060,16 @@ parse_address_range6(struct parse *cfile, struct group *group) {
 /* prefix6-declaration :== ip-address6 ip-address6 SLASH number SEMI */
 
 void 
-parse_prefix6(struct parse *cfile, struct group *group) {
+parse_prefix6(struct parse *cfile,
+	      struct group *group,
+	      struct ipv6_pond *inpond) {
 	struct iaddr lo, hi;
 	int bits;
 	enum dhcp_token token;
 	const char *val;
 	struct iaddrcidrnetlist *nets;
 	struct iaddrcidrnetlist *p;
+	struct ipv6_pond *pond = NULL;
 
 	if (local_family != AF_INET6) {
 		parse_warn(cfile, "prefix6 statement is only supported "
@@ -3955,6 +4134,18 @@ parse_prefix6(struct parse *cfile, struct group *group) {
 		log_fatal("Error converting prefix to CIDR");
 	}
 
+	/*
+	 * See if we have a pond for this set of pools.
+	 * If the caller supplied one we use it, otherwise
+	 * check the shared network
+	 */
+
+	if (inpond != NULL) {
+		ipv6_pond_reference(&pond, inpond, MDL);
+	} else {
+		add_ipv6_pond_to_network(group, &pond);
+	}
+		
 	for (p = nets; p != NULL; p = p->next) {
 		/* Normalize and check. */
 		if (p->cidrnet.bits == 128) {
@@ -3966,7 +4157,7 @@ parse_prefix6(struct parse *cfile, struct group *group) {
 		}
 		add_ipv6_pool_to_subnet(group->subnet, D6O_IA_PD,
 					&p->cidrnet.lo_addr,
-					p->cidrnet.bits, bits);
+					p->cidrnet.bits, bits, pond);
 	}
 
 	free_iaddrcidrnetlist(&nets);
@@ -4052,6 +4243,141 @@ parse_fixed_prefix6(struct parse *cfile, struct host_decl *host_decl) {
 	*h = ia;
 	return;
 }
+
+/*!
+ *
+ * \brief Parse a pool6 statement
+ *
+ * Pool statements are used to group declarations and permit & deny information
+ * with a specific address range.  They must be declared within a shared network
+ * or subnet and there may be multiple pools withing a shared network or subnet.
+ * Each pool may have a different set of permit or deny options.
+ *
+ * \param[in] cfile = the configuration file being parsed
+ * \param[in] group = the group structure for this pool
+ * \param[in] type  = the type of the enclosing statement.  This must be
+ *		      SUBNET_DECL for this function.
+ *
+ * \return
+ * void - This function either parses the statement and updates the structures
+ *        or it generates an error message and possible halts the program if
+ *        it encounters a problem.
+ */
+void parse_pool6_statement (cfile, group, type)
+	struct parse *cfile;
+	struct group *group;
+	int type;
+{
+	enum dhcp_token token;
+	const char *val;
+	int done = 0;
+	struct ipv6_pond *pond, **p;
+	int declaration = 0;
+	isc_result_t status;
+
+	pond = NULL;
+	status = ipv6_pond_allocate(&pond, MDL);
+	if (status != ISC_R_SUCCESS)
+		log_fatal("no memory for pool6: %s",
+			  isc_result_totext (status));
+
+	if (type == SUBNET_DECL)
+		shared_network_reference(&pond->shared_network,
+					 group->subnet->shared_network,
+					 MDL);
+	else {
+		parse_warn(cfile, "Dynamic pool6s are only valid inside "
+				  "subnet statements.");
+		skip_to_semi(cfile);
+		return;
+	}
+
+	if (clone_group(&pond->group, group, MDL) == 0)
+		log_fatal("can't clone pool6 group.");
+
+	if (parse_lbrace(cfile) == 0) {
+		ipv6_pond_dereference(&pond, MDL);
+		return;
+	}
+
+	do {
+		token = peek_token(&val, NULL, cfile);
+		switch (token) {
+		      case RANGE6:
+			skip_token(NULL, NULL, cfile);
+			parse_address_range6(cfile, group, pond);
+			break;
+
+		      case PREFIX6:
+			skip_token(NULL, NULL, cfile);
+			parse_prefix6(cfile, group, pond);
+			break;
+
+		      case ALLOW:
+			skip_token(NULL, NULL, cfile);
+			get_permit(cfile, &pond->permit_list, 1,
+				   &pond->valid_from, &pond->valid_until);
+			break;
+
+		      case DENY:
+			skip_token(NULL, NULL, cfile);
+			get_permit(cfile, &pond->prohibit_list, 0,
+				   &pond->valid_from, &pond->valid_until);
+			break;
+			
+		      case RBRACE:
+			skip_token(&val, NULL, cfile);
+			done = 1;
+			break;
+
+		      case END_OF_FILE:
+			/*
+			 * We can get to END_OF_FILE if, for instance,
+			 * the parse_statement() reads all available tokens
+			 * and leaves us at the end.
+			 */
+			parse_warn(cfile, "unexpected end of file");
+			goto cleanup;
+
+		      default:
+			declaration = parse_statement(cfile, pond->group,
+						      POOL_DECL, NULL,
+						      declaration);
+			break;
+		}
+	} while (!done);
+
+	/*
+	 * A possible optimization is to see if this pond can be merged into
+	 * an already existing pond.  But I'll pass on that for now as we need
+	 * to repoint the leases to the other pond which is annoying. SAR
+	 */
+
+	/* 
+	 * Add this pond to the list (will need updating if we add the
+	 * optimization).
+	 */
+
+	p = &pond->shared_network->ipv6_pond;
+	for (; *p; p = &((*p)->next))
+		;
+	ipv6_pond_reference(p, pond, MDL);
+
+	/* Don't allow a pool6 declaration with no addresses or
+	   prefixes, since it is probably a configuration error. */
+	if (pond->ipv6_pools == NULL) {
+		parse_warn (cfile, "Pool6 declaration with no %s.",
+			    "address range6 or prefix6");
+		log_error ("Pool6 declarations must always contain at least");
+		log_error ("one range6 or prefix6 statement.");
+	}
+
+cleanup:
+	ipv6_pond_dereference(&pond, MDL);
+}
+
+
+
 #endif /* DHCPv6 */
 
 /* allow-deny-keyword :== BOOTP

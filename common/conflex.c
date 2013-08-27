@@ -1231,6 +1231,8 @@ intern(char *atom, enum dhcp_token dfv) {
 			return PACKET;
 		if (!strcasecmp (atom + 1, "ool"))
 			return POOL;
+		if (!strcasecmp (atom + 1, "ool6"))
+			return POOL6;
 		if (!strcasecmp (atom + 1, "refix6"))
 			return PREFIX6;
 		if (!strcasecmp (atom + 1, "seudo"))
