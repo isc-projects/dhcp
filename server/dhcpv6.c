@@ -2781,7 +2781,7 @@ temporary_is_available(struct reply_state *reply, struct iaddr *addr) {
 static isc_result_t
 find_client_temporaries(struct reply_state *reply) {
 	int i;
-	struct ipv6_pool *p;
+	struct ipv6_pool *p = NULL;
 	struct ipv6_pond *pond;
 	isc_result_t status = ISC_R_NORESOURCES;;
 	unsigned int attempts;
