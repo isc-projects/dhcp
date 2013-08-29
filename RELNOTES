@@ -60,7 +60,7 @@ work on other platforms. Please report any problems and suggested fixes to
   was used is now solved on GNU/Linux, BSD and GNU/Hurd systems. Note
   that use-sockets feature was not tested on those systems. Client and
   server code no longer use MAX_PATH constant that is not defined on
-  GNU/Hurd systems. [ISC-Bugs 25979]
+  GNU/Hurd systems. [ISC-Bugs #25979]
 
 - Add a perl script in the contrib directory, dhcp-lease-list.pl, which
   can parse v4 lease files and output the lease information in a more
@@ -106,6 +106,10 @@ work on other platforms. Please report any problems and suggested fixes to
   for the sockets to be cleaned.  This should allow the -r option
   to work more consistently.
   [ISC-Bugs #18175]
+
+- Missing files for ISC DHCP Developer's Guide are now included in
+  the release tarballs. To generate this documentation, please use
+  make devel command in doc directory. [ISC-Bugs #32767]
 
 			Changes since 4.2.4
 
