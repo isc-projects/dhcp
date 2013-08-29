@@ -71,6 +71,10 @@ work on other platforms. Please report any problems and suggested fixes to
   to work more consistently.
   [ISC-Bugs #18175]
 
+- Missing files for ISC DHCP Developer's Guide are now included in
+  the release tarballs. To generate this documentation, please use
+  make devel command in doc directory. [ISC-Bugs #32767]
+
 			Changes since 4.2.5rc1
 
 - None

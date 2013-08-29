@@ -18,7 +18,9 @@ EXTRA_DIST = RELNOTES LICENSE \
 	     doc/ja_JP.eucJP/dhclient.conf.5 doc/ja_JP.eucJP/dhclient.leases.5 \
 	     doc/ja_JP.eucJP/dhcp-eval.5 doc/ja_JP.eucJP/dhcp-options.5 \
 	     doc/examples/dhclient-dhcpv6.conf doc/examples/dhcpd-dhcpv6.conf \
-	     util/bindvar.sh \
+	     doc/devel/arch.dox doc/devel/atf.dox doc/devel/contrib.dox \
+	     doc/devel/debug.dox doc/devel/isc-logo.jpg doc/devel/mainpage.dox \
+	     doc/devel/omapi.dox doc/devel/qa.dox util/bindvar.sh \
 	     bind/Makefile bind/bind.tar.gz bind/version.tmp \
 	     common/tests/Atffile server/tests/Atffile
 
