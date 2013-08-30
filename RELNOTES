@@ -89,6 +89,9 @@ work on other platforms. Please report any problems and suggested fixes to
   the release tarballs. To generate this documentation, please use
   make devel command in doc directory. [ISC-Bugs #32767]
 
+- Update client script for use with openwrt.
+  [ISC-Bugs #29843]
+
 			Changes since 4.1-ESV-R8rc1
 
 - None
