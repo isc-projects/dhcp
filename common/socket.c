@@ -223,7 +223,7 @@ if_register_socket(struct interface_info *info, int family,
 	 * DHCPv4 sockets; we can't yet support BSD sockets well, much
 	 * less multiple sockets.
 	 */
-	if (local_family == AF_INET6) {
+	if ((local_family == AF_INET6) && *do_multicast) {
 		flag = 1;
 		if (setsockopt(sock, SOL_SOCKET, SO_REUSEPORT,
 			       (char *)&flag, sizeof(flag)) < 0) {
