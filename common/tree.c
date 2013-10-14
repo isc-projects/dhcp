@@ -644,15 +644,6 @@ int evaluate_expression (result, packet, lease, client_state,
 		status = (evaluate_data_expression
 			  (&bv -> value.data, packet, lease, client_state,
 			   in_options, cfg_options, scope, expr, MDL));
-#if defined (NSUPDATE_OLD)
-	} else if (is_dns_expression (expr)) {
-		if (!binding_value_allocate (&bv, MDL))
-			return 0;
-		bv -> type = binding_dns;
-		status = (evaluate_dns_expression
-			  (&bv -> value.dns, packet, lease, client_state,
-			   in_options, cfg_options, scope, expr));
-#endif
 	} else {
 		log_error ("%s: invalid expression type: %d",
 			   "evaluate_expression", expr -> op);
@@ -698,19 +689,6 @@ int binding_value_dereference (struct binding_value **v,
 		if (bv -> value.data.buffer)
 			data_string_forget (&bv -> value.data, file, line);
 		break;
-	      case binding_dns:
-#if defined (NSUPDATE_OLD)
-		if (bv -> value.dns) {
-			if (bv -> value.dns -> r_data) {
-				dfree (bv -> value.dns -> r_data_ephem, MDL);
-				bv -> value.dns -> r_data = (unsigned char *)0;
-				bv -> value.dns -> r_data_ephem =
-					(unsigned char *)0;
-			}
-			minires_freeupdrec (bv -> value.dns);
-		}
-		break;
-#endif
 	      default:
 		log_error ("%s(%d): invalid binding type: %d",
 			   file, line, bv -> type);
@@ -719,270 +697,6 @@ int binding_value_dereference (struct binding_value **v,
 	free_binding_value(bv, file, line);
 	return 1;
 }
-
-#if defined (NSUPDATE_OLD)
-int evaluate_dns_expression (result, packet, lease, client_state, in_options,
-			     cfg_options, scope, expr)
-	ns_updrec **result;
-	struct packet *packet;
-	struct lease *lease;
-	struct client_state *client_state;
-	struct option_state *in_options;
-	struct option_state *cfg_options;
-	struct binding_scope **scope;
-	struct expression *expr;
-{
-	unsigned long ttl = 0;
-	char *tname;
-	struct data_string name, data;
-	int r0, r1, r2;
-
-	if (!result || *result) {
-		log_error ("evaluate_dns_expression called with non-null %s",
-			   "result pointer");
-#if defined (POINTER_DEBUG)
-		abort ();
-#else
-		return 0;
-#endif
-	}
-		
-	switch (expr -> op) {
-#if defined (NSUPDATE)
-	      case expr_ns_add:
-		r0 = evaluate_numeric_expression (&ttl, packet, lease,
-						  client_state,
-						  in_options, cfg_options,
-						  scope,
-						  expr -> data.ns_add.ttl);
-		goto nsfinish;
-
-	      case expr_ns_exists:
-		ttl = 1;
-
-	      case expr_ns_delete:
-	      case expr_ns_not_exists:
-		r0 = 1;
-	      nsfinish:
-		memset (&name, 0, sizeof name);
-		r1 = evaluate_data_expression (&name, packet, lease,
-					       client_state,
-					       in_options, cfg_options, scope,
-					       expr -> data.ns_add.rrname,
-					       MDL);
-		if (r1) {
-			/* The result of the evaluation may or may not
-			   be NUL-terminated, but we need it
-			   terminated for sure, so we have to allocate
-			   a buffer and terminate it. */
-			tname = dmalloc (name.len + 1, MDL);
-			if (!tname) {
-				r2 = 0;
-				r1 = 0;
-				data_string_forget (&name, MDL);
-			} else {
-				memcpy (tname, name.data, name.len);
-				tname [name.len] = 0;
-				memset (&data, 0, sizeof data);
-				r2 = evaluate_data_expression
-					(&data, packet, lease, client_state,
-					 in_options, cfg_options, scope,
-					 expr -> data.ns_add.rrdata, MDL);
-			}
-		} else {
-			r2 = 0;
-			tname = NULL;
-		}
-		if (r0 && r1 && (r2 || expr -> op != expr_ns_add)) {
-		    *result = minires_mkupdrec (((expr -> op == expr_ns_add ||
-						  expr -> op == expr_ns_delete)
-						 ? S_UPDATE : S_PREREQ),
-						tname,
-						expr -> data.ns_add.rrclass,
-						expr -> data.ns_add.rrtype,
-						ttl);
-		    if (!*result) {
-			  ngood:
-			    if (r2) {
-				data_string_forget (&data, MDL);
-				r2 = 0;
-			    }
-		    } else {
-			if (data.len) {
-				/* As a special case, if we get exactly
-				   four bytes of data, it's an IP address
-				   represented as a 32-bit quantity, which
-				   is actually what we *should* be getting
-				   here.   Because res_mkupdrec is currently
-				   broken and expects a dotted quad, convert
-				   it.   This should be fixed when the new
-				   resolver is merged. */
-				if (data.len == 4) {
-				    (*result) -> r_data_ephem =
-					    dmalloc (16, MDL);
-				    if (!(*result) -> r_data_ephem)
-					goto dpngood;
-				    (*result) -> r_data =
-					    (*result) -> r_data_ephem;
-				    /*%Audit% 16 bytes max. %2004.06.17,Safe%*/
-				    sprintf ((char *)(*result) -> r_data_ephem,
-					     "%u.%u.%u.%u",
-					     data.data [0] & 0xff,
-					     data.data [1] & 0xff,
-					     data.data [2] & 0xff,
-					     data.data [3] & 0xff);
-				    (*result) -> r_size = 
-					    strlen ((const char *)
-						    (*result) -> r_data);
-				} else {
-				    (*result) -> r_size = data.len;
-				    (*result) -> r_data_ephem =
-					    dmalloc (data.len, MDL);
-				    if (!(*result) -> r_data_ephem) {
-				      dpngood: /* double plus ungood. */
-					minires_freeupdrec (*result);
-					*result = 0;
-					goto ngood;
-				    }
-				    (*result) -> r_data =
-					    (*result) -> r_data_ephem;
-				    memcpy ((*result) -> r_data_ephem,
-					    data.data, data.len);
-				}
-			} else {
-				(*result) -> r_data = 0;
-				(*result) -> r_size = 0;
-			}
-			switch (expr -> op) {
-			      case expr_ns_add:
-				(*result) -> r_opcode = ADD;
-				break;
-			      case expr_ns_delete:
-				(*result) -> r_opcode = DELETE;
-				break;
-			      case expr_ns_exists:
-				(*result) -> r_opcode = YXRRSET;
-				break;
-			      case expr_ns_not_exists:
-				(*result) -> r_opcode = NXRRSET;
-				break;
-
-				/* Can't happen, but satisfy gcc. */
-			      default:
-				break;
-			}
-		    }
-		}
-		if (r1) {
-			data_string_forget (&name, MDL);
-			dfree (tname, MDL);
-		}
-		if (r2)
-			data_string_forget (&data, MDL);
-		/* One flaw in the thinking here: an IP address and an
-		   ASCII string both look like data expressions, but
-		   for A records, we want an ASCII string, not a
-		   binary IP address.  Do I need to turn binary IP
-		   addresses into a separate type?  */
-		return (r0 && r1 &&
-			(r2 || expr -> op != expr_ns_add) && *result);
-
-#else
-	      case expr_ns_add:
-	      case expr_ns_delete:
-	      case expr_ns_exists:
-	      case expr_ns_not_exists:
-		return 0;
-#endif
-	      case expr_funcall:
-		log_error ("%s: dns values for functions not supported.",
-			   expr -> data.funcall.name);
-		break;
-
-	      case expr_variable_reference:
-		log_error ("%s: dns values for variables not supported.",
-			   expr -> data.variable);
-		break;
-
-	      case expr_check:
-	      case expr_equal:
-	      case expr_not_equal:
-	      case expr_regex_match:
-	      case expr_iregex_match:
-	      case expr_and:
-	      case expr_or:
-	      case expr_not:
-	      case expr_match:
-	      case expr_static:
-	      case expr_known:
-	      case expr_exists:
-	      case expr_variable_exists:
-		log_error ("Boolean opcode in evaluate_dns_expression: %d",
-		      expr -> op);
-		return 0;
-
-	      case expr_none:
-	      case expr_substring:
-	      case expr_suffix:
-	      case expr_lcase:
-	      case expr_ucase:
-	      case expr_option:
-	      case expr_hardware:
-	      case expr_const_data:
-	      case expr_packet:
-	      case expr_concat:
-	      case expr_encapsulate:
-	      case expr_host_lookup:
-	      case expr_encode_int8:
-	      case expr_encode_int16:
-	      case expr_encode_int32:
-	      case expr_binary_to_ascii:
-	      case expr_reverse:
-	      case expr_filename:
-	      case expr_sname:
-	      case expr_pick_first_value:
-	      case expr_host_decl_name:
-	      case expr_config_option:
-	      case expr_leased_address:
-	      case expr_null:
-	      case expr_gethostname:
-		log_error ("Data opcode in evaluate_dns_expression: %d",
-		      expr -> op);
-		return 0;
-
-	      case expr_extract_int8:
-	      case expr_extract_int16:
-	      case expr_extract_int32:
-	      case expr_const_int:
-	      case expr_lease_time:
-	      case expr_dns_transaction:
-	      case expr_add:
-	      case expr_subtract:
-	      case expr_multiply:
-	      case expr_divide:
-	      case expr_remainder:
-	      case expr_binary_and:
-	      case expr_binary_or:
-	      case expr_binary_xor:
-	      case expr_client_state:
-		log_error ("Numeric opcode in evaluate_dns_expression: %d",
-		      expr -> op);
-		return 0;
-
-	      case expr_function:
-		log_error ("Function opcode in evaluate_dns_expression: %d",
-		      expr -> op);
-		return 0;
-
-	      case expr_arg:
-		break;
-	}
-
-	log_error ("Bogus opcode in evaluate_dns_expression: %d",
-		   expr -> op);
-	return 0;
-}
-#endif /* defined (NSUPDATE_OLD) */
 
 int evaluate_boolean_expression (result, packet, lease, client_state,
 				 in_options, cfg_options, scope, expr)
@@ -1055,20 +769,7 @@ int evaluate_boolean_expression (result, packet, lease, client_state,
 			    else
 				*result = expr -> op == expr_not_equal;
 			    break;
-#if defined (NSUPDATE_OLD)
-			  case binding_dns:
-#if defined (NSUPDATE)
-			    /* XXX This should be a comparison for equal
-			       XXX values, not for identity. */
-			    if (bv -> value.dns == obv -> value.dns)
-				*result = expr -> op == expr_equal;
-			    else
-				*result = expr -> op == expr_not_equal;
-#else
-				*result = expr -> op == expr_not_equal;
-#endif
-			    break;
-#endif /* NSUPDATE_OLD */
+
 			  case binding_function:
 			    if (bv -> value.fundef == obv -> value.fundef)
 				*result = expr -> op == expr_equal;
@@ -2368,7 +2069,7 @@ int evaluate_data_expression (result, packet, lease, client_state,
 	      case expr_ns_delete:
 	      case expr_ns_exists:
 	      case expr_ns_not_exists:
-		log_error ("dns update opcode in evaluate_data_expression: %d",
+		log_error ("dns opcode in evaluate_boolean_expression: %d",
 		      expr -> op);
 		return 0;
 
@@ -2397,11 +2098,6 @@ int evaluate_numeric_expression (result, packet, lease, client_state,
 {
 	struct data_string data;
 	int status, sleft, sright;
-#if defined (NSUPDATE_OLD)
-	ns_updrec *nut;
-	ns_updque uq;
-	struct expression *cur, *next;
-#endif
 
 	struct binding *binding;
 	struct binding_value *bv;
@@ -2540,53 +2236,6 @@ int evaluate_numeric_expression (result, packet, lease, client_state,
 #endif
 		return (1);
  
-	      case expr_dns_transaction:
-#if !defined (NSUPDATE_OLD)
-		return 0;
-#else
-		if (!resolver_inited) {
-			minires_ninit (&resolver_state);
-			resolver_inited = 1;
-			resolver_state.retrans = 1;
-			resolver_state.retry = 1;
-		}
-		ISC_LIST_INIT (uq);
-		cur = expr;
-		do {
-		    next = cur -> data.dns_transaction.cdr;
-		    nut = 0;
-		    status = (evaluate_dns_expression
-			      (&nut, packet,
-			       lease, client_state, in_options, cfg_options,
-			       scope, cur -> data.dns_transaction.car));
-		    if (!status)
-			    goto dns_bad;
-		    ISC_LIST_APPEND (uq, nut, r_link);
-		    cur = next;
-		} while (next);
-
-		/* Do the update and record the error code, if there was
-		   an error; otherwise set it to NOERROR. */
-		*result = minires_nupdate (&resolver_state,
-					   ISC_LIST_HEAD (uq));
-		status = 1;
-
-		print_dns_status ((int)*result, &uq);
-
-	      dns_bad:
-		while (!ISC_LIST_EMPTY (uq)) {
-			ns_updrec *tmp = ISC_LIST_HEAD (uq);
-			ISC_LIST_UNLINK (uq, tmp, r_link);
-			if (tmp -> r_data_ephem) {
-				dfree (tmp -> r_data_ephem, MDL);
-				tmp -> r_data = (unsigned char *)0;
-				tmp -> r_data_ephem = (unsigned char *)0;
-			}
-			minires_freeupdrec (tmp);
-		}
-		return status;
-#endif /* NSUPDATE_OLD */
-
 	      case expr_variable_reference:
 		if (scope && *scope) {
 		    binding = find_binding (*scope, expr -> data.variable);
@@ -2875,14 +2524,6 @@ int evaluate_numeric_expression (result, packet, lease, client_state,
 #endif
 			return 0;
 		}
-
-	      case expr_ns_add:
-	      case expr_ns_delete:
-	      case expr_ns_exists:
-	      case expr_ns_not_exists:
-		log_error ("dns opcode in evaluate_numeric_expression: %d",
-		      expr -> op);
-		return 0;
 
 	      case expr_function:
 		log_error ("function definition in evaluate_numeric_expr");
@@ -3181,38 +2822,6 @@ void expression_dereference (eptr, file, line)
 				(&expr -> data.reverse.buffer, file, line);
 		break;
 
-	      case expr_dns_transaction:
-		if (expr -> data.dns_transaction.car)
-		    expression_dereference (&expr -> data.dns_transaction.car,
-					    file, line);
-		if (expr -> data.dns_transaction.cdr)
-		    expression_dereference (&expr -> data.dns_transaction.cdr,
-					    file, line);
-		break;
-
-	      case expr_ns_add:
-		if (expr -> data.ns_add.rrname)
-		    expression_dereference (&expr -> data.ns_add.rrname,
-					    file, line);
-		if (expr -> data.ns_add.rrdata)
-		    expression_dereference (&expr -> data.ns_add.rrdata,
-					    file, line);
-		if (expr -> data.ns_add.ttl)
-		    expression_dereference (&expr -> data.ns_add.ttl,
-					    file, line);
-		break;
-
-	      case expr_ns_delete:
-	      case expr_ns_exists:
-	      case expr_ns_not_exists:
-		if (expr -> data.ns_delete.rrname)
-		    expression_dereference (&expr -> data.ns_delete.rrname,
-					    file, line);
-		if (expr -> data.ns_delete.rrdata)
-		    expression_dereference (&expr -> data.ns_delete.rrdata,
-					    file, line);
-		break;
-
 	      case expr_variable_reference:
 	      case expr_variable_exists:
 		if (expr -> data.variable)
@@ -3259,15 +2868,6 @@ void expression_dereference (eptr, file, line)
 		break;
 	}
 	free_expression (expr, MDL);
-}
-
-int is_dns_expression (expr)
-	struct expression *expr;
-{
-      return (expr -> op == expr_ns_add ||
-	      expr -> op == expr_ns_delete ||
-	      expr -> op == expr_ns_exists ||
-	      expr -> op == expr_ns_not_exists);
 }
 
 int is_boolean_expression (expr)
@@ -3324,7 +2924,6 @@ int is_numeric_expression (expr)
 		expr -> op == expr_extract_int32 ||
 		expr -> op == expr_const_int ||
 		expr -> op == expr_lease_time ||
-		expr -> op == expr_dns_transaction ||
 		expr -> op == expr_add ||
 		expr -> op == expr_subtract ||
 		expr -> op == expr_multiply ||
@@ -3339,11 +2938,7 @@ int is_numeric_expression (expr)
 int is_compound_expression (expr)
 	struct expression *expr;
 {
-	return (expr -> op == expr_ns_add ||
-		expr -> op == expr_ns_delete ||
-		expr -> op == expr_ns_exists ||
-		expr -> op == expr_ns_not_exists ||
-		expr -> op == expr_substring ||
+	return (expr -> op == expr_substring ||
 		expr -> op == expr_suffix ||
 		expr -> op == expr_option ||
 		expr -> op == expr_concat ||
@@ -3356,8 +2951,7 @@ int is_compound_expression (expr)
 		expr -> op == expr_config_option ||
 		expr -> op == expr_extract_int8 ||
 		expr -> op == expr_extract_int16 ||
-		expr -> op == expr_extract_int32 ||
-		expr -> op == expr_dns_transaction);
+		expr -> op == expr_extract_int32);
 }
 
 static int op_val (enum expr_op);
@@ -3455,8 +3049,6 @@ enum expression_context expression_context (struct expression *expr)
 		return context_numeric;
 	if (is_boolean_expression (expr))
 		return context_boolean;
-	if (is_dns_expression (expr))
-		return context_dns;
 	return context_any;
 }
 
@@ -3927,99 +3519,6 @@ int write_expression (file, expr, col, indent, firstp)
 					  "lease-time");
 		break;
 
-	      case expr_dns_transaction:
-		col = token_print_indent (file, col, indent, "", "",
-					  "ns-update");
-		col = token_print_indent (file, col, indent, " ", "",
-					  "(");
-		scol = 0;
-		for (e = expr;
-		     e && e -> op == expr_dns_transaction;
-		     e = e -> data.dns_transaction.cdr) {
-			if (!scol) {
-				scol = col;
-				firstp = 1;
-			} else
-				firstp = 0;
-			col = write_expression (file,
-						e -> data.dns_transaction.car,
-						col, scol, firstp);
-			if (e -> data.dns_transaction.cdr)
-				col = token_print_indent (file, col, scol,
-							  "", " ", ",");
-		}
-		if (e)
-			col = write_expression (file, e, col, scol, 0);
-		col = token_print_indent (file, col, indent, "", "", ")");
-		break;
-
-	      case expr_ns_add:
-		col = token_print_indent (file, col, indent, "", "",
-					  "update");
-		col = token_print_indent (file, col, indent, " ", "",
-					  "(");
-		scol = col;
-		sprintf (obuf, "%d", expr -> data.ns_add.rrclass);
-		col = token_print_indent (file, col, scol, "", "", obuf);
-		col = token_print_indent (file, col, scol, "", " ",
-					  ",");
-		sprintf (obuf, "%d", expr -> data.ns_add.rrtype);
-		col = token_print_indent (file, col, scol, "", "", obuf);
-		col = token_print_indent (file, col, scol, "", " ",
-					  ",");
-		col = write_expression (file, expr -> data.ns_add.rrname,
-					col, scol, 0);
-		col = token_print_indent (file, col, scol, "", " ",
-					  ",");
-		col = write_expression (file, expr -> data.ns_add.rrdata,
-					col, scol, 0);
-		col = token_print_indent (file, col, scol, "", " ",
-					  ",");
-		col = write_expression (file, expr -> data.ns_add.ttl,
-					col, scol, 0);
-		col = token_print_indent (file, col, indent, "", "",
-					  ")");
-		break;
-
-	      case expr_ns_delete:
-		col = token_print_indent (file, col, indent, "", "",
-					  "delete");
-		col = token_print_indent (file, col, indent, " ", "",
-					  "(");
-	      finish_ns_small:
-		scol = col;
-		sprintf (obuf, "%d", expr -> data.ns_add.rrclass);
-		col = token_print_indent (file, col, scol, "", "", obuf);
-		col = token_print_indent (file, col, scol, "", " ",
-					  ",");
-		sprintf (obuf, "%d", expr -> data.ns_add.rrtype);
-		col = token_print_indent (file, col, scol, "", "", obuf);
-		col = token_print_indent (file, col, scol, "", " ",
-					  ",");
-		col = write_expression (file, expr -> data.ns_add.rrname,
-					col, scol, 0);
-		col = token_print_indent (file, col, scol, "", " ",
-					  ",");
-		col = write_expression (file, expr -> data.ns_add.rrdata,
-					col, scol, 0);
-		col = token_print_indent (file, col, indent, "", "",
-					  ")");
-		break;
-
-	      case expr_ns_exists:
-		col = token_print_indent (file, col, indent, "", "",
-					  "exists");
-		col = token_print_indent (file, col, indent, " ", "",
-					  "(");
-		goto finish_ns_small;
-
-	      case expr_ns_not_exists:
-		col = token_print_indent (file, col, indent, "", "",
-					  "not exists");
-		col = token_print_indent (file, col, indent, " ", "",
-					  "(");
-		goto finish_ns_small;
-
 	      case expr_static:
 		col = token_print_indent (file, col, indent, "", "",
 					  "static");
@@ -4292,12 +3791,7 @@ int data_subexpression_length (int *rv,
 	      case expr_const_int:
 	      case expr_exists:
 	      case expr_known:
-	      case expr_dns_transaction:
 	      case expr_static:
-	      case expr_ns_add:
-	      case expr_ns_delete:
-	      case expr_ns_exists:
-	      case expr_ns_not_exists:
 	      case expr_not_equal:
 	      case expr_null:
 	      case expr_variable_exists:
@@ -4346,12 +3840,6 @@ int expr_valid_for_context (struct expression *expr,
 	      case context_numeric:
 		if (is_numeric_expression (expr))
 			return 1;
-		return 0;
-
-	      case context_dns:
-		if (is_dns_expression (expr)) {
-			return 1;
-		}
 		return 0;
 
 	      case context_data_or_numeric:

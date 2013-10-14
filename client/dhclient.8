@@ -1,6 +1,6 @@
 .\"	$Id: dhclient.8,v 1.36 2011/04/15 21:58:12 sar Exp $
 .\"
-.\" Copyright (c) 2004,2007-2012 by Internet Systems Consortium, Inc. ("ISC")
+.\" Copyright (c) 2004,2007-2013 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
@@ -54,6 +54,12 @@ dhclient - Dynamic Host Configuration Protocol Client
 [
 .B -P...
 ]
+]
+[
+.B -i
+]
+[
+.B -I
 ]
 [
 .B -D
@@ -322,6 +328,17 @@ Set the giaddr field of all packets to the \fIrelay\fR IP address
 simulating a relay agent.  This is for testing pruposes only and
 should not be expected to work in any consistent or useful way.
 .TP
+.BI \-i
+Use a DUID with DHCPv4 clients.  If no DUID is available in the
+lease file one will be constructed and saved.  The DUID will be
+used to contstuct a RFC4361 style client id that will be included
+in the client's messages.  This client id can be overridden by
+setting a client id in the configuration file.  Overridding the
+client id in this fashion is discouraged.
+.TP
+.BI \-I
+Use the standard DDNS scheme from RFCs 4701 & 4702.  
+.TP
 .BI \--version
 Print version number and exit.
 .PP
@@ -351,8 +368,10 @@ DHCPv6 \fBdhclient\fR creates an identifier based on the link-layer address
 (DUID-LL) if it is running in stateless mode (with \fB\-S\fR, not
 requesting an address), or it creates an identifier based on the
 link-layer address plus a timestamp (DUID-LLT) if it is running in
-stateful mode (without \fB\-S\fR, requesting an address).  \fB\-D\fR
-overrides this default, with a value of either \fILL\fR or \fILLT\fR.
+stateful mode (without \fB\-S\fR, requesting an address).  When DHCPv4
+is configued to use a DUID using \fB\-i\fR option the default is to use
+a DUID-LLT.  \fB\-D\fR
+overrides these default, with a value of either \fILL\fR or \fILLT\fR.
 .TP
 .BI \-N
 .\" TODO: is this for telling an already running dhclient?

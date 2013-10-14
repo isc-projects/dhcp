@@ -33,6 +33,11 @@
  * ``http://www.nominum.com''.
  */
 
+/*
+ * The following tokens have been deprecated and aren't in use anymore.
+ * They have been left in place to avoid disturbing the code.
+ * DNS_UPDATE, DNS_DELETE, NS_UPDATE, UPDATED_DNS_RR
+ */
 enum dhcp_token {
 	SEMI = ';',
 	DOT = '.',

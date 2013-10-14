@@ -275,3 +275,16 @@
    Care should be taken before enabling this option. */
 
 /* #define SERVER_ID_CHECK */
+
+/* Include code to do a slow transition of DDNS records
+   from the interim to the standard version, or backwards.
+   The normal code will handle removing an old style record
+   when the name on a lease is being changed.  This adds code
+   to handle the case where the name isn't being changed but
+   the old record should be removed to allow a new record to
+   be added.  This is the slow transition as leases are only
+   updated as a client touches them.  A fast transition would
+   entail updating all the records at once, probably at start
+   up. */
+#define DDNS_UPDATE_SLOW_TRANSITION
+   

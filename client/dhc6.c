@@ -120,69 +120,6 @@ extern int onetry;
 extern int stateless;
 
 /*
- * The "best" default DUID, since we cannot predict any information
- * about the system (such as whether or not the hardware addresses are
- * integrated into the motherboard or similar), is the "LLT", link local
- * plus time, DUID. For real stateless "LL" is better.
- *
- * Once generated, this duid is stored into the state database, and
- * retained across restarts.
- *
- * For the time being, there is probably a different state database for
- * every daemon, so this winds up being a per-interface identifier...which
- * is not how it is intended.  Upcoming rearchitecting the client should
- * address this "one daemon model."
- */
-void
-form_duid(struct data_string *duid, const char *file, int line)
-{
-	struct interface_info *ip;
-	int len;
-
-	/* For now, just use the first interface on the list. */
-	ip = interfaces;
-
-	if (ip == NULL)
-		log_fatal("Impossible condition at %s:%d.", MDL);
-
-	if ((ip->hw_address.hlen == 0) ||
-	    (ip->hw_address.hlen > sizeof(ip->hw_address.hbuf)))
-		log_fatal("Impossible hardware address length at %s:%d.", MDL);
-
-	if (duid_type == 0)
-		duid_type = stateless ? DUID_LL : DUID_LLT;
-
-	/*
-	 * 2 bytes for the 'duid type' field.
-	 * 2 bytes for the 'htype' field.
-	 * (DUID_LLT) 4 bytes for the 'current time'.
-	 * enough bytes for the hardware address (note that hw_address has
-	 * the 'htype' on byte zero).
-	 */
-	len = 4 + (ip->hw_address.hlen - 1);
-	if (duid_type == DUID_LLT)
-		len += 4;
-	if (!buffer_allocate(&duid->buffer, len, MDL))
-		log_fatal("no memory for default DUID!");
-	duid->data = duid->buffer->data;
-	duid->len = len;
-
-	/* Basic Link Local Address type of DUID. */
-	if (duid_type == DUID_LLT) {
-		putUShort(duid->buffer->data, DUID_LLT);
-		putUShort(duid->buffer->data + 2, ip->hw_address.hbuf[0]);
-		putULong(duid->buffer->data + 4, cur_time - DUID_TIME_EPOCH);
-		memcpy(duid->buffer->data + 8, ip->hw_address.hbuf + 1,
-		       ip->hw_address.hlen - 1);
-	} else {
-		putUShort(duid->buffer->data, DUID_LL);
-		putUShort(duid->buffer->data + 2, ip->hw_address.hbuf[0]);
-		memcpy(duid->buffer->data + 4, ip->hw_address.hbuf + 1,
-		       ip->hw_address.hlen - 1);
-	}
-}
-
-/*
  * Assign DHCPv6 port numbers as a client.
  */
 void

@@ -75,6 +75,15 @@ work on other platforms. Please report any problems and suggested fixes to
 - Add support for using classes with v6.
   [ISC-Bugs #26510]
 
+- Update the DDNS code to current standards and allow for sharing
+  of DDNS entries between v4 and v6 clients.  The new code is used
+  if the ddns-update-style is set to "standard", the older code is
+  still available if ddns-update-style is set to "interim".  The
+  oldest DDNS code "ad-hoc" has been removed.  Thanks to Thomas Pegeot
+  who submitted a patch for this issue.  This patch is based on
+  that work with some modifications.
+  [ISC-Bugs 21139]
+
 			Changes since 4.2.5
 
 - Address static analysis warnings.

@@ -886,10 +886,6 @@ intern(char *atom, enum dhcp_token dfv) {
 	      case 'd':
 		if (!strcasecmp(atom + 1, "b-time-format"))
 			return DB_TIME_FORMAT;
-		if (!strcasecmp (atom + 1, "ns-update"))
-			return DNS_UPDATE;
-		if (!strcasecmp (atom + 1, "ns-delete"))
-			return DNS_DELETE;
 		if (!strcasecmp (atom + 1, "omain"))
 			return DOMAIN;
 		if (!strncasecmp (atom + 1, "omain-", 6)) {
@@ -1183,8 +1179,6 @@ intern(char *atom, enum dhcp_token dfv) {
 			return TOKEN_NOT;
 		if (!strcasecmp (atom + 1, "o"))
 			return TOKEN_NO;
-		if (!strcasecmp (atom + 1, "s-update"))
-			return NS_UPDATE;
 		if (!strcasecmp (atom + 1, "oerror"))
 			return NS_NOERROR;
 		if (!strcasecmp (atom + 1, "otauth"))
@@ -1503,8 +1497,6 @@ intern(char *atom, enum dhcp_token dfv) {
 		}
 		if (!strcasecmp (atom + 1, "nauthenticated"))
 			return UNAUTHENTICATED;
-		if (!strcasecmp (atom + 1, "pdated-dns-rr"))
-			return UPDATED_DNS_RR;
 		if (!strcasecmp (atom + 1, "pdate"))
 			return UPDATE;
 		break;

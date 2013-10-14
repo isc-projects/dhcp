@@ -38,6 +38,9 @@
 #include "dst/md5.h"
 #include <dns/result.h>
 
+char *ddns_standard_tag = "ddns-dhcid";
+char *ddns_interim_tag  = "ddns-txt";
+
 #ifdef NSUPDATE
 
 static void ddns_fwd_srv_connector(struct lease          *lease,
@@ -73,16 +76,13 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 	struct data_string ddns_domainname;
 	struct data_string old_ddns_fwd_name;
 	struct data_string ddns_fwd_name;
-	//struct data_string ddns_rev_name;
 	struct data_string ddns_dhcid;
 	struct binding_scope **scope = NULL;
-	//struct iaddr addr;
 	struct data_string d1;
 	struct option_cache *oc;
 	int s1, s2;
 	int result = 0;
 	int server_updates_a = 1;
-	//int server_updates_ptr = 1;
 	struct buffer *bp = (struct buffer *)0;
 	int ignorep = 0, client_ignorep = 0;
 	int rev_name_len;
@@ -91,8 +91,9 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 	dhcp_ddns_cb_t *ddns_cb;
 	int do_remove = 0;
 
-	if (ddns_update_style != 2)
-		return 0;
+	if ((ddns_update_style != DDNS_UPDATE_STYLE_STANDARD) &&
+	    (ddns_update_style != DDNS_UPDATE_STYLE_INTERIM))
+		return (0);
 
 	/*
 	 * sigh, I want to cancel any previous udpates before we do anything
@@ -151,7 +152,6 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 	memset (&ddns_domainname, 0, sizeof (ddns_domainname));
 	memset (&old_ddns_fwd_name, 0, sizeof (ddns_fwd_name));
 	memset (&ddns_fwd_name, 0, sizeof (ddns_fwd_name));
-	//memset (&ddns_rev_name, 0, sizeof (ddns_rev_name));
 	memset (&ddns_dhcid, 0, sizeof (ddns_dhcid));
 
 	/* If we are allowed to accept the client's update of its own A
@@ -265,36 +265,23 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 			goto in;
 		}
 
-		/* See if there's a DHCID on the lease, and if not
-		 * then potentially look for 'on events' for ad-hoc ddns.
+#if defined  (DDNS_UPDATE_SLOW_TRANSITION)
+		/*
+		 * If the slow transition code is enabled check to see
+		 * if the stored type (standard or interim doesn't
+		 * match the type currently in use.  If it doesn't
+		 * try to remove and replace the DNS record
 		 */
-		if (!find_bound_string(&ddns_dhcid, *scope, "ddns-txt") &&
-		    (old != NULL)) {
-			/* If there's no DHCID, the update was probably
-			   done with the old-style ad-hoc DDNS updates.
-			   So if the expiry and release events look like
-			   they're the same, run them.   This should delete
-			   the old DDNS data. */
-			if (old->on_star.on_expiry ==
-			    old->on_star.on_release) {
-				execute_statements(NULL, NULL, lease, NULL,
-						   NULL, NULL, scope,
-						   old->on_star.on_expiry,
-						   NULL);
-				if (old->on_star.on_expiry)
-					executable_statement_dereference
-						(&old->on_star.on_expiry,
-						 MDL);
-				if (old->on_star.on_release)
-					executable_statement_dereference
-						(&old->on_star.on_release,
-						 MDL);
-				/* Now, install the DDNS data the new way. */
-				goto in;
-			}
-		} else
+		if (((ddns_update_style == DDNS_UPDATE_STYLE_STANDARD) &&
+		     find_bound_string(&ddns_dhcid, *scope, ddns_interim_tag)) ||
+		    ((ddns_update_style == DDNS_UPDATE_STYLE_INTERIM) &&
+		     find_bound_string(&ddns_dhcid, *scope, ddns_standard_tag))) {
 			data_string_forget(&ddns_dhcid, MDL);
-
+			do_remove = 1;
+			goto in;
+		}
+#endif
+		   
 		/* See if the administrator wants to do updates even
 		   in cases where the update already appears to have been
 		   done. */
@@ -492,22 +479,68 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 	}
 
 	/*
+	 * copy the string now so we can pass it to the dhcid routines
+	 * via the ddns_cb pointer
+	 */
+	data_string_copy(&ddns_cb->fwd_name, &ddns_fwd_name, MDL);
+
+	/*
 	 * If we are updating the A record, compute the DHCID value.
+	 * We have two options for computing the DHCID value, the older
+	 * interim version and the newer standard version.  The interim
+	 * has some issues but is left as is to avoid compatibility issues.
+	 *
+	 * We select the type of DHCID to construct and the information to
+	 * use for the digest based on 4701 section 3.3
 	 */
 	if ((ddns_cb->flags & DDNS_UPDATE_ADDR) != 0) {
-		if (lease6 != NULL)
-			result = get_dhcid(&ddns_cb->dhcid, 2,
-					   lease6->ia->iaid_duid.data,
-					   lease6->ia->iaid_duid.len);
-		else if ((lease != NULL) && (lease->uid != NULL) &&
-			 (lease->uid_len != 0))
-			result = get_dhcid (&ddns_cb->dhcid,
-					    DHO_DHCP_CLIENT_IDENTIFIER,
-					    lease -> uid, lease -> uid_len);
-		else if (lease != NULL)
-			result = get_dhcid (&ddns_cb->dhcid, 0,
-					    lease -> hardware_addr.hbuf,
-					    lease -> hardware_addr.hlen);
+		int ddns_type;
+		int ddns_len;
+		if (ddns_update_style == DDNS_UPDATE_STYLE_STANDARD) {
+			/* The standard style */
+			ddns_cb->lease_tag = ddns_standard_tag;
+			ddns_cb->dhcid_class = dns_rdatatype_dhcid;
+			ddns_type = 1;
+			ddns_len = 4;
+		} else {
+			/* The older interim style */
+			ddns_cb->lease_tag = ddns_interim_tag;
+			ddns_cb->dhcid_class = dns_rdatatype_txt;
+			/* for backwards compatibility */
+			ddns_type = DHO_DHCP_CLIENT_IDENTIFIER;
+			/* IAID incorrectly included */
+			ddns_len = 0;
+		}
+
+
+		if (lease6 != NULL) {
+			if (lease6->ia->iaid_duid.len < ddns_len)
+				goto badfqdn;
+			result = get_dhcid(ddns_cb, 2,
+					   lease6->ia->iaid_duid.data + ddns_len,
+					   lease6->ia->iaid_duid.len - ddns_len);
+		} else if ((lease != NULL) &&
+			   (lease->uid != NULL) &&
+			   (lease->uid_len != 0)) {
+			/* If this is standard check for an RFC 4361
+			 * compliant client identifier
+			 */
+			if ((ddns_update_style == DDNS_UPDATE_STYLE_STANDARD) &&
+			    (lease->uid[0] == 255)) {
+				if (lease->uid_len < 5)
+					goto badfqdn;
+				result = get_dhcid(ddns_cb, 2,
+						   lease->uid + 5,
+						   lease->uid_len - 5);
+			} else {
+				result = get_dhcid(ddns_cb, ddns_type,
+						   lease->uid,
+						   lease->uid_len);
+			}
+		} else if (lease != NULL)
+			result = get_dhcid(ddns_cb, 0,
+					   lease->hardware_addr.hbuf,
+					   lease->hardware_addr.hlen);
 		else
 			log_fatal("Impossible condition at %s:%d.", MDL);
 
@@ -518,8 +551,6 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 	/*
 	 * Perform updates.
 	 */
-
-	data_string_copy(&ddns_cb->fwd_name, &ddns_fwd_name, MDL);
 
 	if (ddns_cb->flags && DDNS_UPDATE_ADDR) {
 		oc = lookup_option(&server_universe, options,
@@ -713,8 +744,6 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 	data_string_forget(&ddns_domainname, MDL);
 	data_string_forget(&old_ddns_fwd_name, MDL);
 	data_string_forget(&ddns_fwd_name, MDL);
-	//data_string_forget(&ddns_rev_name, MDL);
-	//data_string_forget(&ddns_dhcid, MDL);
 	if (bp)
 		buffer_dereference(&bp, MDL);
 
@@ -828,18 +857,21 @@ ddns_update_lease_text(dhcp_ddns_cb_t        *ddns_cb,
 	case DDNS_STATE_ADD_FW_NXDOMAIN:
 		bind_ds_value(scope, "ddns-fwd-name", &ddns_cb->fwd_name);
 
-		/* convert from dns version to lease version of dhcid */
-		memset(&lease_dhcid, 0, sizeof(lease_dhcid));
-		dhcid_tolease(&ddns_cb->dhcid, &lease_dhcid);
-		bind_ds_value(scope, "ddns-txt", &lease_dhcid);
-		data_string_forget(&lease_dhcid, MDL);
-
+		if (ddns_cb->lease_tag == ddns_standard_tag) {
+			bind_ds_value(scope, ddns_standard_tag, &ddns_cb->dhcid);
+		} else {
+			/* convert from dns version to lease version of dhcid */
+			memset(&lease_dhcid, 0, sizeof(lease_dhcid));
+			dhcid_tolease(&ddns_cb->dhcid, &lease_dhcid);
+			bind_ds_value(scope, ddns_interim_tag, &lease_dhcid);
+			data_string_forget(&lease_dhcid, MDL);
+		}
 		break;
 
 	case DDNS_STATE_REM_FW_NXRR:
 	case DDNS_STATE_REM_FW_YXDHCID:
 		unset(*scope, "ddns-fwd-name");
-		unset(*scope, "ddns-txt");
+		unset(*scope, ddns_cb->lease_tag);
 		break;
 	}
 		
@@ -1797,7 +1829,8 @@ ddns_removals(struct lease    *lease,
 	if (*scope == NULL)
 		goto cleanup;
 
-	if (ddns_update_style != 2)
+	if ((ddns_update_style != DDNS_UPDATE_STYLE_STANDARD) &&
+	    (ddns_update_style != DDNS_UPDATE_STYLE_INTERIM))
 		goto cleanup;
 
 	/* Assume that we are removing both records */
@@ -1829,15 +1862,22 @@ ddns_removals(struct lease    *lease,
 	}
 
 	/*
-	 * Find the ptr name and copy it to the control block.  If we don't
-	 * have it this isn't an interim or rfc3??? record so we can't delete
+	 * Find the txt or dhcid tag and copy it to the control block.  If we don't
+	 * have one this isn't an interim or standard record so we can't delete
 	 * the A record using this mechanism but we can delete the ptr record.
 	 * In this case we will attempt to do any requested next step.
 	 */
 	memset(&leaseid, 0, sizeof(leaseid));
-	if (!find_bound_string (&leaseid, *scope, "ddns-txt")) {
-		ddns_cb->flags &= ~DDNS_UPDATE_ADDR;
-	} else {
+	if (find_bound_string (&leaseid, *scope, ddns_standard_tag)) {
+		/* We have a standard tag */
+		ddns_cb->lease_tag = ddns_standard_tag;
+		ddns_cb->dhcid_class = dns_rdatatype_dhcid;
+		data_string_copy(&ddns_cb->dhcid, &leaseid, MDL);
+		data_string_forget(&leaseid, MDL);
+	} else 	if (find_bound_string (&leaseid, *scope, ddns_interim_tag)) {
+		/* we have an interim tag */
+		ddns_cb->lease_tag = ddns_interim_tag;
+		ddns_cb->dhcid_class = dns_rdatatype_txt;
 		if (dhcid_fromlease(&ddns_cb->dhcid, &leaseid) != 
 		    ISC_R_SUCCESS) {
 			/* We couldn't convert the dhcid from the lease
@@ -1847,7 +1887,9 @@ ddns_removals(struct lease    *lease,
 			ddns_cb->flags &= ~DDNS_UPDATE_ADDR;
 		}
 		data_string_forget(&leaseid, MDL);
-	}
+	} else {
+		ddns_cb->flags &= ~DDNS_UPDATE_ADDR;
+	}		
 
 	/*
 	 * Find the rev name and copy it to the control block.  If we don't
@@ -1894,7 +1936,7 @@ ddns_removals(struct lease    *lease,
 		else {
 			/*remove info from scope */
 			unset(*scope, "ddns-fwd-name");
-			unset(*scope, "ddns-txt");
+			unset(*scope, ddns_cb->lease_tag);
 		}
 	}
 

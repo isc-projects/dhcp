@@ -3,7 +3,7 @@
    Tables of information only used by server... */
 
 /*
- * Copyright (c) 2004-2011 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2011,2013 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -330,6 +330,7 @@ struct enumeration_value ddns_styles_values [] = {
 	{ "none", 0 },
 	{ "ad-hoc", 1 },
 	{ "interim", 2 },
+	{ "standard", 3 },
 	{ (char *)0, 0 }
 };
 

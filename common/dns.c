@@ -3,7 +3,7 @@
    Domain Name Service subroutines. */
 
 /*
- * Copyright (c) 2009-2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2013 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2001-2003 by Internet Software Consortium
  *
@@ -30,10 +30,12 @@
  * asynchronous DNS routines.
  */
 
+/*! \file common/dns.c
+ */
 #include "dhcpd.h"
 #include "arpa/nameser.h"
 #include <isc/md5.h>
-
+#include <isc/sha2.h>
 #include <dns/result.h>
 
 /*
@@ -823,45 +825,123 @@ void repudiate_zone (struct dns_zone **zone)
 	dns_zone_dereference (zone, MDL);
 }
 
-/* Have to use TXT records for now. */
-#define T_DHCID T_TXT
-
-int get_dhcid (struct data_string *id,
-	       int type, const u_int8_t *data, unsigned len)
+/*!
+ * \brief Create an id for a client
+ *
+ * This function is used to create an id for a client to use with DDNS
+ * This version of the function is for the standard style, RFC 4701
+ *
+ * This function takes information from the type and data fields and
+ * mangles it into a dhcid string which it places in ddns_cb.  It also
+ * sets a field in ddns_cb to specify the class that should be used
+ * when sending the dhcid, in this case it is a DHCID record so we use
+ * dns_rdatatype_dhcid
+ *
+ * The DHCID we construct is:
+ *  2 bytes - identifier type (see 4701 and IANA)
+ *  1 byte  - digest type, currently only SHA256 (1)
+ *  n bytes - digest, length depends on digest type, currently 32 for
+ *            SHA256
+ *
+ * What we base the digest on is up to the calling code for an id type of
+ * 0 - 1 octet htype followed by hlen octets of chaddr from v4 client request
+ * 1 - data octets from a dhcpv4 client's client identifier option
+ * 2 - the client DUID from a v4 or v6 client's client id option
+ * This identifier is concatenated with the fqdn and the result is digested.
+ */
+int get_std_dhcid(dhcp_ddns_cb_t *ddns_cb,
+		  int type,
+		  const u_int8_t *identifier,
+		  unsigned id_len)
 {
+	struct data_string *id = &ddns_cb->dhcid;
+	isc_sha256_t sha256;
+	unsigned char buf[ISC_SHA256_DIGESTLENGTH];
+	unsigned char fwd_buf[256];
+	unsigned fwd_buflen = 0;
+
+	/* Types can only be 0..(2^16)-1. */
+	if (type < 0 || type > 65535)
+		return (0);
+
+	/* We need to convert the fwd name to wire representation */
+	if (MRns_name_pton((char *)ddns_cb->fwd_name.data, fwd_buf, 256) == -1)
+		return (0);
+	while(fwd_buf[fwd_buflen] != 0) {
+		fwd_buflen += fwd_buf[fwd_buflen] + 1;
+	}
+	fwd_buflen++;
+
+	if (!buffer_allocate(&id->buffer,
+			     ISC_SHA256_DIGESTLENGTH + 2 + 1,
+			     MDL))
+		return (0);
+	id->data = id->buffer->data;
+
+	/* The two first bytes contain the type identifier. */
+	putUShort(id->buffer->data, (unsigned)type);
+
+	/* The next is the digest type, SHA-256 is 1 */
+	putUChar(id->buffer->data + 2, 1u);
+
+	/* Computing the digest */
+	isc_sha256_init(&sha256);
+	isc_sha256_update(&sha256, identifier, id_len);
+	isc_sha256_update(&sha256, fwd_buf, fwd_buflen);
+	isc_sha256_final(buf, &sha256);
+
+	memcpy(id->buffer->data + 3, &buf, ISC_SHA256_DIGESTLENGTH);
+
+	id->len = ISC_SHA256_DIGESTLENGTH + 2 + 1;
+
+	return (1);
+}
+
+/*!
+ *
+ * \brief Create an id for a client
+ *
+ * This function is used to create an id for a client to use with DDNS
+ * This version of the function is for the interim style.  It is retained
+ * to allow users to continue using the interim style but they should
+ * switch to the standard style (which uses get_std_dhcid) for better
+ * interoperability.  
+ *
+ * This function takes information from the type and data fields and
+ * mangles it into a dhcid string which it places in ddns_cb.  It also
+ * sets a field in ddns_cb to specify the class that should be used
+ * when sending the dhcid, in this case it is a txt record so we use
+ * dns_rdata_type_txt
+ *
+ * NOTE WELL: this function has issues with how it calculates the
+ * dhcid, they can't be changed now as that would break the records
+ * already in use.
+ */
+
+int get_int_dhcid (dhcp_ddns_cb_t *ddns_cb,
+		   int type,
+		   const u_int8_t *data,
+		   unsigned len)
+{
+	struct data_string *id = &ddns_cb->dhcid;
 	unsigned char buf[ISC_MD5_DIGESTLENGTH];
 	isc_md5_t md5;
 	int i;
 
 	/* Types can only be 0..(2^16)-1. */
 	if (type < 0 || type > 65535)
-		return 0;
+		return (0);
 
 	/*
 	 * Hexadecimal MD5 digest plus two byte type, NUL,
 	 * and one byte for length for dns.
 	 */
-	if (!buffer_allocate (&id -> buffer,
-			      (ISC_MD5_DIGESTLENGTH * 2) + 4, MDL))
-		return 0;
-	id -> data = id -> buffer -> data;
+	if (!buffer_allocate(&id -> buffer,
+			     (ISC_MD5_DIGESTLENGTH * 2) + 4, MDL))
+		return (0);
+	id->data = id->buffer->data;
 
 	/*
-	 * DHCP clients and servers should use the following forms of client
-	 * identification, starting with the most preferable, and finishing
-	 * with the least preferable.  If the client does not send any of these
-	 * forms of identification, the DHCP/DDNS interaction is not defined by
-	 * this specification.  The most preferable form of identification is
-	 * the Globally Unique Identifier Option [TBD].  Next is the DHCP
-	 * Client Identifier option.  Last is the client's link-layer address,
-	 * as conveyed in its DHCPREQUEST message.  Implementors should note
-	 * that the link-layer address cannot be used if there are no
-	 * significant bytes in the chaddr field of the DHCP client's request,
-	 * because this does not constitute a unique identifier.
-	 *   -- "Interaction between DHCP and DNS"
-	 *      <draft-ietf-dhc-dhcp-dns-12.txt>
-	 *      M. Stapp, Y. Rekhter
-	 *
 	 * We put the length into the first byte to turn 
 	 * this into a dns text string.  This avoid needing to
 	 * copy the string to add the byte later.
@@ -893,7 +973,18 @@ int get_dhcid (struct data_string *id,
 	id->buffer->data[id->len] = 0;
 	id->terminated = 1;
 
-	return 1;
+	return (1);
+}
+
+int get_dhcid(dhcp_ddns_cb_t *ddns_cb,
+	      int type,
+	      const u_int8_t *identifier,
+	      unsigned id_len)
+{
+	if (ddns_cb->dhcid_class == dns_rdatatype_dhcid)
+		return get_std_dhcid(ddns_cb, type, identifier, id_len);
+	else 
+		return get_int_dhcid(ddns_cb, type, identifier, id_len);
 }
 
 /*
@@ -1015,12 +1106,12 @@ make_dns_dataset(dns_rdataclass_t  dataclass,
  * For the server the first step will have a request of:
  * The name is not in use
  * Add an A RR
- * Add a DHCID RR (currently txt)
+ * Add a DHCID RR
  *
  * For the client the first step will have a request of:
  * The A RR does not exist
  * Add an A RR
- * Add a DHCID RR (currently txt)
+ * Add a DHCID RR
  */
 
 static isc_result_t
@@ -1062,7 +1153,7 @@ ddns_modify_fwd_add1(dhcp_ddns_cb_t   *ddns_cb,
 	dataspace++;
 
 	/* Add the DHCID RR */
-	result = make_dns_dataset(dns_rdataclass_in, dns_rdatatype_txt,
+	result = make_dns_dataset(dns_rdataclass_in, ddns_cb->dhcid_class,
 				  dataspace, 
 				  (unsigned char *)ddns_cb->dhcid.data,
 				  ddns_cb->dhcid.len, ddns_cb->ttl);
@@ -1108,7 +1199,7 @@ ddns_modify_fwd_add2(dhcp_ddns_cb_t   *ddns_cb,
 		     dns_name_t       *pname,
 		     dns_name_t       *uname)
 {
-	isc_result_t result;
+	isc_result_t result = ISC_R_SUCCESS;
 
 	/*
 	 * If we are doing conflict resolution (unset) we use a prereq list.
@@ -1117,7 +1208,7 @@ ddns_modify_fwd_add2(dhcp_ddns_cb_t   *ddns_cb,
 	if ((ddns_cb->flags & DDNS_CONFLICT_OVERRIDE) == 0) {
 		/* Construct the prereq list */
 		/* The DHCID RR exists and matches the client identity */
-		result = make_dns_dataset(dns_rdataclass_in, dns_rdatatype_txt,
+		result = make_dns_dataset(dns_rdataclass_in, ddns_cb->dhcid_class,
 					  dataspace, 
 					  (unsigned char *)ddns_cb->dhcid.data,
 					  ddns_cb->dhcid.len, 0);
@@ -1130,7 +1221,7 @@ ddns_modify_fwd_add2(dhcp_ddns_cb_t   *ddns_cb,
 		/* Start constructing the update list.
 		 * Conflict detection override: delete DHCID RRs */
 		result = make_dns_dataset(dns_rdataclass_any,
-					  dns_rdatatype_txt,
+					  ddns_cb->dhcid_class,
 					  dataspace, NULL, 0, 0);
 		if (result != ISC_R_SUCCESS) {
 			return(result);
@@ -1139,7 +1230,7 @@ ddns_modify_fwd_add2(dhcp_ddns_cb_t   *ddns_cb,
 		dataspace++;
 
 		/* Add current DHCID RR */
-		result = make_dns_dataset(dns_rdataclass_in, dns_rdatatype_txt,
+		result = make_dns_dataset(dns_rdataclass_in, ddns_cb->dhcid_class,
 					  dataspace, 
 					  (unsigned char *)ddns_cb->dhcid.data,
 					  ddns_cb->dhcid.len, ddns_cb->ttl);
@@ -1201,11 +1292,11 @@ ddns_modify_fwd_rem1(dhcp_ddns_cb_t   *ddns_cb,
 		     dns_name_t       *pname,
 		     dns_name_t       *uname)
 {
-	isc_result_t result;
+	isc_result_t result = ISC_R_SUCCESS;
 
 	/* Consruct the prereq list */
 	/* The DHCID RR exists and matches the client identity */
-	result = make_dns_dataset(dns_rdataclass_in, dns_rdatatype_txt,
+	result = make_dns_dataset(dns_rdataclass_in, ddns_cb->dhcid_class,
 				  dataspace, 
 				  (unsigned char *)ddns_cb->dhcid.data,
 				  ddns_cb->dhcid.len, 0);
@@ -1271,7 +1362,7 @@ ddns_modify_fwd_rem2(dhcp_ddns_cb_t   *ddns_cb,
 
 	/* Construct the update list */
 	/* Delete DHCID RR */
-	result = make_dns_dataset(dns_rdataclass_none, dns_rdatatype_txt,
+	result = make_dns_dataset(dns_rdataclass_none, ddns_cb->dhcid_class,
 				  dataspace,
 				  (unsigned char *)ddns_cb->dhcid.data,
 				  ddns_cb->dhcid.len, 0);

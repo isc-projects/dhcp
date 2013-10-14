@@ -76,86 +76,6 @@ option server.ddns-hostname =						    \n\
 option server.ddns-domainname =	config-option domain-name;		    \n\
 option server.ddns-rev-domainname = \"in-addr.arpa.\";";
 
-/* This is the old-style name service updater that is executed
-   whenever a lease is committed.  It does not follow the DHCP-DNS
-   draft at all. */
-
-char old_nsupdate [] = "						    \n\
-on commit {								    \n\
-  if (not static and							    \n\
-      ((config-option server.ddns-updates = null) or			    \n\
-       (config-option server.ddns-updates != 0))) {			    \n\
-    set new-ddns-fwd-name =						    \n\
-      concat (pick (config-option server.ddns-hostname,			    \n\
-		    option host-name), \".\",				    \n\
-	      pick (config-option server.ddns-domainname,		    \n\
-		    config-option domain-name));			    \n\
-    if (defined (ddns-fwd-name) and ddns-fwd-name != new-ddns-fwd-name) {   \n\
-      switch (ns-update (delete (IN, A, ddns-fwd-name, leased-address))) {  \n\
-      case NOERROR:							    \n\
-	unset ddns-fwd-name;						    \n\
-	on expiry or release {						    \n\
-	}								    \n\
-      }									    \n\
-    }									    \n\
-									    \n\
-    if (not defined (ddns-fwd-name)) {					    \n\
-      set ddns-fwd-name = new-ddns-fwd-name;				    \n\
-      if defined (ddns-fwd-name) {					    \n\
-	switch (ns-update (not exists (IN, A, ddns-fwd-name, null),	    \n\
-			   add (IN, A, ddns-fwd-name, leased-address,	    \n\
-				lease-time / 2))) {			    \n\
-	default:							    \n\
-	  unset ddns-fwd-name;						    \n\
-	  break;							    \n\
-									    \n\
-	case NOERROR:							    \n\
-	  set ddns-rev-name =						    \n\
-	    concat (binary-to-ascii (10, 8, \".\",			    \n\
-				     reverse (1,			    \n\
-					      leased-address)), \".\",	    \n\
-		    pick (config-option server.ddns-rev-domainname,	    \n\
-			  \"in-addr.arpa.\"));				    \n\
-	  switch (ns-update (delete (IN, PTR, ddns-rev-name, null),	    \n\
-			     add (IN, PTR, ddns-rev-name, ddns-fwd-name,    \n\
-				  lease-time / 2)))			    \n\
-	    {								    \n\
-	    default:							    \n\
-	      unset ddns-rev-name;					    \n\
-	      on release or expiry {					    \n\
-		switch (ns-update (delete (IN, A, ddns-fwd-name,	    \n\
-					   leased-address))) {		    \n\
-		case NOERROR:						    \n\
-		  unset ddns-fwd-name;					    \n\
-		  break;						    \n\
-		}							    \n\
-		on release or expiry;					    \n\
-	      }								    \n\
-	      break;							    \n\
-									    \n\
-	    case NOERROR:						    \n\
-	      on release or expiry {					    \n\
-		switch (ns-update (delete (IN, PTR, ddns-rev-name, null))) {\n\
-		case NOERROR:						    \n\
-		  unset ddns-rev-name;					    \n\
-		  break;						    \n\
-		}							    \n\
-		switch (ns-update (delete (IN, A, ddns-fwd-name,	    \n\
-					   leased-address))) {		    \n\
-		case NOERROR:						    \n\
-		  unset ddns-fwd-name;					    \n\
-		  break;						    \n\
-		}							    \n\
-		on release or expiry;					    \n\
-	      }								    \n\
-	    }								    \n\
-	}								    \n\
-      }									    \n\
-    }									    \n\
-    unset new-ddns-fwd-name;						    \n\
-  }									    \n\
-}";
-
 #endif /* NSUPDATE */
 int ddns_update_style;
 
@@ -875,9 +795,6 @@ void postconf_initialization (int quiet)
 	struct option_cache *oc;
 	char *s;
 	isc_result_t result;
-#if defined (NSUPDATE)
-	struct parse *parse;
-#endif
 	int tmp;
 
 	/* Now try to get the lease file name. */
@@ -1133,49 +1050,6 @@ void postconf_initialization (int quiet)
 
 	/* Don't need the options anymore. */
 	option_state_dereference (&options, MDL);
-	
-#if defined (NSUPDATE)
-	/* If old-style ddns updates have been requested, parse the
-	   old-style ddns updater. */
-	if (ddns_update_style == 1) {
-		struct executable_statement **e, *s;
-
-		if (root_group -> statements) {
-			s = (struct executable_statement *)0;
-			if (!executable_statement_allocate (&s, MDL))
-				log_fatal ("no memory for ddns updater");
-			executable_statement_reference
-				(&s -> next, root_group -> statements, MDL);
-			executable_statement_dereference
-				(&root_group -> statements, MDL);
-			executable_statement_reference
-				(&root_group -> statements, s, MDL);
-			s -> op = statements_statement;
-			e = &s -> data.statements;
-			executable_statement_dereference (&s, MDL);
-		} else {
-			e = &root_group -> statements;
-		}
-
-		/* Set up the standard name service updater routine. */
-		parse = NULL;
-		result = new_parse(&parse, -1, old_nsupdate,
-				   sizeof(old_nsupdate) - 1,
-				   "old name service update routine", 0);
-		if (result != ISC_R_SUCCESS)
-			log_fatal ("can't begin parsing old ddns updater!");
-
-		if (parse != NULL) {
-			tmp = 0;
-			if (!(parse_executable_statements(e, parse, &tmp,
-							  context_any))) {
-				end_parse(&parse);
-				log_fatal("can't parse standard ddns updater!");
-			}
-		}
-		end_parse(&parse);
-	}
-#endif
 }
 
 void postdb_startup (void)
