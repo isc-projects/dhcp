@@ -78,6 +78,12 @@ work on other platforms. Please report any problems and suggested fixes to
 - Update client script for use with openwrt.
   [ISC-Bugs #29843]
 
+- Fix the socket handling for DHCPv6 clients to allow multiple instances
+  of a client on a single machine to work properly.  Previously only
+  one client would receive the packets.  Thanks to Jiri Popelka at Red Hat
+  for the bug report and a potential patch.
+  [ISC-Bugs #34784]
+
 			Changes since 4.2.5rc1
 
 - None

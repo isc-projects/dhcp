@@ -57,10 +57,6 @@ struct in_addr limited_broadcast;
 int local_family = AF_INET;
 struct in_addr local_address;
 
-#ifdef DHCPv6
-struct in6_addr local_address6;
-#endif /* DHCPv6 */
-
 void (*bootp_packet_handler) (struct interface_info *,
 			      struct dhcp_packet *, unsigned,
 			      unsigned int,
@@ -1241,7 +1237,7 @@ discover_interfaces(int state) {
 			    (state == DISCOVER_RELAY)) {
 				if_register6(tmp, 1);
 			} else {
-				if_register6(tmp, 0);
+				if_register_linklocal6(tmp);
 			}
 #endif /* DHCPv6 */
 		}
@@ -1297,13 +1293,14 @@ discover_interfaces(int state) {
 				   tmp -> name, isc_result_totext (status));
 
 #if defined(DHCPv6)
-		/* Only register the first interface for V6, since they all
-		 * use the same socket.  XXX: This has some messy side
-		 * effects if we start dynamically adding and removing
-		 * interfaces, but we're well beyond that point in terms of
-		 * mess.
+		/* Only register the first interface for V6, since
+		 * servers and relays all use the same socket.
+		 * XXX: This has some messy side effects if we start
+		 * dynamically adding and removing interfaces, but
+		 * we're well beyond that point in terms of mess.
 		 */
-		if (local_family == AF_INET6)
+		if (((state == DISCOVER_SERVER) || (state == DISCOVER_RELAY)) &&
+		    (local_family == AF_INET6))
 			break;
 #endif
 	} /* for (tmp = interfaces; ... */
