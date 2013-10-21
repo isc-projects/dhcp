@@ -2179,7 +2179,7 @@ void get_hw_addr(const char *name, struct hardware *hw);
 /* socket.c */
 #if defined (USE_SOCKET_SEND) || defined (USE_SOCKET_RECEIVE) \
 	|| defined (USE_SOCKET_FALLBACK)
-int if_register_socket(struct interface_info *, int, int *);
+int if_register_socket(struct interface_info *, int, int *, struct in6_addr *);
 #endif
 
 #if defined (USE_SOCKET_FALLBACK) && !defined (USE_SOCKET_SEND)
@@ -2190,7 +2190,7 @@ ssize_t send_fallback (struct interface_info *,
 		       struct in_addr,
 		       struct sockaddr_in *, struct hardware *);
 ssize_t send_fallback6(struct interface_info *, struct packet *,
-		       struct dhcp_packet *, size_t, struct in6_addr,
+		       struct dhcp_packet *, size_t, struct in6_addr *,
 		       struct sockaddr_in6 *, struct hardware *);
 #endif
 
@@ -2226,6 +2226,7 @@ void maybe_setup_fallback (void);
 #endif
 
 void if_register6(struct interface_info *info, int do_multicast);
+void if_register_linklocal6(struct interface_info *info);
 ssize_t receive_packet6(struct interface_info *interface,
 			unsigned char *buf, size_t len,
 			struct sockaddr_in6 *from, struct in6_addr *to_addr,
@@ -2372,7 +2373,6 @@ void interface_trace_setup (void);
 extern struct in_addr limited_broadcast;
 extern int local_family;
 extern struct in_addr local_address;
-extern struct in6_addr local_address6;
 
 extern u_int16_t local_port;
 extern u_int16_t remote_port;
