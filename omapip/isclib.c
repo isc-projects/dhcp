@@ -1,5 +1,5 @@
 /*
- * Copyright(c) 2009-2010 by Internet Systems Consortium, Inc.("ISC")
+ * Copyright(c) 2009-2010,2013 by Internet Systems Consortium, Inc.("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -28,6 +28,7 @@
 #include "dhcpd.h"
 
 #include <sys/time.h>
+#include <signal.h>
 
 dhcp_context_t dhcp_gbl_ctx;
 
@@ -217,3 +218,20 @@ isclib_make_dst_key(char          *inname,
 				  &b, dhcp_gbl_ctx.mctx, dstkey));
 }
 
+/**
+ * signal handler that initiates server shutdown
+ *
+ * @param signal signal code that we received
+ */
+void dhcp_signal_handler(int signal) {
+	isc_appctx_t *ctx = dhcp_gbl_ctx.actx;
+	if (ctx && ctx->methods && ctx->methods->ctxshutdown) {
+		/*
+		 * Let's not use standard log facilities here. They may not be
+		 * signal safe, e.g. we could get the signal in the middle of
+		 * another log call
+		 */
+		printf("Received signal %d, initiating shutdown.\n", signal);
+		ctx->methods->ctxshutdown(ctx);
+	}
+}

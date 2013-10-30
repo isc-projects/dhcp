@@ -3,7 +3,7 @@
    Network input dispatcher... */
 
 /*
- * Copyright (c) 2004-2011 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2011,2013 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -112,8 +112,15 @@ dispatch(void)
 
 	status = isc_app_ctxrun(dhcp_gbl_ctx.actx);
 
-	log_fatal ("Dispatch routine failed: %s -- exiting",
-		   isc_result_totext (status));
+        /*
+         * isc_app_ctxrun can be stopped by receiving a signal. It will
+         * return ISC_R_SUCCESS in that case. That is a normal behavior.
+         */
+
+	if (status != ISC_R_SUCCESS) {
+		log_fatal ("Dispatch routine failed: %s -- exiting",
+		           isc_result_totext (status));
+	}
 }
 
 void

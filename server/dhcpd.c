@@ -42,11 +42,11 @@ static const char url [] =
 #include "dhcpd.h"
 #include <omapip/omapip_p.h>
 #include <syslog.h>
+#include <signal.h>
 #include <errno.h>
 #include <limits.h>
 #include <sys/types.h>
 #include <sys/time.h>
-#include <signal.h>
 
 #if defined (PARANOIA)
 #  include <sys/types.h>
@@ -861,10 +861,20 @@ main(int argc, char **argv) {
 	omapi_set_int_value ((omapi_object_t *)dhcp_control_object,
 			     (omapi_object_t *)0, "state", server_running);
 
-	/* Receive packets and dispatch them... */
+        /* install signal handlers */
+	signal(SIGINT, dhcp_signal_handler);   /* control-c */
+	signal(SIGTERM, dhcp_signal_handler);  /* kill */
+
+	/*
+	 * Receive packets and dispatch them...
+	 * dispatch() will return only when we are shutting down.
+	 */
 	dispatch ();
 
-	/* Not reached */
+	log_info("Shutting down.");
+	dhcp_set_control_state(server_shutdown/*ignored*/, server_shutdown);
+
+	/* Let's return status code */
 	return 0;
 }
 #endif /* !UNIT_TEST */

@@ -688,6 +688,10 @@ main(int argc, char **argv) {
 	dmalloc_outstanding = 0;
 #endif
 
+        /* install signal handlers */
+	signal(SIGINT, dhcp_signal_handler);   /* control-c */
+	signal(SIGTERM, dhcp_signal_handler);  /* kill */
+
 	/* If we're not supposed to wait before getting the address,
 	   don't. */
 	if (nowait)
@@ -701,7 +705,6 @@ main(int argc, char **argv) {
 	/* Start dispatching packets and timeouts... */
 	dispatch();
 
-	/*NOTREACHED*/
 	return 0;
 }
 
@@ -804,7 +807,6 @@ void run_stateless(int exit_mode)
 	/* Start dispatching packets and timeouts... */
 	dispatch();
 
-	/*NOTREACHED*/
 #endif /* DHCPv6 */
 	return;
 }
