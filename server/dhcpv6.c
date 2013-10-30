@@ -1927,7 +1927,7 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 						   NULL, NULL, 
 						   reply->packet->options,
 						   reply->opt_state,
-						   &reply->lease->scope,
+						   &tmp->scope,
 						   tmp->on_star.on_commit,
 						   &tmp->on_star);
 				executable_statement_dereference
@@ -2628,7 +2628,7 @@ reply_process_ia_ta(struct reply_state *reply, struct option_cache *ia) {
 						   NULL, NULL, 
 						   reply->packet->options,
 						   reply->opt_state,
-						   &reply->lease->scope,
+						   &tmp->scope,
 						   tmp->on_star.on_commit,
 						   &tmp->on_star);
 				executable_statement_dereference
@@ -3647,7 +3647,7 @@ reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia) {
 						   NULL, NULL, 
 						   reply->packet->options,
 						   reply->opt_state,
-						   &reply->lease->scope,
+						   &tmp->scope,
 						   tmp->on_star.on_commit,
 						   &tmp->on_star);
 				executable_statement_dereference
