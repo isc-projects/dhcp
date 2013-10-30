@@ -3,7 +3,7 @@
    connections to the isc and dns libraries */
 
 /*
- * Copyright (c) 2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009,2013 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -118,5 +118,7 @@ isclib_make_dst_key(char          *inname,
 
 isc_result_t dhcp_context_create(void);
 void isclib_cleanup(void);
+
+void dhcp_signal_handler(int signal);
 
 #endif /* ISCLIB_H */

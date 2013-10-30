@@ -34,6 +34,7 @@
 
 #include "dhcpd.h"
 #include <syslog.h>
+#include <signal.h>
 #include <sys/time.h>
 
 TIME default_lease_time = 43200; /* 12 hours... */
@@ -577,10 +578,13 @@ main(int argc, char **argv) {
 		dhcpv6_packet_handler = do_packet6;
 #endif
 
+        /* install signal handlers */
+	signal(SIGINT, dhcp_signal_handler);   /* control-c */
+	signal(SIGTERM, dhcp_signal_handler);  /* kill */
+
 	/* Start dispatching packets and timeouts... */
 	dispatch();
 
-	/* Not reached */
 	return (0);
 }
 

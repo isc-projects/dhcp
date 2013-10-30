@@ -129,6 +129,9 @@ work on other platforms. Please report any problems and suggested fixes to
   for the bug report and a potential patch.
   [ISC-Bugs #34784]
 
+- Added support for gentle shutdown after signal is received.
+  [ISC-BUGS #32692]
+
 			Changes since 4.2.4
 
 - Correct code to calculate timing values in client to compare
