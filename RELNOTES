@@ -132,6 +132,10 @@ work on other platforms. Please report any problems and suggested fixes to
 - Added support for gentle shutdown after signal is received.
   [ISC-BUGS #32692]
 
+- Enhance the DHCPv6 server logging to include the addresses that are assigned
+  to the clients.
+  [ISC-Bugs #26377]
+
 			Changes since 4.2.4
 
 - Correct code to calculate timing values in client to compare
