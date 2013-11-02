@@ -275,3 +275,11 @@
    Care should be taken before enabling this option. */
 
 /* #define SERVER_ID_CHECK */
+
+/* In the v6 server code log the addresses as they are assigned
+   to make it easier for an admin to see what has beend done.
+   This default to off to avoid changes to what is currently
+   logged. */
+
+/* #define LOG_V6_ADDRESSES */
+
