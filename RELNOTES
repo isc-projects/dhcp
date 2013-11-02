@@ -98,6 +98,10 @@ work on other platforms. Please report any problems and suggested fixes to
   for the bug report and a potential patch.
   [ISC-Bugs #34784]
 
+- Enhance the DHCPv6 server logging to include the addresses that are assigned
+  to the clients.  This can be enabled by defining LOG_V6_ADDRESSES in site.h.
+  [ISC-Bugs #26377]
+
 			Changes since 4.1-ESV-R8rc1
 - None
 

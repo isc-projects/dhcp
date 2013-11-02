@@ -59,6 +59,7 @@ struct reply_state {
 	struct ia_xx *old_ia;
 	struct option_state *reply_ia;
 	struct data_string fixed;
+	struct iaddrcidrnet fixed_pref; /* static prefix for logging */
 
 	/* IAADDR/PREFIX level persistent state */
 	struct iasubopt *lease;
@@ -1809,6 +1810,56 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 	putULong(reply->buf.data + ia_cursor + 12, reply->rebind);
 
 	/*
+	 * yes, goto's aren't the best but we also want to avoid extra
+	 * indents
+	 */
+	if (status == ISC_R_CANCELED)
+		goto cleanup;
+
+	/*
+	 * Handle static lease
+	 */
+	if (reply->static_lease) {
+#if defined(LOG_V6_ADDRESSES)
+		char tmp_addr[INET6_ADDRSTRLEN];
+		log_info("%s NA: address %s to client with duid %s iaid = %d "
+			 "static",
+			 dhcpv6_type_names[reply->buf.reply.msg_type],
+			 inet_ntop(AF_INET6, reply->fixed.data, tmp_addr,
+				   sizeof(tmp_addr)),
+			 print_hex_1(reply->client_id.len,
+				     reply->client_id.data, 60),
+			 iaid);
+#endif
+		goto cleanup;
+	}
+
+
+#if defined(LOG_V6_ADDRESSES)
+	/*
+	 * If we have any addresses log what we are doing.
+	 */
+	if (reply->ia->num_iasubopt != 0) {
+		struct iasubopt *tmp;
+		int i;
+		char tmp_addr[INET6_ADDRSTRLEN];
+
+		for (i = 0 ; i < reply->ia->num_iasubopt ; i++) {
+			tmp = reply->ia->iasubopt[i];
+
+			log_info("%s NA: address %s to client with duid %s "
+				 "iaid = %d valid for %d seconds",
+				 dhcpv6_type_names[reply->buf.reply.msg_type],
+				 inet_ntop(AF_INET6, &tmp->addr,
+					   tmp_addr, sizeof(tmp_addr)),
+				 print_hex_1(reply->client_id.len,
+					     reply->client_id.data, 60),
+				 iaid, tmp->valid);
+		}
+	}
+#endif
+
+	/*
 	 * If this is not a 'soft' binding, consume the new changes into
 	 * the database (if any have been attached to the ia_na).
 	 *
@@ -1816,9 +1867,9 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 	 * leases onto this IA_NA rather than any old ones, and updating
 	 * pool timers for each (if any).
 	 */
-	if ((status != ISC_R_CANCELED) && !reply->static_lease &&
-	    (reply->buf.reply.msg_type == DHCPV6_REPLY) &&
-	    (reply->ia->num_iasubopt != 0)) {
+
+	if ((reply->ia->num_iasubopt != 0) &&
+	    (reply->buf.reply.msg_type == DHCPV6_REPLY)) {
 		struct iasubopt *tmp;
 		struct data_string *ia_id;
 		int i;
@@ -2465,16 +2516,47 @@ reply_process_ia_ta(struct reply_state *reply, struct option_cache *ia) {
 		  reply->cursor - (ia_cursor + 4));
 
 	/*
-	 * Consume the new changes into the database (if any have been
-	 * attached to the ia_ta).
+	 * yes, goto's aren't the best but we also want to avoid extra
+	 * indents
+	 */
+	if (status == ISC_R_CANCELED)
+		goto cleanup;
+
+#if defined(LOG_V6_ADDRESSES)
+	/*
+	 * If we have any addresses log what we are doing.
+	 */
+	if (reply->ia->num_iasubopt != 0) {
+		struct iasubopt *tmp;
+		int i;
+		char tmp_addr[INET6_ADDRSTRLEN];
+
+		for (i = 0 ; i < reply->ia->num_iasubopt ; i++) {
+			tmp = reply->ia->iasubopt[i];
+
+			log_info("%s TA: address %s to client with duid %s "
+				 "iaid = %d valid for %d seconds",
+				 dhcpv6_type_names[reply->buf.reply.msg_type],
+				 inet_ntop(AF_INET6, &tmp->addr,
+					   tmp_addr, sizeof(tmp_addr)),
+				 print_hex_1(reply->client_id.len,
+					     reply->client_id.data, 60),
+				 iaid,
+				 tmp->valid);
+		}
+	}
+#endif
+
+	/*
+	 * For hard bindings we consume the new changes into
+	 * the database (if any have been attached to the ia_ta).
 	 *
 	 * Loop through the assigned dynamic addresses, referencing the
 	 * leases onto this IA_TA rather than any old ones, and updating
 	 * pool timers for each (if any).
 	 */
-	if ((status != ISC_R_CANCELED) &&
-	    (reply->buf.reply.msg_type == DHCPV6_REPLY) &&
-	    (reply->ia->num_iasubopt != 0)) {
+	if ((reply->ia->num_iasubopt != 0) &&
+	    (reply->buf.reply.msg_type == DHCPV6_REPLY)) {
 		struct iasubopt *tmp;
 		struct data_string *ia_id;
 		int i;
@@ -3333,6 +3415,57 @@ reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia) {
 	putULong(reply->buf.data + ia_cursor + 12, reply->rebind);
 
 	/*
+	 * yes, goto's aren't the best but we also want to avoid extra
+	 * indents
+	 */
+	if (status == ISC_R_CANCELED)
+		goto cleanup;
+
+	/*
+	 * Handle static prefixes
+	 */
+	if (reply->static_prefixes != 0) {
+#if defined(LOG_V6_ADDRESSES)
+		char tmp_addr[INET6_ADDRSTRLEN];
+		log_info("%s PD: address %s/%d to client with duid %s "
+			 "iaid = %d static",
+			 dhcpv6_type_names[reply->buf.reply.msg_type],
+			 inet_ntop(AF_INET6, reply->fixed_pref.lo_addr.iabuf,
+				   tmp_addr, sizeof(tmp_addr)),
+			 reply->fixed_pref.bits,
+			 print_hex_1(reply->client_id.len,
+				     reply->client_id.data, 60),
+			 iaid);
+#endif
+		goto cleanup;
+	}
+
+#if defined(LOG_V6_ADDRESSES)
+	/*
+	 * If we have any addresses log what we are doing.
+	 */
+	if (reply->ia->num_iasubopt != 0) {
+		struct iasubopt *tmp;
+		int i;
+		char tmp_addr[INET6_ADDRSTRLEN];
+
+		for (i = 0 ; i < reply->ia->num_iasubopt ; i++) {
+			tmp = reply->ia->iasubopt[i];
+
+			log_info("%s PD: address %s/%d to client with duid %s"
+				 " iaid = %d valid for %d seconds",
+				 dhcpv6_type_names[reply->buf.reply.msg_type],
+				 inet_ntop(AF_INET6, &tmp->addr,
+					   tmp_addr, sizeof(tmp_addr)),
+				 (int)tmp->plen,
+				 print_hex_1(reply->client_id.len,
+					     reply->client_id.data, 60),
+				 iaid, tmp->valid);
+		}
+	}
+#endif
+
+	/*
 	 * If this is not a 'soft' binding, consume the new changes into
 	 * the database (if any have been attached to the ia_pd).
 	 *
@@ -3340,8 +3473,7 @@ reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia) {
 	 * prefixes onto this IA_PD rather than any old ones, and updating
 	 * prefix pool timers for each (if any).
 	 */
-	if ((status != ISC_R_CANCELED) && (reply->static_prefixes == 0) &&
-	    (reply->buf.reply.msg_type == DHCPV6_REPLY) &&
+	if ((reply->buf.reply.msg_type == DHCPV6_REPLY) &&
 	    (reply->ia->num_iasubopt != 0)) {
 		struct iasubopt *tmp;
 		struct data_string *ia_id;
@@ -3556,6 +3688,9 @@ reply_process_prefix(struct reply_state *reply, struct option_cache *pref) {
 			log_fatal("Impossible condition at %s:%d.", MDL);
 
 		scope = &global_scope;
+
+		/* Copy the static prefix for logging purposes */
+		memcpy(&reply->fixed_pref, &tmp_pref, sizeof(tmp_pref));
 	} else {
 		if (reply->lease == NULL)
 			log_fatal("Impossible condition at %s:%d.", MDL);
@@ -3745,6 +3880,10 @@ find_client_prefix(struct reply_state *reply) {
 		memcpy(&send_pref, &l->cidrnet, sizeof(send_pref));
 
 		scope = &global_scope;
+
+		/* Copy the prefix for logging purposes */
+		memcpy(&reply->fixed_pref, &l->cidrnet, sizeof(send_pref));
+
 		goto send_pref;
 	}
 
