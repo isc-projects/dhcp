@@ -1839,15 +1839,6 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 				     reply->client_id.data, 60),
 			 iaid);
 #endif
-		if ((reply->buf.reply.msg_type == DHCPV6_REPLY) &&
-		    (reply->on_star.on_commit != NULL)) {
-			execute_statements(NULL, reply->packet, NULL, NULL, 
-					   reply->packet->options,
-					   reply->opt_state, NULL,
-					   reply->on_star.on_commit, NULL);
-			executable_statement_dereference
-				(&reply->on_star.on_commit, MDL);
-		}
 		goto cleanup;
 	}
 
@@ -3459,16 +3450,6 @@ reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia) {
 				     reply->client_id.data, 60),
 			 iaid);
 #endif
-		if ((reply->buf.reply.msg_type == DHCPV6_REPLY) &&
-		    (reply->on_star.on_commit != NULL)) {
-			execute_statements(NULL, reply->packet, NULL, NULL,
-					   reply->packet->options,
-					   reply->opt_state,
-					   NULL, reply->on_star.on_commit,
-					   NULL);
-			executable_statement_dereference
-				(&reply->on_star.on_commit, MDL);
-		}
 		goto cleanup;
 	}
 
