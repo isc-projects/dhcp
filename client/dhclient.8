@@ -325,13 +325,13 @@ feature is not supported in DHCPv6 (\fB-6\fR) mode.
 .BI \-g \ relay
 .\" mockup relay
 Set the giaddr field of all packets to the \fIrelay\fR IP address
-simulating a relay agent.  This is for testing pruposes only and
+simulating a relay agent.  This is for testing purposes only and
 should not be expected to work in any consistent or useful way.
 .TP
 .BI \-i
 Use a DUID with DHCPv4 clients.  If no DUID is available in the
 lease file one will be constructed and saved.  The DUID will be
-used to contstuct a RFC4361 style client id that will be included
+used to construct a RFC4361 style client id that will be included
 in the client's messages.  This client id can be overridden by
 setting a client id in the configuration file.  Overridding the
 client id in this fashion is discouraged.
@@ -369,7 +369,7 @@ DHCPv6 \fBdhclient\fR creates an identifier based on the link-layer address
 requesting an address), or it creates an identifier based on the
 link-layer address plus a timestamp (DUID-LLT) if it is running in
 stateful mode (without \fB\-S\fR, requesting an address).  When DHCPv4
-is configued to use a DUID using \fB\-i\fR option the default is to use
+is configured to use a DUID using \fB\-i\fR option the default is to use
 a DUID-LLT.  \fB\-D\fR
 overrides these default, with a value of either \fILL\fR or \fILLT\fR.
 .TP
