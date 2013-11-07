@@ -754,7 +754,7 @@ The Failover pool balance statements.
 This version of the DHCP Server evaluates pool balance on a schedule,
 rather than on demand as leases are allocated.  The latter approach
 proved to be slightly klunky when pool misbalanced reach total
-saturation...when any server ran out of leases to assign, it also lost
+saturation \(em when any server ran out of leases to assign, it also lost
 its ability to notice it had run dry.
 .PP
 In order to understand pool balance, some elements of its operation
@@ -1202,12 +1202,12 @@ IP address, it can update its own A record, assuming that the
 .PP
 If the server is configured not to allow client updates, or if the
 client doesn't want to do its own update, the server will simply
-choose a name for the client from either the fqdn option (if present)
+choose a name for the client from either the \fBfqdn\fR option (if present)
 or the hostname option (if present).  It will use its own
 domain name for the client, just as in the ad-hoc update scheme.
 It will then update both the A and PTR record, using the name that it
 chose for the client.  If the client sends a fully-qualified domain
-name in the fqdn option, the server uses only the leftmost part of the
+name in the \fBfqdn\fR option, the server uses only the leftmost part of the
 domain name - in the example above, "jschmoe" instead of
 "jschmoe.radish.org".
 .PP
@@ -2018,7 +2018,7 @@ The \fIddns-hostname\fR statement
 .B ddns-hostname \fIname\fB;\fR
 .PP
 The \fIname\fR parameter should be the hostname that will be used in
-setting up the client's A and PTR records.  If no ddns-hostname is
+setting up the client's A and PTR records.  If no \fIddns-hostname\fR is
 specified in scope, then the server will derive the hostname
 automatically, using an algorithm that varies for each of the
 different update methods.
@@ -2142,7 +2142,7 @@ set to \fBinterim\fR.  Forward updates are enabled by default.  If
 this statement is used to disable forward updates, the DHCP server
 will never attempt to update the client's A record, and will only ever
 attempt to update the client's PTR record if the client supplies an
-FQDN that should be placed in the PTR record using the fqdn option.
+FQDN that should be placed in the PTR record using the \fBfqdn\fR option.
 If forward updates are enabled, the DHCP server will still honor the
 setting of the \fBclient-updates\fR flag.
 .RE
@@ -2397,7 +2397,7 @@ This statement causes the DHCP server to listen for DHCP requests sent
 to the specified \fIaddress\fR, rather than requests sent to all addresses.
 Since serving directly attached DHCP clients implies that the server must
 respond to requests sent to the all-ones IP address, this option cannot be
-used if clients are on directly attached networks...it is only realistically
+used if clients are on directly attached networks; it is only realistically
 useful for a server whose only clients are reached via unicasts, such as via
 DHCP relay agents.
 .PP
@@ -2452,6 +2452,7 @@ Because the \fIlog-facility\fR setting is controlled by the dhcpd.conf
 file, log messages printed while parsing the dhcpd.conf file or before
 parsing it are logged to the default log facility.  To prevent this,
 see the README file included with this distribution, which describes
+BUG: where is that mentioned in README?
 how to change the default log facility.  When this parameter is used,
 the DHCP server prints its startup message a second time after parsing
 the configuration file, so that the log will be as complete as

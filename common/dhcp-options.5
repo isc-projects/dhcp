@@ -1138,7 +1138,7 @@ circuit from which a DHCP client-to-server packet was received.  It is
 intended for use by agents in relaying DHCP responses back to the
 proper circuit.  The format of this option is currently defined to be
 vendor-dependent, and will probably remain that way, although the
-current draft allows for for the possibility of standardizing the
+current draft allows for the possibility of standardizing the
 format in the future.
 .RE
 .PP
@@ -1176,7 +1176,7 @@ cases where the giaddr (where responses must be sent to the relay agent)
 is not on the same subnet as the client.  When this option is present in
 a packet from a relay agent, the DHCP server will use its contents to find
 a subnet declared in configuration, and from here take one step further
-backwards to any shared-network the subnet may be defined within...the
+backwards to any shared-network the subnet may be defined within; the
 client may be given any address within that shared network, as normally
 appropriate.
 .RE
@@ -1253,8 +1253,8 @@ and \fBconfig-option\fR operators in an expression, in which case it returns
 all labels after the first label in the \fBfqdn.fqdn\fR suboption - for
 example, if the value of \fBfqdn.fqdn\fR is "foo.example.com.",
 then \fBfqdn.hostname\fR will be "example.com.".  If this suboption value
-is not set, it means that an unqualified name was sent in the fqdn option,
-or that no fqdn option was sent at all.
+is not set, it means that an unqualified name was sent in the \fBfqdn\fR option,
+or that no \fBfqdn\fR option was sent at all.
 .RE
 .PP
 If you wish to use any of these suboptions, we strongly recommend that you
@@ -1582,11 +1582,25 @@ The \fBnis-domain-name\fR option specifies the NIS domain name the client is
 expected to use, and is related to the \fBnis-servers\fR option.
 .RE
 .PP
+.B option \fBdhcp6.nis-domain-name\fR \fIdomain-name\fR\fB;\fR
+.RS 0.25i
+.PP
+The \fBdhcp6.nis-domain-name\fR option specifies NIS domain name the
+client is expected to use, and is related to \fBdhcp6.nis-servers\fR option.
+.RE
+.PP
 .B option \fBnisp-domain-name\fR \fIdomain-list\fR\fB;\fR
 .RS 0.25i
 .PP
 The \fBnisp-domain-name\fR option specifies the NIS+ domain name the client
 is expected to use, and is related to the \fBnisp-servers\fR option.
+.RE
+.PP
+.B option \fBdhcp6.nisp-domain-name\fR \fIdomain-name\fR\fB;\fR
+.RS 0.25i
+.PP
+The \fBdhcp6.nis-domain-name\fR option specifies NIS+ domain name the
+client is expected to use, and is related to \fBdhcp6.nisp-servers\fR option.
 .RE
 .PP
 .B option
@@ -1886,7 +1900,7 @@ optional \fBcompressed\fR keyword indicates if the option should be
 compressed relative to the start of the option contents (not the packet
 contents).
 .PP
-When in doubt, omit the \fBcompressed\fR keyword.  When the software recieves
+When in doubt, omit the \fBcompressed\fR keyword.  When the software receives
 an option that is compressed and the \fBcompressed\fR keyword is omitted, it
 will still decompress the option (relative to the option contents field).  The
 keyword only controls whether or not transmitted packets are compressed.
@@ -1967,7 +1981,7 @@ the \fBVendor Identified Vendor Sub Options\fR option ("VIVSO"), and the
 DHCPv6 protocol defines the \fBVendor-specific Information Option\fR
 ("VSIO").  The format of all of these options is usually internally a
 string of options, similarly to other normal DHCP options.  The VIVSO
-and VSIO options differ in that that they contain options that correspond
+and VSIO options differ in that they contain options that correspond
 to vendor Enterprise-ID numbers (assigned by IANA), which then contain
 options according to each Vendor's specifications.  You will need to refer
 to your vendor's documentation in order to form options to their
