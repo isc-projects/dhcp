@@ -1793,6 +1793,10 @@ isc_result_t dhcp_failover_set_state (dhcp_failover_state_t *state,
     log_info ("failover peer %s: I move from %s to %s",
 	      state -> name, dhcp_failover_state_name_print (saved_state),
 	      dhcp_failover_state_name_print (state -> me.state));
+
+    /* If both servers are now normal log it */
+    if ((state->me.state == normal) && (state->partner.state == normal))
+	    log_info("failover peer %s: Both servers normal", state->name);
     
     /* If we were in startup and we just left it, cancel the timeout. */
     if (new_state != startup && saved_state == startup)
@@ -1986,6 +1990,10 @@ isc_result_t dhcp_failover_peer_state_changed (dhcp_failover_state_t *state,
 		  state -> name,
 		  dhcp_failover_state_name_print (previous_state),
 		  dhcp_failover_state_name_print (state -> partner.state));
+
+	/* If both servers are now normal log it */
+	if ((state->me.state == normal) && (state->partner.state == normal))
+		log_info("failover peer %s: Both servers normal", state->name);
     
 	if (!write_failover_state (state) || !commit_leases ()) {
 		/* This is bad, but it's not fatal.  Of course, if we

@@ -96,6 +96,15 @@ work on other platforms. Please report any problems and suggested fixes to
   to a client and before the server stops.  Using this option is
   not recommended.
 
+- Add some logging statements to indicate when the server is ready
+  to serve.  One statement is emitted after the server has finished
+  reading its files and is about to enter the dispatch loop.
+  This is "Server starting service.".
+  The second is emitted when a server determines that both it and
+  its failover peer are in the normal state.
+  This is "failover peer <name>: Both servers normal."
+  [ISC-Bugs 33208]
+
 			Changes since 4.2.5
 
 - Address static analysis warnings.

@@ -785,6 +785,9 @@ main(int argc, char **argv) {
 	signal(SIGINT, dhcp_signal_handler);   /* control-c */
 	signal(SIGTERM, dhcp_signal_handler);  /* kill */
 
+	/* Log that we are about to start working */
+	log_info("Server starting service.");
+
 	/*
 	 * Receive packets and dispatch them...
 	 * dispatch() will return only when we are shutting down.

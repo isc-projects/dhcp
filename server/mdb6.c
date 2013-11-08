@@ -2166,20 +2166,25 @@ write_ia_leases(const void *name, unsigned len, void *value) {
  */
 int
 write_leases6(void) {
+	int nas, tas, pds;
+
 	write_error = 0;
 	write_server_duid();
-	ia_hash_foreach(ia_na_active, write_ia_leases);
+	nas = ia_hash_foreach(ia_na_active, write_ia_leases);
 	if (write_error) {
 		return 0;
 	}
-	ia_hash_foreach(ia_ta_active, write_ia_leases);
+	tas = ia_hash_foreach(ia_ta_active, write_ia_leases);
 	if (write_error) {
 		return 0;
 	}
-	ia_hash_foreach(ia_pd_active, write_ia_leases);
+	pds = ia_hash_foreach(ia_pd_active, write_ia_leases);
 	if (write_error) {
 		return 0;
 	}
+
+	log_info("Wrote %d NA, %d TA, %d PD leases to lease file.",
+		 nas, tas, pds);
 	return 1;
 }
 #endif /* DHCPv6 */

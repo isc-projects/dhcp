@@ -2296,13 +2296,48 @@ void hw_hash_delete (lease)
 		lease_dereference (&head, MDL);
 }
 
+/* Write v4 leases to permanent storage. */
+int write_leases4(void) {
+	struct lease *l;
+	struct shared_network *s;
+	struct pool *p;
+	struct lease **lptr[RESERVED_LEASES+1];
+	int num_written = 0, i;
+
+	/* Write all the leases. */
+	for (s = shared_networks; s; s = s->next) {
+	    for (p = s->pools; p; p = p->next) {
+		lptr[FREE_LEASES] = &p->free;
+		lptr[ACTIVE_LEASES] = &p->active;
+		lptr[EXPIRED_LEASES] = &p->expired;
+		lptr[ABANDONED_LEASES] = &p->abandoned;
+		lptr[BACKUP_LEASES] = &p->backup;
+		lptr[RESERVED_LEASES] = &p->reserved;
+
+		for (i = FREE_LEASES; i <= RESERVED_LEASES; i++) {
+		    for (l = *(lptr[i]); l; l = l->next) {
+#if !defined (DEBUG_DUMP_ALL_LEASES)
+			if (l->hardware_addr.hlen != 0 || l->uid_len != 0 ||
+			    l->tsfp != 0 || l->binding_state != FTS_FREE)
+#endif
+			{
+			    if (write_lease(l) == 0)
+				    return (0);
+			    num_written++;
+			}
+		    }
+		}
+	    }
+	}
+
+	log_info ("Wrote %d leases to leases file.", num_written);
+	return (1);
+}
+
 /* Write all interesting leases to permanent storage. */
 
 int write_leases ()
 {
-	struct lease *l;
-	struct shared_network *s;
-	struct pool *p;
 	struct host_decl *hp;
 	struct group_object *gp;
 	struct hash_bucket *hb;
@@ -2310,7 +2345,6 @@ int write_leases ()
 	struct collection *colp;
 	int i;
 	int num_written;
-	struct lease **lptr[RESERVED_LEASES+1];
 
 	/* write all the dynamically-created class declarations. */
 	if (collections->classes) {
@@ -2390,41 +2424,22 @@ int write_leases ()
 		return 0;
 #endif
 
-	/* Write all the leases. */
-	num_written = 0;
-	for (s = shared_networks; s; s = s -> next) {
-	    for (p = s -> pools; p; p = p -> next) {
-		lptr [FREE_LEASES] = &p -> free;
-		lptr [ACTIVE_LEASES] = &p -> active;
-		lptr [EXPIRED_LEASES] = &p -> expired;
-		lptr [ABANDONED_LEASES] = &p -> abandoned;
-		lptr [BACKUP_LEASES] = &p -> backup;
-		lptr [RESERVED_LEASES] = &p->reserved;
-
-		for (i = FREE_LEASES; i <= RESERVED_LEASES; i++) {
-		    for (l = *(lptr [i]); l; l = l -> next) {
-#if !defined (DEBUG_DUMP_ALL_LEASES)
-			if (l->hardware_addr.hlen != 0 || l->uid_len != 0 ||
-			    l->tsfp != 0 || l->binding_state != FTS_FREE)
-#endif
-			{
-			    if (!write_lease (l))
-				    return 0;
-			    num_written++;
-			}
-		    }
-		}
-	    }
-	}
-	log_info ("Wrote %d leases to leases file.", num_written);
+	switch (local_family) {
+	      case AF_INET:
+		if (write_leases4() == 0)
+			return (0);
+		break;
 #ifdef DHCPv6
-	if (!write_leases6()) {
-		return 0;
-	}
+	      case AF_INET6:
+		if (write_leases6() == 0)
+			return (0);
+		break;
 #endif /* DHCPv6 */
-	if (!commit_leases ())
-		return 0;
-	return 1;
+	}
+
+	if (commit_leases() == 0)
+		return (0);
+	return (1);
 }
 
 /* In addition to placing this lease upon a lease queue depending on its
