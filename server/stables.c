@@ -267,6 +267,7 @@ static struct option server_options[] = {
 #endif /* LDAP_USE_SSL */
 #endif /* LDAP_CONFIGURATION */
 	{ "dhcp-cache-threshold", "B",		&server_universe,  78, 1 },
+	{ "dont-use-fsync", "f",		&server_universe,  79, 1 },
 	{ NULL, NULL, NULL, 0, 0 }
 };
 

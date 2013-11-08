@@ -89,6 +89,13 @@ work on other platforms. Please report any problems and suggested fixes to
   key for security reasons.
   [ISC-Bugs 30461]
 
+- Add a configuration option to the server to suppress using fsync().
+  Enabling this option will mean that fsync() is never called.  This
+  may provide better performance but there is also a risk that a lease
+  will not be properly written to the disk after it has been issued
+  to a client and before the server stops.  Using this option is
+  not recommended.
+
 			Changes since 4.2.5
 
 - Address static analysis warnings.

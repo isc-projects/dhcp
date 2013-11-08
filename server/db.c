@@ -1014,12 +1014,13 @@ int commit_leases ()
 	   We need to do this even if we're rewriting the file below,
 	   just in case the rewrite fails. */
 	if (fflush (db_file) == EOF) {
-		log_info ("commit_leases: unable to commit, fflush(): %m");
-		return 0;
+		log_info("commit_leases: unable to commit, fflush(): %m");
+		return (0);
 	}
-	if (fsync (fileno (db_file)) < 0) {
+	if ((dont_use_fsync == 0) &&
+	    (fsync(fileno (db_file)) < 0)) {
 		log_info ("commit_leases: unable to commit, fsync(): %m");
-		return 0;
+		return (0);
 	}
 
 	/* send out all deferred ACKs now */
@@ -1031,9 +1032,9 @@ int commit_leases ()
 	if (count && cur_time - write_time > LEASE_REWRITE_PERIOD) {
 		count = 0;
 		write_time = cur_time;
-		new_lease_file ();
+		new_lease_file();
 	}
-	return 1;
+	return (1);
 }
 
 /*

@@ -78,6 +78,7 @@ option server.ddns-rev-domainname = \"in-addr.arpa.\";";
 
 #endif /* NSUPDATE */
 int ddns_update_style;
+int dont_use_fsync = 0; /* 0 = default, use fsync, 1 = don't use fsync */
 
 const char *path_dhcpd_conf = _PATH_DHCPD_CONF;
 const char *path_dhcpd_db = _PATH_DHCPD_DB;
@@ -800,7 +801,7 @@ main(int argc, char **argv) {
 
 void postconf_initialization (int quiet)
 {
-	struct option_state *options = (struct option_state *)0;
+	struct option_state *options = NULL;
 	struct data_string db;
 	struct option_cache *oc;
 	char *s;
@@ -808,39 +809,35 @@ void postconf_initialization (int quiet)
 	int tmp;
 
 	/* Now try to get the lease file name. */
-	option_state_allocate (&options, MDL);
+	option_state_allocate(&options, MDL);
 
 	execute_statements_in_scope(NULL, NULL, NULL, NULL, NULL,
 				    options, &global_scope, root_group,
 				    NULL, NULL);
-	memset (&db, 0, sizeof db);
-	oc = lookup_option (&server_universe, options, SV_LEASE_FILE_NAME);
+	memset(&db, 0, sizeof db);
+	oc = lookup_option(&server_universe, options, SV_LEASE_FILE_NAME);
 	if (oc &&
-	    evaluate_option_cache (&db, (struct packet *)0,
-				   (struct lease *)0, (struct client_state *)0,
-				   options, (struct option_state *)0,
-				   &global_scope, oc, MDL)) {
-		s = dmalloc (db.len + 1, MDL);
+	    evaluate_option_cache(&db, NULL, NULL, NULL, options, NULL,
+				  &global_scope, oc, MDL)) {
+		s = dmalloc(db.len + 1, MDL);
 		if (!s)
-			log_fatal ("no memory for lease db filename.");
-		memcpy (s, db.data, db.len);
-		s [db.len] = 0;
-		data_string_forget (&db, MDL);
+			log_fatal("no memory for lease db filename.");
+		memcpy(s, db.data, db.len);
+		s[db.len] = 0;
+		data_string_forget(&db, MDL);
 		path_dhcpd_db = s;
 	}
 
-	oc = lookup_option (&server_universe, options, SV_PID_FILE_NAME);
+	oc = lookup_option(&server_universe, options, SV_PID_FILE_NAME);
 	if (oc &&
-	    evaluate_option_cache (&db, (struct packet *)0,
-				   (struct lease *)0, (struct client_state *)0,
-				   options, (struct option_state *)0,
-				   &global_scope, oc, MDL)) {
-		s = dmalloc (db.len + 1, MDL);
+	    evaluate_option_cache(&db, NULL, NULL, NULL, options, NULL,
+				  &global_scope, oc, MDL)) {
+		s = dmalloc(db.len + 1, MDL);
 		if (!s)
-			log_fatal ("no memory for pid filename.");
-		memcpy (s, db.data, db.len);
-		s [db.len] = 0;
-		data_string_forget (&db, MDL);
+			log_fatal("no memory for pid filename.");
+		memcpy(s, db.data, db.len);
+		s[db.len] = 0;
+		data_string_forget(&db, MDL);
 		path_dhcpd_pid = s;
 	}
 
@@ -853,137 +850,116 @@ void postconf_initialization (int quiet)
                 oc = lookup_option(&server_universe, options,
                                    SV_DHCPV6_LEASE_FILE_NAME);
                 if (oc &&
-                    evaluate_option_cache(&db, NULL, NULL, NULL,
-				          options, NULL, &global_scope,
-                                          oc, MDL)) {
-                        s = dmalloc (db.len + 1, MDL);
+                    evaluate_option_cache(&db, NULL, NULL, NULL, options, NULL,
+					  &global_scope, oc, MDL)) {
+                        s = dmalloc(db.len + 1, MDL);
                         if (!s)
-                                log_fatal ("no memory for lease db filename.");
-                        memcpy (s, db.data, db.len);
-                        s [db.len] = 0;
-                        data_string_forget (&db, MDL);
+                                log_fatal("no memory for lease db filename.");
+                        memcpy(s, db.data, db.len);
+                        s[db.len] = 0;
+                        data_string_forget(&db, MDL);
                         path_dhcpd_db = s;
                 }
 
                 oc = lookup_option(&server_universe, options,
                                    SV_DHCPV6_PID_FILE_NAME);
                 if (oc &&
-                    evaluate_option_cache(&db, NULL, NULL, NULL,
-				          options, NULL, &global_scope,
-                                          oc, MDL)) {
-                        s = dmalloc (db.len + 1, MDL);
+                    evaluate_option_cache(&db, NULL, NULL, NULL, options, NULL,
+					  &global_scope, oc, MDL)) {
+                        s = dmalloc(db.len + 1, MDL);
                         if (!s)
-                                log_fatal ("no memory for pid filename.");
-                        memcpy (s, db.data, db.len);
-                        s [db.len] = 0;
-                        data_string_forget (&db, MDL);
+                                log_fatal("no memory for pid filename.");
+                        memcpy(s, db.data, db.len);
+                        s[db.len] = 0;
+                        data_string_forget(&db, MDL);
                         path_dhcpd_pid = s;
                 }
         }
 #endif /* DHCPv6 */
 
 	omapi_port = -1;
-	oc = lookup_option (&server_universe, options, SV_OMAPI_PORT);
+	oc = lookup_option(&server_universe, options, SV_OMAPI_PORT);
 	if (oc &&
-	    evaluate_option_cache (&db, (struct packet *)0,
-				   (struct lease *)0, (struct client_state *)0,
-				   options, (struct option_state *)0,
-				   &global_scope, oc, MDL)) {
+	    evaluate_option_cache(&db, NULL, NULL, NULL, options, NULL,
+				  &global_scope, oc, MDL)) {
 		if (db.len == 2) {
-			omapi_port = getUShort (db.data);
+			omapi_port = getUShort(db.data);
 		} else
-			log_fatal ("invalid omapi port data length");
-		data_string_forget (&db, MDL);
+			log_fatal("invalid omapi port data length");
+		data_string_forget(&db, MDL);
 	}
 
-	oc = lookup_option (&server_universe, options, SV_OMAPI_KEY);
+	oc = lookup_option(&server_universe, options, SV_OMAPI_KEY);
 	if (oc &&
-	    evaluate_option_cache (&db, (struct packet *)0,
-				   (struct lease *)0, (struct client_state *)0,
-				   options,
-				   (struct option_state *)0,
-				   &global_scope, oc, MDL)) {
-		s = dmalloc (db.len + 1, MDL);
+	    evaluate_option_cache(&db, NULL, NULL, NULL, options, NULL,
+				  &global_scope, oc, MDL)) {
+		s = dmalloc(db.len + 1, MDL);
 		if (!s)
-			log_fatal ("no memory for OMAPI key filename.");
-		memcpy (s, db.data, db.len);
-		s [db.len] = 0;
-		data_string_forget (&db, MDL);
-		result = omapi_auth_key_lookup_name (&omapi_key, s);
-		dfree (s, MDL);
+			log_fatal("no memory for OMAPI key filename.");
+		memcpy(s, db.data, db.len);
+		s[db.len] = 0;
+		data_string_forget(&db, MDL);
+		result = omapi_auth_key_lookup_name(&omapi_key, s);
+		dfree(s, MDL);
 		if (result != ISC_R_SUCCESS)
-			log_fatal ("OMAPI key %s: %s",
-				   s, isc_result_totext (result));
+			log_fatal("OMAPI key %s: %s",
+				  s, isc_result_totext (result));
 	}
 
-	oc = lookup_option (&server_universe, options, SV_LOCAL_PORT);
+	oc = lookup_option(&server_universe, options, SV_LOCAL_PORT);
 	if (oc &&
-	    evaluate_option_cache (&db, (struct packet *)0,
-				   (struct lease *)0, (struct client_state *)0,
-				   options,
-				   (struct option_state *)0,
-				   &global_scope, oc, MDL)) {
+	    evaluate_option_cache(&db, NULL, NULL, NULL, options, NULL,
+				  &global_scope, oc, MDL)) {
 		if (db.len == 2) {
-			local_port = htons (getUShort (db.data));
+			local_port = htons(getUShort (db.data));
 		} else
-			log_fatal ("invalid local port data length");
-		data_string_forget (&db, MDL);
+			log_fatal("invalid local port data length");
+		data_string_forget(&db, MDL);
 	}
 
-	oc = lookup_option (&server_universe, options, SV_REMOTE_PORT);
+	oc = lookup_option(&server_universe, options, SV_REMOTE_PORT);
 	if (oc &&
-	    evaluate_option_cache (&db, (struct packet *)0,
-				   (struct lease *)0, (struct client_state *)0,
-				   options, (struct option_state *)0,
-				   &global_scope, oc, MDL)) {
+	    evaluate_option_cache(&db, NULL, NULL, NULL, options, NULL,
+				  &global_scope, oc, MDL)) {
 		if (db.len == 2) {
-			remote_port = htons (getUShort (db.data));
+			remote_port = htons(getUShort (db.data));
 		} else
-			log_fatal ("invalid remote port data length");
-		data_string_forget (&db, MDL);
+			log_fatal("invalid remote port data length");
+		data_string_forget(&db, MDL);
 	}
 
-	oc = lookup_option (&server_universe, options,
-			    SV_LIMITED_BROADCAST_ADDRESS);
+	oc = lookup_option(&server_universe, options,
+			   SV_LIMITED_BROADCAST_ADDRESS);
 	if (oc &&
-	    evaluate_option_cache (&db, (struct packet *)0,
-				   (struct lease *)0, (struct client_state *)0,
-				   options, (struct option_state *)0,
-				   &global_scope, oc, MDL)) {
+	    evaluate_option_cache(&db, NULL, NULL, NULL, options, NULL,
+				  &global_scope, oc, MDL)) {
 		if (db.len == 4) {
-			memcpy (&limited_broadcast, db.data, 4);
+			memcpy(&limited_broadcast, db.data, 4);
 		} else
-			log_fatal ("invalid broadcast address data length");
-		data_string_forget (&db, MDL);
+			log_fatal("invalid broadcast address data length");
+		data_string_forget(&db, MDL);
 	}
 
-	oc = lookup_option (&server_universe, options,
-			    SV_LOCAL_ADDRESS);
+	oc = lookup_option(&server_universe, options, SV_LOCAL_ADDRESS);
 	if (oc &&
-	    evaluate_option_cache (&db, (struct packet *)0,
-				   (struct lease *)0, (struct client_state *)0,
-				   options, (struct option_state *)0,
-				   &global_scope, oc, MDL)) {
+	    evaluate_option_cache(&db, NULL, NULL, NULL, options, NULL,
+				  &global_scope, oc, MDL)) {
 		if (db.len == 4) {
-			memcpy (&local_address, db.data, 4);
+			memcpy(&local_address, db.data, 4);
 		} else
-			log_fatal ("invalid local address data length");
-		data_string_forget (&db, MDL);
+			log_fatal("invalid local address data length");
+		data_string_forget(&db, MDL);
 	}
 
-	oc = lookup_option (&server_universe, options, SV_DDNS_UPDATE_STYLE);
+	oc = lookup_option(&server_universe, options, SV_DDNS_UPDATE_STYLE);
 	if (oc) {
-		if (evaluate_option_cache (&db, (struct packet *)0,
-					   (struct lease *)0,
-					   (struct client_state *)0,
-					   options,
-					   (struct option_state *)0,
-					   &global_scope, oc, MDL)) {
+		if (evaluate_option_cache(&db, NULL, NULL, NULL, options, NULL,
+					  &global_scope, oc, MDL)) {
 			if (db.len == 1) {
-				ddns_update_style = db.data [0];
+				ddns_update_style = db.data[0];
 			} else
-				log_fatal ("invalid dns update type");
-			data_string_forget (&db, MDL);
+				log_fatal("invalid dns update type");
+			data_string_forget(&db, MDL);
 		}
 	} else {
 		ddns_update_style = DDNS_UPDATE_STYLE_NONE;
@@ -1000,17 +976,13 @@ void postconf_initialization (int quiet)
 	}
 #endif
 
-	oc = lookup_option (&server_universe, options, SV_LOG_FACILITY);
+	oc = lookup_option(&server_universe, options, SV_LOG_FACILITY);
 	if (oc) {
-		if (evaluate_option_cache (&db, (struct packet *)0,
-					   (struct lease *)0,
-					   (struct client_state *)0,
-					   options,
-					   (struct option_state *)0,
-					   &global_scope, oc, MDL)) {
+		if (evaluate_option_cache(&db, NULL, NULL, NULL, options, NULL,
+					  &global_scope, oc, MDL)) {
 			if (db.len == 1) {
 				closelog ();
-				openlog ("dhcpd", LOG_NDELAY, db.data[0]);
+				openlog("dhcpd", LOG_NDELAY, db.data[0]);
 				/* Log the startup banner into the new
 				   log file. */
 				if (!quiet) {
@@ -1019,14 +991,14 @@ void postconf_initialization (int quiet)
 					log_perror = 0;
 					log_info("%s %s",
 						 message, PACKAGE_VERSION);
-					log_info (copyright);
-					log_info (arr);
-					log_info (url);
+					log_info(copyright);
+					log_info(arr);
+					log_info(url);
 					log_perror = tmp;
 				}
 			} else
-				log_fatal ("invalid log facility");
-			data_string_forget (&db, MDL);
+				log_fatal("invalid log facility");
+			data_string_forget(&db, MDL);
 		}
 	}
 	
@@ -1058,8 +1030,16 @@ void postconf_initialization (int quiet)
 		data_string_forget(&db, MDL);
 	}
 
+	oc = lookup_option(&server_universe, options, SV_DONT_USE_FSYNC);
+	if ((oc != NULL) &&
+	    evaluate_boolean_option_cache(NULL, NULL, NULL, NULL, options, NULL,
+					  &global_scope, oc, MDL)) {
+		dont_use_fsync = 1;
+		log_error("Not using fsync() to flush lease writes");
+	}
+
 	/* Don't need the options anymore. */
-	option_state_dereference (&options, MDL);
+	option_state_dereference(&options, MDL);
 }
 
 void postdb_startup (void)

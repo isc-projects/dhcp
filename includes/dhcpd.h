@@ -732,6 +732,7 @@ struct lease_state {
 #endif
 #endif
 #define SV_CACHE_THRESHOLD		78
+#define SV_DONT_USE_FSYNC		79
 
 #if !defined (DEFAULT_PING_TIMEOUT)
 # define DEFAULT_PING_TIMEOUT 1
@@ -1916,6 +1917,7 @@ extern struct timeval cur_tv;
 #define cur_time cur_tv.tv_sec
 
 extern int ddns_update_style;
+extern int dont_use_fsync;
 
 extern const char *path_dhcpd_conf;
 extern const char *path_dhcpd_db;

@@ -2110,6 +2110,24 @@ will still honor the setting of the \fBclient-updates\fR flag.
 .RE
 .PP
 The
+.I dont-use-async
+statement
+.RS 0.25i
+.PP
+.B dont-use-async \fIflag\fB;\fR
+.PP
+The \fIdont-use-async\fR statement instructs the DHCP server if
+it should call fsync() when writing leases to the lease file.  By
+default and if the flag is set to false the server \fBwill\fR call
+fsync().  Suppressing the call to fsync() may increase the performance
+of the server but it also adds a risk that a lease will not be
+properly written to the disk after it has been issued to a client
+and before the server stops.  This can lead to duplicate leases
+being issued to different clients.  Using this option is \fBnot
+recommended\FR.
+.RE
+.PP
+The
 .I dynamic-bootp-lease-cutoff
 statement
 .RS 0.25i
