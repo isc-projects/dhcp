@@ -110,17 +110,29 @@ dispatch(void)
 {
 	isc_result_t status;
 
-	status = isc_app_ctxrun(dhcp_gbl_ctx.actx);
+	do {
+		status = isc_app_ctxrun(dhcp_gbl_ctx.actx);
 
-        /*
-         * isc_app_ctxrun can be stopped by receiving a signal. It will
-         * return ISC_R_SUCCESS in that case. That is a normal behavior.
-         */
+		/*
+		 * isc_app_ctxrun can be stopped by receiving a
+		 * signal. It will return ISC_R_RELOAD in that
+		 * case. That is a normal behavior.
+		 */
 
-	if (status != ISC_R_SUCCESS) {
-		log_fatal ("Dispatch routine failed: %s -- exiting",
-		           isc_result_totext (status));
-	}
+		if (status == ISC_R_RELOAD) {
+			/*
+			 * dhcp_set_control_state() will do the job.
+			 * Note its first argument is ignored.
+			 */
+			status = dhcp_set_control_state(server_shutdown,
+							server_shutdown);
+			if (status == ISC_R_SUCCESS)
+				status = ISC_R_RELOAD;
+		}
+	} while (status == ISC_R_RELOAD);
+
+	log_fatal ("Dispatch routine failed: %s -- exiting",
+		   isc_result_totext (status));
 }
 
 void

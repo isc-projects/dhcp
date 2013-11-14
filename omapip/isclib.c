@@ -31,6 +31,7 @@
 #include <signal.h>
 
 dhcp_context_t dhcp_gbl_ctx;
+int shutdown_signal = 0;
 
 void
 isclib_cleanup(void)
@@ -225,13 +226,17 @@ isclib_make_dst_key(char          *inname,
  */
 void dhcp_signal_handler(int signal) {
 	isc_appctx_t *ctx = dhcp_gbl_ctx.actx;
-	if (ctx && ctx->methods && ctx->methods->ctxshutdown) {
-		/*
-		 * Let's not use standard log facilities here. They may not be
-		 * signal safe, e.g. we could get the signal in the middle of
-		 * another log call
-		 */
-		printf("Received signal %d, initiating shutdown.\n", signal);
-		ctx->methods->ctxshutdown(ctx);
+	int prev = shutdown_signal;
+
+	if (prev != 0) {
+		/* Already in shutdown. */
+		return;
+	}
+	/* Possible race but does it matter? */
+	shutdown_signal = signal;
+
+	/* Use reload (aka suspend) for easier dispatch() reenter. */
+	if (ctx && ctx->methods && ctx->methods->ctxsuspend) {
+		(void) isc_app_ctxsuspend(ctx);
 	}
 }

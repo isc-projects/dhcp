@@ -151,7 +151,7 @@ work on other platforms. Please report any problems and suggested fixes to
   [ISC-Bugs #34784]
 
 - Added support for gentle shutdown after signal is received.
-  [ISC-BUGS #32692]
+  [ISC-Bugs #32692] [ISC-Bugs 34945]
 
 - Enhance the DHCPv6 server logging to include the addresses that are assigned
   to the clients.
