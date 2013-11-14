@@ -705,6 +705,7 @@ main(int argc, char **argv) {
 	/* Start dispatching packets and timeouts... */
 	dispatch();
 
+	/* In fact dispatch() never returns. */
 	return 0;
 }
 
@@ -3828,6 +3829,20 @@ isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
 	struct interface_info *ip;
 	struct client_state *client;
 	struct timeval tv;
+
+	if (newstate == server_shutdown) {
+		/* Re-entry */
+		if (shutdown_signal == SIGUSR1)
+			return ISC_R_SUCCESS;
+		/* Log shutdown on signal. */
+		if ((shutdown_signal == SIGINT) ||
+		    (shutdown_signal == SIGTERM)) {
+			log_info("Received signal %d, initiating shutdown.",
+				 shutdown_signal);
+		}
+		/* Mark it was called. */
+		shutdown_signal = SIGUSR1;
+	}
 
 	/* Do the right thing for each interface. */
 	for (ip = interfaces; ip; ip = ip -> next) {

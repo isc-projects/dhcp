@@ -585,6 +585,7 @@ main(int argc, char **argv) {
 	/* Start dispatching packets and timeouts... */
 	dispatch();
 
+	/* In fact dispatch() never returns. */
 	return (0);
 }
 
@@ -1686,5 +1687,7 @@ parse_allow_deny(struct option_cache **oc, struct parse *p, int i) {
 isc_result_t
 dhcp_set_control_state(control_object_state_t oldstate,
 		       control_object_state_t newstate) {
-	return ISC_R_SUCCESS;
+	if (newstate != server_shutdown)
+		return ISC_R_SUCCESS;
+	exit(0);
 }

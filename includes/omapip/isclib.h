@@ -120,5 +120,6 @@ isc_result_t dhcp_context_create(void);
 void isclib_cleanup(void);
 
 void dhcp_signal_handler(int signal);
+extern int shutdown_signal;
 
 #endif /* ISCLIB_H */

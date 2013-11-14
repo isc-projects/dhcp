@@ -738,5 +738,7 @@ main(int argc, char **argv) {
 isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
 				     control_object_state_t newstate)
 {
-	return ISC_R_SUCCESS;
+	if (newstate != server_shutdown)
+		return ISC_R_SUCCESS;
+	exit (0);
 }

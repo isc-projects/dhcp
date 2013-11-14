@@ -867,12 +867,9 @@ main(int argc, char **argv) {
 
 	/*
 	 * Receive packets and dispatch them...
-	 * dispatch() will return only when we are shutting down.
+	 * dispatch() will never return.
 	 */
 	dispatch ();
-
-	log_info("Shutting down.");
-	dhcp_set_control_state(server_shutdown/*ignored*/, server_shutdown);
 
 	/* Let's return status code */
 	return 0;
@@ -1507,11 +1504,32 @@ static isc_result_t dhcp_io_shutdown_countdown (void *vlp)
 isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
 				     control_object_state_t newstate)
 {
-	if (newstate == server_shutdown) {
-		shutdown_time = cur_time;
-		shutdown_state = shutdown_listeners;
+	struct timeval tv;
+
+	if (newstate != server_shutdown)
+		return DHCP_R_INVALIDARG;
+	/* Re-entry. */
+	if (shutdown_signal == SIGUSR1)
+		return ISC_R_SUCCESS;
+	shutdown_time = cur_time;
+	shutdown_state = shutdown_listeners;
+	/* Called by user. */
+	if (shutdown_signal == 0) {
+		shutdown_signal = SIGUSR1;
 		dhcp_io_shutdown_countdown (0);
 		return ISC_R_SUCCESS;
 	}
-	return DHCP_R_INVALIDARG;
+	/* Called on signal. */
+	log_info("Received signal %d, initiating shutdown.", shutdown_signal);
+	shutdown_signal = SIGUSR1;
+	
+	/*
+	 * Prompt the shutdown event onto the timer queue
+	 * and return to the dispatch loop.
+	 */
+	tv.tv_sec = cur_tv.tv_sec;
+	tv.tv_usec = cur_tv.tv_usec + 1;
+	add_timeout(&tv,
+		    (void (*)(void *))dhcp_io_shutdown_countdown, 0, 0, 0);
+	return ISC_R_SUCCESS;
 }
