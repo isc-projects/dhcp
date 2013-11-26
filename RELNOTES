@@ -82,12 +82,7 @@ work on other platforms. Please report any problems and suggested fixes to
   oldest DDNS code "ad-hoc" has been removed.  Thanks to Thomas Pegeot
   who submitted a patch for this issue.  This patch is based on
   that work with some modifications.
-  [ISC-Bugs 21139]
-
-- Update the DDNS code to support usage without a zone statement.
-  We strongly recommend that you use a zone statement with a TSIG
-  key for security reasons.
-  [ISC-Bugs 30461]
+  [ISC-Bugs #21139]
 
 - Add a configuration option to the server to suppress using fsync().
   Enabling this option will mean that fsync() is never called.  This
@@ -95,6 +90,7 @@ work on other platforms. Please report any problems and suggested fixes to
   will not be properly written to the disk after it has been issued
   to a client and before the server stops.  Using this option is
   not recommended.
+  [ISC-Bugs #34810]
 
 - Add some logging statements to indicate when the server is ready
   to serve.  One statement is emitted after the server has finished
@@ -103,7 +99,7 @@ work on other platforms. Please report any problems and suggested fixes to
   The second is emitted when a server determines that both it and
   its failover peer are in the normal state.
   This is "failover peer <name>: Both servers normal."
-  [ISC-Bugs 33208]
+  [ISC-Bugs #33208]
 
 - Add support for accessing options from v6 relays.  The v6relay
   statement allows the administrator to choose which relay to
