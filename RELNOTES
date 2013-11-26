@@ -105,6 +105,14 @@ work on other platforms. Please report any problems and suggested fixes to
   This is "failover peer <name>: Both servers normal."
   [ISC-Bugs 33208]
 
+- Add support for accessing options from v6 relays.  The v6relay
+  statement allows the administrator to choose which relay to
+  use when searching for an option, see the dhcp-options man page
+  for a description.  The host-identifer option has also been
+  updated to support the use of relay options see the dhcpd.conf
+  man page for a description.
+  [ISC-Bugs #19598]
+
 			Changes since 4.2.5
 
 - Address static analysis warnings.

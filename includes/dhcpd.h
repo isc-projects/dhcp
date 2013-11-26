@@ -882,6 +882,10 @@ struct host_decl {
 #define HOST_DECL_DELETED	1
 #define HOST_DECL_DYNAMIC	2
 #define HOST_DECL_STATIC	4
+	/* For v6 the host-identifer option can specify which relay
+	   to use when trying to look up an option.  We store the
+	   value here. */
+	int relays;
 };
 
 struct permit {

@@ -55,10 +55,18 @@ lease_id_hash_t *lease_hw_addr_hash;
  * identifier. Because of this, we store a list with an entry for
  * each option type. Each of these has a hash table, which contains 
  * hash of the option data.
+ *
+ * For v6 we also include a relay count - this specifies which
+ * relay to check for the requested option.  As each different
+ * value of relays creates a new instance admins should use the
+ * same value across each option for all host-identifers.
+ * A value of 0 indicates that we aren't doing relay options
+ * and should simply look in the current option list.
  */
 typedef struct host_id_info {
 	struct option *option;
 	host_hash_t *values_hash;
+	int relays;
 	struct host_id_info *next;
 } host_id_info_t;
 
@@ -146,11 +154,12 @@ static int find_uid_statement (struct executable_statement *esp,
 
 
 static host_id_info_t *
-find_host_id_info(unsigned int option_code) {
+find_host_id_info(unsigned int option_code, int relays) {
 	host_id_info_t *p;
 
-	for (p=host_id_info; p != NULL; p = p->next) {
-		if (p->option->code == option_code) {
+	for (p = host_id_info; p != NULL; p = p->next) {
+		if ((p->option->code == option_code) &&
+		    (p->relays == relays)) {
 			break;
 		}
 	}
@@ -369,7 +378,8 @@ isc_result_t enter_host (hd, dynamicp, commit)
 		 * Look for the host identifier information for this option,
 		 * and create a new entry if there is none.
 		 */
-		h_id_info = find_host_id_info(hd->host_id_option->code);
+		h_id_info = find_host_id_info(hd->host_id_option->code,
+					      hd->relays);
 		if (h_id_info == NULL) {
 			h_id_info = dmalloc(sizeof(*h_id_info), MDL);
 			if (h_id_info == NULL) {
@@ -383,6 +393,7 @@ isc_result_t enter_host (hd, dynamicp, commit)
 				log_fatal("No memory for host-identifier "
 					  "option hash.");
 			}
+			h_id_info->relays = hd->relays;
 			h_id_info->next = host_id_info;
 			host_id_info = h_id_info;
 		}
@@ -638,14 +649,41 @@ find_hosts_by_option(struct host_decl **hp,
 	struct option_cache *oc;
 	struct data_string data;
 	int found;
+	struct packet *relay_packet;
+	struct option_state *relay_state;
 	
 	for (p = host_id_info; p != NULL; p = p->next) {
+		relay_packet = packet;	
+		relay_state = opt_state;
+
+		/* If this option block is for a relay (relays != 0)
+		 * and we are processing the main options and not
+		 * options from the IA (packet->options == opt_state)
+		 * try to find the proper relay
+		 */
+		if ((p->relays != 0) && (packet->options == opt_state)) {
+			int i = p->relays;
+			while ((i != 0) &&
+			       (relay_packet->dhcpv6_container_packet != NULL)) {
+				relay_packet =
+					relay_packet->dhcpv6_container_packet;
+				i--;
+			}
+			/* We wanted a specific relay but were
+			 * unable to find it */
+			if ((p->relays <= MAX_V6RELAY_HOPS) && (i != 0))
+				continue;
+
+			relay_state = relay_packet->options;
+		}
+
 		oc = lookup_option(p->option->universe, 
-				   opt_state, p->option->code);
+				   relay_state, p->option->code);
 		if (oc != NULL) {
 			memset(&data, 0, sizeof(data));
-			if (!evaluate_option_cache(&data, packet, NULL, NULL,
-						   opt_state, NULL,
+
+			if (!evaluate_option_cache(&data, relay_packet, NULL,
+						   NULL, relay_state, NULL,
 						   &global_scope, oc, 
 						   MDL)) {
 				log_error("Error evaluating option cache");

@@ -3463,6 +3463,8 @@ int parse_boolean (cfile)
  *		       HARDWARE |
  *		       PACKET LPAREN numeric-expression COMMA
  *				     numeric-expression RPAREN |
+ *		       V6RELAY LPAREN numeric-expression COMMA
+ *				      data-expression RPAREN |
  *		       STRING |
  *		       colon_separated_hex_list
  */
@@ -4329,6 +4331,34 @@ int parse_non_binary (expr, cfile, lose, context)
 				  "record. (%s:%d)", MDL);
 
 		token = next_token(NULL, NULL, cfile);
+		if (token != RPAREN)
+			goto norparen;
+		break;
+
+	      case V6RELAY:
+		skip_token(&val, NULL, cfile);
+		if (!expression_allocate (expr, MDL))
+			log_fatal ("can't allocate expression");
+		(*expr)->op = expr_v6relay;
+
+		token = next_token (&val, NULL, cfile);
+		if (token != LPAREN)
+			goto nolparen;
+
+		if (!parse_numeric_expression (&(*expr)->data.v6relay.relay,
+						cfile, lose))
+			goto nodata;
+
+		token = next_token (&val, NULL, cfile);
+		if (token != COMMA)
+			goto nocomma;
+
+		if (!parse_data_expression (&(*expr)->data.v6relay.roption,
+					    cfile, lose))
+			goto nodata;
+
+		token = next_token (&val, NULL, cfile);
+
 		if (token != RPAREN)
 			goto norparen;
 		break;

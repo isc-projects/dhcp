@@ -1072,6 +1072,7 @@ int evaluate_boolean_expression (result, packet, lease, client_state,
 	      case expr_filename:
 	      case expr_sname:
 	      case expr_gethostname:
+	      case expr_v6relay:
 		log_error ("Data opcode in evaluate_boolean_expression: %d",
 		      expr -> op);
 		return 0;
@@ -1136,6 +1137,8 @@ int evaluate_data_expression (result, packet, lease, client_state,
 	struct binding *binding;
 	unsigned char *s;
 	struct binding_value *bv;
+	struct packet *relay_packet;
+	struct option_state *relay_options;
 
 	switch (expr -> op) {
 		/* Extract N bytes starting at byte M of a data string. */
@@ -1213,6 +1216,7 @@ int evaluate_data_expression (result, packet, lease, client_state,
 				result -> data += data.len - len;
 				result -> len = len;
 			}
+
 			data_string_forget (&data, MDL);
 		}
 
@@ -1224,6 +1228,7 @@ int evaluate_data_expression (result, packet, lease, client_state,
 		       ? print_hex_2 (result -> len, result -> data, 30)
 		       : "NULL"));
 #endif
+
 		return s0 && s1;
 
 		/* Convert string to lowercase. */
@@ -1294,8 +1299,9 @@ int evaluate_data_expression (result, packet, lease, client_state,
 			  s1 ? print_hex_2(result->len, result->data, 30)
 			     : "NULL");
 #endif
-		 if (s0)
+		if (s0)
 			data_string_forget(&data, MDL);
+
 		 return s1;
 
 		/* Extract an option. */
@@ -2028,6 +2034,79 @@ int evaluate_data_expression (result, packet, lease, client_state,
 		data_string_forget(result, MDL);
 		return 0;
 
+		/* Find an option within a v6relay context
+		 *
+		 * The numeric expression in relay indicates which relay
+		 * to try and use as the context.  The relays are numbered
+		 * 1 to 32 with 1 being the one closest to the client and
+		 * 32 closest to the server.  A value of greater than 33
+		 * indicates using the one closest to the server whatever
+		 * the count.  A value of 0 indicates not using the relay
+		 * options, this is included for completeness and consistency
+		 * with the host-identier code.
+		 *
+		 * The data expression in roption is evaluated in that
+		 * context and the result returned.
+		 */
+	      case expr_v6relay:
+		len = 0;
+		s1 = 0;
+		memset (&data, 0, sizeof data);
+
+		/* Evaluate the relay count */
+		s0 = evaluate_numeric_expression(&len, packet, lease,
+						 client_state,
+						 in_options, cfg_options,
+						 scope,
+						 expr->data.v6relay.relay);
+
+		/* no number or an obviously invalid number */
+		if ((s0 == 0) ||
+		    ((len > 0) && 
+		     ((packet == NULL) ||
+		      (packet->dhcpv6_container_packet == NULL)))) {
+#if defined (DEBUG_EXPRESSIONS)
+			log_debug("data: v6relay(%d) = NULL", len);
+#endif
+			return (0);
+		}
+
+		/* Find the correct packet for the requested relay */
+		i = len;
+		relay_packet = packet;
+		relay_options = in_options;
+		while ((i != 0) && 
+		       (relay_packet->dhcpv6_container_packet != NULL)) {
+			relay_packet = relay_packet->dhcpv6_container_packet;
+			relay_options = relay_packet->options;
+			i--;
+		}
+		/* We wanted a specific relay but were unable to find it */
+		if ((len <= MAX_V6RELAY_HOPS) && (i != 0)) {
+#if defined (DEBUG_EXPRESSIONS)
+			log_debug("data: v6relay(%d) = NULL", len);
+#endif
+			return (0);
+		}
+
+		s1 = evaluate_data_expression(&data, relay_packet, lease,
+					      client_state, relay_options,
+					      cfg_options, scope,
+					      expr->data.v6relay.roption,
+					      MDL);
+
+		if (s1) {
+			data_string_copy(result, &data, file, line);
+			data_string_forget(&data, MDL);
+		}
+
+#if defined (DEBUG_EXPRESSIONS)
+		log_debug("data: v6relay(%d) = %s", len, 
+			  s1 ? print_hex_3(result->len, result->data, 30)
+			  : "NULL");
+#endif
+		return (s1);
+
 	      case expr_check:
 	      case expr_equal:
 	      case expr_not_equal:
@@ -2147,6 +2226,7 @@ int evaluate_numeric_expression (result, packet, lease, client_state,
 	      case expr_leased_address:
 	      case expr_null:
 	      case expr_gethostname:
+	      case expr_v6relay:
 		log_error ("Data opcode in evaluate_numeric_expression: %d",
 		      expr -> op);
 		return 0;
@@ -2849,6 +2929,16 @@ void expression_dereference (eptr, file, line)
 		fundef_dereference (&expr -> data.func, file, line);
 		break;
 
+	      case expr_v6relay:
+		if (expr->data.v6relay.relay)
+			expression_dereference(&expr->data.v6relay.relay,
+					       file, line);
+
+		if (expr->data.v6relay.roption)
+			expression_dereference(&expr->data.v6relay.roption,
+					       file, line);
+		break;
+
 		/* No subexpressions. */
 	      case expr_leased_address:
 	      case expr_lease_time:
@@ -2913,7 +3003,8 @@ int is_data_expression (expr)
 		expr->op == expr_leased_address ||
 		expr->op == expr_config_option ||
 		expr->op == expr_null ||
-		expr->op == expr_gethostname);
+		expr->op == expr_gethostname ||
+	        expr->op == expr_v6relay);
 }
 
 int is_numeric_expression (expr)
@@ -2951,7 +3042,8 @@ int is_compound_expression (expr)
 		expr -> op == expr_config_option ||
 		expr -> op == expr_extract_int8 ||
 		expr -> op == expr_extract_int16 ||
-		expr -> op == expr_extract_int32);
+		expr -> op == expr_extract_int32 ||
+		expr -> op == expr_v6relay);
 }
 
 static int op_val (enum expr_op);
@@ -3011,6 +3103,7 @@ static int op_val (op)
 	      case expr_binary_xor:
 	      case expr_client_state:
 	      case expr_gethostname:
+	      case expr_v6relay:
 		return 100;
 
 	      case expr_equal:
@@ -3103,6 +3196,7 @@ enum expression_context op_context (op)
 	      case expr_funcall:
 	      case expr_function:
 	      case expr_gethostname:
+	      case expr_v6relay:
 		return context_any;
 
 	      case expr_equal:
@@ -3568,6 +3662,19 @@ int write_expression (file, expr, col, indent, firstp)
 		col = token_print_indent(file, col, indent, "", "", ")");
 		break;
 
+	      case expr_v6relay:
+		col = token_print_indent(file, col, indent, "", "",
+					 "v6relay");
+		col = token_print_indent(file, col, indent, " ", "", "(");
+		scol = col;
+		col = write_expression(file, expr->data.v6relay.relay,
+				       col, scol, 1);
+		col = token_print_indent (file, col, scol, "", " ", ",");
+		col = write_expression(file, expr->data.v6relay.roption,
+				       col, scol, 0);
+		col = token_print_indent(file, col, indent, "", "", ")");
+		break;
+
 	      default:
 		log_fatal ("invalid expression type in print_expression: %d",
 			   expr -> op);
@@ -3765,6 +3872,17 @@ int data_subexpression_length (int *rv,
 			*rv = lrhs;
 		return 1;
 			
+	      case expr_v6relay:
+		clhs = data_subexpression_length (&llhs,
+						  expr -> data.v6relay.relay);
+		crhs = data_subexpression_length (&lrhs,
+						  expr -> data.v6relay.roption);
+		if (crhs == 0 || clhs == 0)
+			return 0;
+		*rv = llhs + lrhs;
+		return 1;
+		break;
+
 	      case expr_binary_to_ascii:
 	      case expr_config_option:
 	      case expr_host_decl_name:

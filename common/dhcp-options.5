@@ -1712,6 +1712,22 @@ The \fBlq-relay-data\fR option is used internally by for lease query.
 .PP
 The \fBlq-client-link\fR option is used internally by for lease query.
 .RE
+.SH ACCESSING DHCPV6 RELAY OPTIONS
+.PP
+.B v6relay (\fBrelay-number\f, \fBoption\f)
+This option allows access to an option that has been added to a packet
+by a relay agent.  Relay-number value selects the relay to examine
+and option is the option to find.  In DHCPv6 each relay encapsulates
+the entire previous message into an option, adds its own options (if
+any) and sends the result onwards.  The RFC specifies a limit of 32
+hops.  A relay-number of 0 is a no-op and means don't look at the relays.
+1 is the relay that is closest to the client, 2 would be the next in
+from the client and so on.  Any value greater than the max number of hops
+is which is closest to the server independent of number.  To use this
+option in a class statement you would have something like this:
+.PP
+match if v6relay(1, option dhcp6.subscriber-id) = "client_1";
+.RE
 .PP
 .RE
 .SH DEFINING NEW OPTIONS

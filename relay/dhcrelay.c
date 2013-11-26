@@ -116,6 +116,14 @@ struct stream_list {
 static struct stream_list *parse_downstream(char *);
 static struct stream_list *parse_upstream(char *);
 static void setup_streams(void);
+
+/*
+ * A pointer to a subscriber id to add to the message we forward.
+ * This is primarily for testing purposes as we only have one id
+ * for the entire relay and don't determine one per client which
+ * would be more useful.
+ */
+char *dhcrelay_sub_id = NULL;
 #endif
 
 static void do_relay4(struct interface_info *, struct dhcp_packet *,
@@ -147,7 +155,8 @@ static const char url[] =
 "                     [-i interface0 [ ... -i interfaceN]\n" \
 "                     server0 [ ... serverN]\n\n" \
 "       dhcrelay -6   [-d] [-q] [-I] [-c <hops>] [-p <port>]\n" \
-"                     [-pf <pid-file>] [--no-pid]\n"\
+"                     [-pf <pid-file>] [--no-pid]\n" \
+"                     [-s <subscriber-id>]\n" \
 "                     -l lower0 [ ... -l lowerN]\n" \
 "                     -u upper0 [ ... -u upperN]\n" \
 "       lower (client link): [address%%]interface[#index]\n" \
@@ -155,7 +164,7 @@ static const char url[] =
 #else
 #define DHCRELAY_USAGE \
 "Usage: dhcrelay [-d] [-q] [-a] [-D] [-A <length>] [-c <hops>] [-p <port>]\n" \
-"                [-pf <pid-file>] [--no-pid]\n"\
+"                [-pf <pid-file>] [--no-pid]\n" \
 "                [-m append|replace|forward|discard]\n" \
 "                [-i interface0 [ ... -i interfaceN]\n" \
 "                server0 [ ... serverN]\n\n"
@@ -362,6 +371,15 @@ main(int argc, char **argv) {
 			sl = parse_upstream(argv[i]);
 			sl->next = upstreams;
 			upstreams = sl;
+		} else if (!strcmp(argv[i], "-s")) {
+			if (local_family_set && (local_family == AF_INET)) {
+				usage();
+			}
+			local_family_set = 1;
+			local_family = AF_INET6;
+			if (++i == argc)
+				usage();
+			dhcrelay_sub_id = argv[i];
 #endif
 		} else if (!strcmp(argv[i], "-pf")) {
 			if (++i == argc)
@@ -1341,6 +1359,7 @@ setup_streams(void) {
  */
 static const int required_forw_opts[] = {
 	D6O_INTERFACE_ID,
+	D6O_SUBSCRIBER_ID,
 	D6O_RELAY_MSG,
 	0
 };
@@ -1450,6 +1469,20 @@ process_up6(struct packet *packet, struct stream_list *dp) {
 			return;
 		}
 	}
+
+	/* Add a subscriber-id if desired. */
+	/* This is for testing rather than general use */
+	if (dhcrelay_sub_id != NULL) {
+		if (!save_option_buffer(&dhcpv6_universe, opts, NULL,
+					(unsigned char *) dhcrelay_sub_id,
+					strlen(dhcrelay_sub_id),
+					D6O_SUBSCRIBER_ID, 0)) {
+			log_error("Can't save subsriber-id.");
+			option_state_dereference(&opts, MDL);
+			return;
+		}
+	}
+		
 
 	/* Add the relay-msg carrying the packet. */
 	if (!save_option_buffer(&dhcpv6_universe, opts,

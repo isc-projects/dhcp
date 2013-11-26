@@ -1501,6 +1501,10 @@ intern(char *atom, enum dhcp_token dfv) {
 			return UPDATE;
 		break;
 	      case 'v':
+		if (!strcasecmp (atom + 1, "6relay"))
+			return V6RELAY;
+		if (!strcasecmp (atom + 1, "6relopt"))
+			return V6RELOPT;
 		if (!strcasecmp (atom + 1, "endor-class"))
 			return VENDOR_CLASS;
 		if (!strcasecmp (atom + 1, "endor"))

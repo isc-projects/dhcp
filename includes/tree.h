@@ -196,7 +196,8 @@ enum expr_op {
 	expr_lcase,
 	expr_regex_match,
 	expr_iregex_match,
-	expr_gethostname
+	expr_gethostname,
+	expr_v6relay
 };
 
 struct expression {
@@ -279,6 +280,10 @@ struct expression {
 			struct expression *arglist;
 		} funcall;
 		struct fundef *func;
+		struct {
+			struct expression *relay;
+			struct expression *roption;
+		} v6relay;
 	} data;
 	int flags;
 #	define EXPR_EPHEMERAL	1

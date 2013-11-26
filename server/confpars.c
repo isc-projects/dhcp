@@ -1974,9 +1974,27 @@ void parse_host_declaration (cfile, group)
 			}
 	      		skip_token(&val, NULL, cfile);
 			token = next_token(&val, NULL, cfile);
-			if (token != OPTION) {
+			if (token == V6RELOPT) {
+				token = next_token(&val, NULL, cfile);				
+				if (token != NUMBER) {
+					parse_warn(cfile,
+						   "host-identifier v6relopt "
+						   "must have a number");
+					skip_to_rbrace(cfile, 1);
+					break;
+				}
+				host->relays = atoi(val);
+				if (host->relays < 0) {
+					parse_warn(cfile,
+						   "host-identifer v6relopt "
+						   "must have a number >= 0");
+					skip_to_rbrace(cfile, 1);
+					break;
+				}
+			} else if (token != OPTION) {
 				parse_warn(cfile, 
-					   "host-identifier must be an option");
+					   "host-identifier must be an option"
+					   " or v6relopt");
 				skip_to_rbrace(cfile, 1);
 				break;
 			}

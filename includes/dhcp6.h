@@ -3,6 +3,7 @@
    DHCPv6 Protocol structures... */
 
 /*
+ * Copyright (c) 2013 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2006-2009 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -193,6 +194,7 @@ struct dhcpv6_relay_packet {
 	unsigned char peer_address[16];
 	unsigned char options[FLEXIBLE_ARRAY_MEMBER];
 };
+#define MAX_V6RELAY_HOPS 32
 
 /* Leasequery query-types (RFC 5007) */
 

@@ -6299,41 +6299,54 @@ static void
 build_dhcpv6_reply(struct data_string *reply, struct packet *packet) {
 	memset(reply, 0, sizeof(*reply));
 
-	/* Classify the client */
-	classify_client(packet);
+	/* I would like to classify the client once here, but
+	 * as I don't want to classify all of the incoming packets
+	 * I need to do it before handling specific types.
+	 * We don't need to classify if we are tossing the packet
+	 * or if it is a relay - the classification step will get
+	 * done when we process the inner client packet.
+	 */
 
 	switch (packet->dhcpv6_msg_type) {
 		case DHCPV6_SOLICIT:
+			classify_client(packet);
 			dhcpv6_solicit(reply, packet);
 			break;
 		case DHCPV6_ADVERTISE:
 			dhcpv6_discard(packet);
 			break;
 		case DHCPV6_REQUEST:
+			classify_client(packet);
 			dhcpv6_request(reply, packet);
 			break;
 		case DHCPV6_CONFIRM:
+			classify_client(packet);
 			dhcpv6_confirm(reply, packet);
 			break;
 		case DHCPV6_RENEW:
+			classify_client(packet);
 			dhcpv6_renew(reply, packet);
 			break;
 		case DHCPV6_REBIND:
+			classify_client(packet);
 			dhcpv6_rebind(reply, packet);
 			break;
 		case DHCPV6_REPLY:
 			dhcpv6_discard(packet);
 			break;
 		case DHCPV6_RELEASE:
+			classify_client(packet);
 			dhcpv6_release(reply, packet);
 			break;
 		case DHCPV6_DECLINE:
+			classify_client(packet);
 			dhcpv6_decline(reply, packet);
 			break;
 		case DHCPV6_RECONFIGURE:
 			dhcpv6_discard(packet);
 			break;
 		case DHCPV6_INFORMATION_REQUEST:
+			classify_client(packet);
 			dhcpv6_information_request(reply, packet);
 			break;
 		case DHCPV6_RELAY_FORW:
@@ -6343,6 +6356,7 @@ build_dhcpv6_reply(struct data_string *reply, struct packet *packet) {
 			dhcpv6_discard(packet);
 			break;
 		case DHCPV6_LEASEQUERY:
+			classify_client(packet);
 			dhcpv6_leasequery(reply, packet);
 			break;
 		case DHCPV6_LEASEQUERY_REPLY:

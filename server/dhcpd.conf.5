@@ -2271,6 +2271,10 @@ statement
 .PP
 .B host-identifier option \fIoption-name option-data\fB;\fR
 .PP
+or
+.PP
+.B host-identifier v6relopt \fInumber option-name option-data\fB;\fR
+.PP
 This identifies a DHCPv6 client in a
 .I host
 statement.
@@ -2279,7 +2283,12 @@ is any option, and
 .I option-data
 is the value for the option that the client will send. The 
 .I option-data
-must be a constant value.
+must be a constant value.  In the v6relopts case the additional number
+is the relay to examine for the specified option name and value.  The
+values are the same as for the v6relay option.  0 is a no-op, 1 is the
+relay closest to the client, 2 the next one in and so on.  Values that
+are larger than the maximum number of relays (currently 32) indicate the
+relay closest to the server independent of number.
 .RE
 .PP
 The
