@@ -61,6 +61,8 @@
 #include <isc/heap.h>
 #include <isc/random.h>
 
+#include <irs/resconf.h>
+
 #include <dns/client.h>
 #include <dns/fixedname.h>
 #include <dns/keyvalues.h>

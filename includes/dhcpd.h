@@ -1371,6 +1371,8 @@ struct dns_query {
 	int backoff;			/* Current backoff, in seconds. */
 };
 
+#define DNS_ZONE_ACTIVE  0
+#define DNS_ZONE_INACTIVE 1
 struct dns_zone {
 	int refcnt;
 	TIME timeout;
@@ -1380,6 +1382,7 @@ struct dns_zone {
 	struct option_cache *primary6;
 	struct option_cache *secondary6;
 	struct auth_key *key;
+	u_int16_t flags;
 };
 
 struct icmp_state {

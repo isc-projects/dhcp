@@ -117,6 +117,10 @@
 
 #define NSUPDATE
 
+/* Define this if you want to enable the DHCP server attempting to
+   find a nameserver to use for DDNS updates. */
+#define DNS_ZONE_LOOKUP
+
 /* Define this if you want the dhcpd.pid file to go somewhere other than
    the default (which varies from system to system, but is usually either
    /etc or /var/run. */

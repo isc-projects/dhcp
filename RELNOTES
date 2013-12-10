@@ -109,6 +109,14 @@ work on other platforms. Please report any problems and suggested fixes to
   man page for a description.
   [ISC-Bugs #19598]
 
+- When doing DDNS if there isn't an appropriate zone statement attempt
+  to find a reasoanble nameserver via a DNS resolver.  This restores
+  some functionality that was lost in the transition to asynchronous
+  DDNS.  Due to the lack of security and increase in fragility of the
+  system when using this feature we strongly recommend the use of
+  appropriate zone statements rather than using this functionality.
+  [ISC-Bugs #30461]
+
 			Changes since 4.2.5
 
 - Address static analysis warnings.

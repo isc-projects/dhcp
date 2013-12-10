@@ -33,6 +33,57 @@
 dhcp_context_t dhcp_gbl_ctx;
 int shutdown_signal = 0;
 
+#if defined (NSUPDATE)
+
+/* This routine will open up the /etc/resolv.conf file and
+ * send any nameservers it finds to the DNS client code.
+ * It may be moved to be part of the dns client code instead
+ * of being in the DHCP code
+ */
+isc_result_t 
+dhcp_dns_client_setservers(void)
+{
+	isc_result_t result;
+	irs_resconf_t *resconf = NULL;
+	isc_sockaddrlist_t *nameservers;
+	isc_sockaddr_t *sa;
+
+	result = irs_resconf_load(dhcp_gbl_ctx.mctx, _PATH_RESOLV_CONF,
+				  &resconf);
+	if (result != ISC_R_SUCCESS) {
+		log_error("irs_resconf_load failed: %d.", result);
+		return (result);
+	}
+
+	nameservers = irs_resconf_getnameservers(resconf);
+
+	/* Initialize port numbers */
+	for (sa = ISC_LIST_HEAD(*nameservers);
+	     sa != NULL;
+	     sa = ISC_LIST_NEXT(sa, link)) {
+		switch (sa->type.sa.sa_family) {
+		case AF_INET:
+			sa->type.sin.sin_port = htons(NS_DEFAULTPORT);
+			break;
+		case AF_INET6:
+			sa->type.sin6.sin6_port = htons(NS_DEFAULTPORT);
+			break;
+		default:
+			break;
+		}
+	}
+
+	result = dns_client_setservers(dhcp_gbl_ctx.dnsclient,
+				       dns_rdataclass_in,
+				       NULL, nameservers);
+	if (result != ISC_R_SUCCESS) {
+		log_error("dns_client_setservers failed: %d.",
+			  result);
+	}
+	return (result);
+}
+#endif
+
 void
 isclib_cleanup(void)
 {
@@ -142,6 +193,11 @@ dhcp_context_create(void) {
 				    &dhcp_gbl_ctx.dnsclient);
 	if (result != ISC_R_SUCCESS)
 		goto cleanup;
+
+	result = dhcp_dns_client_setservers();
+	if (result != ISC_R_SUCCESS)
+		goto cleanup;
+
 #else
 	/* The dst library is inited as part of dns_lib_init, we don't
 	 * need it if NSUPDATE is enabled */

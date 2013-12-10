@@ -137,11 +137,13 @@ PROGRAMS = $(bin_PROGRAMS) $(noinst_PROGRAMS)
 am_cltest_OBJECTS = cltest.$(OBJEXT)
 cltest_OBJECTS = $(am_cltest_OBJECTS)
 cltest_DEPENDENCIES = libdhcpctl.a ../common/libdhcp.a \
-	../omapip/libomapi.a ../bind/lib/libdns.a ../bind/lib/libisc.a
+	../omapip/libomapi.a ../bind/lib/libirs.a ../bind/lib/libdns.a \
+	../bind/lib/libisccfg.a ../bind/lib/libisc.a
 am_omshell_OBJECTS = omshell.$(OBJEXT)
 omshell_OBJECTS = $(am_omshell_OBJECTS)
 omshell_DEPENDENCIES = libdhcpctl.a ../common/libdhcp.a \
-	../omapip/libomapi.a ../bind/lib/libdns.a ../bind/lib/libisc.a
+	../omapip/libomapi.a ../bind/lib/libirs.a ../bind/lib/libdns.a \
+	../bind/lib/libisccfg.a ../bind/lib/libisc.a
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -309,12 +311,14 @@ man_MANS = omshell.1 dhcpctl.3
 EXTRA_DIST = $(man_MANS)
 omshell_SOURCES = omshell.c
 omshell_LDADD = libdhcpctl.a ../common/libdhcp.a ../omapip/libomapi.a \
-	        ../bind/lib/libdns.a ../bind/lib/libisc.a
+	        ../bind/lib/libirs.a ../bind/lib/libdns.a \
+	        ../bind/lib/libisccfg.a ../bind/lib/libisc.a
 
 libdhcpctl_a_SOURCES = dhcpctl.c callback.c remote.c
 cltest_SOURCES = cltest.c
 cltest_LDADD = libdhcpctl.a ../common/libdhcp.a ../omapip/libomapi.a \
-	       ../bind/lib/libdns.a ../bind/lib/libisc.a
+	       ../bind/lib/libirs.a ../bind/lib/libdns.a \
+               ../bind/lib/libisccfg.a ../bind/lib/libisc.a
 
 all: all-am
 
