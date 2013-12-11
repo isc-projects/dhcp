@@ -333,6 +333,7 @@ EXTRA_DIST = RELNOTES LICENSE \
 	     contrib/ms2isc/Registry.pm contrib/ms2isc/ms2isc.pl \
 	     contrib/ms2isc/readme.txt contrib/ldap/dhcpd-conf-to-ldap \
 	     contrib/ldap/dhcp.schema contrib/ldap/README.ldap \
+             contrib/dhcp-lease-list.pl \
 	     doc/IANA-arp-parameters doc/Makefile doc/References.html \
 	     doc/References.txt doc/References.xml doc/api+protocol \
 	     doc/ja_JP.eucJP/dhclient-script.8 doc/ja_JP.eucJP/dhclient.8 \
