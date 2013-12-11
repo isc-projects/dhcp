@@ -204,7 +204,8 @@ main(int argc, char **argv) {
                 close(fd);
 
 	/* Set up the isc and dns library managers */
-	status = dhcp_context_create();
+	status = dhcp_context_create(DHCP_CONTEXT_PRE_DB,
+				     NULL, NULL);
 	if (status != ISC_R_SUCCESS)
 		log_fatal("Can't initialize context: %s",
 			  isc_result_totext(status));
@@ -807,6 +808,10 @@ void postconf_initialization (int quiet)
 	char *s;
 	isc_result_t result;
 	int tmp;
+#if defined (NSUPDATE)
+	struct in_addr  local4, *local4_ptr = NULL;
+	struct in6_addr local6, *local6_ptr = NULL;
+#endif
 
 	/* Now try to get the lease file name. */
 	option_state_allocate(&options, MDL);
@@ -969,6 +974,35 @@ void postconf_initialization (int quiet)
 	if (ddns_update_style == DDNS_UPDATE_STYLE_AD_HOC) {
 		log_fatal("ddns-update-style ad_hoc no longer supported");
 	}
+
+	oc = lookup_option(&server_universe, options, SV_DDNS_LOCAL_ADDRESS4);
+	if (oc) {
+		if (evaluate_option_cache(&db, NULL, NULL, NULL, options, NULL,
+					  &global_scope, oc, MDL)) {
+			if (db.len == 4) {
+				memcpy(&local4, db.data, 4);
+				local4_ptr = &local4;
+			}
+			data_string_forget(&db, MDL);
+		}
+	}
+
+	oc = lookup_option(&server_universe, options, SV_DDNS_LOCAL_ADDRESS6);
+	if (oc) {
+		if (evaluate_option_cache(&db, NULL, NULL, NULL, options, NULL,
+					  &global_scope, oc, MDL)) {
+			if (db.len == 16) {
+				memcpy(&local6, db.data, 16);
+				local6_ptr = &local6;
+			}
+			data_string_forget(&db, MDL);
+		}
+	}
+
+	if (dhcp_context_create(DHCP_CONTEXT_POST_DB, local4_ptr, local6_ptr)
+	    != ISC_R_SUCCESS)
+		log_fatal("Unable to complete ddns initialization");
+
 #else
 	/* If we don't have support for updates compiled in tell the user */
 	if (ddns_update_style != DDNS_UPDATE_STYLE_NONE) {

@@ -1973,10 +1973,23 @@ appended to the client's hostname to form a fully-qualified
 domain-name (FQDN).
 .RE
 .PP
+The \fddns-local-address4\fR and \fddns-local-address6\fR statements
+.RS 0.25i
+.PP
+.B ddns-local-address4 \fIaddress\fB;\fR
+.PP
+.B ddns-local-address6 \fIaddress\fB;\fR
+.PP
+The \fIaddress\fR parameter should be the local IPv4 or IPv6 address
+the server should use as the from address when sending DDNS update
+requests.
+.RE
+.PP
 The \fIddns-rev-domainname\fR statement
 .RS 0.25i
 .PP
 .B ddns-rev-domainname \fIname\fB;\fR
+.PP
 The \fIname\fR parameter should be the domain name that will be
 appended to the client's reversed IP address to produce a name for use
 in the client's PTR record.  By default, this is "in-addr.arpa.", but
@@ -2043,6 +2056,7 @@ statements
 .RS 0.25i
 .PP
 .B delayed-ack \fIcount\fR\fB;\fR
+.PP
 .B max-ack-delay \fImicroseconds\fR\fB;\fR
 .PP
 .I Count

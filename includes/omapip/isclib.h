@@ -118,7 +118,11 @@ isclib_make_dst_key(char          *inname,
 		    int            length,
 		    dst_key_t    **dstkey);
 
-isc_result_t dhcp_context_create(void);
+#define DHCP_CONTEXT_PRE_DB  1
+#define DHCP_CONTEXT_POST_DB 2
+isc_result_t dhcp_context_create(int              flags,
+				 struct in_addr  *local4,
+				 struct in6_addr *local6);
 void isclib_cleanup(void);
 
 void dhcp_signal_handler(int signal);

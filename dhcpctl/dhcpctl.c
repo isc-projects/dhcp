@@ -3,7 +3,8 @@
    Subroutines providing general support for objects. */
 
 /*
- * Copyright (c) 2004,2007,2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009,2013 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -48,7 +49,8 @@ dhcpctl_status dhcpctl_initialize ()
 	isc_result_t status;
 
 	/* Set up the isc and dns library managers */
-	status = dhcp_context_create();
+	status = dhcp_context_create(DHCP_CONTEXT_PRE_DB | DHCP_CONTEXT_POST_DB,
+				     NULL, NULL);
 	if (status != ISC_R_SUCCESS)
 		return status;
 

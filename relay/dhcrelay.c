@@ -210,7 +210,8 @@ main(int argc, char **argv) {
 #endif	
 
 	/* Set up the isc and dns library managers */
-	status = dhcp_context_create();
+	status = dhcp_context_create(DHCP_CONTEXT_PRE_DB | DHCP_CONTEXT_POST_DB,
+				     NULL, NULL);
 	if (status != ISC_R_SUCCESS)
 		log_fatal("Can't initialize context: %s",
 			  isc_result_totext(status));
