@@ -109,7 +109,6 @@ work on other platforms. Please report any problems and suggested fixes to
   man page for a description.
   [ISC-Bugs #19598]
 
-<<<<<<< HEAD
 - When doing DDNS if there isn't an appropriate zone statement attempt
   to find a reasoanble nameserver via a DNS resolver.  This restores
   some functionality that was lost in the transition to asynchronous
@@ -123,7 +122,7 @@ work on other platforms. Please report any problems and suggested fixes to
   "ddns-local-address4" and "ddns-local-address6" that each take
   one instance of their respective address types.
   [ISC-Bugs #34779]
-=======
+
 - Add ignore-client-uids option in the server.  This option causes
   the server to not record a client's uid in its lease.  This
   violates the specification but may also be useful when a client
@@ -131,7 +130,12 @@ work on other platforms. Please report any problems and suggested fixes to
   Thank you to Brian De Wolf for the patch.
   [ISC-Bugs #32427]
   [ISC-Bugs #35066]
->>>>>>> rt35066
+
+- Extend the DHCPINFORM processing to honor the subnet selection option
+  and take host declarations into account.
+  Thanks to Christof Chen for testing and submitting the patch.
+  [ISC-Bugs #35015]
+
 
 			Changes since 4.2.5
 

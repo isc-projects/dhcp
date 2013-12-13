@@ -973,76 +973,122 @@ void dhcpinform (packet, ms_nulltp)
 	struct packet *packet;
 	int ms_nulltp;
 {
-	char msgbuf [1024];
-	struct data_string d1, prl;
+	char msgbuf[1024], *addr_type;
+	struct data_string d1, prl, fixed_addr;
 	struct option_cache *oc;
-	struct option_state *options = (struct option_state *)0;
+	struct option_state *options = NULL;
 	struct dhcp_packet raw;
 	struct packet outgoing;
 	unsigned char dhcpack = DHCPACK;
 	struct subnet *subnet = NULL;
-	struct iaddr cip, gip;
+	struct iaddr cip, gip, sip;
 	unsigned i;
 	int nulltp;
 	struct sockaddr_in to;
 	struct in_addr from;
 	isc_boolean_t zeroed_ciaddr;
 	struct interface_info *interface;
-	int result;
+	int result, h_m_client_ip = 0;
+	struct host_decl  *host = NULL, *hp = NULL, *h;
+#if defined (DEBUG_INFORM_HOST)
+	int h_w_fixed_addr = 0;
+#endif
 
 	/* The client should set ciaddr to its IP address, but apparently
 	   it's common for clients not to do this, so we'll use their IP
 	   source address if they didn't set ciaddr. */
-	if (!packet -> raw -> ciaddr.s_addr) {
+	if (!packet->raw->ciaddr.s_addr) {
 		zeroed_ciaddr = ISC_TRUE;
 		cip.len = 4;
-		memcpy (cip.iabuf, &packet -> client_addr.iabuf, 4);
+		memcpy(cip.iabuf, &packet->client_addr.iabuf, 4);
+		addr_type = "source";
 	} else {
 		zeroed_ciaddr = ISC_FALSE;
 		cip.len = 4;
-		memcpy (cip.iabuf, &packet -> raw -> ciaddr, 4);
+		memcpy(cip.iabuf, &packet->raw->ciaddr, 4);
+		addr_type = "client";
 	}
+	sip.len = 4;
+	memcpy(sip.iabuf, cip.iabuf, 4);
 
 	if (packet->raw->giaddr.s_addr) {
 		gip.len = 4;
 		memcpy(gip.iabuf, &packet->raw->giaddr, 4);
+		if (zeroed_ciaddr == ISC_TRUE) {
+			addr_type = "relay";
+			memcpy(sip.iabuf, gip.iabuf, 4);
+		}
 	} else
 		gip.len = 0;
 
 	/* %Audit% This is log output. %2004.06.17,Safe%
 	 * If we truncate we hope the user can get a hint from the log.
 	 */
-	snprintf (msgbuf, sizeof msgbuf, "DHCPINFORM from %s via %s",
-		 piaddr (cip), packet->raw->giaddr.s_addr ?
-				inet_ntoa(packet->raw->giaddr) :
-				packet -> interface -> name);
+	snprintf(msgbuf, sizeof(msgbuf), "DHCPINFORM from %s via %s",
+		 piaddr(cip),
+		 packet->raw->giaddr.s_addr ?
+		 inet_ntoa(packet->raw->giaddr) :
+		 packet->interface->name);
 
 	/* If the IP source address is zero, don't respond. */
-	if (!memcmp (cip.iabuf, "\0\0\0", 4)) {
-		log_info ("%s: ignored (null source address).", msgbuf);
+	if (!memcmp(cip.iabuf, "\0\0\0", 4)) {
+		log_info("%s: ignored (null source address).", msgbuf);
 		return;
 	}
 
-	/* Find the subnet that the client is on. */
-	if (zeroed_ciaddr && (gip.len != 0)) {
-		/* XXX - do subnet selection relay agent suboption here */
-		find_subnet(&subnet, gip, MDL);
+	/* Find the subnet that the client is on. 
+	 * CC: Do the link selection / subnet selection
+	 */
 
-		if (subnet == NULL) {
-			log_info("%s: unknown subnet for relay address %s",
-				 msgbuf, piaddr(gip));
+	option_state_allocate(&options, MDL);
+
+	if ((oc = lookup_option(&agent_universe, packet->options,
+				RAI_LINK_SELECT)) == NULL)
+		oc = lookup_option(&dhcp_universe, packet->options,
+				   DHO_SUBNET_SELECTION);
+
+	memset(&d1, 0, sizeof d1);
+	if (oc && evaluate_option_cache(&d1, packet, NULL, NULL,
+					packet->options, NULL,
+					&global_scope, oc, MDL)) {
+		struct option_cache *noc = NULL;
+
+		if (d1.len != 4) {
+			log_info("%s: ignored (invalid subnet selection option).", msgbuf);
+			option_state_dereference(&options, MDL);
 			return;
 		}
-	} else {
-		/* XXX - do subnet selection (not relay agent) option here */
-		find_subnet(&subnet, cip, MDL);
 
-		if (subnet == NULL) {
-			log_info("%s: unknown subnet for %s address %s",
-				 msgbuf, zeroed_ciaddr ? "source" : "client",
-				 piaddr(cip));
-			return;
+		memcpy(sip.iabuf, d1.data, 4);
+		data_string_forget(&d1, MDL);
+
+		/* Make a copy of the data. */
+		if (option_cache_allocate(&noc, MDL)) {
+			if (oc->data.len)
+				data_string_copy(&noc->data, &oc->data, MDL);
+			if (oc->expression)
+				expression_reference(&noc->expression,
+						     oc->expression, MDL);
+			if (oc->option)
+				option_reference(&(noc->option), oc->option,
+						 MDL);
 		}
+		save_option(&dhcp_universe, options, noc);
+		option_cache_dereference(&noc, MDL);
+
+		if ((zeroed_ciaddr == ISC_TRUE) && (gip.len != 0))
+			addr_type = "relay link select";
+		else
+			addr_type = "selected";
+	}
+
+	find_subnet(&subnet, sip, MDL);
+
+	if (subnet == NULL) {
+		log_info("%s: unknown subnet for %s address %s",
+			 msgbuf, addr_type, piaddr(sip));
+		option_state_dereference (&options, MDL);
+		return;
 	}
 
 	/* We don't respond to DHCPINFORM packets if we're not authoritative.
@@ -1067,10 +1113,10 @@ void dhcpinform (packet, ms_nulltp)
 		if (eso++ == 100)
 			eso = 0;
 		subnet_dereference (&subnet, MDL);
+		option_state_dereference (&options, MDL);
 		return;
 	}
-
-	option_state_allocate (&options, MDL);
+	
 	memset (&outgoing, 0, sizeof outgoing);
 	memset (&raw, 0, sizeof raw);
 	outgoing.raw = &raw;
@@ -1083,7 +1129,7 @@ void dhcpinform (packet, ms_nulltp)
 					     packet->options, options,
 					     &global_scope, subnet->group,
 					     NULL, NULL);
-
+ 		
 	/* Execute statements in the class scopes. */
 	for (i = packet -> class_count; i > 0; i--) {
 		execute_statements_in_scope(NULL, packet, NULL, NULL,
@@ -1094,6 +1140,181 @@ void dhcpinform (packet, ms_nulltp)
 					    NULL);
 	}
 
+	/*
+	 * Process host declarations during DHCPINFORM, 
+	 * Try to find a matching host declaration by cli ID or HW addr.
+	 *
+	 * Look through the host decls for one that matches the
+	 * client identifer or the hardware address.  The preference
+	 * order is:
+	 * client id with matching ip address
+	 * hardware address with matching ip address
+	 * client id without a ip fixed address
+	 * hardware address without a fixed ip address
+	 * If found, set host to use its option definitions.
+         */
+	oc = lookup_option(&dhcp_universe, packet->options,
+			   DHO_DHCP_CLIENT_IDENTIFIER);
+	memset(&d1, 0, sizeof(d1));
+	if (oc &&
+	    evaluate_option_cache(&d1, packet, NULL, NULL,
+				  packet->options, NULL,
+				  &global_scope, oc, MDL)) {
+		find_hosts_by_uid(&hp, d1.data, d1.len, MDL);
+		data_string_forget(&d1, MDL);
+
+#if defined (DEBUG_INFORM_HOST)
+		if (hp)
+			log_debug ("dhcpinform: found host by ID "
+				   "-- checking fixed-address match");
+#endif
+		/* check if we have one with fixed-address
+		 * matching the client ip first */
+		for (h = hp; !h_m_client_ip && h; h = h->n_ipaddr) {
+			if (!h->fixed_addr)
+				continue;
+
+			memset(&fixed_addr, 0, sizeof(fixed_addr));
+			if (!evaluate_option_cache (&fixed_addr, NULL,
+						    NULL, NULL, NULL, NULL,
+						    &global_scope,
+						    h->fixed_addr, MDL))
+				continue;
+
+#if defined (DEBUG_INFORM_HOST)
+			h_w_fixed_addr++;
+#endif
+			for (i = 0;
+			     (i + cip.len) <= fixed_addr.len;
+			     i += cip.len) {
+				if (memcmp(fixed_addr.data + i,
+					   cip.iabuf, cip.len) == 0) {
+#if defined (DEBUG_INFORM_HOST)
+					log_debug ("dhcpinform: found "
+						   "host with matching "
+						   "fixed-address by ID");
+#endif
+					host_reference(&host, h, MDL);
+					h_m_client_ip = 1;
+					break;
+				}
+			}
+			data_string_forget(&fixed_addr, MDL);
+		}
+
+		/* fallback to a host without fixed-address */
+		for (h = hp; !host && h; h = h->n_ipaddr) {
+			if (h->fixed_addr)
+				continue;
+
+#if defined (DEBUG_INFORM_HOST)
+			log_debug ("dhcpinform: found host "
+				   "without fixed-address by ID");
+#endif
+			host_reference(&host, h, MDL);
+			break;
+		}
+		if (hp)
+			host_dereference (&hp, MDL);
+	}
+	if (!host || !h_m_client_ip) {
+		find_hosts_by_haddr(&hp, packet->raw->htype,
+				    packet->raw->chaddr,
+				    packet->raw->hlen, MDL);
+
+#if defined (DEBUG_INFORM_HOST)
+		if (hp)
+			log_debug ("dhcpinform: found host by HW "
+				   "-- checking fixed-address match");
+#endif
+
+		/* check if we have one with fixed-address
+		 * matching the client ip first */
+		for (h = hp; !h_m_client_ip && h; h = h->n_ipaddr) {
+			if (!h->fixed_addr)
+				continue;
+
+			memset (&fixed_addr, 0, sizeof(fixed_addr));
+			if (!evaluate_option_cache (&fixed_addr, NULL,
+						    NULL, NULL, NULL, NULL,
+						    &global_scope,
+						    h->fixed_addr, MDL))
+				continue;
+
+#if defined (DEBUG_INFORM_HOST)
+			h_w_fixed_addr++;
+#endif
+			for (i = 0;
+			     (i + cip.len) <= fixed_addr.len;
+			     i += cip.len) {
+				if (memcmp(fixed_addr.data + i,
+					   cip.iabuf, cip.len) == 0) {
+#if defined (DEBUG_INFORM_HOST)
+					log_debug ("dhcpinform: found "
+						   "host with matching "
+						   "fixed-address by HW");
+#endif
+					/*
+					 * Hmm.. we've found one
+					 * without IP by ID and now
+					 * (better) one with IP by HW.
+					 */
+					if(host)
+						host_dereference(&host, MDL);
+					host_reference(&host, h, MDL);
+					h_m_client_ip = 1;
+					break;
+				}
+			}
+			data_string_forget(&fixed_addr, MDL);
+		}
+		/* fallback to a host without fixed-address */
+		for (h = hp; !host && h; h = h->n_ipaddr) {
+			if (h->fixed_addr)
+				continue;
+
+#if defined (DEBUG_INFORM_HOST)
+			log_debug ("dhcpinform: found host without "
+				   "fixed-address by HW");
+#endif
+			host_reference (&host, h, MDL);
+			break;
+		}
+
+		if (hp)
+			host_dereference (&hp, MDL);
+	}
+ 
+#if defined (DEBUG_INFORM_HOST)
+	/* Hmm..: what when there is a host with a fixed-address,
+	 * that matches by hw or id, but the fixed-addresses
+	 * didn't match client ip?
+	 */
+	if (h_w_fixed_addr && !h_m_client_ip) {
+		log_info ("dhcpinform: matching host with "
+			  "fixed-address different than "
+			  "client IP detected?!");
+	}
+#endif
+
+	/* If we have a host_decl structure, run the options
+	 * associated with its group. Whether the host decl
+	 * struct is old or not. */
+	if (host) {
+#if defined (DEBUG_INFORM_HOST)
+		log_info ("dhcpinform: applying host (group) options");
+#endif
+		execute_statements_in_scope(NULL, packet, NULL, NULL,
+					    packet->options, options,
+					    &global_scope, host->group,
+					    host->group ?
+					      host->group->next : NULL,
+					    NULL);
+		host_dereference (&host, MDL);
+	}
+
+ 	/* CC: end of host entry processing.... */
+	
 	/* Figure out the filename. */
 	memset (&d1, 0, sizeof d1);
 	oc = lookup_option (&server_universe, options, SV_FILENAME);
