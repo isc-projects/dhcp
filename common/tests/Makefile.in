@@ -102,7 +102,8 @@ am__DEPENDENCIES_1 =
 @HAVE_ATF_TRUE@alloc_unittest_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 @HAVE_ATF_TRUE@	../libdhcp.a ../../omapip/libomapi.a \
 @HAVE_ATF_TRUE@	../../bind/lib/libirs.a ../../bind/lib/libdns.a \
-@HAVE_ATF_TRUE@	../bind/lib/libisccfg.a ../../bind/lib/libisc.a
+@HAVE_ATF_TRUE@	../../bind/lib/libisccfg.a \
+@HAVE_ATF_TRUE@	../../bind/lib/libisc.a
 am__dns_unittest_SOURCES_DIST = dns_unittest.c \
 	$(top_srcdir)/tests/t_api_dhcp.c
 @HAVE_ATF_TRUE@am_dns_unittest_OBJECTS = dns_unittest.$(OBJEXT) \
@@ -110,7 +111,9 @@ am__dns_unittest_SOURCES_DIST = dns_unittest.c \
 dns_unittest_OBJECTS = $(am_dns_unittest_OBJECTS)
 @HAVE_ATF_TRUE@dns_unittest_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 @HAVE_ATF_TRUE@	../libdhcp.a ../../omapip/libomapi.a \
-@HAVE_ATF_TRUE@	../../bind/lib/libdns.a ../../bind/lib/libisc.a
+@HAVE_ATF_TRUE@	../../bind/lib/libirs.a ../../bind/lib/libdns.a \
+@HAVE_ATF_TRUE@	../../bind/lib/libisccfg.a \
+@HAVE_ATF_TRUE@	../../bind/lib/libisc.a
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -322,11 +325,14 @@ ATF_TESTS = $(am__append_1)
 @HAVE_ATF_TRUE@alloc_unittest_SOURCES = test_alloc.c $(top_srcdir)/tests/t_api_dhcp.c
 @HAVE_ATF_TRUE@alloc_unittest_LDADD = $(ATF_LDFLAGS) ../libdhcp.a \
 @HAVE_ATF_TRUE@	../../omapip/libomapi.a ../../bind/lib/libirs.a \
-@HAVE_ATF_TRUE@	../../bind/lib/libdns.a ../bind/lib/libisccfg.a \
+@HAVE_ATF_TRUE@	../../bind/lib/libdns.a \
+@HAVE_ATF_TRUE@	../../bind/lib/libisccfg.a \
 @HAVE_ATF_TRUE@	../../bind/lib/libisc.a
 @HAVE_ATF_TRUE@dns_unittest_SOURCES = dns_unittest.c $(top_srcdir)/tests/t_api_dhcp.c
 @HAVE_ATF_TRUE@dns_unittest_LDADD = $(ATF_LDFLAGS) ../libdhcp.a \
-@HAVE_ATF_TRUE@	../../omapip/libomapi.a ../../bind/lib/libdns.a \
+@HAVE_ATF_TRUE@	../../omapip/libomapi.a ../../bind/lib/libirs.a \
+@HAVE_ATF_TRUE@	../../bind/lib/libdns.a \
+@HAVE_ATF_TRUE@	../../bind/lib/libisccfg.a \
 @HAVE_ATF_TRUE@	../../bind/lib/libisc.a
 all: all-recursive
 
