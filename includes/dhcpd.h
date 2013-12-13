@@ -735,6 +735,7 @@ struct lease_state {
 #define SV_DONT_USE_FSYNC		79
 #define SV_DDNS_LOCAL_ADDRESS4		80
 #define SV_DDNS_LOCAL_ADDRESS6		81
+#define SV_IGNORE_CLIENT_UIDS		82
 
 #if !defined (DEFAULT_PING_TIMEOUT)
 # define DEFAULT_PING_TIMEOUT 1

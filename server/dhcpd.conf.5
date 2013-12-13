@@ -2305,6 +2305,19 @@ are larger than the maximum number of relays (currently 32) indicate the
 relay closest to the server independent of number.
 .RE
 .PP
+The 
+.I ignore-client-uids
+statement
+.RS 0.25i
+.PP
+.B ignore-client-uids \fIflag\fB;\fR
+.PP
+If the \fIignore-client-uids\fR statement is present and has a value of
+\fItrue\fR or \fIon\fR, the UID for clients will not be recorded.
+If this statement is not present or has a value of \fIfalse\fR or
+\fIoff\fR, then client UIDs will be recorded.  
+.RE
+.PP
 The
 .I infinite-is-reserved
 statement

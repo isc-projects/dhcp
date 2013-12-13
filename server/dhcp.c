@@ -2343,31 +2343,40 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 	/* Update Client Last Transaction Time. */
 	lt->cltt = cur_time;
 
-	/* Record the uid, if given... */
-	oc = lookup_option (&dhcp_universe, packet -> options,
-			    DHO_DHCP_CLIENT_IDENTIFIER);
-	if (oc &&
-	    evaluate_option_cache (&d1, packet, lease,
-				   (struct client_state *)0,
-				   packet -> options, state -> options,
-				   &lease -> scope, oc, MDL)) {
-		if (d1.len <= sizeof lt -> uid_buf) {
-			memcpy (lt -> uid_buf, d1.data, d1.len);
-			lt -> uid = lt -> uid_buf;
-			lt -> uid_max = sizeof lt -> uid_buf;
-			lt -> uid_len = d1.len;
-		} else {
-			unsigned char *tuid;
-			lt -> uid_max = d1.len;
-			lt -> uid_len = d1.len;
-			tuid = (unsigned char *)dmalloc (lt -> uid_max, MDL);
-			/* XXX inelegant */
-			if (!tuid)
-				log_fatal ("no memory for large uid.");
-			memcpy (tuid, d1.data, lt -> uid_len);
-			lt -> uid = tuid;
+	/* See if we want to record the uid for this client */
+	oc = lookup_option(&server_universe, state->options,
+			   SV_IGNORE_CLIENT_UIDS);
+	if ((oc == NULL) ||
+	    !evaluate_boolean_option_cache(&ignorep, packet, lease, NULL,
+					   packet->options, state->options,
+					   &lease->scope, oc, MDL)) {
+	
+		/* Record the uid, if given... */
+		oc = lookup_option (&dhcp_universe, packet -> options,
+				    DHO_DHCP_CLIENT_IDENTIFIER);
+		if (oc &&
+		    evaluate_option_cache(&d1, packet, lease, NULL,
+					  packet->options, state->options,
+					  &lease->scope, oc, MDL)) {
+			if (d1.len <= sizeof(lt->uid_buf)) {
+				memcpy(lt->uid_buf, d1.data, d1.len);
+				lt->uid = lt->uid_buf;
+				lt->uid_max = sizeof(lt->uid_buf);
+				lt->uid_len = d1.len;
+			} else {
+				unsigned char *tuid;
+				lt->uid_max = d1.len;
+				lt->uid_len = d1.len;
+				tuid = (unsigned char *)dmalloc(lt->uid_max,
+								MDL);
+				/* XXX inelegant */
+				if (!tuid)
+					log_fatal ("no memory for large uid.");
+				memcpy(tuid, d1.data, lt->uid_len);
+				lt->uid = tuid;
+			}
+			data_string_forget (&d1, MDL);
 		}
-		data_string_forget (&d1, MDL);
 	}
 
 	if (host) {
