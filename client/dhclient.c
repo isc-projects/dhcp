@@ -69,7 +69,7 @@ int std_dhcid = 0;
    assert (state_is == state_shouldbe). */
 #define ASSERT_STATE(state_is, state_shouldbe) {}
 
-static const char copyright[] = "Copyright 2004-2009 Internet Systems Consortium.";
+static const char copyright[] = "Copyright 2004-2013 Internet Systems Consortium.";
 static const char arr [] = "All rights reserved.";
 static const char message [] = "Internet Systems Consortium DHCP Client";
 static const char url [] = "For info, please visit https://www.isc.org/software/dhcp/";
