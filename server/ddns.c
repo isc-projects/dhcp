@@ -552,7 +552,7 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 	 * Perform updates.
 	 */
 
-	if (ddns_cb->flags && DDNS_UPDATE_ADDR) {
+	if (ddns_cb->flags & DDNS_UPDATE_ADDR) {
 		oc = lookup_option(&server_universe, options,
 				   SV_DDNS_CONFLICT_DETECT);
 		if (oc &&
