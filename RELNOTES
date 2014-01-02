@@ -127,7 +127,7 @@ work on other platforms. Please report any problems and suggested fixes to
   the server to not record a client's uid in its lease.  This
   violates the specification but may also be useful when a client
   can dual boot using different client ids but the same mac address.
-  Thank you to Brian De Wolf for the patch.
+  Thank you to Brian De Wolf at Cal Ply Pomona for the patch.
   [ISC-Bugs #32427]
   [ISC-Bugs #35066]
 
@@ -188,6 +188,9 @@ work on other platforms. Please report any problems and suggested fixes to
 - Enhance the DHCPv6 server logging to include the addresses that are assigned
   to the clients.
   [ISC-Bugs #26377]
+
+- Fix an operation in the DDDNS code to be a bitwise instead of logcial or.
+  [ISC-Bugs #35138]
 
 			Changes since 4.2.4
 
