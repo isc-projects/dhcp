@@ -516,7 +516,7 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 
 	data_string_copy(&ddns_cb->fwd_name, &ddns_fwd_name, MDL);
 
-	if (ddns_cb->flags && DDNS_UPDATE_ADDR) {
+	if (ddns_cb->flags & DDNS_UPDATE_ADDR) {
 		oc = lookup_option(&server_universe, options,
 				   SV_DDNS_CONFLICT_DETECT);
 		if (oc &&
