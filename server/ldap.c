@@ -628,7 +628,7 @@ ldap_start (void)
       options = NULL;
       option_state_allocate (&options, MDL);
 
-      execute_statements_in_scope (NULL, NULL, NULL, NULL, NULL
+      execute_statements_in_scope (NULL, NULL, NULL, NULL, NULL,
 				   options, &global_scope, root_group,
 				   NULL, NULL);
 
