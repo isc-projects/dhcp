@@ -2124,13 +2124,13 @@ will still honor the setting of the \fBclient-updates\fR flag.
 .RE
 .PP
 The
-.I dont-use-async
+.I dont-use-fsync
 statement
 .RS 0.25i
 .PP
-.B dont-use-async \fIflag\fB;\fR
+.B dont-use-fsync \fIflag\fB;\fR
 .PP
-The \fIdont-use-async\fR statement instructs the DHCP server if
+The \fIdont-use-fsync\fR statement instructs the DHCP server if
 it should call fsync() when writing leases to the lease file.  By
 default and if the flag is set to false the server \fBwill\fR call
 fsync().  Suppressing the call to fsync() may increase the performance
