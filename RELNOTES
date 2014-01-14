@@ -136,6 +136,10 @@ work on other platforms. Please report any problems and suggested fixes to
   Thanks to Christof Chen for testing and submitting the patch.
   [ISC-Bugs #35015]
 
+- Extend the hardware expression to look into the lease structure
+  for a hardware address if there is no packet.  This allows the
+  server to find the hardware address during on-expiry processing.
+  [ISC-Bugs #24584]
 
 			Changes since 4.2.5
 

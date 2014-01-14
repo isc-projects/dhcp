@@ -3,7 +3,7 @@
    Routines for manipulating parse trees... */
 
 /*
- * Copyright (c) 2011-2013 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2011-2014 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2007,2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
@@ -1349,49 +1349,61 @@ int evaluate_data_expression (result, packet, lease, client_state,
 	      case expr_hardware:
 		/* On the client, hardware is our hardware. */
 		if (client_state) {
-			memset (result, 0, sizeof *result);
-			result -> data =
-				client_state -> interface -> hw_address.hbuf;
-			result -> len =
-				client_state -> interface -> hw_address.hlen;
+			memset(result, 0, sizeof(*result));
+			result->data = client_state->interface->hw_address.hbuf;
+			result->len = client_state->interface->hw_address.hlen;
 #if defined (DEBUG_EXPRESSIONS)
-			log_debug ("data: hardware = %s",
-				   print_hex_1 (result -> len,
-						result -> data, 60));
+			log_debug("data: hardware = %s",
+				  print_hex_1(result->len, result->data, 60));
 #endif
-			return 1;
+			return (1);
 		}
 
 		/* The server cares about the client's hardware address,
-		   so only in the case where we are examining a packet can
-		   we return anything. */
-		if (!packet || !packet -> raw) {
-			log_error ("data: hardware: raw packet not available");
-			return 0;
-		}
-		if (packet -> raw -> hlen > sizeof packet -> raw -> chaddr) {
-			log_error ("data: hardware: invalid hlen (%d)\n",
-				   packet -> raw -> hlen);
-			return 0;
-		}
-		result -> len = packet -> raw -> hlen + 1;
-		if (buffer_allocate (&result -> buffer, result -> len,
-				     file, line)) {
-			result -> data = &result -> buffer -> data [0];
-			result -> buffer -> data [0] = packet -> raw -> htype;
-			memcpy (&result -> buffer -> data [1],
-				packet -> raw -> chaddr,
-				packet -> raw -> hlen);
-			result -> terminated = 0;
+		   so only in the case where we are examining a packet or have
+		   a lease with a hardware address can we return anything. */
+
+		if (packet != NULL && packet->raw != NULL) {
+			if (packet->raw->hlen > sizeof(packet->raw->chaddr)) {
+				log_error("data: hardware: invalid hlen (%d)\n",
+					  packet->raw->hlen);
+				return (0);
+			}
+			result->len = packet->raw->hlen + 1;
+			if (buffer_allocate(&result->buffer, result->len, MDL)){
+				result->data = &result->buffer->data[0];
+				result->buffer->data[0] = packet->raw->htype;
+				memcpy(&result->buffer->data[1],
+				       packet->raw->chaddr, packet->raw->hlen);
+				result->terminated = 0;
+			} else {
+				log_error("data: hardware: "
+					  "no memory for buffer.");
+				return (0);
+			}
+		} else if (lease != NULL) {
+			result->len = lease->hardware_addr.hlen;
+			if (buffer_allocate(&result->buffer, result->len, MDL)){
+				result->data = &result->buffer->data[0];
+				memcpy(result->buffer->data,
+				       lease->hardware_addr.hbuf, result->len);
+				result->terminated = 0;
+			} else {
+				log_error("data: hardware: "
+					  "no memory for buffer.");
+				return (0);
+			}
 		} else {
-			log_error ("data: hardware: no memory for buffer.");
-			return 0;
+			log_error("data: hardware: no raw packet or lease "
+				  "is available");
+			return (0);
 		}
+
 #if defined (DEBUG_EXPRESSIONS)
-		log_debug ("data: hardware = %s",
-		      print_hex_1 (result -> len, result -> data, 60));
+		log_debug("data: hardware = %s",
+			  print_hex_1(result->len, result->data, 60));
 #endif
-		return 1;
+		return (1);
 
 		/* Extract part of the raw packet. */
 	      case expr_packet:
