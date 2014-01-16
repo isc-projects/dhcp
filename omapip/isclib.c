@@ -50,7 +50,7 @@ dhcp_dns_client_setservers(void)
 
 	result = irs_resconf_load(dhcp_gbl_ctx.mctx, _PATH_RESOLV_CONF,
 				  &resconf);
-	if (result != ISC_R_SUCCESS) {
+	if (result != ISC_R_SUCCESS && result != ISC_R_FILENOTFOUND) {
 		log_error("irs_resconf_load failed: %d.", result);
 		return (result);
 	}
