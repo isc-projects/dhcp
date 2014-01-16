@@ -141,6 +141,9 @@ work on other platforms. Please report any problems and suggested fixes to
   server to find the hardware address during on-expiry processing.
   [ISC-Bugs #24584]
 
+- Add definitions for some options that have been specified by the IETF.
+  [ISC-Bugs #29268]
+
 			Changes since 4.2.5
 
 - Address static analysis warnings.

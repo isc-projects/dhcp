@@ -295,3 +295,24 @@
    up. */
 #define DDNS_UPDATE_SLOW_TRANSITION
    
+/* Include definitions for various options.  In general these
+   should be left as is, but if you have already defined one
+   of these and prefer your definition you can comment the 
+   RFC define out to avoid conflicts */
+#define RFC4776_OPTIONS
+#define RFC4833_OPTIONS
+#define RFC4994_OPTIONS
+#define RFC5192_OPTIONS
+#define RFC5223_OPTIONS
+#define RFC5417_OPTIONS
+#define RFC5460_OPTIONS
+#define RFC5970_OPTIONS
+#define RFC5986_OPTIONS
+#define RFC6011_OPTIONS
+#define RFC6334_OPTIONS
+#define RFC6440_OPTIONS
+#define RFC6731_OPTIONS
+#define RFC6939_OPTIONS
+#define RFC6977_OPTIONS
+#define RFC7083_OPTIONS
+
