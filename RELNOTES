@@ -160,6 +160,9 @@ work on other platforms. Please report any problems and suggested fixes to
   and our website for directions on bug submissions.
   [ISC-Bugs #24789]
 
+- Handle an absent resolv.conf file better.
+  [ISC-Bugs #35194]
+
 			Changes since 4.2.5
 
 - Address static analysis warnings.
