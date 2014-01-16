@@ -144,6 +144,13 @@ work on other platforms. Please report any problems and suggested fixes to
 - Add definitions for some options that have been specified by the IETF.
   [ISC-Bugs #29268]
 
+			Changes since 4.3.0a1
+
+- Modify the message displayed when a process hits a fatal error.
+  The new message is much shorter and simply points to the README
+  and our website for directions on bug submissions.
+  [ISC-Bugs #24789]
+
 			Changes since 4.2.5
 
 - Address static analysis warnings.
