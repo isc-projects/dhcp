@@ -1,17 +1,26 @@
 	      Internet Systems Consortium DHCP Distribution
-			     Version 4.3.0a1
-			     17 December 2013
+			     Version 4.3.0b1
+			     20 January 2014
 
 			      Release Notes
 
 			      NEW FEATURES
 
-ISC DHCP 4.2.x includes features that were not included in DHCP 4.1.x.
-These include:
+The major "theme" for ISC DHCP 4.3.x was to update the support for
+DHCPv6 to include several of the features that have been available
+for DHCPv4.  These include:
 
-Processing the DHCP to DNS server transactions in an asyncrhonous fashion.
-The DHCP server or client can now continue with its processing while
-awaiting replies from the DNS server.
+- Support the use of classes
+
+- Support for on_commit, on_expiry and on_release statements
+
+- Better logging of address assignements
+
+- Support for using DHCPv6 relay options in expressions
+
+This release also adds suppport for the standard DDNS as described in the
+current RFCs as well as enhancing support for dynamically adding and removing
+subclasses via OMAPI.
 
 There are a number of DHCPv6 limitations and features missing in this
 release, which will be addressed in the future:

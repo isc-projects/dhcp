@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Copyright (C) 2009-2013  Internet Systems Consortium, Inc. ("ISC")
+# Copyright (C) 2009-2014  Internet Systems Consortium, Inc. ("ISC")
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -59,6 +59,7 @@ case $# in
 	### For ease of use, this records the sticky tag of versions
 	### released with each point release.
 	###
+	4.3.0b1) BINDTAG=v9_9_5rc1 ;;
 	4.3.0a1) BINDTAG=v9_9_5b1 ;;
 	4.2.6b1) BINDTAG=v9_9_5 ;;
 	4.2.5b1|4.2.5rc1) BINDTAG=v9_8_4_P1 ;;
