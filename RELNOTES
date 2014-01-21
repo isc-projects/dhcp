@@ -91,7 +91,7 @@ work on other platforms. Please report any problems and suggested fixes to
   to the clients.  This can be enabled by defining LOG_V6_ADDRESSES in site.h.
   [ISC-Bugs #26377]
 
-- Fix an operation in the DDDNS	code to	be a bitwise instead of	logcial	or.
+- Fix an operation in the DDNS	code to	be a bitwise instead of	logcial	or.
   [ISC-Bugs #35138]
 
 			Changes since 4.2.5rc1
