@@ -14,7 +14,7 @@ for DHCPv4.  These include:
 
 - Support for on_commit, on_expiry and on_release statements
 
-- Better logging of address assignements
+- Better logging of address assignments
 
 - Support for using DHCPv6 relay options in expressions
 
@@ -58,7 +58,7 @@ work on other platforms. Please report any problems and suggested fixes to
   which improves performance. [ISC-Bugs #22228]
   Update this patch to support asynchronous DDNS.  If the server is
   attempting to do DDNS on a lease it should be udpated and written to
-  disk even if that wouldn't be necessary due to the thresholding
+  disk even if that wouldn't be necessary due to the thresholding.
   [ISC-Bugs #26311]
 
 - The 'no available billing' log line now also logs the name of the last
@@ -79,7 +79,7 @@ work on other platforms. Please report any problems and suggested fixes to
   [ISC-Bugs #20680]
 
 - Add support in v6 for on-commit, on-expire and on-release.
-  [ISC-Bugs #27912
+  [ISC-Bugs #27912]
 
 - Add support for using classes with v6.
   [ISC-Bugs #26510]
@@ -215,7 +215,7 @@ work on other platforms. Please report any problems and suggested fixes to
   to the clients.
   [ISC-Bugs #26377]
 
-- Fix an operation in the DDDNS code to be a bitwise instead of logcial or.
+- Fix an operation in the DDNS code to be a bitwise instead of logcial or.
   [ISC-Bugs #35138]
 
 			Changes since 4.2.4
