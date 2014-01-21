@@ -83,7 +83,7 @@ void log_fatal (const char * fmt, ... )
   log_error ("If you did get this software from ftp.isc.org and have not");
   log_error ("yet read the README, please read it before requesting help.");
   log_error ("If you intend to request help from the dhcp-bugs at isc.org");
-  log_error ("mailing list, please read the section on the REDDME about");
+  log_error ("mailing list, please read the section on the README about");
   log_error ("submitting bug reports and requests for help.");
   log_error ("%s", "");
   log_error ("Please do not under any circumstances send requests for");
