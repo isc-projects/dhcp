@@ -219,7 +219,7 @@ by Eric Young (eay@cryptsoft.com).
   to the clients.
   [ISC-Bugs #26377]
 
-- Fix an operation in the DDNS code to be a bitwise instead of logcial or.
+- Fix an operation in the DDNS code to be a bitwise instead of logical or.
   [ISC-Bugs #35138]
 
 			Changes since 4.2.4
