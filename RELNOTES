@@ -48,6 +48,10 @@ The system has only been tested on Linux, FreeBSD, and Solaris, and may not
 work on other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
+ISC DHCP is open source software maintained by Internet Systems
+Consortium.  This product includes cryptographic software written
+by Eric Young (eay@cryptsoft.com).
+
 			Changes since 4.2.0 (new features)
 
 - If a client renews before 'dhcp-cache-threshold' percent of its lease
