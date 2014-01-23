@@ -167,7 +167,7 @@ by Eric Young (eay@cryptsoft.com).
 - Tidy up some compiler issues in the debug code.
   [ISC-Bugs #26460]
 
-- Move the dhcpd.conf exmample file to dhcpd.conf.example to avoid
+- Move the dhcpd.conf example file to dhcpd.conf.example to avoid
   overwriting the dhcpd.conf file when installing a new version of
   ISC DHCP.  The user will now need to manual copy and edit the
   dhcpd.conf file as desired.
