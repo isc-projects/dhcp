@@ -95,7 +95,7 @@ by Eric Young (eay@cryptsoft.com).
   to the clients.  This can be enabled by defining LOG_V6_ADDRESSES in site.h.
   [ISC-Bugs #26377]
 
-- Fix an operation in the DDNS	code to	be a bitwise instead of	logcial	or.
+- Fix an operation in the DDNS code to be a bitwise instead of logical or.
   [ISC-Bugs #35138]
 
 			Changes since 4.2.5rc1
@@ -224,7 +224,7 @@ by Eric Young (eay@cryptsoft.com).
 - Tidy up some compiler issues in the debug code.
   [ISC-Bugs #26460]
 
-- Move the dhcpd.conf exmample file to dhcpd.conf.example to avoid
+- Move the dhcpd.conf example file to dhcpd.conf.example to avoid
   overwriting the dhcpd.conf file when installing a new version of
   ISC DHCP.  The user will now need to manual copy and edit the
   dhcpd.conf file as desired.
