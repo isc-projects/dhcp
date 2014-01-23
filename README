@@ -40,6 +40,7 @@ the ISC DHCP Distribution.
 	 5.10	 MacOS X
 	6	SUPPORT
 	 6.1	 HOW TO REPORT BUGS
+	7	HISTORY
 
 		      WHERE TO FIND DOCUMENTATION
 
@@ -692,3 +693,19 @@ bug reports are more likely to get handled more quickly overall.
 Please see https://www.isc.org/software/dhcp/ for details on how to subscribe
 to the ISC DHCP mailing lists.
 
+			       HISTORY
+
+ISC DHCP was originally written by Ted Lemon under a contract with
+Vixie Labs with the goal of being a complete reference implementation
+of the DHCP protocol.  Funding for this project was provided by
+Internet Systems Consortium. The first release of the ISC DHCP
+distribution in December 1997 included just the DHCP server.
+Release 2 in June 1999 added a DHCP client and a BOOTP/DHCP relay
+agent. DHCP 3 was released in October 2001 and included DHCP failover
+support, OMAPI, Dynamic DNS, conditional behaviour, client classing,
+and more. Version 3 of the DHCP server was funded by Nominum, Inc.
+The 4.0 release in December 2007 introduced DHCPv6 protocol support
+for the server and client.
+
+This product includes cryptographic software written
+by Eric Young (eay@cryptsoft.com).
