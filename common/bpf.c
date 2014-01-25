@@ -3,7 +3,7 @@
    BPF socket interface code, originally contributed by Archie Cobbs. */
 
 /*
- * Copyright (c) 2009,2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009,2012-2014 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
@@ -409,45 +409,43 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 	/* Process packets until we get one we can return or until we've
 	   done a read and gotten nothing we can return... */
 
-	do {
-		/* If the buffer is empty, fill it. */
-		if (interface -> rbuf_offset == interface -> rbuf_len) {
-			length = read (interface -> rfdesc,
-				       interface -> rbuf,
-				       (size_t)interface -> rbuf_max);
-			if (length <= 0) {
+	/* If the buffer is empty, fill it. */
+	if (interface->rbuf_offset >= interface->rbuf_len) {
+		length = read(interface->rfdesc, interface->rbuf,
+			      (size_t)interface->rbuf_max);
+		if (length <= 0) {
 #ifdef __FreeBSD__
-				if (errno == ENXIO) {
+			if (errno == ENXIO) {
 #else
-				if (errno == EIO) {
+			if (errno == EIO) {
 #endif
-					dhcp_interface_remove
-						((omapi_object_t *)interface,
-						 (omapi_object_t *)0);
-				}
-				return length;
+				dhcp_interface_remove
+					((omapi_object_t *)interface, NULL);
 			}
-			interface -> rbuf_offset = 0;
-			interface -> rbuf_len = BPF_WORDALIGN (length);
+			return (length);
 		}
+		interface->rbuf_offset = 0;
+		interface->rbuf_len = BPF_WORDALIGN(length);
+	}
 
+	do {
 		/* If there isn't room for a whole bpf header, something went
 		   wrong, but we'll ignore it and hope it goes away... XXX */
-		if (interface -> rbuf_len -
-		    interface -> rbuf_offset < sizeof hdr) {
-			interface -> rbuf_offset = interface -> rbuf_len;
+		if (interface->rbuf_len -
+		    interface->rbuf_offset < sizeof hdr) {
+			interface->rbuf_offset = interface->rbuf_len;
 			continue;
 		}
 
 		/* Copy out a bpf header... */
-		memcpy (&hdr, &interface -> rbuf [interface -> rbuf_offset],
-			sizeof hdr);
+		memcpy(&hdr, &interface->rbuf[interface->rbuf_offset],
+		       sizeof hdr);
 
 		/* If the bpf header plus data doesn't fit in what's left
 		   of the buffer, stick head in sand yet again... */
-		if (interface -> rbuf_offset +
-		    hdr.bh_hdrlen + hdr.bh_caplen > interface -> rbuf_len) {
-			interface -> rbuf_offset = interface -> rbuf_len;
+		if (interface->rbuf_offset +
+		    hdr.bh_hdrlen + hdr.bh_caplen > interface->rbuf_len) {
+			interface->rbuf_offset = interface->rbuf_len;
 			continue;
 		}
 
@@ -455,67 +453,64 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 		   the packet won't fit in the input buffer, all we
 		   can do is drop it. */
 		if (hdr.bh_caplen != hdr.bh_datalen) {
-			interface -> rbuf_offset =
-				BPF_WORDALIGN (interface -> rbuf_offset +
-					       hdr.bh_hdrlen + hdr.bh_caplen);
+			interface->rbuf_offset =
+				BPF_WORDALIGN(interface->rbuf_offset +
+					      hdr.bh_hdrlen + hdr.bh_caplen);
 			continue;
 		}
 
 		/* Skip over the BPF header... */
-		interface -> rbuf_offset += hdr.bh_hdrlen;
+		interface->rbuf_offset += hdr.bh_hdrlen;
 
 		/* Decode the physical header... */
-		offset = decode_hw_header (interface,
-					   interface -> rbuf,
-					   interface -> rbuf_offset,
-					   hfrom);
+		offset = decode_hw_header(interface, interface->rbuf,
+					  interface->rbuf_offset, hfrom);
 
 		/* If a physical layer checksum failed (dunno of any
 		   physical layer that supports this, but WTH), skip this
 		   packet. */
 		if (offset < 0) {
-			interface -> rbuf_offset = 
-				BPF_WORDALIGN (interface -> rbuf_offset +
-					       hdr.bh_caplen);
+			interface->rbuf_offset = 
+				BPF_WORDALIGN(interface->rbuf_offset +
+					      hdr.bh_caplen);
 			continue;
 		}
-		interface -> rbuf_offset += offset;
+		interface->rbuf_offset += offset;
 		hdr.bh_caplen -= offset;
 
 		/* Decode the IP and UDP headers... */
-		offset = decode_udp_ip_header (interface,
-					       interface -> rbuf,
-					       interface -> rbuf_offset,
+		offset = decode_udp_ip_header(interface, interface->rbuf,
+					       interface->rbuf_offset,
   					       from, hdr.bh_caplen, &paylen);
 
 		/* If the IP or UDP checksum was bad, skip the packet... */
 		if (offset < 0) {
-			interface -> rbuf_offset = 
-				BPF_WORDALIGN (interface -> rbuf_offset +
-					       hdr.bh_caplen);
+			interface->rbuf_offset = 
+				BPF_WORDALIGN(interface->rbuf_offset +
+					      hdr.bh_caplen);
 			continue;
 		}
-		interface -> rbuf_offset = interface -> rbuf_offset + offset;
+		interface->rbuf_offset = interface->rbuf_offset + offset;
 		hdr.bh_caplen -= offset;
 
 		/* If there's not enough room to stash the packet data,
 		   we have to skip it (this shouldn't happen in real
 		   life, though). */
 		if (hdr.bh_caplen > len) {
-			interface -> rbuf_offset =
-				BPF_WORDALIGN (interface -> rbuf_offset +
+			interface->rbuf_offset =
+				BPF_WORDALIGN(interface->rbuf_offset +
 					       hdr.bh_caplen);
 			continue;
 		}
 
 		/* Copy out the data in the packet... */
 		memcpy(buf, interface->rbuf + interface->rbuf_offset, paylen);
-		interface -> rbuf_offset =
-			BPF_WORDALIGN (interface -> rbuf_offset +
-				       hdr.bh_caplen);
+		interface->rbuf_offset =
+			BPF_WORDALIGN(interface->rbuf_offset + hdr.bh_caplen);
 		return paylen;
-	} while (!length);
-	return 0;
+	} while (interface->rbuf_offset < interface->rbuf_len);
+
+	return (0);
 }
 
 int can_unicast_without_arp (ip)

@@ -157,6 +157,13 @@ by Eric Young (eay@cryptsoft.com).
 - Add definitions for some options that have been specified by the IETF.
   [ISC-Bugs #29268]
 
+			Changes since 4.3.0b1
+
+- Tidy up receive packet processing.
+  Thanks to Brad Plank of GTA for reporting the issue and suggesting
+  a possible patch.
+  [ISC-Bugs #34447]
+
 			Changes since 4.3.0a1
 
 - Modify the message displayed when a process hits a fatal error.
