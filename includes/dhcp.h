@@ -3,7 +3,7 @@
    Protocol structures... */
 
 /*
- * Copyright (c) 2011-2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2011-2012,2014 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
@@ -25,10 +25,6 @@
  *   <info@isc.org>
  *   https://www.isc.org/
  *
- * This software has been written for Internet Systems Consortium
- * by Ted Lemon in cooperation with Vixie Enterprises.  To learn more
- * about Internet Systems Consortium, see ``https://www.isc.org''.
- * To learn more about Vixie Enterprises, see ``http://www.vix.com''.
  */
 
 #ifndef DHCP_H

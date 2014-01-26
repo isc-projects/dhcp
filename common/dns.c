@@ -3,7 +3,7 @@
    Domain Name Service subroutines. */
 
 /*
- * Copyright (c) 2009-2013 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2014 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2001-2003 by Internet Software Consortium
  *
@@ -25,9 +25,6 @@
  *   <info@isc.org>
  *   https://www.isc.org/
  *
- * The original software was written for Internet Systems Consortium
- * by Ted Lemon it has since been extensively modified to use the
- * asynchronous DNS routines.
  */
 
 /*! \file common/dns.c

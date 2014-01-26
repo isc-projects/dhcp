@@ -5,7 +5,7 @@
    transactions... */
 
 /*
- * Copyright (c) 2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2012,2014 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2001-2003 by Internet Software Consortium
@@ -28,10 +28,6 @@
  *   <info@isc.org>
  *   https://www.isc.org/
  *
- * This software has been written for Internet Systems Consortium
- * by Ted Lemon, as part of a project for Nominum, Inc.   To learn more
- * about Internet Systems Consortium, see https://www.isc.org/.  To
- * learn more about Nominum, Inc., see ``http://www.nominum.com''.
  */
 
 #include "dhcpd.h"
