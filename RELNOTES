@@ -156,6 +156,7 @@ by Eric Young (eay@cryptsoft.com).
 
 - Add definitions for some options that have been specified by the IETF.
   [ISC-Bugs #29268]
+  [ISC-Bugs #35198]
 
 			Changes since 4.3.0b1
 

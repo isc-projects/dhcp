@@ -205,6 +205,9 @@ static struct option dhcp_options[] = {
 	{ "pxe-client-id", "BX",		&dhcp_universe,  97, 1 },
 #endif
 	{ "uap-servers", "t",			&dhcp_universe,  98, 1 },
+#if defined(RFC4776_OPTIONS)
+        { "geoconf-civic", "X",                 &dhcp_universe, 99, 1 },
+#endif
 #if defined(RFC4833_OPTIONS)
 	{ "pcode", "t",				&dhcp_universe, 100, 1 },
 	{ "tcode", "t",				&dhcp_universe, 101, 1 },
@@ -212,6 +215,9 @@ static struct option dhcp_options[] = {
 	{ "netinfo-server-address", "Ia",	&dhcp_universe, 112, 1 },
 	{ "netinfo-server-tag", "t",		&dhcp_universe, 113, 1 },
 	{ "default-url", "t",			&dhcp_universe, 114, 1 },
+#if defined(RFC2937_OPTIONS)
+	{ "name-service-search", "Sa",		&dhcp_universe, 117, 1 },
+#endif
 	{ "subnet-selection", "I",		&dhcp_universe, 118, 1 },
 	{ "domain-search", "Dc",		&dhcp_universe, 119, 1 },
 	{ "vivco", "Evendor-class.",		&dhcp_universe, 124, 1 },
@@ -239,6 +245,9 @@ static struct option dhcp_options[] = {
 #if defined(RFC5417_OPTIONS)
 	{"capwap-ac-v4", "Ia",			&dhcp_universe, 138, 1 },
 #endif
+#if defined(RFC6731_OPTIONS)
+        { "rdnss-selection", "BIID",		&dhcp_universe, 146, 1 },
+#endif
 #if 0
 	/* Not defined by RFC yet */
 	{ "tftp-server-address", "Ia",		&dhcp_universe, 150, 1 },
@@ -249,6 +258,9 @@ static struct option dhcp_options[] = {
 	{ "loader-configfile", "t",		&dhcp_universe, 209, 1 },
 	{ "loader-pathprefix", "t",		&dhcp_universe, 210, 1 },
 	{ "loader-reboottime", "L",		&dhcp_universe, 211, 1 },
+#endif
+#if defined(RFC5969_OPTIONS)
+        { "option-6rd", "BB6Ia",		&dhcp_universe, 212, 1 },
 #endif
 #if defined(RFC5986_OPTIONS)
 	{"v4-access-domain", "d",		&dhcp_universe, 213, 1 },

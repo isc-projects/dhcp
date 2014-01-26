@@ -299,6 +299,7 @@
    should be left as is, but if you have already defined one
    of these and prefer your definition you can comment the 
    RFC define out to avoid conflicts */
+#define RFC2937_OPTIONS
 #define RFC4776_OPTIONS
 #define RFC4833_OPTIONS
 #define RFC4994_OPTIONS
@@ -306,6 +307,7 @@
 #define RFC5223_OPTIONS
 #define RFC5417_OPTIONS
 #define RFC5460_OPTIONS
+#define RFC5969_OPTIONS
 #define RFC5970_OPTIONS
 #define RFC5986_OPTIONS
 #define RFC6011_OPTIONS
