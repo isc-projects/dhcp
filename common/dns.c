@@ -3,11 +3,7 @@
    Domain Name Service subroutines. */
 
 /*
-<<<<<<< HEAD
- * Copyright (c) 2009-2010,2013 by Internet Systems Consortium, Inc. ("ISC")
-=======
  * Copyright (c) 2009-2014 by Internet Systems Consortium, Inc. ("ISC")
->>>>>>> edad9be... [master] Remove vix.com and nominum.com
  * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2001-2003 by Internet Software Consortium
  *
@@ -29,14 +25,6 @@
  *   <info@isc.org>
  *   https://www.isc.org/
  *
-<<<<<<< HEAD
- * This software has been written for Internet Systems Consortium
- * by Ted Lemon in cooperation with Nominum, Inc.
- * To learn more about Internet Systems Consortium, see
- * ``https://www.isc.org/''.  To learn more about Nominum, Inc., see
- * ``http://www.nominum.com''.
-=======
->>>>>>> edad9be... [master] Remove vix.com and nominum.com
  */
 
 #include "dhcpd.h"
