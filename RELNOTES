@@ -6,7 +6,7 @@
 
 			      NEW FEATURES
 
-The major "theme" for ISC DHCP 4.3.x was to update the support for
+The major "theme" for ISC DHCP 4.3.x was to update the suport for
 DHCPv6 to include several of the features that have been available
 for DHCPv4.  These include:
 
@@ -29,7 +29,7 @@ release, which will be addressed in the future:
 
 - DHCPv6 includes human-readable text in status code messages, in
   English.  A method to reconfigure or support other languages would
-  be preferrable.
+  be preferable.
 
 - The "host-identifier" option is limited to a simple token.
 
@@ -60,7 +60,7 @@ by Eric Young (eay@cryptsoft.com).
   than extend or renew the lease.  This absolves the server of needing
   to perform an fsync() operation on the lease database before reply,
   which improves performance. [ISC-Bugs #22228]
-  Update this patch to support asynchronous DDNS.  If the server is
+  Updated this patch to support asynchronous DDNS.  If the server is
   attempting to do DDNS on a lease it should be udpated and written to
   disk even if that wouldn't be necessary due to the thresholding.
   [ISC-Bugs #26311]
@@ -123,7 +123,7 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Bugs #19598]
 
 - When doing DDNS if there isn't an appropriate zone statement attempt
-  to find a reasoanble nameserver via a DNS resolver.  This restores
+  to find a reasonable nameserver via a DNS resolver.  This restores
   some functionality that was lost in the transition to asynchronous
   DDNS.  Due to the lack of security and increase in fragility of the
   system when using this feature we strongly recommend the use of
