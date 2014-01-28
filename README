@@ -275,7 +275,7 @@ we completely bypass the Linux IP stack, but on old versions of Linux
 DHCP clients connected to the same network as the ISC DHCP server or
 ISC relay agent will not see messages from the DHCP server.   It *is*
 possible to run into trouble with this on Linux 2.2 and later if you
-are running a verson of the DHCP server that was compiled on a Linux
+are running a version of the DHCP server that was compiled on a Linux
 2.0 system, though.
 
 It is possible to work around this problem on some versions of Linux
@@ -507,7 +507,7 @@ server and relay will work only on a single interface.  (They do work
 on multi-interface machines if configured to listen on only one of the
 interfaces.)
 
-We have reports of Windows XP clients having difficutly retrieving
+We have reports of Windows XP clients having difficulty retrieving
 addresses from a server running on an AIX machine.  This issue
 was traced to the client requiring messages be sent to the all ones
 broadcast address (255.255.255.255) while the AIX server was sending 
