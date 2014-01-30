@@ -117,8 +117,8 @@ by Eric Young (eay@cryptsoft.com).
 - Add support for accessing options from v6 relays.  The v6relay
   statement allows the administrator to choose which relay to
   use when searching for an option, see the dhcp-options man page
-  for a description.  The host-identifer option has also been
-  updated to support the use of relay options see the dhcpd.conf
+  for a description.  The host-identifier option has also been
+  updated to support the use of relay options, see the dhcpd.conf
   man page for a description.
   [ISC-Bugs #19598]
 
@@ -140,7 +140,7 @@ by Eric Young (eay@cryptsoft.com).
   the server to not record a client's uid in its lease.  This
   violates the specification but may also be useful when a client
   can dual boot using different client ids but the same mac address.
-  Thank you to Brian De Wolf at Cal Ply Pomona for the patch.
+  Thank you to Brian De Wolf at Cal Poly Pomona for the patch.
   [ISC-Bugs #32427]
   [ISC-Bugs #35066]
 
