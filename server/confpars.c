@@ -1980,7 +1980,7 @@ void parse_host_declaration (cfile, group)
 				host->relays = atoi(val);
 				if (host->relays < 0) {
 					parse_warn(cfile,
-						   "host-identifer v6relopt "
+						   "host-identifier v6relopt "
 						   "must have a number >= 0");
 					skip_to_rbrace(cfile, 1);
 					break;
