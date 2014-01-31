@@ -491,6 +491,14 @@ This option specifies a list of X Window System Font servers available
 to the client. Servers should be listed in order of preference.
 .RE
 .PP
+.B option \fBgeoconf-civic\fR \fIstring\fR\fB;\fR
+.RS 0.25i
+.PP
+A string to hold the geoconf civic structure.
+.PP
+This option is included based on RFC 4776.
+.RE
+.PP
 .B option \fBhost-name\fR \fIstring\fR\fB;\fR
 .RS 0.25i
 .PP
@@ -604,6 +612,15 @@ This option specifies a list of IP addresses indicating mobile IP
 home agents available to the client.  Agents should be listed in
 order of preference, although normally there will be only one such
 agent.
+.RE
+.PP
+.B option \fBname-service-search\fR \fIuint16\fR [\fB,\fR \fIuint6\fR... ]\fB;\fR
+.RS 0.25i
+.PP
+This option specifies a list of name services in the order the client should
+attempt to use them.
+.PP
+This option is included based on RFC 2937.
 .RE
 .PP
 .B option \fBnds-context\fR \fIstring\fR\fB;\fR
@@ -772,6 +789,17 @@ NetWare/IP suboptions - see the NETWARE/IP SUBOPTIONS section for more
 information.
 .RE
 .PP
+.B option \fBoption-6rd\fR \fIuint8 uint8 ip6-address ip-address\fR  [\fB,\fR
+.I ip-address \fR...]\fB;\fR
+.RS 0.25i
+.PP
+This option contains infomration about the rapid deployment option.  It is
+8 bits of ipv4 mask length, 8 bits of 6rd prefix length, an ipv6 prefix as
+an ipv6 address and a list of one or more ipv4 addresses.
+.PP
+This option is included based on RFC 5969.
+.RE
+.PP
 .B option
 .B pana-agent
 .I ip-address \fR[\fB,
@@ -841,6 +869,16 @@ See STD 3 (RFC1122) for further information.
 .PP
 The POP3 server option specifies a list of POP3 servers available
 to the client.  Servers should be listed in order of preference.
+.RE
+.PP
+.B option \fBrdnss-selection\fR \fIuint8 ip-address ip-address domain-name\fR\fB;\fR
+.RS 0.25i
+.PP
+The rdnss-selection option specifies an 8 bit flags field, a primary and secondary
+ip address for the name server and a domainlist of domains for whcih the RDNSS has
+sepcial knowledge.
+.PP
+This option is included based on RFC 6731.
 .RE
 .PP
 .B option \fBresource-location-servers\fR \fIip-address\fR
@@ -1930,8 +1968,8 @@ This option is included based on RFC 6440.
 .B option \fBdhcp6.rdnss-selection\fR \fIip6-address uint8 domain-name\fR\fB;\fR
 .RS 0.25i
 .PP
-RDNSS information consists of an IPv6 address of RDNSS, a 8 bit flags field and
-a domain-list of domains for which the RDNSS has specail knowledge.
+RDNSS information consists of an IPv6 address of RDNSS, an 8 bit flags field and
+a domain-list of domains for which the RDNSS has special knowledge.
 .PP
 This option is included based on RFC 6731.
 .RE
