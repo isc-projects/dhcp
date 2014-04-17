@@ -49,7 +49,7 @@ case $# in
 	### tarball with vastly different values.  So the version.tmp can not
 	### be used to chdir down into the directory that is unpacked.
 	###
-	v4_2) noSNAP=snapshot BINDTAG=v9_8 ;;
+	v4_2) noSNAP=snapshot BINDTAG=v9_9 ;;
 	v4_3) noSNAP=snapshot BINDTAG=v9_9 ;;
 	### change to using the head of v9_9 until we upgrade DHCP
 	### to use shared libraries
@@ -63,8 +63,10 @@ case $# in
 	4.3.0rc1) BINDTAG=v9_9_5rc2 ;;
 	4.3.0b1) BINDTAG=v9_9_5rc1 ;;
 	4.3.0a1) BINDTAG=v9_9_5b1 ;;
-	4.2.6b1) BINDTAG=v9_9_5 ;;
-	4.2.5b1|4.2.5rc1) BINDTAG=v9_8_4_P1 ;;
+	4.2.6) BINDTAG=v9_9_5 ;;
+	4.2.6rc1) BINDTAG=v9_9_5rc2 ;;
+	4.2.6b1) BINDTAG=v9_9_5rc1 ;;
+	4.2.5b1|4.2.5rc1|4.2.5) BINDTAG=v9_8_4_P1 ;;
 	4.2.4rc2|4.2.4) BINDTAG=v9_8_3 ;;
 	4.2.4b1|4.2.4rc1) BINDTAG=v9_8_2 ;;
 	4.2.3-P1|4.2.3-P2) BINDTAG=v9_8_1_P1 ;;
