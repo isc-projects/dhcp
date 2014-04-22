@@ -1,5 +1,5 @@
 	      Internet Systems Consortium DHCP Distribution
-			      Version 4.3.0
+			   Version 4.3.1-pre-beta
 			     3 February 2014
 
 			      Release Notes
@@ -51,6 +51,29 @@ work on other platforms. Please report any problems and suggested fixes to
 ISC DHCP is open source software maintained by Internet Systems
 Consortium.  This product includes cryptographic software written
 by Eric Young (eay@cryptsoft.com).
+
+			Changes since 4.3.1
+
+
+			Changes since 4.3.0rc1
+
+- None
+			Changes since 4.3.0b1
+
+- Tidy up receive packet processing.
+  Thanks to Brad Plank of GTA for reporting the issue and suggesting
+  a possible patch.
+  [ISC-Bugs #34447]
+
+			Changes since 4.3.0a1
+
+- Modify the message displayed when a process hits a fatal error.
+  The new message is much shorter and simply points to the README
+  and our website for directions on bug submissions.
+  [ISC-Bugs #24789]
+
+- Handle an absent resolv.conf file better.
+  [ISC-Bugs #35194]
 
 			Changes since 4.2.0 (new features)
 
@@ -158,486 +181,92 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Bugs #29268]
   [ISC-Bugs #35198]
 
-			Changes since 4.3.0rc1
-
-- None
-			Changes since 4.3.0b1
-
-- Tidy up receive packet processing.
-  Thanks to Brad Plank of GTA for reporting the issue and suggesting
-  a possible patch.
-  [ISC-Bugs #34447]
-
-			Changes since 4.3.0a1
-
-- Modify the message displayed when a process hits a fatal error.
-  The new message is much shorter and simply points to the README
-  and our website for directions on bug submissions.
-  [ISC-Bugs #24789]
-
-- Handle an absent resolv.conf file better.
-  [ISC-Bugs #35194]
-
-			Changes since 4.2.5
-
-- Address static analysis warnings.
-  [ISC-Bugs #33510] [ISC-Bugs #33511]
-
-- Silence benign static analysis warnings.
-  [ISC-Bugs #33428]
-
-- Add check for 64-bit package for atf.
-  [ISC-Bugs #32206]
-
-- Use newer auto* tool packages and turn on RFC_3542 support on Mac OS.
-  [ISC-Bugs #26303]
-
-- Remove a variable when it isn't being used due to #ifdefs to avoid
-  a compiler warning on Solaris using GCC.
-  [ISC-Bugs #33032]
-
-- Add a check for too much whitespace in a config or lease file.
-  Thanks to Paolo Pellegrino for finding the issue and a suggestion
-  for the patch.
-  [ISC-Bugs #33351]
-
-- Fix several problems with using OMAPI to manipulate class and subclass
-  objects.
-  [ISC-Bugs #27452]
-
-- Added a sleep call after killing the old client to allow time
-  for the sockets to be cleaned.  This should allow the -r option
-  to work more consistently.
-  [ISC-Bugs #18175]
-
-- Missing files for ISC DHCP Developer's Guide are now included in
-  the release tarballs. To generate this documentation, please use
-  make devel command in doc directory. [ISC-Bugs #32767]
-
-- Update client script for use with openwrt.
-  [ISC-Bugs #29843]
-
-- Fix the socket handling for DHCPv6 clients to allow multiple instances
-  of a client on a single machine to work properly.  Previously only
-  one client would receive the packets.  Thanks to Jiri Popelka at Red Hat
-  for the bug report and a potential patch.
-  [ISC-Bugs #34784]
-
-- Added support for gentle shutdown after signal is received.
-  [ISC-Bugs #32692] [ISC-Bugs 34945]
-
-- Enhance the DHCPv6 server logging to include the addresses that are assigned
-  to the clients.
-  [ISC-Bugs #26377]
-
-- Fix an operation in the DDNS code to be a bitwise instead of logical or.
-  [ISC-Bugs #35138]
-
-			Changes since 4.2.4
-
-- Correct code to calculate timing values in client to compare
-  rebind value to infinity instead of renew value.
-  Thanks to Chenda Huang from H3C Technologies Co., Limited
-  for reporting this issue.
-  [ISC-Bugs #29062]
-
-- Fix some issues in the code for parsing and printing options.
-  [ISC-Bugs #22625] - properly print options that have several fields
-  followed by an array of something for example "fIa"
-  [ISC-Bugs #27289] - properly parse options in declarations that have
-  several fields followed by an array of something for example "fIa"
-  [ISC-Bugs #27296] - properly determine if we parsed a 16 or 32 bit
-  value in evaluate_numeric_expression (extract-int).
-  [ISC-Bugs #27314] - properly parse a zero length option from
-  a lease file.  Thanks to Marius Tomaschewski from SUSE for the report
-  and prototype patch for this ticket as well as ticket 27289.
-
-! Previously the server code was relaxed to allow packets with zero
-  length client ids to be processed.  Under some situations use of
-  zero length client ids can cause the server to go into an infinite
-  loop.  As such ids are not valid according to RFC 2132 section 9.14
-  the server no longer accepts them.  Client ids with a length of 1
-  are also invalid but the server still accepts them in order to
-  minimize disruption.  The restriction will likely be tightened in
-  the future to disallow ids with a length of 1.
-  Thanks to Markus Hietava of Codenomicon CROSS project for the
-  finding this issue and CERT-FI for vulnerability coordination. 
-  [ISC-Bugs #29851]
-  CVE: CVE-2012-3571
-
-! When attempting to convert a DUID from a client id option
-  into a hardware address handle unexpected client ids properly.
-  Thanks to Markus Hietava of Codenomicon CROSS project for the
-  finding this issue and CERT-FI for vulnerability coordination. 
-  [ISC-Bugs #29852]
-  CVE: CVE-2012-3570
-
-! A pair of memory leaks were found and fixed.  Thanks to
-  Glen Eustace of Massey University, New Zealand for finding
-  this issue.
-  [ISC-Bugs #30024]
-  CVE: CVE-2012-3954
-
-- Existing legacy unit-tests have been migrated to Automated Test
-  Framework (ATF). Several new tests have been developed. To enable
-  unit-tests, please use --with-atf in configure script. A Developer's
-  Guide has been added. To generate it, please use make devel in
-  the doc directory. It is currently in early stages of development,
-  but is expected to grow in the near future. [ISC-Bugs 25901]
-
-! An issue with the use of lease times was found and fixed.  Making
-  certain changes to the end time of an IPv6 lease could cause the
-  server to abort.  Thanks to Glen Eustace of Massey University,
-  New Zealand for finding this issue.
-  [ISC-Bugs #30281]
-  CVE: CVE-2012-3955
-
-- Update the memory leakage debug code to work with v6.
-  [ISC-Bugs #30297]
-
-- Relax the requirements for deleting an A or AAAA record.
-  Previously the DDNS removal code required both the A or AAAA
-  record and the TXT record to exist.  This requirement could
-  cause problems if something interrupted the removal leaving
-  the TXT record alone.  This relaxation was codified in RFC 4703.
-  [ISC-Bugs #30734]
-
-- Modify the failover code to handle incorrect peer names
-  better.  Previously the structure holding the name might
-  have been freed inappropriately in some cases and not
-  freed in other cases.
-  [ISC-Bugs #30320]
-
-- Add a configure option, enable-secs-byteorder, to deal with
-  clients that do the byte ordering on the secs field incorrectly.
-  This field should be in network byte order but some clients
-  get it wrong.  When this option is enabled the server will examine
-  the secs field and if it looks wrong (high byte non zero and low
-  byte zero) swap the bytes.  The default is disabled.  This option
-  is only useful when doing load balancing within failover.
-  [ISC-Bugs #26108]
-
-- Fix a set of issues that were discovered via a code inspection
-  tool.  Thanks to Jiri Popelka and Tomas Hozza Red Hat for the logs
-  and patches.
-  [ISC-Bugs #23833]
-
-- Parsing unquoted base64 strings improved. Parser now properly handles 
-  strings that contain reserved names. [ISC-Bugs #23048]
-
-- Modify the nak_lease function to make some attempts to find a
-  server-identifier option to use for the NAK.
-  [ISC-Bugs #25689]
-
-- The client now passes information about the options it requested
-  from the server to the script code via environment variables.
-  These variables are of the form requested_<option_name>=1 with
-  the option name being the same as used in the new_* and old_*
-  variables.
-  [ISC-Bugs #29068]
-
-- Add support for a simple check that the server id in a request message
-  to a failover peer matches the server id of the server.  This support
-  is enabled by editing the file includes/site.h and uncommenting the
-  definition for SERVER_ID_CHECK.  The option has several restrictions
-  and issues - please read the comment in the site.h file before
-  enabling it.
-  [ISC-Bugs #31463]
-
-- Tidy up some compiler issues in the debug code.
-  [ISC-Bugs #26460]
-
-- Move the dhcpd.conf exmample file to dhcpd.conf.example to avoid
-  overwriting the dhcpd.conf file when installing a new version of
-  ISC DHCP.  The user will now need to manual copy and edit the
-  dhcpd.conf file as desired.
-  [ISC-Bugs #19337]
-
-- Check the status value when trying to read from a connection to
-  see if it may have been closed.  If it appears closed don't try
-  to read from it again.  This avoids a potential busy-wait like
-  loop when the peer names are mismatched.
-  [ISC-Bugs #31231]
-
-- Remove an unused variable to keep compilers happy.
-  [ISC-Bugs #31983]
-
-- Modify test makefiles to be more similar to standard makefiles
-  and comment out a currently unused test.
-  [ISC-Bugs #32089]
-
-			Changes since 4.2.3
-
-! Add a check for a null pointer before calling the regexec function.
-  Without this check we could, under some circumstances, pass
-  a null pointer to the regexec function causing it to segfault.
-  Thanks to a report from BlueCat Networks.
-  [ISC-Bugs #26704].
-  CVE: CVE-2011-4539
-
-! Modify the DDNS handling code.  In a previous patch we added logging
-  code to the DDNS handling.  This code included a bug that caused it
-  to attempt to dereference a NULL pointer and eventually segfault.
-  While reviewing the code as we addressed this problem, we determined
-  that some of the updates to the lease structures would not work as
-  planned since the structures being updated were in the process of
-  being freed: these updates were removed.  In addition we removed an
-  incorrect call to the DDNS removal function that could cause a failure
-  during the removal of DDNS information from the DNS server.
-  Thanks to Jasper Jongmans for reporting this issue.
-  [ISC-Bugs #27078]
-  CVE: CVE-2011-4868
-
-- Fixed the code that checks if an address the server is planning
-  to hand out is in a reserved range.  This would appear as
-  the server being out of addresses in pools with particular ranges.
-  [ISC-Bugs #26498]
-
-- In the DDNS code handle error conditions more gracefully and add more
-  logging code.  The major change is to handle unexpected cancel events
-  from the DNS client code.
-  [ISC-Bugs #26287]
-
-- Tidy up the receive calls and eliminate the need for found_pkt.
-  [ISC-Bugs #25066]
- 
-- Add support for Infiniband over sockets to the server and
-  relay code.  We've tested this on Solaris and hope to expand
-  support for Infiniband in the future.  This patch also corrects
-  some issues we found in the socket code.
-  [ISC-Bugs #24245]
-
-- Add a compile time check for the presence of the noreturn attribute
-  and use it for log_fatal if it's available.  This will help code
-  checking programs to eliminate false positives.
-  [ISC-Bugs #27539]
-
-- Fixed many compilation problems ("set, but not used" warnings) for
-  gcc 4.6 that may affect Ubuntu 11.10 users. [ISC-Bugs #27588]
-
-- Modify the code that determines if an outstanding DDNS request
-  should be cancelled.  This patch results in cancelling the
-  outstanding request less often.  It fixes the problem caused
-  by a client doing a release where  the TXT and PTR records
-  weren't removed from the DNS.
-  [ISC-BUGS #27858]
-
-- Use offsetof() instead of sizeof() to get the sizes for dhcpv6_relay_packet
-  and dhcpv6_packet in several more places.  Thanks to a report from
-  Bruno Verstuyft and Vincent Demaertelaere of Excentis.
-  [ISC-Bugs #27941]
-
-- Remove outdated note in the description of the bootp keyword about the
-  option not satisfying the requirement of failover peers for denying
-  dynamic bootp clients.
-  [ISC-bugs #28574]
-
-- Multiple items to clean up IPv6 address processing.
-  When processing an IA that we've seen check to see if the
-  addresses are usable (not in use by somebody else) before
-  handing it out.
-  When reading in leases from the file discard expired addresses.
-  When picking an address for a client include the IA ID in
-  addition to the client ID to generally pick different addresses
-  for different IAs.
-  [ISC-Bugs #23138] [ISC-Bugs #27945] [ISC-Bugs #25586]
-  [ISC-Bugs #27684]
-
-- Remove unnecessary checks in the lease query code and clean up
-  several compiler issues (some dereferences of NULL and treating
-  an int as a boolean).
-  [ISC-Bugs #26203]
-
-- Fix the NA and PD allocation code to handle the case where a client
-  provides a preference and the server doesn't have any addresses or
-  prefixes available.  Previously the server ignored the request with
-  this patch it replies with a NoAddrsAvail or NoPrefixAvail response.
-  By default the code performs according to the errata of August 2010
-  for RFC 3315 section 17.2.2; to enable the previous style see the
-  section on RFC3315_PRE_ERRATA_2010_08 in includes/site.h.  This option
-  may be removed in the future.
-  Thanks to Jiri Popelka at Red Hat for the patch.
-  [ISC-Bugs #22676]
-
-- Fix up some issues found by static analysis.
-  A potential memory leak and NULL dereference in omapi.
-  The use of a boolean test instead of a bitwise test in dst.
-  [ISC-Bugs #28941]
-
-- Rotate the lease file when running in v6 mode.
-  Thanks to Christoph Moench-Tegeder at Astaro for the
-  report and the first version of the patch.
-  [ISC-Bugs #24887]
-
-			Changes since 4.2.2
-
-- Fix the code that checks for an existing DDNS transaction to cancel
-  when removing DDNS information, so that we will continue with the
-  processing if we have a lease even if it doesn't have an outstanding
-  transaction.  [ISC-Bugs #24682]
-
-- Add AM_MAINTAINER_MODE to configure.ac to avoid rebuilding
-  configuration files.  [ISC-Bugs #24107]
-
-- Add support for passing DDNS information to a DNS server over
-  an IPv6 address.  [ISC-Bugs #22647]
-
-- Enhanced patch for 23595 to handle IPv4 fixed addresses more
-  cleanly.  [ISC-Bugs #23595]
-
-			Changes since 4.2.1
-
-! In dhclient check the data for some string options for
-  reasonableness before passing it along to the script that
-  interfaces with the OS.
-  [ISC-Bugs #23722]
-  CVE: CVE-2011-0997
-
-- DHCPv6 server now responds properly if client asks for a prefix that
-  is already assigned to a different client. [ISC-Bugs #23948]
-
-- Add the option "--no-pid" to the client, relay and server code,
-  to disable writing a pid file.  Add the option "-pf pidfile"
-  to the relay to allow the user to supply the pidfile name at
-  runtime.  Add the "with-relay6-pid-file" option to configure
-  to allow the user to supply the pidfile name for the relay
-  in v6 mode at configure time.
-  [ISC-Bugs #23351] [ISC-Bugs #17541]
-
-- 'dhclient' no longer waits a random interval after first starting up to
-  begin in the INIT state.  This conforms to RFC 2131, but elects not to
-  implement a 'SHOULD' direction in section 4.1. The goal of this change 
-  is to start up faster. [ISC-Bugs #19660]
-  
-- Added 'initial-delay' parameter that specifies maximum amount of time 
-  before client goes to the INIT state. The default value is 0. In previous 
-  versions of the code client could wait up to 5 seconds. The old behavior 
-  may be restored by using 'initial-delay 5;' in the client config file.
-  [ISC-Bugs #19660]
-
-- ICMP ping-check should now sit closer to precisely the number of seconds
-  configured (or default 1), due to making use of the new microsecond
-  scale timer internally to dhcpd.  This corrects a bug where the server
-  may immediately timeout an ICMP ping-check if it was made late in the
-  current second. [ISC-Bugs #19660]
-
-- The DHCP client will schedule renewal and rebinding events in
-  microseconds if the DHCP server provided a lease-time that would result
-  in sub-1-second timers.  This corrects a bug where a 2-second or lower
-  lease-time would cause the DHCP client to enter an infinite loop by
-  scheduling renewal at zero seconds. [ISC-Bugs #19660]
-
-- Client lease records are recorded at most once every 15 seconds.  This
-  keeps the client from filling the lease database disk quickly on very small
-  lease times. [ISC-Bugs #19660]
-
-- To defend against RFC 2131 non-compliant DHCP servers which fail to
-  advertise a lease-time (either mangled, or zero in value) the DHCP
-  client now adds the server to the reject list ACL and returns to INIT
-  state to hopefully find an RFC 2131 compliant server (or retry in INIT
-  forever). [ISC-Bugs #19660]
-
-- Parameters configured to evaluate from user defined function calls can
-  now be correctly written to dhcpd.leases (as on 'on events' or dynamic
-  host records inserted via OMAPI).  [ISC-Bugs #22266]
-
-- If a 'next-server' parameter is configured in a dynamic host record via
-  OMAPI as a domain name, the syntax written to disk is now correctly parsed
-  upon restart.  [ISC-Bugs #22266]
-
-- The DHCP server now responds to DHCPLEASEQUERY messages from agents using
-  IP addresses not covered by a subnet in configuration.  Whether or not to
-  respond to such an agent is still governed by the 'allow leasequery;'
-  configuration parameter, in the case of an agent not covered by a configured
-  subnet the root configuration area is examined. Server now also returns
-  vendor-class-id option, if client sent it. [ISC-Bugs #21094]
-  
-- Documentation fixes
-  [ISC-Bugs #17959] add text to AIX section describing how to have it send
-  responses to the all-ones address.
-  [ISC-Bugs #19615] update the includes in dhcpctl/dhcpctl.3 to be more correct
-  [ISC-Bugs #20676] update dhcpd.conf.5 to include the RFC numbers for DDNS
-
-- Relay no longer crashes, when DHCP packet is received over interface without
-  any IPv4 address assigned. Also extended logging message about discarding
-  packets with invalid hlen with information about relevant interface name.
-  [ISC-Bugs #22409]
-
-- Relay now properly logs that packet was received over interface without
-  global IPv6 address [ISC-Bugs #24070]
-
-- Linux Packet Filter interface improvement. sockaddr_pkt structure is used, 
-  rather than sockaddr. Packet ethertype is now forced to ETH_P_IP. 
-  [ISC-Bugs #18975]
-
-- Minor code cleanups - but note port change for #23196
-  [ISC-Bugs #23470] - Modify when an ignore return macro is defined to
-  handle unsed error return warnings for more versions of gcc.
-  [ISC-Bugs #23196] - Modify the reply handling in the server code to
-  send to a specified port rather than to the source port for the incoming
-  message.  Sending to the source port was test code that should have
-  been removed.  The previous functionality may be restored by defining
-  REPLY_TO_SOURCE_PORT in the includes/site.h file.  We suggest you don't
-  enable this except for testing purposes.
-  [ISC-Bugs #22695] - Close a file descriptor in an error path.
-  [ISC-Bugs #19368] - Tidy up variable types in validate_port.
-
-- Code cleanup: remove obsolete PROTO, KandR, INLINE and ANSI_DECL macros
-  [ISC-Bugs #13151] 
-
-- Compilation problem with gcc4.5 and omshell.c resolved. [ISC-Bugs #23831]
-
-- Client Script fixes
-  [ISC-Bugs #23045] Typos in client/scripts/openbsd
-  [ISC-Bugs #23565] In the client scripts add a zone id (interface id) if
-  the domain search address is link local.
-  [ISC-Bugs #1277] In some of the client scripts add code to handle the
-  case of the default router information being changed without the address
-  being changed.
-
-- Documentation cleanup
-  [ISC-Bugs #23326] Updated References document, several man page updates
-
-- Server no longer complains about NULL pointer when configured 
-  server-identifier expression fails to evaluate. [ISC-Bugs #24547]
-
-- Convert ISC_R_INPROGRESS status to ISC_R_SUCCESS when called from other
-  than the dispatch handler.  This fixes an issue where omshell, when
-  run from the same platform as the server, would appear to fail to
-  connect.  This is a companion to #21839.  [ISC-Bugs #23592]
-
-- Enlarge the buffer size used by the Omshell code and some of the
-  print routines to allow for greater than 60 characters or, when
-  printing as hex strings, 20 characters.  [ISC-Bugs #22743]
-
-- In Solaris 11 switch to using sockets instead of DLPI, thanks
-  to a patch form Oracle.  [ISC-Bugs #24634].
-
-- Strict checks for content of domain-name DHCPv4 option can now be 
-  configured during compilation time. Even though RFC2132 does not allow 
-  to store more than one domain in domain-name option, such behavior is 
-  now enabled by default, but this may change some time in the future.
-  See ACCEPT_LIST_IN_DOMAIN_NAME define in includes/site.h.
-  [ISC-Bugs #24167]
-
-- DNS Update fix. A misconfigured server could crash during DNS update
-  processing if the configuration included overlapping pools or
-  multiple fixed-address entries for a single address.  This issue
-  affected both IPv4 and IPv6. The fix allows a server to detect such
-  conditions, provides the user with extra information and recommended
-  steps to fix the problem.  If the user enables the appropriate option
-  in site.h then server will be terminated
-  [ISC-Bugs #23595]
-
-! Two packets were found that cause a server to halt.  The code
-  has been updated to properly process or reject the packets as
-  appropriate.  Thanks to David Zych at University of Illinois
-  for reporting this issue.  [ISC-Bugs #24960]
-  One CVE number for each class of packet.
-  CVE-2011-2748
-  CVE-2011-2749
-
-			Changes since 4.2.0
+			Changes since 4.2.0 (bug fixes)
+
+- When using 'ignore client-updates;', the FQDN returned to the client
+  is no longer truncated to one octet.
+
+- Cleaned up an unused hardware address variable in nak_lease().
+
+- Manpage entries for the ia-pd and ia-prefix options were updated to
+  reflect support for prefix delegation.
+
+- Cleaned up some compiler warnings
+
+- An optimization described in the failover protocol draft is now included,
+  which permits a DHCP server operating in communications-interrupted state
+  to 'rewind' a lease to the state most recently transmitted to its peer,
+  greatly increasing a server's endurance in communications-interrupted.
+  This is supported using a new 'rewind state' record on the dhcpd.leases
+  entry for each lease.
+
+- Fix the trace code which was broken by the changes to the DDNS code.
+
+- Update the fsync code to work with the changes to the DDNS code.  It now
+  uses a timer instead of noticing if there are no more packets to process.
+
+- When constructing the DNS name structure from a text string append
+  the root to relative names.  This satisfies a requirement in the DNS
+  library that names be absolute instead of relative and prevents DHCP
+  from crashing.  [ISC-Bugs #21054]
+
+- "The LDAP Patch" that has been circulating for some time, written by
+  Brian Masney and S.Kalyanasundraram and maintained for application to
+  the DHCP-4 sources by David Cantrell has been included.  Please be
+  advised that these sources were contributed, and do not yet meet the
+  high standards we place on production sources we include by default.
+  As a result, the LDAP features are only included by using a compile-time
+  option which defaults off, and if you enable it you do so under your
+  own recognizance.  We will be improving this software over time.
+  [ISC-Bugs #17741]
+
+- Prohibit including lease time information in a response to a DHCP INFORM.
+  [ISC-Bugs #21092]
+
+! Accept a client id of length 0 while hashing.  Previously the server would
+  exit if it attempted to hash a zero length client id, providing attackers
+  with a simple denial of service attack.  [ISC-Bugs #21253]
+  CERT: VU#541921 - CVE: CVE-2010-2156
+
+- A memory leak in ddns processing was closed.  [ISC-Bugs #21377]
+
+- Modify the exception handling for initial context creation.  Previously
+  we would try and clean up before exiting.  This could present problems
+  when the cleanup required part of the context that wasn't available.  It
+  also didn't do much as we exited afterwards anyway.   Now we simply log
+  the error and exit. [ISC-Bugs #21093]
+
+- A bug was fixed that could cause the DHCPv6 server to advertise/assign a
+  previously allocated (active) lease to a client that has changed subnets,
+  despite being on different shared networks.  Dynamic prefixes specifically
+  allocated in shared networks also now are not offered if the client has
+  moved.  [ISC-Bugs #21152]
+
+- Add some debugging output for use with the DDNS code. [ISC-Bugs #20916]
+
+- Fix the trace code to handle timing events better and to truncate a file
+  before using instead of overwriting it.  [ISC-Bugs #20969]
+
+- Modify the determination of the default TTL to use for DDNS updates.
+  The user may still configure the ttl via ddns-ttl.  The default for
+  both v4 and v6 is now 1/2 the (preferred) lease time with a limit.  The
+  previous defaults (1/2 lease time without a limit for v4 and a default
+  value for v6) may be used by defining USE_OLD_DDNS_TTL in site.h
+  [ISC-Bugs #21126]
+
+- libisc/libdns is now brought up to version 9.7.1rc1.  This corrects
+  three reported flaws in ISC DHCP;
+
+  o DHCP processes (dhcpd, dhclient) fail to start if one of either the
+    IPv4 or IPv6 address families is not present.  [ISC-Bugs #21122]
+
+  o Assertion failure when attempting to cancel a previously running DDNS
+    update.  [ISC-Bugs #21133]
+
+  o Compilation failure of libisc/libdns due to the use of a flexible
+    array member.  [ISC-Bugs #21316]
+
+- Add declaration for variable in debug code in alloc.c.  [ISC-Bugs #21472]
 
 - Documentation cleanup covering multiple tickets
   [ISC-Bugs #20265] [ISC-Bugs #20259] minor cleanup
@@ -808,98 +437,455 @@ by Eric Young (eay@cryptsoft.com).
 - Modify the dlpi code to accept getmsg() returning a positive value.
   [ISC-Bugs #22824]
 
-			Changes since 4.2.0b2
+! In dhclient check the data for some string options for
+  reasonableness before passing it along to the script that
+  interfaces with the OS.
+  [ISC-Bugs #23722]
+  CVE: CVE-2011-0997
 
-- Add declaration for variable in debug code in alloc.c.  [ISC-Bugs #21472]
+- DHCPv6 server now responds properly if client asks for a prefix that
+  is already assigned to a different client. [ISC-Bugs #23948]
 
-			Changes since 4.2.0b1
+- Add the option "--no-pid" to the client, relay and server code,
+  to disable writing a pid file.  Add the option "-pf pidfile"
+  to the relay to allow the user to supply the pidfile name at
+  runtime.  Add the "with-relay6-pid-file" option to configure
+  to allow the user to supply the pidfile name for the relay
+  in v6 mode at configure time.
+  [ISC-Bugs #23351] [ISC-Bugs #17541]
 
-- Prohibit including lease time information in a response to a DHCP INFORM.
-  [ISC-Bugs #21092]
+- 'dhclient' no longer waits a random interval after first starting up to
+  begin in the INIT state.  This conforms to RFC 2131, but elects not to
+  implement a 'SHOULD' direction in section 4.1. The goal of this change 
+  is to start up faster. [ISC-Bugs #19660]
+  
+- Added 'initial-delay' parameter that specifies maximum amount of time 
+  before client goes to the INIT state. The default value is 0. In previous 
+  versions of the code client could wait up to 5 seconds. The old behavior 
+  may be restored by using 'initial-delay 5;' in the client config file.
+  [ISC-Bugs #19660]
 
-! Accept a client id of length 0 while hashing.  Previously the server would
-  exit if it attempted to hash a zero length client id, providing attackers
-  with a simple denial of service attack.  [ISC-Bugs #21253]
-  CERT: VU#541921 - CVE: CVE-2010-2156
+- ICMP ping-check should now sit closer to precisely the number of seconds
+  configured (or default 1), due to making use of the new microsecond
+  scale timer internally to dhcpd.  This corrects a bug where the server
+  may immediately timeout an ICMP ping-check if it was made late in the
+  current second. [ISC-Bugs #19660]
 
-- A memory leak in ddns processing was closed.  [ISC-Bugs #21377]
+- The DHCP client will schedule renewal and rebinding events in
+  microseconds if the DHCP server provided a lease-time that would result
+  in sub-1-second timers.  This corrects a bug where a 2-second or lower
+  lease-time would cause the DHCP client to enter an infinite loop by
+  scheduling renewal at zero seconds. [ISC-Bugs #19660]
 
-- Modify the exception handling for initial context creation.  Previously
-  we would try and clean up before exiting.  This could present problems
-  when the cleanup required part of the context that wasn't available.  It
-  also didn't do much as we exited afterwards anyway.   Now we simply log
-  the error and exit. [ISC-Bugs #21093]
+- Client lease records are recorded at most once every 15 seconds.  This
+  keeps the client from filling the lease database disk quickly on very small
+  lease times. [ISC-Bugs #19660]
 
-- A bug was fixed that could cause the DHCPv6 server to advertise/assign a
-  previously allocated (active) lease to a client that has changed subnets,
-  despite being on different shared networks.  Dynamic prefixes specifically
-  allocated in shared networks also now are not offered if the client has
-  moved.  [ISC-Bugs #21152]
+- To defend against RFC 2131 non-compliant DHCP servers which fail to
+  advertise a lease-time (either mangled, or zero in value) the DHCP
+  client now adds the server to the reject list ACL and returns to INIT
+  state to hopefully find an RFC 2131 compliant server (or retry in INIT
+  forever). [ISC-Bugs #19660]
 
-- Add some debugging output for use with the DDNS code. [ISC-Bugs #20916]
+- Parameters configured to evaluate from user defined function calls can
+  now be correctly written to dhcpd.leases (as on 'on events' or dynamic
+  host records inserted via OMAPI).  [ISC-Bugs #22266]
 
-- Fix the trace code to handle timing events better and to truncate a file
-  before using instead of overwriting it.  [ISC-Bugs #20969]
+- If a 'next-server' parameter is configured in a dynamic host record via
+  OMAPI as a domain name, the syntax written to disk is now correctly parsed
+  upon restart.  [ISC-Bugs #22266]
 
-- Modify the determination of the default TTL to use for DDNS updates.
-  The user may still configure the ttl via ddns-ttl.  The default for
-  both v4 and v6 is now 1/2 the (preferred) lease time with a limit.  The
-  previous defaults (1/2 lease time without a limit for v4 and a default
-  value for v6) may be used by defining USE_OLD_DDNS_TTL in site.h
-  [ISC-Bugs #21126]
+- The DHCP server now responds to DHCPLEASEQUERY messages from agents using
+  IP addresses not covered by a subnet in configuration.  Whether or not to
+  respond to such an agent is still governed by the 'allow leasequery;'
+  configuration parameter, in the case of an agent not covered by a configured
+  subnet the root configuration area is examined. Server now also returns
+  vendor-class-id option, if client sent it. [ISC-Bugs #21094]
+  
+- Documentation fixes
+  [ISC-Bugs #17959] add text to AIX section describing how to have it send
+  responses to the all-ones address.
+  [ISC-Bugs #19615] update the includes in dhcpctl/dhcpctl.3 to be more correct
+  [ISC-Bugs #20676] update dhcpd.conf.5 to include the RFC numbers for DDNS
 
-- libisc/libdns is now brought up to version 9.7.1rc1.  This corrects
-  three reported flaws in ISC DHCP;
+- Relay no longer crashes, when DHCP packet is received over interface without
+  any IPv4 address assigned. Also extended logging message about discarding
+  packets with invalid hlen with information about relevant interface name.
+  [ISC-Bugs #22409]
 
-  o DHCP processes (dhcpd, dhclient) fail to start if one of either the
-    IPv4 or IPv6 address families is not present.  [ISC-Bugs #21122]
+- Relay now properly logs that packet was received over interface without
+  global IPv6 address [ISC-Bugs #24070]
 
-  o Assertion failure when attempting to cancel a previously running DDNS
-    update.  [ISC-Bugs #21133]
+- Linux Packet Filter interface improvement. sockaddr_pkt structure is used, 
+  rather than sockaddr. Packet ethertype is now forced to ETH_P_IP. 
+  [ISC-Bugs #18975]
 
-  o Compilation failure of libisc/libdns due to the use of a flexible
-    array member.  [ISC-Bugs #21316]
+- Minor code cleanups - but note port change for #23196
+  [ISC-Bugs #23470] - Modify when an ignore return macro is defined to
+  handle unsed error return warnings for more versions of gcc.
+  [ISC-Bugs #23196] - Modify the reply handling in the server code to
+  send to a specified port rather than to the source port for the incoming
+  message.  Sending to the source port was test code that should have
+  been removed.  The previous functionality may be restored by defining
+  REPLY_TO_SOURCE_PORT in the includes/site.h file.  We suggest you don't
+  enable this except for testing purposes.
+  [ISC-Bugs #22695] - Close a file descriptor in an error path.
+  [ISC-Bugs #19368] - Tidy up variable types in validate_port.
 
-			Changes since 4.2.0a2
+- Code cleanup: remove obsolete PROTO, KandR, INLINE and ANSI_DECL macros
+  [ISC-Bugs #13151] 
 
-- Update the fsync code to work with the changes to the DDNS code.  It now
-  uses a timer instead of noticing if there are no more packets to process.
+- Compilation problem with gcc4.5 and omshell.c resolved. [ISC-Bugs #23831]
 
-- When constructing the DNS name structure from a text string append
-  the root to relative names.  This satisfies a requirement in the DNS
-  library that names be absolute instead of relative and prevents DHCP
-  from crashing.  [ISC-Bugs #21054]
+- Client Script fixes
+  [ISC-Bugs #23045] Typos in client/scripts/openbsd
+  [ISC-Bugs #23565] In the client scripts add a zone id (interface id) if
+  the domain search address is link local.
+  [ISC-Bugs #1277] In some of the client scripts add code to handle the
+  case of the default router information being changed without the address
+  being changed.
 
-- "The LDAP Patch" that has been circulating for some time, written by
-  Brian Masney and S.Kalyanasundraram and maintained for application to
-  the DHCP-4 sources by David Cantrell has been included.  Please be
-  advised that these sources were contributed, and do not yet meet the
-  high standards we place on production sources we include by default.
-  As a result, the LDAP features are only included by using a compile-time
-  option which defaults off, and if you enable it you do so under your
-  own recognizance.  We will be improving this software over time.
-  [ISC-Bugs #17741]
+- Documentation cleanup
+  [ISC-Bugs #23326] Updated References document, several man page updates
 
-			Changes since 4.2.0a1
+- Server no longer complains about NULL pointer when configured 
+  server-identifier expression fails to evaluate. [ISC-Bugs #24547]
 
-- When using 'ignore client-updates;', the FQDN returned to the client
-  is no longer truncated to one octet.
+- Convert ISC_R_INPROGRESS status to ISC_R_SUCCESS when called from other
+  than the dispatch handler.  This fixes an issue where omshell, when
+  run from the same platform as the server, would appear to fail to
+  connect.  This is a companion to #21839.  [ISC-Bugs #23592]
 
-- Cleaned up an unused hardware address variable in nak_lease().
+- Enlarge the buffer size used by the Omshell code and some of the
+  print routines to allow for greater than 60 characters or, when
+  printing as hex strings, 20 characters.  [ISC-Bugs #22743]
 
-- Manpage entries for the ia-pd and ia-prefix options were updated to
-  reflect support for prefix delegation.
+- In Solaris 11 switch to using sockets instead of DLPI, thanks
+  to a patch form Oracle.  [ISC-Bugs #24634].
 
-- Cleaned up some compiler warnings
+- Strict checks for content of domain-name DHCPv4 option can now be 
+  configured during compilation time. Even though RFC2132 does not allow 
+  to store more than one domain in domain-name option, such behavior is 
+  now enabled by default, but this may change some time in the future.
+  See ACCEPT_LIST_IN_DOMAIN_NAME define in includes/site.h.
+  [ISC-Bugs #24167]
 
-- An optimization described in the failover protocol draft is now included,
-  which permits a DHCP server operating in communications-interrupted state
-  to 'rewind' a lease to the state most recently transmitted to its peer,
-  greatly increasing a server's endurance in communications-interrupted.
-  This is supported using a new 'rewind state' record on the dhcpd.leases
-  entry for each lease.
+- DNS Update fix. A misconfigured server could crash during DNS update
+  processing if the configuration included overlapping pools or
+  multiple fixed-address entries for a single address.  This issue
+  affected both IPv4 and IPv6. The fix allows a server to detect such
+  conditions, provides the user with extra information and recommended
+  steps to fix the problem.  If the user enables the appropriate option
+  in site.h then server will be terminated
+  [ISC-Bugs #23595]
 
-- Fix the trace code which was broken by the changes to the DDNS code.
+! Two packets were found that cause a server to halt.  The code
+  has been updated to properly process or reject the packets as
+  appropriate.  Thanks to David Zych at University of Illinois
+  for reporting this issue.  [ISC-Bugs #24960]
+  One CVE number for each class of packet.
+  CVE-2011-2748
+  CVE-2011-2749
+
+- Fix the code that checks for an existing DDNS transaction to cancel
+  when removing DDNS information, so that we will continue with the
+  processing if we have a lease even if it doesn't have an outstanding
+  transaction.  [ISC-Bugs #24682]
+
+- Add AM_MAINTAINER_MODE to configure.ac to avoid rebuilding
+  configuration files.  [ISC-Bugs #24107]
+
+- Add support for passing DDNS information to a DNS server over
+  an IPv6 address.  [ISC-Bugs #22647]
+
+- Enhanced patch for 23595 to handle IPv4 fixed addresses more
+  cleanly.  [ISC-Bugs #23595]
+
+! Add a check for a null pointer before calling the regexec function.
+  Without this check we could, under some circumstances, pass
+  a null pointer to the regexec function causing it to segfault.
+  Thanks to a report from BlueCat Networks.
+  [ISC-Bugs #26704].
+  CVE: CVE-2011-4539
+
+! Modify the DDNS handling code.  In a previous patch we added logging
+  code to the DDNS handling.  This code included a bug that caused it
+  to attempt to dereference a NULL pointer and eventually segfault.
+  While reviewing the code as we addressed this problem, we determined
+  that some of the updates to the lease structures would not work as
+  planned since the structures being updated were in the process of
+  being freed: these updates were removed.  In addition we removed an
+  incorrect call to the DDNS removal function that could cause a failure
+  during the removal of DDNS information from the DNS server.
+  Thanks to Jasper Jongmans for reporting this issue.
+  [ISC-Bugs #27078]
+  CVE: CVE-2011-4868
+
+- Fixed the code that checks if an address the server is planning
+  to hand out is in a reserved range.  This would appear as
+  the server being out of addresses in pools with particular ranges.
+  [ISC-Bugs #26498]
+
+- In the DDNS code handle error conditions more gracefully and add more
+  logging code.  The major change is to handle unexpected cancel events
+  from the DNS client code.
+  [ISC-Bugs #26287]
+
+- Tidy up the receive calls and eliminate the need for found_pkt.
+  [ISC-Bugs #25066]
+ 
+- Add support for Infiniband over sockets to the server and
+  relay code.  We've tested this on Solaris and hope to expand
+  support for Infiniband in the future.  This patch also corrects
+  some issues we found in the socket code.
+  [ISC-Bugs #24245]
+
+- Add a compile time check for the presence of the noreturn attribute
+  and use it for log_fatal if it's available.  This will help code
+  checking programs to eliminate false positives.
+  [ISC-Bugs #27539]
+
+- Fixed many compilation problems ("set, but not used" warnings) for
+  gcc 4.6 that may affect Ubuntu 11.10 users. [ISC-Bugs #27588]
+
+- Modify the code that determines if an outstanding DDNS request
+  should be cancelled.  This patch results in cancelling the
+  outstanding request less often.  It fixes the problem caused
+  by a client doing a release where  the TXT and PTR records
+  weren't removed from the DNS.
+  [ISC-BUGS #27858]
+
+- Use offsetof() instead of sizeof() to get the sizes for dhcpv6_relay_packet
+  and dhcpv6_packet in several more places.  Thanks to a report from
+  Bruno Verstuyft and Vincent Demaertelaere of Excentis.
+  [ISC-Bugs #27941]
+
+- Remove outdated note in the description of the bootp keyword about the
+  option not satisfying the requirement of failover peers for denying
+  dynamic bootp clients.
+  [ISC-bugs #28574]
+
+- Multiple items to clean up IPv6 address processing.
+  When processing an IA that we've seen check to see if the
+  addresses are usable (not in use by somebody else) before
+  handing it out.
+  When reading in leases from the file discard expired addresses.
+  When picking an address for a client include the IA ID in
+  addition to the client ID to generally pick different addresses
+  for different IAs.
+  [ISC-Bugs #23138] [ISC-Bugs #27945] [ISC-Bugs #25586]
+  [ISC-Bugs #27684]
+
+- Remove unnecessary checks in the lease query code and clean up
+  several compiler issues (some dereferences of NULL and treating
+  an int as a boolean).
+  [ISC-Bugs #26203]
+
+- Fix the NA and PD allocation code to handle the case where a client
+  provides a preference and the server doesn't have any addresses or
+  prefixes available.  Previously the server ignored the request with
+  this patch it replies with a NoAddrsAvail or NoPrefixAvail response.
+  By default the code performs according to the errata of August 2010
+  for RFC 3315 section 17.2.2; to enable the previous style see the
+  section on RFC3315_PRE_ERRATA_2010_08 in includes/site.h.  This option
+  may be removed in the future.
+  Thanks to Jiri Popelka at Red Hat for the patch.
+  [ISC-Bugs #22676]
+
+- Fix up some issues found by static analysis.
+  A potential memory leak and NULL dereference in omapi.
+  The use of a boolean test instead of a bitwise test in dst.
+  [ISC-Bugs #28941]
+
+- Rotate the lease file when running in v6 mode.
+  Thanks to Christoph Moench-Tegeder at Astaro for the
+  report and the first version of the patch.
+  [ISC-Bugs #24887]
+
+- Correct code to calculate timing values in client to compare
+  rebind value to infinity instead of renew value.
+  Thanks to Chenda Huang from H3C Technologies Co., Limited
+  for reporting this issue.
+  [ISC-Bugs #29062]
+
+- Fix some issues in the code for parsing and printing options.
+  [ISC-Bugs #22625] - properly print options that have several fields
+  followed by an array of something for example "fIa"
+  [ISC-Bugs #27289] - properly parse options in declarations that have
+  several fields followed by an array of something for example "fIa"
+  [ISC-Bugs #27296] - properly determine if we parsed a 16 or 32 bit
+  value in evaluate_numeric_expression (extract-int).
+  [ISC-Bugs #27314] - properly parse a zero length option from
+  a lease file.  Thanks to Marius Tomaschewski from SUSE for the report
+  and prototype patch for this ticket as well as ticket 27289.
+
+! Previously the server code was relaxed to allow packets with zero
+  length client ids to be processed.  Under some situations use of
+  zero length client ids can cause the server to go into an infinite
+  loop.  As such ids are not valid according to RFC 2132 section 9.14
+  the server no longer accepts them.  Client ids with a length of 1
+  are also invalid but the server still accepts them in order to
+  minimize disruption.  The restriction will likely be tightened in
+  the future to disallow ids with a length of 1.
+  Thanks to Markus Hietava of Codenomicon CROSS project for the
+  finding this issue and CERT-FI for vulnerability coordination. 
+  [ISC-Bugs #29851]
+  CVE: CVE-2012-3571
+
+! When attempting to convert a DUID from a client id option
+  into a hardware address handle unexpected client ids properly.
+  Thanks to Markus Hietava of Codenomicon CROSS project for the
+  finding this issue and CERT-FI for vulnerability coordination. 
+  [ISC-Bugs #29852]
+  CVE: CVE-2012-3570
+
+! A pair of memory leaks were found and fixed.  Thanks to
+  Glen Eustace of Massey University, New Zealand for finding
+  this issue.
+  [ISC-Bugs #30024]
+  CVE: CVE-2012-3954
+
+- Existing legacy unit-tests have been migrated to Automated Test
+  Framework (ATF). Several new tests have been developed. To enable
+  unit-tests, please use --with-atf in configure script. A Developer's
+  Guide has been added. To generate it, please use make devel in
+  the doc directory. It is currently in early stages of development,
+  but is expected to grow in the near future. [ISC-Bugs 25901]
+
+! An issue with the use of lease times was found and fixed.  Making
+  certain changes to the end time of an IPv6 lease could cause the
+  server to abort.  Thanks to Glen Eustace of Massey University,
+  New Zealand for finding this issue.
+  [ISC-Bugs #30281]
+  CVE: CVE-2012-3955
+
+- Update the memory leakage debug code to work with v6.
+  [ISC-Bugs #30297]
+
+- Relax the requirements for deleting an A or AAAA record.
+  Previously the DDNS removal code required both the A or AAAA
+  record and the TXT record to exist.  This requirement could
+  cause problems if something interrupted the removal leaving
+  the TXT record alone.  This relaxation was codified in RFC 4703.
+  [ISC-Bugs #30734]
+
+- Modify the failover code to handle incorrect peer names
+  better.  Previously the structure holding the name might
+  have been freed inappropriately in some cases and not
+  freed in other cases.
+  [ISC-Bugs #30320]
+
+- Add a configure option, enable-secs-byteorder, to deal with
+  clients that do the byte ordering on the secs field incorrectly.
+  This field should be in network byte order but some clients
+  get it wrong.  When this option is enabled the server will examine
+  the secs field and if it looks wrong (high byte non zero and low
+  byte zero) swap the bytes.  The default is disabled.  This option
+  is only useful when doing load balancing within failover.
+  [ISC-Bugs #26108]
+
+- Fix a set of issues that were discovered via a code inspection
+  tool.  Thanks to Jiri Popelka and Tomas Hozza Red Hat for the logs
+  and patches.
+  [ISC-Bugs #23833]
+
+- Parsing unquoted base64 strings improved. Parser now properly handles 
+  strings that contain reserved names. [ISC-Bugs #23048]
+
+- Modify the nak_lease function to make some attempts to find a
+  server-identifier option to use for the NAK.
+  [ISC-Bugs #25689]
+
+- The client now passes information about the options it requested
+  from the server to the script code via environment variables.
+  These variables are of the form requested_<option_name>=1 with
+  the option name being the same as used in the new_* and old_*
+  variables.
+  [ISC-Bugs #29068]
+
+- Add support for a simple check that the server id in a request message
+  to a failover peer matches the server id of the server.  This support
+  is enabled by editing the file includes/site.h and uncommenting the
+  definition for SERVER_ID_CHECK.  The option has several restrictions
+  and issues - please read the comment in the site.h file before
+  enabling it.
+  [ISC-Bugs #31463]
+
+- Tidy up some compiler issues in the debug code.
+  [ISC-Bugs #26460]
+
+- Move the dhcpd.conf exmample file to dhcpd.conf.example to avoid
+  overwriting the dhcpd.conf file when installing a new version of
+  ISC DHCP.  The user will now need to manual copy and edit the
+  dhcpd.conf file as desired.
+  [ISC-Bugs #19337]
+
+- Check the status value when trying to read from a connection to
+  see if it may have been closed.  If it appears closed don't try
+  to read from it again.  This avoids a potential busy-wait like
+  loop when the peer names are mismatched.
+  [ISC-Bugs #31231]
+
+- Remove an unused variable to keep compilers happy.
+  [ISC-Bugs #31983]
+
+- Modify test makefiles to be more similar to standard makefiles
+  and comment out a currently unused test.
+  [ISC-Bugs #32089]
+
+- Address static analysis warnings.
+  [ISC-Bugs #33510] [ISC-Bugs #33511]
+
+- Silence benign static analysis warnings.
+  [ISC-Bugs #33428]
+
+- Add check for 64-bit package for atf.
+  [ISC-Bugs #32206]
+
+- Use newer auto* tool packages and turn on RFC_3542 support on Mac OS.
+  [ISC-Bugs #26303]
+
+- Remove a variable when it isn't being used due to #ifdefs to avoid
+  a compiler warning on Solaris using GCC.
+  [ISC-Bugs #33032]
+
+- Add a check for too much whitespace in a config or lease file.
+  Thanks to Paolo Pellegrino for finding the issue and a suggestion
+  for the patch.
+  [ISC-Bugs #33351]
+
+- Fix several problems with using OMAPI to manipulate class and subclass
+  objects.
+  [ISC-Bugs #27452]
+
+- Added a sleep call after killing the old client to allow time
+  for the sockets to be cleaned.  This should allow the -r option
+  to work more consistently.
+  [ISC-Bugs #18175]
+
+- Missing files for ISC DHCP Developer's Guide are now included in
+  the release tarballs. To generate this documentation, please use
+  make devel command in doc directory. [ISC-Bugs #32767]
+
+- Update client script for use with openwrt.
+  [ISC-Bugs #29843]
+
+- Fix the socket handling for DHCPv6 clients to allow multiple instances
+  of a client on a single machine to work properly.  Previously only
+  one client would receive the packets.  Thanks to Jiri Popelka at Red Hat
+  for the bug report and a potential patch.
+  [ISC-Bugs #34784]
+
+- Added support for gentle shutdown after signal is received.
+  [ISC-Bugs #32692] [ISC-Bugs 34945]
+
+- Enhance the DHCPv6 server logging to include the addresses that are assigned
+  to the clients.
+  [ISC-Bugs #26377]
+
+- Fix an operation in the DDNS code to be a bitwise instead of logical or.
+  [ISC-Bugs #35138]
+
 
 			Changes since 4.1.0 (new features)
 
