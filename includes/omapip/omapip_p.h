@@ -278,7 +278,6 @@ OMAPI_ARRAY_TYPE_DECL(omapi_connection, omapi_connection_object_t);
 
 isc_result_t omapi_handle_clear(omapi_handle_t);
 
-extern int log_priority;
 extern int log_perror;
 extern void (*log_cleanup) (void);
 

@@ -29,6 +29,9 @@
 
 #include "dhcpd.h"
 
+/* length of line we can read from the IF file, 256 is too small in some cases */
+#define IF_LINE_LENGTH 1024
+
 #define BSD_COMP		/* needed on Solaris for SIOCGLIFNUM */
 #include <sys/ioctl.h>
 #include <errno.h>
@@ -408,7 +411,7 @@ struct iface_info {
  */
 int 
 begin_iface_scan(struct iface_conf_list *ifaces) {
-	char buf[256];
+	char buf[IF_LINE_LENGTH];
 	int len;
 	int i;
 
@@ -481,7 +484,7 @@ begin_iface_scan(struct iface_conf_list *ifaces) {
  */
 static int
 next_iface4(struct iface_info *info, int *err, struct iface_conf_list *ifaces) {
-	char buf[256];
+	char buf[IF_LINE_LENGTH];
 	int len;
 	char *p;
 	char *name;
@@ -605,7 +608,7 @@ next_iface4(struct iface_info *info, int *err, struct iface_conf_list *ifaces) {
  */
 static int
 next_iface6(struct iface_info *info, int *err, struct iface_conf_list *ifaces) {
-	char buf[256];
+	char buf[IF_LINE_LENGTH];
 	int len;
 	char *p;
 	char *name;
