@@ -5951,7 +5951,7 @@ parse_server_duid_conf(struct parse *cfile) {
 			}
 			duid.data = (unsigned char *)duid.buffer->data;
 			putUShort(duid.buffer->data, DUID_LL);
- 			putULong(duid.buffer->data + 2, ll_type);
+ 			putUShort(duid.buffer->data + 2, ll_type);
 			memcpy(duid.buffer->data + 4, 
 			       ll_addr.data, ll_addr.len);
 
@@ -6015,7 +6015,7 @@ parse_server_duid_conf(struct parse *cfile) {
 			}
 			duid.data = (unsigned char *)duid.buffer->data;
 			putUShort(duid.buffer->data, DUID_LLT);
- 			putULong(duid.buffer->data + 2, ll_type);
+ 			putUShort(duid.buffer->data + 2, ll_type);
  			putULong(duid.buffer->data + 4, llt_time);
 			memcpy(duid.buffer->data + 8, 
 			       ll_addr.data, ll_addr.len);

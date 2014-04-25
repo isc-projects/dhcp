@@ -888,6 +888,9 @@ intern(char *atom, enum dhcp_token dfv) {
 			if (!strcasecmp(atom + 7, "list"))
 				return DOMAIN_LIST;
 		}
+		if (!strcasecmp (atom + 1, "o-forward-updates"))
+			return DO_FORWARD_UPDATE;
+		/* do-forward-update is included for historical reasons */
 		if (!strcasecmp (atom + 1, "o-forward-update"))
 			return DO_FORWARD_UPDATE;
 		if (!strcasecmp (atom + 1, "ebug"))

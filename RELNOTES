@@ -54,6 +54,17 @@ by Eric Young (eay@cryptsoft.com).
 
 			Changes since 4.3.0
 
+- Tidy up several small tickets
+  Correct parsing of DUID from config file, previously the LL type
+  was put in the wrong place in the DUID string.
+  [ISC-Bugs #20962] 
+  Add code to parse "do-forward-updates" as well as "do-forward-update"
+  Thanks to Jiri Popelka at Red Hat.
+  [ISC-Bugs #31328]
+  Remove log_priority as it isn't currently used.
+  [ISC-Bugs #33397]
+  Increase the size of the buffer used for reading interface information.
+  [ISC-Bugs #34858]
 
 			Changes since 4.3.0rc1
 

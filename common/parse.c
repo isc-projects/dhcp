@@ -5564,10 +5564,10 @@ int parse_warn (struct parse *cfile, const char *fmt, ...)
 	lexbuf [lix] = 0;
 
 #ifndef DEBUG
-	syslog (log_priority | LOG_ERR, "%s", mbuf);
-	syslog (log_priority | LOG_ERR, "%s", cfile -> token_line);
+	syslog (LOG_ERR, "%s", mbuf);
+	syslog (LOG_ERR, "%s", cfile -> token_line);
 	if (cfile -> lexchar < 81)
-		syslog (log_priority | LOG_ERR, "%s^", lexbuf);
+		syslog (LOG_ERR, "%s^", lexbuf);
 #endif
 
 	if (log_perror) {

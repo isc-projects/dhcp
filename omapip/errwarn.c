@@ -43,7 +43,6 @@ int log_perror = -1;
 #else
 int log_perror = 1;
 #endif
-int log_priority;
 void (*log_cleanup) (void);
 
 #define CVT_BUF_MAX 1023
@@ -66,7 +65,7 @@ void log_fatal (const char * fmt, ... )
   va_end (list);
 
 #ifndef DEBUG
-  syslog (log_priority | LOG_ERR, "%s", mbuf);
+  syslog (LOG_ERR, "%s", mbuf);
 #endif
 
   /* Also log it to stderr? */
@@ -105,7 +104,7 @@ int log_error (const char * fmt, ...)
   va_end (list);
 
 #ifndef DEBUG
-  syslog (log_priority | LOG_ERR, "%s", mbuf);
+  syslog (LOG_ERR, "%s", mbuf);
 #endif
 
   if (log_perror) {
@@ -132,7 +131,7 @@ int log_info (const char *fmt, ...)
   va_end (list);
 
 #ifndef DEBUG
-  syslog (log_priority | LOG_INFO, "%s", mbuf);
+  syslog (LOG_INFO, "%s", mbuf);
 #endif
 
   if (log_perror) {
@@ -159,7 +158,7 @@ int log_debug (const char *fmt, ...)
   va_end (list);
 
 #ifndef DEBUG
-  syslog (log_priority | LOG_DEBUG, "%s", mbuf);
+  syslog (LOG_DEBUG, "%s", mbuf);
 #endif
 
   if (log_perror) {
