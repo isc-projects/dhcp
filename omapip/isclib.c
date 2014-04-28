@@ -144,6 +144,15 @@ dhcp_context_create(int flags,
 		gettimeofday(&cur_tv, (struct timezone *)0);
 		isc_random_seed(cur_tv.tv_sec);
 
+		/* we need to create the memory context before
+		 * the lib inits in case we aren't doing NSUPDATE
+		 * in which case dst needs a memory context
+		 */
+		result = isc_mem_create(0, 0, &dhcp_gbl_ctx.mctx);
+		if (result != ISC_R_SUCCESS)
+			goto cleanup;
+
+
 #if defined (NSUPDATE)
 		result = dns_lib_init();
 		if (result != ISC_R_SUCCESS)
@@ -156,9 +165,6 @@ dhcp_context_create(int flags,
 			goto cleanup;
 
 #endif
-		result = isc_mem_create(0, 0, &dhcp_gbl_ctx.mctx);
-		if (result != ISC_R_SUCCESS)
-			goto cleanup;
 
 		result = isc_appctx_create(dhcp_gbl_ctx.mctx,
 					   &dhcp_gbl_ctx.actx);

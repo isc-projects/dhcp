@@ -31,6 +31,8 @@
  * from rfc 4701
  */
 
+#if defined (NSUPDATE)
+
 char *name_1 = "chi6.example.com"; 
 u_int8_t clid_1[] = {0x00, 0x01, 0x00, 0x06, 0x41, 0x2d, 0xf1, 0x66, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06};
 u_int8_t std_result_1[] = {0x00, 0x02, 0x01, 0x63, 0x6f, 0xc0, 0xb8, 0x27, 0x1c,
@@ -173,3 +175,19 @@ ATF_TP_ADD_TCS(tp)
 
     return (atf_no_error());
 }
+
+#else /* NSUPDATE */
+ATF_TC(untested);
+ATF_TC_HEAD(untested, tc) {
+    atf_tc_set_md_var(tc, "descr", "skipping dns test");
+}
+ATF_TC_BODY(untested, tc) {
+    IGNORE_UNUSED(tc);
+    atf_tc_skip("NSUPDATE is not defined");
+}
+ATF_TP_ADD_TCS(tp) {
+    ATF_TP_ADD_TC(tp, untested);
+
+    return (atf_no_error());
+}
+#endif /* NSUPDATE */
