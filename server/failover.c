@@ -1979,6 +1979,7 @@ isc_result_t dhcp_failover_peer_state_changed (dhcp_failover_state_t *state,
 	}
 
 	state -> partner.state = new_state;
+	state -> partner.stos = cur_time;
 
 	log_info ("failover peer %s: peer moves from %s to %s",
 		  state -> name,
