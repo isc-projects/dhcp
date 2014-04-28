@@ -76,6 +76,12 @@ by Eric Young (eay@cryptsoft.com).
   heard from this partner) field when updating the state in failover.
   [ISC-Bugs #35549]
 
+- Modify the overload processing to allow space for the remote agent ID
+  [ISC-Bugs #35569]
+  Handle the ordering of the SUBNET_MASK option even if it is the last
+  option in the list.
+  [ISC-Bugs #24580]
+
 			Changes since 4.2.6rc1
 
 - None
