@@ -5,7 +5,7 @@ static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/dst_api.c,v 1.9.6.1 
 /*
  * Portions Copyright (c) 1995-1998 by Trusted Information Systems, Inc.
  * Portions Copyright (c) 2007,2009 by Internet Systems Consortium, Inc. ("ISC")
- * Portions Copyright (c) 2012-2013 by Internet Systems Consortium, Inc. ("ISC")
+ * Portions Copyright (c) 2012-2014 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -112,6 +112,10 @@ dst_init()
 		} else {
 			char *dp = (char *) malloc(len + 2);
 			int l;
+			if (dp == NULL) {
+				EREPORT(("malloc() failed for dp\n"));
+				return;
+			}
 			memcpy(dp, s, len + 1);
 			l = strlen (dp);
 			if (dp[l - 1] != '/') {
@@ -180,6 +184,11 @@ dst_s_get_key_struct(const char *name, const int alg, const u_int32_t flags,
 
 	memset(new_key, 0, sizeof(*new_key));
 	new_key->dk_key_name = strdup(name);
+	if (new_key->dk_key_name == NULL) {
+		EREPORT(("Unable to duplicate name for key"));
+		free(new_key);
+		return (NULL);
+	}
 	new_key->dk_alg = alg;
 	new_key->dk_flags = flags;
 	new_key->dk_proto = protocol;
@@ -903,6 +912,10 @@ dst_s_read_private_key_file(char *name, DST_KEY *pk_key, unsigned in_id,
 	if (pk_key->dk_key_name && !strcmp(pk_key->dk_key_name, name))
 		SAFE_FREE2(pk_key->dk_key_name, strlen(pk_key->dk_key_name));
 	pk_key->dk_key_name = (char *) strdup(name);
+	if (pk_key->dk_key_name == NULL) {
+		EREPORT(("Unable to duplicate name for key"));
+		goto fail;
+	}
 
 	/* allocate and fill in key structure */
 	if (pk_key->dk_func == NULL || pk_key->dk_func->from_file_fmt == NULL)
@@ -1014,7 +1027,7 @@ dst_free_key(DST_KEY *f_key)
 			 f_key->dk_alg));
 	}
 	if (f_key->dk_KEY_struct) {
-		SAFE_FREE(f_key->dk_KEY_struct);
+		SAFE_FREE2(f_key->dk_KEY_struct, sizeof(f_key->dk_KEY_struct));
 	}
 	if (f_key->dk_key_name)
 		SAFE_FREE(f_key->dk_key_name);
@@ -1069,6 +1082,10 @@ dst_random(const int mode, unsigned wanted, u_char *outran)
 	switch (mode) {
 	case DST_RAND_SEMI: 
 		bp = buff = (u_int32_t *) malloc(wanted+sizeof(u_int32_t));
+		if (bp == NULL) {
+			EREPORT(("malloc() failed for buff in function dst_random\n"));
+			return (0);
+		}
 		for (i = 0; i < wanted; i+= sizeof(u_int32_t), bp++) {
 			*bp = dst_s_quick_random(i);
 		}

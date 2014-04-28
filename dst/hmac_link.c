@@ -5,7 +5,7 @@ static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/hmac_link.c,v 1.5.6.
 /*
  * Portions Copyright (c) 1995-1998 by Trusted Information Systems, Inc.
  * Portions Copyright (c) 2007,2009 by Internet Systems Consortium, Inc. ("ISC")
- * Portions Copyright (c) 2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Portions Copyright (c) 2012,2014 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -355,6 +355,9 @@ dst_hmac_md5_key_from_file_format(DST_KEY *dkey, const char *buff,
 		return (-4);
 	len = eol - p;
 	tmp = malloc(len + 2);
+	if (tmp == NULL)
+		return (-5);
+
 	memcpy(tmp, p, len);
 	*(tmp + len) = 0x0;
 	key_len = b64_pton((char *)tmp, key, HMAC_LEN+1);	/* see above */
@@ -447,6 +450,8 @@ dst_hmac_md5_generate_key(DST_KEY *key, const int nothing)
 	
 	len = size > 64 ? 64 : size;
 	buff = malloc(len+8);
+	if (buff == NULL)
+		return (-1);
 
 	n = dst_random(DST_RAND_SEMI, len, buff);
 	n += dst_random(DST_RAND_KEY, len, buff);
