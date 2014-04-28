@@ -82,6 +82,10 @@ by Eric Young (eay@cryptsoft.com).
 - Fix some minor issues in the dst code.
   [ISC-Bugs #34172]
 
+- Update the partner's stos (start time of state, basically when we last
+  heard from this partner) field when updating the state in failover.
+  [ISC-Bugs #35549]
+
 			Changes since 4.1-ESV-R9rc1
 
 - None
