@@ -2,7 +2,7 @@
 static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/prandom.c,v 1.10 2012/03/09 11:18:13 tomasz Exp $";
 #endif
 /*
- * Portions Copyright (c) 2012,2013 by Internet Systems Consortium, Inc. ("ISC")
+ * Portions Copyright (c) 2012,2013-2014 by Internet Systems Consortium, Inc. ("ISC")
  * Portions Copyright (c) 2007,2009 by Internet Systems Consortium, Inc. ("ISC")
  * Portions Copyright (c) 1995-1998 by Trusted Information Systems, Inc.
  *
@@ -549,6 +549,10 @@ do_hash(dst_work *work, prand_hash *hash, const u_char *input, unsigned size)
 	if (hash->step > 1) {	/* if using subset of input data */
 		tmp_size = size / hash->step + 2;
 		abuf = tp = malloc(tmp_size);
+		/* no good return code but at least don't step on things */
+		if (tp == NULL) {
+			return (0);
+		}
 		tmp = tp;
 		for (cnt = 0, i = hash->curr; i < size; i += hash->step, cnt++)
 			*(tp++) = input[i];

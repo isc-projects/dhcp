@@ -74,6 +74,9 @@ by Eric Young (eay@cryptsoft.com).
   Popelka at Red Hat.
   [ISC-Bugs #31892]
 
+- Fix some minor issues in the dst code.
+  [ISC-Bugs #34172]
+
 			Changes since 4.3.0rc1
 
 - None
