@@ -69,6 +69,9 @@ by Eric Young (eay@cryptsoft.com).
 - Fix some minor issues in the dst code.
   [ISC-Bugs #34172]
 
+- Properly #ifdef functions so that the code can compile without NSUPDATE
+  [ISC-Bugs #35058]
+
 			Changes since 4.2.6rc1
 
 - None

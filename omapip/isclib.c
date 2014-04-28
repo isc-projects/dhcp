@@ -1,5 +1,5 @@
 /*
- * Copyright(c) 2009-2010,2013 by Internet Systems Consortium, Inc.("ISC")
+ * Copyright(c) 2009-2010,2013-2014 by Internet Systems Consortium, Inc.("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -90,15 +90,25 @@ dhcp_context_create(void) {
 	gettimeofday(&cur_tv, (struct timezone *)0);
 	isc_random_seed(cur_tv.tv_sec);
 
+	/* we need to create the memory context before
+	 * the lib inits in case we aren't doing NSUPDATE
+	 * in which case dst needs a memory context
+	 */
+	result = isc_mem_create(0, 0, &dhcp_gbl_ctx.mctx);
+	if (result != ISC_R_SUCCESS)
+		goto cleanup;
+
 #if defined (NSUPDATE)
 	result = dns_lib_init();
 	if (result != ISC_R_SUCCESS)
 		goto cleanup;
-#endif
-
-	result = isc_mem_create(0, 0, &dhcp_gbl_ctx.mctx);
+#else
+	/* The dst library is inited as part of dns_lib_init, we don't
+	 * need it if NSUPDATE is enabled */
+	result = dst_lib_init(dhcp_gbl_ctx.mctx, NULL, 0);
 	if (result != ISC_R_SUCCESS)
 		goto cleanup;
+#endif
 
 	result = isc_appctx_create(dhcp_gbl_ctx.mctx, &dhcp_gbl_ctx.actx);
 	if (result != ISC_R_SUCCESS)
@@ -142,13 +152,6 @@ dhcp_context_create(void) {
 				    &dhcp_gbl_ctx.dnsclient);
 	if (result != ISC_R_SUCCESS)
 		goto cleanup;
-#else
-	/* The dst library is inited as part of dns_lib_init, we don't
-	 * need it if NSUPDATE is enabled */
-	result = dst_lib_init(dhcp_gbl_ctx.mctx, NULL, 0);
-	if (result != ISC_R_SUCCESS)
-		goto cleanup;
-
 #endif
 	return(ISC_R_SUCCESS);
 
