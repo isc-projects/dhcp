@@ -58,6 +58,9 @@ by Eric Young (eay@cryptsoft.com).
   Increase the size of the buffer used for reading interface information.
   [ISC-Bugs #34858]
 
+- Remove an extra set of the msg_controllen variable.
+  [ISC-Bugs #21035]
+
 			Changes since 4.2.6rc1
 
 - None

@@ -819,7 +819,6 @@ ssize_t send_packet6(struct interface_info *interface,
 	pktinfo = (struct in6_pktinfo *)CMSG_DATA(cmsg);
 	memset(pktinfo, 0, sizeof(*pktinfo));
 	pktinfo->ipi6_ifindex = ifindex;
-	m.msg_controllen = cmsg->cmsg_len;
 
 	result = sendmsg(interface->wfdesc, &m, 0);
 	if (result < 0) {
