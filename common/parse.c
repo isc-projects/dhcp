@@ -2815,27 +2815,31 @@ int parse_zone (struct dns_zone *zone, struct parse *cfile)
 		    break;
 
 		  case KEY:
-		    skip_token(&val, (unsigned *)0, cfile);
-		    token = peek_token (&val, (unsigned *)0, cfile);
+		    skip_token(&val, NULL, cfile);
+		    token = peek_token(&val, NULL, cfile);
 		    if (token == STRING) {
-			    skip_token(&val, (unsigned *)0, cfile);
-			    key_name = (char *)0;
+			    skip_token(&val, NULL, cfile);
+			    key_name = NULL;
 		    } else {
-			    key_name = parse_host_name (cfile);
+			    key_name = parse_host_name(cfile);
 			    if (!key_name) {
-				    parse_warn (cfile, "expecting key name.");
-				    skip_to_semi (cfile);
-				    return 0;
+				    parse_warn(cfile, "expecting key name.");
+				    skip_to_semi(cfile);
+				    return (0);
 			    }
 			    val = key_name;
 		    }
-		    if (omapi_auth_key_lookup_name (&zone -> key, val) !=
+		    if (zone->key) {
+			    log_fatal("Multiple key definitions for zone %s.",
+				      zone->name);
+		    }
+		    if (omapi_auth_key_lookup_name(&zone->key, val) !=
 			ISC_R_SUCCESS)
-			    parse_warn (cfile, "unknown key %s", val);
+			    parse_warn(cfile, "unknown key %s", val);
 		    if (key_name)
-			    dfree (key_name, MDL);
-		    if (!parse_semi (cfile))
-			    return 0;
+			    dfree(key_name, MDL);
+		    if (!parse_semi(cfile))
+			    return (0);
 		    break;
 		    
 		  default:
@@ -2844,12 +2848,12 @@ int parse_zone (struct dns_zone *zone, struct parse *cfile)
 	    }
 	} while (!done);
 
-	token = next_token (&val, (unsigned *)0, cfile);
+	token = next_token(&val, NULL, cfile);
 	if (token != RBRACE) {
-		parse_warn (cfile, "expecting right brace.");
-		return 0;
+		parse_warn(cfile, "expecting right brace.");
+		return (0);
 	}
-	return 1;
+	return (1);
 }
 
 /* key-statements :== key-statement |
