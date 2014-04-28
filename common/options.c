@@ -623,7 +623,10 @@ cons_options(struct packet *inpacket, struct dhcp_packet *outpacket,
 	 * Set offsets for buffer data to be copied into filename
 	 * and servername fields 
 	 */
-	mb_max = mb_size;
+	if (mb_size > agent_size)
+		mb_max = mb_size - agent_size;
+	else
+		mb_max = mb_size;
 
 	if (overload_avail & 1) {
 		of1 = mb_max;
@@ -1161,7 +1164,7 @@ store_options(int *ocount,
 	/* Eliminate duplicate options from the parameter request list.
 	 * Enforce RFC-mandated ordering of options that are present.
 	 */
-	for (i = 0; i < priority_len - 1; i++) {
+	for (i = 0; i < priority_len; i++) {
 		/* Eliminate duplicates. */
 		tto = 0;
 		for (ix = i + 1; ix < priority_len + tto; ix++) {
