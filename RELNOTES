@@ -69,6 +69,11 @@ by Eric Young (eay@cryptsoft.com).
 - Remove an extra set of the msg_controllen variable.
   [ISC-Bugs #21035]
 
+- Add a more understandable error message if a configuration attempts
+  to add multiple keys for a single zone.  Thanks to a patch from Jiri
+  Popelka at Red Hat.
+  [ISC-Bugs #31892]
+
 			Changes since 4.3.0rc1
 
 - None
