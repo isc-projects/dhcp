@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2013 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2006-2014 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -677,12 +677,14 @@ static const int required_opts[] = {
 	D6O_PREFERENCE,
 	0
 };
+#if defined (RFC3315_PRE_ERRATA_2010_08)
 static const int required_opts_NAA[] = {
 	D6O_CLIENTID,
 	D6O_SERVERID,
 	D6O_STATUS_CODE,
 	0
 };
+#endif /* defined (RFC3315_PRE_ERRATA_2010_08) */
 static const int required_opts_solicit[] = {
 	D6O_CLIENTID,
 	D6O_SERVERID,

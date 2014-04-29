@@ -82,6 +82,9 @@ by Eric Young (eay@cryptsoft.com).
   option in the list.
   [ISC-Bugs #24580]
 
+- #ifdef variables used in RFC3315_PRE_ERRATA code.
+  [ISC-Bugs #28938]
+
 			Changes since 4.2.6rc1
 
 - None
