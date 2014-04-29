@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2013 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2006-2014 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -683,12 +683,6 @@ static const int required_opts[] = {
 	D6O_PREFERENCE,
 	0
 };
-static const int required_opts_NAA[] = {
-	D6O_CLIENTID,
-	D6O_SERVERID,
-	D6O_STATUS_CODE,
-	0
-};
 static const int required_opts_solicit[] = {
 	D6O_CLIENTID,
 	D6O_SERVERID,
@@ -1312,9 +1306,6 @@ lease_to_client(struct data_string *reply_ret,
 	static struct reply_state reply;
 	struct option_cache *oc;
 	struct data_string packet_oro;
-#if defined (RFC3315_PRE_ERRATA_2010_08)
-	isc_boolean_t no_resources_avail = ISC_FALSE;
-#endif
 	int i;
 
 	memset(&packet_oro, 0, sizeof(packet_oro));
@@ -1397,15 +1388,6 @@ lease_to_client(struct data_string *reply_ret,
 		if ((status != ISC_R_SUCCESS) &&
 		    (status != ISC_R_NORESOURCES))
 			goto exit;
-
-#if defined (RFC3315_PRE_ERRATA_2010_08)
-		/*
-		 * If any address cannot be given to any IA, then set the
-		 * NoAddrsAvail status code.
-		 */
-		if (reply.client_resources == 0)
-			no_resources_avail = ISC_TRUE;
-#endif
 	}
 	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_IA_TA);
 	for (; oc != NULL ; oc = oc->next) {
@@ -1424,15 +1406,6 @@ lease_to_client(struct data_string *reply_ret,
 		if ((status != ISC_R_SUCCESS) &&
 		    (status != ISC_R_NORESOURCES))
 			goto exit;
-
-#if defined (RFC3315_PRE_ERRATA_2010_08)
-		/*
-		 * If any address cannot be given to any IA, then set the
-		 * NoAddrsAvail status code.
-		 */
-		if (reply.client_resources == 0)
-			no_resources_avail = ISC_TRUE;
-#endif
 	}
 
 	/* Same for IA_PD's. */
@@ -1508,6 +1481,9 @@ lease_to_client(struct data_string *reply_ret,
 	 * the user, a Server Identifier option with the server's DUID,
 	 * and a Client Identifier option with the client's DUID.
 	 *
+	 * This has been updated by an errata such that the server
+	 * can always send an IA.
+	 *
 	 * Section 18.2.1 (Request):
 	 *
 	 * If the server cannot assign any addresses to an IA in the
@@ -1522,51 +1498,7 @@ lease_to_client(struct data_string *reply_ret,
 	 * the server.
 	 * Sends a Renew/Rebind if the IA is not in the Reply message.
 	 */
-#if defined (RFC3315_PRE_ERRATA_2010_08)
-	if (no_resources_avail && (reply.ia_count != 0) &&
-	    (reply.packet->dhcpv6_msg_type == DHCPV6_SOLICIT))
-	{
-		/* Set the NoAddrsAvail status code. */
-		if (!set_status_code(STATUS_NoAddrsAvail,
-				     "No addresses available for this "
-				     "interface.", reply.opt_state)) {
-			log_error("lease_to_client: Unable to set "
-				  "NoAddrsAvail status code.");
-			goto exit;
-		}
 
-		/* Rewind the cursor to the start. */
-		reply.cursor = REPLY_OPTIONS_INDEX;
-
-		/*
-		 * Produce an advertise that includes only:
-		 *
-		 * Status code.
-		 * Server DUID.
-		 * Client DUID.
-		 */
-		reply.buf.reply.msg_type = DHCPV6_ADVERTISE;
-		reply.cursor += store_options6((char *)reply.buf.data +
-							reply.cursor,
-					       sizeof(reply.buf) -
-					       		reply.cursor,
-					       reply.opt_state, reply.packet,
-					       required_opts_NAA,
-					       NULL);
-	} else {
-		/*
-		 * Having stored the client's IA's, store any options that
-		 * will fit in the remaining space.
-		 */
-		reply.cursor += store_options6((char *)reply.buf.data +
-							reply.cursor,
-					       sizeof(reply.buf) -
-							reply.cursor,
-					       reply.opt_state, reply.packet,
-					       required_opts_solicit,
-					       &packet_oro);
-	}
-#else /* defined (RFC3315_PRE_ERRATA_2010_08) */
 	/*
 	 * Having stored the client's IA's, store any options that
 	 * will fit in the remaining space.
@@ -1576,7 +1508,6 @@ lease_to_client(struct data_string *reply_ret,
 				       reply.opt_state, reply.packet,
 				       required_opts_solicit,
 				       &packet_oro);
-#endif /* defined (RFC3315_PRE_ERRATA_2010_08) */
 
 	/* Return our reply to the caller. */
 	reply_ret->len = reply.cursor;

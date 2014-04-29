@@ -90,6 +90,11 @@ by Eric Young (eay@cryptsoft.com).
   option in the list.
   [ISC-Bugs #24580]
 
+- Remove the code that allows a server to follow RFC3315 instead of
+  the subsequent errata from August 2010 when determining which IAs
+  to include if no addresses will be assigned.
+
+
 			Changes since 4.3.0rc1
 
 - None
