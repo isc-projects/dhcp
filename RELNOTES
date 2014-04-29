@@ -93,7 +93,10 @@ by Eric Young (eay@cryptsoft.com).
 - Remove the code that allows a server to follow RFC3315 instead of
   the subsequent errata from August 2010 when determining which IAs
   to include if no addresses will be assigned.
+  [ISC-Bugs #28938]
 
+- Remove unused RCSID tags.
+  [ISC-Bugs #35846]
 
 			Changes since 4.3.0rc1
 
