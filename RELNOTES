@@ -95,6 +95,9 @@ by Eric Young (eay@cryptsoft.com).
 - #ifdef variables used in RFC3315_PRE_ERRATA code.
   [ISC-Bugs #28938]
 
+- Remove unused RCSID tags.
+  [ISC-Bugs #35846]
+
 			Changes since 4.1-ESV-R9rc1
 
 - None

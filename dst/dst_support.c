@@ -1,10 +1,7 @@
-static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/dst_support.c,v 1.4 2007/12/06 00:50:22 dhankins Exp $";
-
-
 /*
  * Portions Copyright (c) 1995-1998 by Trusted Information Systems, Inc.
  * Portions Copyright (c) 2007,2009 by Internet Systems Consortium, Inc. ("ISC")
- * Portions Copyright (c) 2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Portions Copyright (c) 2012,2014 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
