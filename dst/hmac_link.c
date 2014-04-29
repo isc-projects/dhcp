@@ -1,7 +1,4 @@
 #ifdef HMAC_MD5
-#ifndef LINT
-static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/hmac_link.c,v 1.5.6.1 2009/11/20 01:49:01 sar Exp $";
-#endif
 /*
  * Portions Copyright (c) 1995-1998 by Trusted Information Systems, Inc.
  * Portions Copyright (c) 2007,2009 by Internet Systems Consortium, Inc. ("ISC")

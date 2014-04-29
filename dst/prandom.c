@@ -1,8 +1,5 @@
-#ifndef LINT
-static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/prandom.c,v 1.8.6.2 2012/03/09 11:28:11 tomasz Exp $";
-#endif
 /*
- * Portions Copyright (c) 2012,2013-2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Portions Copyright (c) 2012-2014 by Internet Systems Consortium, Inc. ("ISC")
  * Portions Copyright (c) 2007,2009 by Internet Systems Consortium, Inc. ("ISC")
  * Portions Copyright (c) 1995-1998 by Trusted Information Systems, Inc.
  *
