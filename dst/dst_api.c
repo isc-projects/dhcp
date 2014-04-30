@@ -1022,7 +1022,12 @@ dst_free_key(DST_KEY *f_key)
 			 f_key->dk_alg));
 	}
 	if (f_key->dk_KEY_struct) {
-		SAFE_FREE2(f_key->dk_KEY_struct, sizeof(*f_key->dk_KEY_struct));
+		/* 
+		 * We can't used SAFE_FREE* here as we do not know the size
+		 * of the structure, so no way to zero it.
+		 */
+		free(f_key->dk_KEY_struct);
+		f_key->dk_KEY_struct = NULL;
 	}
 	if (f_key->dk_key_name)
 		SAFE_FREE(f_key->dk_key_name);
