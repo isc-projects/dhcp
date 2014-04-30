@@ -98,6 +98,11 @@ by Eric Young (eay@cryptsoft.com).
 - Remove unused RCSID tags.
   [ISC-Bugs #35846]
 
+- Correct the v6 client timing code.  When doing the timing backoff
+  for MRT limit it to MRD.
+  Thanks to Jiri Popelka at Red Hat for the bug and fix.
+  [ISC-Bugs #21238
+
 			Changes since 4.1-ESV-R9rc1
 
 - None
