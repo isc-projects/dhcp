@@ -1,7 +1,7 @@
 /* dhc6.c - DHCPv6 client routines. */
 
 /*
- * Copyright (c) 2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2012-2014 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2006-2010 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -363,7 +363,7 @@ dhc6_retrans_init(struct client_state *client)
 static void
 dhc6_retrans_advance(struct client_state *client)
 {
-	struct timeval elapsed;
+	struct timeval elapsed, elapsed_plus_rt;
 
 	/* elapsed = cur - start */
 	elapsed.tv_sec = cur_tv.tv_sec - client->start_time.tv_sec;
@@ -380,6 +380,12 @@ dhc6_retrans_advance(struct client_state *client)
 		elapsed.tv_sec += 1;
 		elapsed.tv_usec -= 1000000;
 	}
+	/*
+	 * Save what the time will be after the current RT to determine
+	 * what the delta to MRD will be.
+	 */
+	elapsed_plus_rt.tv_sec = elapsed.tv_sec;
+	elapsed_plus_rt.tv_usec = elapsed.tv_usec;
 
 	/*
 	 * RT for each subsequent message transmission is based on the previous
@@ -418,12 +424,16 @@ dhc6_retrans_advance(struct client_state *client)
 	}
 	if (elapsed.tv_sec >= client->MRD) {
 		/*
-		 * wake at RT + cur = start + MRD
+		 * The desired RT is the time that will be remaining in MRD
+		 * when the current timeout finishes.  We then have 
+		 * desired RT = MRD - (elapsed time + previous RT); or
+		 * desired RT = MRD - elapsed_plut_rt;
 		 */
-		client->RT = client->MRD +
-			(client->start_time.tv_sec - cur_tv.tv_sec);
-		client->RT = client->RT * 100 +
-			(client->start_time.tv_usec - cur_tv.tv_usec) / 10000;
+		client->RT = client->MRD - elapsed_plus_rt.tv_sec;
+		client->RT = (client->RT * 100) -
+			(elapsed_plus_rt.tv_usec / 10000);
+		if (client->RT < 0)
+			client->RT = 0;
 	}
 	client->txcount++;
 }
@@ -1500,7 +1510,7 @@ check_timing6 (struct client_state *client, u_int8_t msg_type,
 	}
 
 	/* Check if finished (-1 argument). */
-	if ((client->MRD != 0) && (elapsed.tv_sec > client->MRD)) {
+	if ((client->MRD != 0) && (elapsed.tv_sec >= client->MRD)) {
 		log_info("Max retransmission duration exceeded.");
 		return(CHK_TIM_MRD_EXCEEDED);
 	}
