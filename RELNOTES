@@ -133,6 +133,12 @@ by Eric Young (eay@cryptsoft.com).
   When processing a "--version" request don't output the version information
   to syslog.
 
+- Add the "enable-log-pid" option to the configure script.  When enabled
+  this causes the client, server and relay programs to include the PID
+  number in syslog messages.
+  Thanks to Marius Tomaschewski for the suggestion and proto-patch.
+  [ISC-Bugs #29713]
+
 			Changes since 4.3.0rc1
 
 - None

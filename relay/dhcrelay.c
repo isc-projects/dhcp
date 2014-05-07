@@ -197,7 +197,7 @@ main(int argc, char **argv) {
 	else if (fd != -1)
 		close(fd);
 
-	openlog("dhcrelay", LOG_NDELAY, LOG_DAEMON);
+	openlog("dhcrelay", DHCP_LOG_OPTIONS, LOG_DAEMON);
 
 #if !defined(DEBUG)
 	setlogmask(LOG_UPTO(LOG_INFO));
