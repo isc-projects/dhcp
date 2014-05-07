@@ -1026,6 +1026,7 @@ struct client_lease {
 	unsigned int is_bootp: 1;  /* If set, lease was acquired with BOOTP. */
 
 	struct option_state *options;	     /* Options supplied with lease. */
+	struct iaddr next_srv_addr;	/* Address of the next server to use */
 };
 
 /* DHCPv6 lease structures */

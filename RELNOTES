@@ -93,6 +93,21 @@ by Eric Young (eay@cryptsoft.com).
   Thanks to Jiri Popelka at Red Hat for the bug and fix.
   [ISC-Bugs #21238
 
+- Some minor cleanups in the client code
+  In addition to checking for dhcpc check for bootpc in the services list
+  [ISC-Bugs #18933]
+  Correct the client code to only try to get a lease once when the
+  given the "-1" argument.
+  Thanks to Jiri Popelka at Red Hat for the bug and fix.
+  [ISC-Bugs #26735]
+  When asked for the version don't send the output to syslog.
+  [ISC-Bugs #29772]
+  Add the next server information to the environment variables for
+  use by the client script.  In order to avoid changing the client
+  lease file the next server information isn't written to it.
+  Thanks to Tomas Hozza at Red Hat for the suggestion and a prototype fix.
+  [ISC-Bugs #33098]
+
 			Changes since 4.2.6rc1
 
 - None
