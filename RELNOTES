@@ -123,6 +123,16 @@ by Eric Young (eay@cryptsoft.com).
   Thanks to Tomas Hozza at Red Hat for the suggestion and a prototype fix.
   [ISC-Bugs #33098]
 
+- Several updates to the dhcp server code
+  When not in quiet mode print out the files being used.
+  [ISC-Bugs #17551]
+  As accessing some pid files may require privileges move the dropping
+  of permission bits due to the paranoia patch to be after the pid code.
+  Thanks to Jiri Popelka at Red Hat for the bug and fix.
+  [ISC-Bugs #25806]
+  When processing a "--version" request don't output the version information
+  to syslog.
+
 			Changes since 4.3.0rc1
 
 - None

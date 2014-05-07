@@ -308,7 +308,13 @@ main(int argc, char **argv) {
 			local_family_set = 1;
 #endif /* DHCPv6 */
 		} else if (!strcmp (argv [i], "--version")) {
-			log_info("isc-dhcpd-%s", PACKAGE_VERSION);
+			const char vstring[] = "isc-dhcpd-";
+			IGNORE_RET(write(STDERR_FILENO, vstring,
+					 strlen(vstring)));
+			IGNORE_RET(write(STDERR_FILENO,
+					 PACKAGE_VERSION,
+					 strlen(PACKAGE_VERSION)));
+			IGNORE_RET(write(STDERR_FILENO, "\n", 1));
 			exit (0);
 #if defined (TRACING)
 		} else if (!strcmp (argv [i], "-tf")) {
@@ -394,6 +400,9 @@ main(int argc, char **argv) {
 		log_info (copyright);
 		log_info (arr);
 		log_info (url);
+		log_info ("Config file: %s", path_dhcpd_conf);
+		log_info ("Database file: %s", path_dhcpd_db);
+		log_info ("PID file: %s", path_dhcpd_pid);
 	} else {
 		quiet = 0;
 		log_perror = 0;
@@ -690,22 +699,6 @@ main(int argc, char **argv) {
 			exit (0);
 	}
  
-#if defined (PARANOIA)
-	/* change uid to the specified one */
-
-	if (set_gid) {
-		if (setgroups (0, (void *)0))
-			log_fatal ("setgroups: %m");
-		if (setgid (set_gid))
-			log_fatal ("setgid(%d): %m", (int) set_gid);
-	}	
-
-	if (set_uid) {
-		if (setuid (set_uid))
-			log_fatal ("setuid(%d): %m", (int) set_uid);
-	}
-#endif /* PARANOIA */
-
 	/*
 	 * Deal with pid files.  If the user told us
 	 * not to write a file we don't read one either
@@ -741,6 +734,22 @@ main(int argc, char **argv) {
 				  path_dhcpd_pid);
 		}
 	}
+
+#if defined (PARANOIA)
+	/* change uid to the specified one */
+
+	if (set_gid) {
+		if (setgroups (0, (void *)0))
+			log_fatal ("setgroups: %m");
+		if (setgid (set_gid))
+			log_fatal ("setgid(%d): %m", (int) set_gid);
+	}	
+
+	if (set_uid) {
+		if (setuid (set_uid))
+			log_fatal ("setuid(%d): %m", (int) set_uid);
+	}
+#endif /* PARANOIA */
 
 	/* If we were requested to log to stdout on the command line,
 	   keep doing so; otherwise, stop. */
