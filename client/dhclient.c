@@ -293,7 +293,13 @@ main(int argc, char **argv) {
 		} else if (!strcmp(argv[i], "-v")) {
 			quiet = 0;
 		} else if (!strcmp(argv[i], "--version")) {
-			log_info("isc-dhclient-%s", PACKAGE_VERSION);
+			const char vstring[] = "isc-dhclient-";
+			IGNORE_RET(write(STDERR_FILENO, vstring,
+					 strlen(vstring)));
+			IGNORE_RET(write(STDERR_FILENO,
+					 PACKAGE_VERSION,
+					 strlen(PACKAGE_VERSION)));
+			IGNORE_RET(write(STDERR_FILENO, "\n", 1));
 			exit(0);
 		} else if (argv[i][0] == '-') {
 		    usage();
@@ -1184,33 +1190,38 @@ void bind_lease (client)
 	struct timeval tv;
 
 	/* Remember the medium. */
-	client -> new -> medium = client -> medium;
+	client->new->medium = client->medium;
 
 	/* Run the client script with the new parameters. */
-	script_init (client, (client -> state == S_REQUESTING
-			  ? "BOUND"
-			  : (client -> state == S_RENEWING
-			     ? "RENEW"
-			     : (client -> state == S_REBOOTING
-				? "REBOOT" : "REBIND"))),
-		     client -> new -> medium);
-	if (client -> active && client -> state != S_REBOOTING)
-		script_write_params (client, "old_", client -> active);
-	script_write_params (client, "new_", client -> new);
+	script_init(client, (client->state == S_REQUESTING ? "BOUND" :
+			     (client->state == S_RENEWING ? "RENEW" : 
+			      (client->state == S_REBOOTING ? "REBOOT" :
+			       "REBIND"))),
+		    client->new->medium);
+	if (client->active && client->state != S_REBOOTING)
+		script_write_params(client, "old_", client->active);
+	script_write_params (client, "new_", client->new);
 	script_write_requested(client);
-	if (client -> alias)
-		script_write_params (client, "alias_", client -> alias);
+	if (client->alias)
+		script_write_params(client, "alias_", client->alias);
 
 	/* If the BOUND/RENEW code detects another machine using the
 	   offered address, it exits nonzero.  We need to send a
 	   DHCPDECLINE and toss the lease. */
-	if (script_go (client)) {
-		make_decline (client, client -> new);
-		send_decline (client);
-		destroy_client_lease (client -> new);
-		client -> new = (struct client_lease *)0;
-		state_init (client);
-		return;
+	if (script_go(client)) {
+		make_decline(client, client->new);
+		send_decline(client);
+		destroy_client_lease(client->new);
+		client->new = NULL;
+		if (onetry) {
+			if (!quiet)
+				log_info("Unable to obtain a lease on first "
+					 "try (declined).  Exiting.");
+			exit(2);
+		} else {
+			state_init(client);
+			return;
+		}
 	}
 
 	/* Write out the new lease if it has been long enough. */
@@ -1219,10 +1230,10 @@ void bind_lease (client)
 		write_client_lease(client, client->new, 0, 0);
 
 	/* Replace the old active lease with the new one. */
-	if (client -> active)
-		destroy_client_lease (client -> active);
-	client -> active = client -> new;
-	client -> new = (struct client_lease *)0;
+	if (client->active)
+		destroy_client_lease(client->active);
+	client->active = client->new;
+	client->new = NULL;
 
 	/* Set up a timeout to start the renewal process. */
 	tv.tv_sec = client->active->renewal;
@@ -1230,15 +1241,14 @@ void bind_lease (client)
 			random() % 1000000 : cur_tv.tv_usec;
 	add_timeout(&tv, state_bound, client, 0, 0);
 
-	log_info ("bound to %s -- renewal in %ld seconds.",
-	      piaddr (client -> active -> address),
-	      (long)(client -> active -> renewal - cur_time));
-	client -> state = S_BOUND;
-	reinitialize_interfaces ();
-	go_daemon ();
+	log_info("bound to %s -- renewal in %ld seconds.",
+	      piaddr(client->active->address),
+	      (long)(client->active->renewal - cur_time));
+	client->state = S_BOUND;
+	reinitialize_interfaces();
+	go_daemon();
 	if (client->config->do_forward_update)
-		dhclient_schedule_updates(client, &client->active->address,
-					  1);
+		dhclient_schedule_updates(client, &client->active->address, 1);
 }
 
 /* state_bound is called when we've successfully bound to a particular
@@ -1619,20 +1629,24 @@ struct client_lease *packet_to_lease (packet, client)
 	lease = (struct client_lease *)new_client_lease (MDL);
 
 	if (!lease) {
-		log_error ("packet_to_lease: no memory to record lease.\n");
-		return (struct client_lease *)0;
+		log_error("packet_to_lease: no memory to record lease.\n");
+		return NULL;
 	}
 
-	memset (lease, 0, sizeof *lease);
+	memset(lease, 0, sizeof(*lease));
 
 	/* Copy the lease options. */
-	option_state_reference (&lease -> options, packet -> options, MDL);
+	option_state_reference(&lease->options, packet->options, MDL);
 
-	lease -> address.len = sizeof (packet -> raw -> yiaddr);
-	memcpy (lease -> address.iabuf, &packet -> raw -> yiaddr,
-		lease -> address.len);
+	lease->address.len = sizeof(packet->raw->yiaddr);
+	memcpy(lease->address.iabuf, &packet->raw->yiaddr,
+	       lease->address.len);
 
-	memset (&data, 0, sizeof data);
+	lease->next_srv_addr.len = sizeof(packet->raw->siaddr);
+	memcpy(lease->next_srv_addr.iabuf, &packet->raw->siaddr,
+	       lease->next_srv_addr.len);
+	
+	memset(&data, 0, sizeof(data));
 
 	if (client -> config -> vendor_space_name) {
 		i = DHO_VENDOR_ENCAPSULATED_OPTIONS;
@@ -3171,6 +3185,13 @@ void script_write_params (client, prefix, lease)
 	client_envadd (client,
 		       prefix, "ip_address", "%s", piaddr (lease -> address));
 
+	/* If we've set the next server address in the lease structure
+	   put it into an environment variable for the script */
+	if (lease->next_srv_addr.len != 0) {
+		client_envadd(client, prefix, "next_server", "%s",
+			      piaddr(lease->next_srv_addr));
+	}
+
 	/* For the benefit of Linux (and operating systems which may
 	   have similar needs), compute the network address based on
 	   the supplied ip address and netmask, if provided.  Also
@@ -3980,14 +4001,16 @@ dhcpv4_client_assignments(void)
 	if (!local_port) {
 		/* If we're faking a relay agent, and we're not using loopback,
 		   use the server port, not the client port. */
-		if (mockup_relay && giaddr.s_addr != htonl (INADDR_LOOPBACK)) {
+		if (mockup_relay && giaddr.s_addr != htonl(INADDR_LOOPBACK)) {
 			local_port = htons(67);
 		} else {
-			ent = getservbyname ("dhcpc", "udp");
-			if (!ent)
-				local_port = htons (68);
+			ent = getservbyname("dhcpc", "udp");
+			if (ent == NULL)
+				ent = getservbyname("bootpc", "udp");
+			if (ent == NULL)
+				local_port = htons(68);
 			else
-				local_port = ent -> s_port;
+				local_port = ent->s_port;
 #ifndef __CYGWIN32__
 			endservent ();
 #endif
@@ -3996,10 +4019,10 @@ dhcpv4_client_assignments(void)
 
 	/* If we're faking a relay agent, and we're not using loopback,
 	   we're using the server port, not the client port. */
-	if (mockup_relay && giaddr.s_addr != htonl (INADDR_LOOPBACK)) {
+	if (mockup_relay && giaddr.s_addr != htonl(INADDR_LOOPBACK)) {
 		remote_port = local_port;
 	} else
-		remote_port = htons (ntohs (local_port) - 1);   /* XXX */
+		remote_port = htons(ntohs(local_port) - 1);   /* XXX */
 }
 
 /*
