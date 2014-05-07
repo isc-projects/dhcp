@@ -1481,6 +1481,12 @@ typedef unsigned char option_mask [16];
 #define MAX_TIME 0x7fffffff
 #define MIN_TIME 0
 
+#ifdef USE_LOG_PID
+/* include the pid in the syslog messages */
+#define DHCP_LOG_OPTIONS LOG_NDELAY | LOG_PID
+#else
+#define DHCP_LOG_OPTIONS LOG_NDELAY
+#endif
 						/* these are referenced */
 typedef struct hash_table ia_hash_t;
 typedef struct hash_table iasubopt_hash_t;

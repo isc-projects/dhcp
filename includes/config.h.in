@@ -148,6 +148,9 @@
 /* Define to include server activity tracing support. */
 #undef TRACING
 
+/* Define to include PIDs in syslog messages. */
+#undef USE_LOG_PID
+
 /* Define to 1 to use the standard BSD socket API. */
 #undef USE_SOCKETS
 
