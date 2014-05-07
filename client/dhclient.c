@@ -408,8 +408,10 @@ main(int argc, char **argv) {
 			e = fscanf(pidfd, "%ld\n", &temp);
 			oldpid = (pid_t)temp;
 
-			if (e != 0 && e != EOF) {
-				if (oldpid && (kill(oldpid, SIGTERM) == 0)) {
+			if (e != 0 && e != EOF && oldpid) {
+				if (kill(oldpid, SIGTERM) == 0) {
+					log_info("Killed old client process");
+					(void) unlink(path_dhclient_pid);
 					/*
 					 * wait for the old process to
 					 * cleanly terminate.
@@ -418,6 +420,9 @@ main(int argc, char **argv) {
 					 * the parent can be signaled...
 					 */
 					sleep(1);
+				} else if (errno == ESRCH) {
+					log_info("Removed stale PID file");
+					(void) unlink(path_dhclient_pid);
 				}
 			}
 			fclose(pidfd);
@@ -3867,6 +3872,9 @@ unsigned cons_agent_information_options (cfg_options, outpacket,
 
 static void shutdown_exit (void *foo)
 {
+	/* get rid of the pid if we can */
+	if (no_pid_file == ISC_FALSE)
+		(void) unlink(path_dhclient_pid);
 	exit (0);
 }
 

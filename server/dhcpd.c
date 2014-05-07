@@ -1354,6 +1354,8 @@ static isc_result_t dhcp_io_shutdown_countdown (void *vlp)
 	    free_everything ();
 	    omapi_print_dmalloc_usage_by_caller ();
 #endif
+	    if (no_pid_file == ISC_FALSE)
+		    (void) unlink(path_dhcpd_pid);
 	    exit (0);
 	}		
 #else
@@ -1363,6 +1365,8 @@ static isc_result_t dhcp_io_shutdown_countdown (void *vlp)
 		free_everything ();
 		omapi_print_dmalloc_usage_by_caller (); 
 #endif
+		if (no_pid_file == ISC_FALSE)
+			(void) unlink(path_dhcpd_pid);
 		exit (0);
 	}
 #endif

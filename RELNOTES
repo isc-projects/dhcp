@@ -103,6 +103,11 @@ by Eric Young (eay@cryptsoft.com).
   Thanks to Jiri Popelka at Red Hat for the bug and fix.
   [ISC-Bugs #21238
 
+- Add a log entry when killing a client and remove the PID files
+  when a server, relay or client are killed.
+  [ISC-Bugs #16970]
+  [ISC-Bugs #17258]
+
 			Changes since 4.3.0rc1
 
 - None

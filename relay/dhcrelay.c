@@ -1717,5 +1717,9 @@ dhcp_set_control_state(control_object_state_t oldstate,
 		       control_object_state_t newstate) {
 	if (newstate != server_shutdown)
 		return ISC_R_SUCCESS;
+
+	if (no_pid_file == ISC_FALSE)
+		(void) unlink(path_dhcrelay_pid);
+
 	exit(0);
 }
