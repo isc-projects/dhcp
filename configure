@@ -5393,8 +5393,8 @@ $as_echo "#define SECS_BYTEORDER 1" >>confdefs.h
 
 fi
 
-# Include the PID in the log messages.  This is useful when there may be multiple
-# instances of a program.
+# Include the PID in the log messages.  This is useful when there may
+# be multiple instances of a program.
 # This is off by default
 # Check whether --enable-log_pid was given.
 if test "${enable_log_pid+set}" = set; then :
