@@ -138,7 +138,7 @@ main(int argc, char **argv) {
 	else if (fd != -1)
 		close(fd);
 
-	openlog("dhclient", LOG_NDELAY, LOG_DAEMON);
+	openlog("dhclient", DHCP_LOG_OPTIONS, LOG_DAEMON);
 
 #if !(defined(DEBUG) || defined(__CYGWIN32__))
 	setlogmask(LOG_UPTO(LOG_INFO));

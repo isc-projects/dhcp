@@ -182,6 +182,16 @@ if test "$enable_secs_byteorder" = "yes" ; then
 		[Define to correct bad byteorders in secs field.])
 fi
 
+# Include the PID in the log messages.  This is useful when there may
+# be multiple instances of a program.
+# This is off by default
+AC_ARG_ENABLE(log_pid,
+	AS_HELP_STRING([--enable-log-pid],[Include PIDs in syslog messages (default is no).]))
+if test "$enable_log_pid" = "yes" ; then
+	AC_DEFINE([USE_LOG_PID], [1],
+		[Define to include PIDs in syslog messages.])
+fi
+
 # Testing section
 
 atf_path="no"

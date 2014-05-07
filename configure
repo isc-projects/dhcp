@@ -745,6 +745,7 @@ enable_early_chroot
 enable_ipv4_pktinfo
 enable_use_sockets
 enable_secs_byteorder
+enable_log_pid
 with_atf
 with_srv_lease_file
 with_srv6_lease_file
@@ -1410,6 +1411,7 @@ Optional Features:
   --enable-use-sockets    use the standard BSD socket API (default is no)
   --enable-secs-byteorder Correct bad byteorders in the secs field (default is
                           no).
+  --enable-log-pid        Include PIDs in syslog messages (default is no).
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -5388,6 +5390,20 @@ fi
 if test "$enable_secs_byteorder" = "yes" ; then
 
 $as_echo "#define SECS_BYTEORDER 1" >>confdefs.h
+
+fi
+
+# Include the PID in the log messages.  This is useful when there may be multiple
+# instances of a program.
+# This is off by default
+# Check whether --enable-log_pid was given.
+if test "${enable_log_pid+set}" = set; then :
+  enableval=$enable_log_pid;
+fi
+
+if test "$enable_log_pid" = "yes" ; then
+
+$as_echo "#define USE_LOG_PID 1" >>confdefs.h
 
 fi
 

@@ -299,7 +299,7 @@ main(int argc, char **argv) {
 	dhcp_common_objects_setup ();
 
 	/* Initially, log errors to stderr as well as to syslogd. */
-	openlog ("dhcpd", LOG_NDELAY, DHCPD_LOG_FACILITY);
+	openlog ("dhcpd", DHCP_LOG_OPTIONS, DHCPD_LOG_FACILITY);
 
 	for (i = 1; i < argc; i++) {
 		if (!strcmp (argv [i], "-p")) {
@@ -1064,7 +1064,7 @@ void postconf_initialization (int quiet)
 					   &global_scope, oc, MDL)) {
 			if (db.len == 1) {
 				closelog ();
-				openlog ("dhcpd", LOG_NDELAY, db.data[0]);
+				openlog("dhcpd", DHCP_LOG_OPTIONS, db.data[0]);
 				/* Log the startup banner into the new
 				   log file. */
 				if (!quiet) {

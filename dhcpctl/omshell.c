@@ -100,7 +100,7 @@ main(int argc, char **argv) {
 	}
 
 	/* Initially, log errors to stderr as well as to syslogd. */
-	openlog ("omshell", LOG_NDELAY, DHCPD_LOG_FACILITY);
+	openlog ("omshell", DHCP_LOG_OPTIONS, DHCPD_LOG_FACILITY);
 	status = dhcpctl_initialize ();
 	if (status != ISC_R_SUCCESS) {
 		fprintf (stderr, "dhcpctl_initialize: %s\n",
