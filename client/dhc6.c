@@ -3851,11 +3851,8 @@ dhc6_marshall_values(const char *prefix, struct client_state *client,
 				      piaddr(addr->address),
 				      (unsigned) addr->plen);
 		} else {
-			/* Current practice is that all subnets are /64's, but
-			 * some suspect this may not be permanent.
-			 */
 			client_envadd(client, prefix, "ip6_prefixlen",
-				      "%d", 64);
+				      "%d", DHCLIENT_DEFAULT_PREFIX_LEN);
 			client_envadd(client, prefix, "ip6_address",
 				      "%s", piaddr(addr->address));
 		}
