@@ -124,6 +124,11 @@ by Eric Young (eay@cryptsoft.com).
   Thanks to Marius Tomaschewski for the suggestion and proto-patch.
   [ISC-Bugs #29713]
 
+- Add a #define to specify the prefix length used when a client attempts
+  to configure an address.  This can be modified by editing includes/site.h.
+  By default it is set to 64.  While 128 might be a better choice it would
+  also be a change for currently running systems, so we have left it at 64.
+
 			Changes since 4.1-ESV-R9rc1
 
 - None

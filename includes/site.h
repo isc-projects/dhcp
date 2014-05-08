@@ -263,3 +263,12 @@
 
 /* #define LOG_V6_ADDRESSES */
 
+/* Define the default prefix length passed from the client to
+   the script when modifying an IPv6 IA_NA or IA_TA address.
+   The two most useful values are 128 which is what the current
+   specifications call for or 64 which is what has been used in
+   the past.  For most OSes 128 will indicate that the address
+   is a host address and doesn't include any on-link information.
+   64 indicates that the first 64 bits are the subnet or on-link
+   prefix. */
+#define DHCLIENT_DEFAULT_PREFIX_LEN 64
