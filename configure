@@ -6780,7 +6780,7 @@ $as_echo "#define FLEXIBLE_ARRAY_MEMBER /**/" >>confdefs.h
   fi
 
 
-ac_config_files="$ac_config_files Makefile client/Makefile common/Makefile common/tests/Makefile dhcpctl/Makefile dst/Makefile includes/Makefile omapip/Makefile relay/Makefile server/Makefile tests/Makefile server/tests/Makefile doc/devel/doxyfile"
+ac_config_files="$ac_config_files Makefile client/Makefile client/tests/Makefile common/Makefile common/tests/Makefile dhcpctl/Makefile dst/Makefile includes/Makefile omapip/Makefile relay/Makefile server/Makefile tests/Makefile server/tests/Makefile doc/devel/doxyfile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -7520,6 +7520,7 @@ do
     "includes/config.h") CONFIG_HEADERS="$CONFIG_HEADERS includes/config.h" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "client/Makefile") CONFIG_FILES="$CONFIG_FILES client/Makefile" ;;
+    "client/tests/Makefile") CONFIG_FILES="$CONFIG_FILES client/tests/Makefile" ;;
     "common/Makefile") CONFIG_FILES="$CONFIG_FILES common/Makefile" ;;
     "common/tests/Makefile") CONFIG_FILES="$CONFIG_FILES common/tests/Makefile" ;;
     "dhcpctl/Makefile") CONFIG_FILES="$CONFIG_FILES dhcpctl/Makefile" ;;

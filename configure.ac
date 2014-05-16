@@ -622,6 +622,7 @@ AC_C_FLEXIBLE_ARRAY_MEMBER
 AC_CONFIG_FILES([
   Makefile
   client/Makefile
+  client/tests/Makefile
   common/Makefile
   common/tests/Makefile
   dhcpctl/Makefile

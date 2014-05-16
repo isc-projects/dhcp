@@ -47,6 +47,7 @@ const char *path_dhclient_db = NULL;
 const char *path_dhclient_pid = NULL;
 static char path_dhclient_script_array[] = _PATH_DHCLIENT_SCRIPT;
 char *path_dhclient_script = path_dhclient_script_array;
+const char *path_dhclient_duid = NULL;
 
 /* False (default) => we write and use a pid file */
 isc_boolean_t no_pid_file = ISC_FALSE;
@@ -100,6 +101,7 @@ static int check_domain_name_list(const char *ptr, size_t len, int dots);
 static int check_option_values(struct universe *universe, unsigned int opt,
 			       const char *ptr, size_t len);
 
+#ifndef UNIT_TEST
 int
 main(int argc, char **argv) {
 	int fd;
@@ -210,6 +212,10 @@ main(int argc, char **argv) {
 				usage();
 			path_dhclient_conf = argv[i];
 			no_dhclient_conf = 1;
+		} else if (!strcmp(argv[i], "-df")) {
+			if (++i == argc)
+				usage();
+			path_dhclient_duid = argv[i];
 		} else if (!strcmp(argv[i], "-lf")) {
 			if (++i == argc)
 				usage();
@@ -504,6 +510,11 @@ main(int argc, char **argv) {
 	/* Parse the lease database. */
 	read_client_leases();
 
+	/* If desired parse the secondary lease database for a DUID */
+	if ((default_duid.len == 0) && (path_dhclient_duid != NULL)) {
+		read_client_duid();
+	}
+
 	/* Rewrite the lease database... */
 	rewrite_client_leases();
 
@@ -723,6 +734,7 @@ main(int argc, char **argv) {
 	/* In fact dispatch() never returns. */
 	return 0;
 }
+#endif /* !UNIT_TEST */
 
 static void usage()
 {
@@ -738,8 +750,8 @@ static void usage()
 #else /* DHCPv6 */
 		  "[-I1dvrxi] [-nw] [-p <port>] [-D LL|LLT] \n"
 #endif /* DHCPv6 */
-		  "                [-s server-addr] [-cf config-file] "
-		  "[-lf lease-file]\n"
+		  "                [-s server-addr] [-cf config-file]\n"
+		  "                [-df duid-file] [-lf lease-file]\n"
 		  "                [-pf pid-file] [--no-pid] [-e VAR=val]\n"
 		  "                [-sf script-file] [interface]");
 }
@@ -762,6 +774,11 @@ void run_stateless(int exit_mode)
 
 	/* Parse the lease database. */
 	read_client_leases();
+
+	/* If desired parse the secondary lease database for a DUID */
+	if ((default_duid.len == 0) && (path_dhclient_duid != NULL)) {
+		read_client_duid();
+	}
 
 	/* Establish a default DUID. */
 	if (default_duid.len == 0) {
@@ -2884,6 +2901,7 @@ form_duid(struct data_string *duid, const char *file, int line)
 {
 	struct interface_info *ip;
 	int len;
+	char *str;
 
 	/* For now, just use the first interface on the list. */
 	ip = interfaces;
@@ -2925,6 +2943,14 @@ form_duid(struct data_string *duid, const char *file, int line)
 		putUShort(duid->buffer->data + 2, ip->hw_address.hbuf[0]);
 		memcpy(duid->buffer->data + 4, ip->hw_address.hbuf + 1,
 		       ip->hw_address.hlen - 1);
+	}
+
+	str = quotify_buf(duid->data, duid->len, MDL);
+	if (str == NULL)
+		log_info("Created duid.");
+	else {
+		log_info("Created duid %s.", str);
+		dfree(str, MDL);
 	}
 }
 

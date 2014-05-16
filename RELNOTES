@@ -145,6 +145,13 @@ by Eric Young (eay@cryptsoft.com).
   also be a change for currently running systems, so we have left it at 64.
   [ISC-Bugs #DHCP-2]
 
+- Add a run time option to the client "-df" to allow the administrator to
+  point to a second lease file the client can search for a DUID.  This can
+  be used to allow a v4 and a v6 instance of the client to share a DUID.
+  The second file will only be searched if there isn't a DUID in the main
+  lease file and the DUID will be written out to the main lease file.
+  [ISC-Bugs #34886]
+
 			Changes since 4.3.0rc1
 
 - None

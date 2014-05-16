@@ -73,6 +73,10 @@ dhclient - Dynamic Host Configuration Protocol Client
 .B -d
 ]
 [
+.B -df
+.I duid-lease-file
+]
+[
 .B -e
 .I VAR=value
 ]
@@ -390,6 +394,16 @@ have not been mounted when the DHCP client is started.
 Path to the client configuration file.  If unspecified, the default
 .B ETCDIR/dhclient.conf
 is used.  See \fBdhclient.conf(5)\fR for a description of this file.
+.TP
+.BI \-df \ duid-lease-file
+Path to a secondary lease file.  If the primary lease file doesn't contain
+a DUID this file will be searched.  The DUID read from the secondary will
+be written to the primary.  This option can be used to allow an IPv4 instance
+of the client to share a DUID with an IPv6 instance.  After starting one of
+the instances the second can be started with this option pointing to the
+lease file of the first instance.  There is no default.  If no file is
+specified no search is made for a DUID should one not be found in the main
+lease file.
 .TP
 .BI \-lf \ lease-file
 Path to the lease database file.  If unspecified, the default

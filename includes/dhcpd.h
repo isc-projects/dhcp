@@ -2746,6 +2746,7 @@ extern char *path_dhclient_script;
 extern int interfaces_requested;
 extern struct data_string default_duid;
 extern int duid_type;
+extern const char *path_dhclient_duid;
 
 extern struct client_config top_level_config;
 
@@ -2920,6 +2921,7 @@ isc_result_t read_client_conf (void);
 int read_client_conf_file (const char *,
 			   struct interface_info *, struct client_config *);
 void read_client_leases (void);
+void read_client_duid (void);
 void parse_client_statement (struct parse *, struct interface_info *,
 			     struct client_config *);
 int parse_X (struct parse *, u_int8_t *, unsigned);
