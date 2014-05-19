@@ -578,6 +578,9 @@ get_hw_addr(const char *name, struct hardware *hw) {
 	 */
         switch (sa->sdl_type) {
                 case IFT_ETHER:
+#if defined (IFT_L2VLAN)
+		case IFT_L2VLAN:
+#endif
                         hw->hlen = sa->sdl_alen + 1;
                         hw->hbuf[0] = HTYPE_ETHER;
                         memcpy(&hw->hbuf[1], LLADDR(sa), sa->sdl_alen);

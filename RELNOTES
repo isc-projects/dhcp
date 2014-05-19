@@ -156,6 +156,10 @@ by Eric Young (eay@cryptsoft.com).
   client hibernates or otherwise shuts down.
   [ISC-Bugs #35894]
 
+- Add a check for L2VLAN in bpf.c to help support VLAN interfaces
+  Thanks to Steinar Haug for the suggestion.
+  [ISC-Bugs #36033]
+
 			Changes since 4.3.0rc1
 
 - None
