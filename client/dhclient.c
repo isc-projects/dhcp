@@ -1271,7 +1271,7 @@ void bind_lease (client)
 	/* Write out the new lease if it has been long enough. */
 	if (!client->last_write ||
 	    (cur_time - client->last_write) >= MIN_LEASE_WRITE)
-		write_client_lease(client, client->new, 0, 0);
+		write_client_lease(client, client->new, 0, 1);
 
 	/* Replace the old active lease with the new one. */
 	if (client->active)

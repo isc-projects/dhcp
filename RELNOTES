@@ -152,6 +152,10 @@ by Eric Young (eay@cryptsoft.com).
   lease file and the DUID will be written out to the main lease file.
   [ISC-Bugs #34886]
 
+- Have the client fsync the lease file to avoid lease corruption if the
+  client hibernates or otherwise shuts down.
+  [ISC-Bugs #35894]
+
 			Changes since 4.3.0rc1
 
 - None
