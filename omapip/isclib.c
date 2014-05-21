@@ -225,9 +225,17 @@ dhcp_context_create(int flags,
 		if (result != ISC_R_SUCCESS)
 			goto cleanup;
 
+		/*
+		 * If we can't set up the servers we may not be able to
+		 * do DDNS but we should continue to try and perform
+		 * our basic functions and let the user sort it out.
+		 */
 		result = dhcp_dns_client_setservers();
-		if (result != ISC_R_SUCCESS)
-			goto cleanup;
+		if (result != ISC_R_SUCCESS) {
+			log_error("Unable to set resolver from resolv.conf; "
+				  "startup continuing but DDNS support "
+				  "may be affected");
+		}
 	}
 #endif
 

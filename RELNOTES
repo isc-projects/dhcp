@@ -160,6 +160,10 @@ by Eric Young (eay@cryptsoft.com).
   Thanks to Steinar Haug for the suggestion.
   [ISC-Bugs #36033]
 
+- Modify the handling of the resolv.conf file to allow the DHCP
+  process to start up even if the resolv.conf file has problems.
+  [ISC-Bugs #35989]
+
 			Changes since 4.3.0rc1
 
 - None
