@@ -796,6 +796,99 @@ set_status_code(u_int16_t status_code, const char *status_message,
 	return ret_val;
 }
 
+void check_pool6_threshold(struct reply_state *reply,
+			   struct iasubopt *lease)
+{
+	struct ipv6_pond *pond;
+	int used, count, high_threshold, poolhigh = 0, poollow = 0;
+	char *shared_name = "no name";
+	char tmp_addr[INET6_ADDRSTRLEN];
+
+	if ((lease->ipv6_pool == NULL) || (lease->ipv6_pool->ipv6_pond == NULL))
+		return;
+	pond = lease->ipv6_pool->ipv6_pond;
+
+	count = pond->num_total;
+	used = pond->num_active;
+
+	/* The logged flag indicates if we have already crossed the high
+	 * threshold and emitted a log message.  If it is set we check to
+	 * see if we have re-crossed the low threshold and need to reset
+	 * things.  When we cross the high threshold we determine what
+	 * the low threshold is and save it into the low_threshold value.
+	 * When we cross that threshold we reset the logged flag and
+	 * the low_threshold to 0 which allows the high threshold message
+	 * to be emitted once again.
+	 * if we haven't recrossed the boundry we don't need to do anything.
+	 */
+	if (pond->logged !=0) {
+		if (used <= pond->low_threshold) {
+			pond->low_threshold = 0;
+			pond->logged = 0;
+			log_error("Pool threshold reset - shared subnet: %s; "
+				  "address: %s; low threshold %d/%d.",
+				  shared_name,
+				  inet_ntop(AF_INET6, &lease->addr,
+					    tmp_addr, sizeof(tmp_addr)),
+				  used, count);
+		}
+		return;
+	}
+
+	/* find the high threshold */
+	if (get_option_int(&poolhigh, &server_universe, reply->packet, NULL,
+			   NULL, reply->packet->options, reply->opt_state,
+			   reply->opt_state, &lease->scope,
+			   SV_LOG_THRESHOLD_HIGH, MDL) == 0) {
+		/* no threshold bail out */
+		return;
+	}
+
+	/* We do have a threshold for this pool, see if its valid */
+	if ((poolhigh <= 0) || (poolhigh > 100)) {
+		/* not valid */
+		return;
+	}
+
+	/* we have a valid value, have we exceeded it */
+	high_threshold = FIND_PERCENT(count, poolhigh);
+	if (used < high_threshold) {
+		/* nope, no more to do */
+		return;
+	}
+
+	/* we've exceeded it, output a message */
+	if ((pond->shared_network != NULL) &&
+	    (pond->shared_network->name != NULL)) {
+		shared_name = pond->shared_network->name;
+	}
+	log_error("Pool threshold exceeded - shared subnet: %s; "
+		  "address: %s; high threshold %d%% %d/%d.",
+		  shared_name,
+		  inet_ntop(AF_INET6, &lease->addr, tmp_addr, sizeof(tmp_addr)),
+		  poolhigh, used, count);
+
+	/* handle the low threshold now, if we don't
+	 * have one we default to 0. */
+	if ((get_option_int(&poollow, &server_universe, reply->packet, NULL,
+			    NULL, reply->packet->options, reply->opt_state,
+			    reply->opt_state, &lease->scope,
+			    SV_LOG_THRESHOLD_LOW, MDL) == 0) ||
+	    (poollow > 100)) {
+		poollow = 0;
+	}
+
+	/*
+	 * If the low theshold is higher than the high threshold we continue to log
+	 * If it isn't then we set the flag saying we already logged and determine
+	 * what the reset threshold is.
+	 */
+	if (poollow < poolhigh) {
+		pond->logged = 1;
+		pond->low_threshold = FIND_PERCENT(count, poollow);
+	}
+}
+
 /*
  * We have a set of operations we do to set up the reply packet, which
  * is the same for many message types.
@@ -1939,6 +2032,8 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 					     tmp, NULL, reply->opt_state);
 			}
 #endif
+			/* Do our threshold check. */
+			check_pool6_threshold(reply, tmp);
 		}
 
 		/* Remove any old ia from the hash. */
@@ -2655,6 +2750,8 @@ reply_process_ia_ta(struct reply_state *reply, struct option_cache *ia) {
 					     tmp, NULL, reply->opt_state);
 			}
 #endif
+			/* Do our threshold check. */
+			check_pool6_threshold(reply, tmp);
 		}
 
 		/* Remove any old ia from the hash. */
@@ -3713,6 +3810,9 @@ reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia) {
 				executable_statement_dereference
 					(&tmp->on_star.on_commit, MDL);
 			}
+
+			/* Do our threshold check. */
+			check_pool6_threshold(reply, tmp);
 		}
 
 		/* Remove any old ia from the hash. */

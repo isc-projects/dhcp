@@ -77,7 +77,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-@HAVE_ATF_TRUE@am__append_1 = alloc_unittest dns_unittest
+@HAVE_ATF_TRUE@am__append_1 = alloc_unittest dns_unittest misc_unittest
 check_PROGRAMS = $(am__EXEEXT_2)
 subdir = common/tests
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
@@ -91,7 +91,7 @@ CONFIG_HEADER = $(top_builddir)/includes/config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 @HAVE_ATF_TRUE@am__EXEEXT_1 = alloc_unittest$(EXEEXT) \
-@HAVE_ATF_TRUE@	dns_unittest$(EXEEXT)
+@HAVE_ATF_TRUE@	dns_unittest$(EXEEXT) misc_unittest$(EXEEXT)
 am__EXEEXT_2 = $(am__EXEEXT_1)
 am__alloc_unittest_SOURCES_DIST = test_alloc.c \
 	$(top_srcdir)/tests/t_api_dhcp.c
@@ -110,6 +110,16 @@ am__dns_unittest_SOURCES_DIST = dns_unittest.c \
 @HAVE_ATF_TRUE@	t_api_dhcp.$(OBJEXT)
 dns_unittest_OBJECTS = $(am_dns_unittest_OBJECTS)
 @HAVE_ATF_TRUE@dns_unittest_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+@HAVE_ATF_TRUE@	../libdhcp.a ../../omapip/libomapi.a \
+@HAVE_ATF_TRUE@	../../bind/lib/libirs.a ../../bind/lib/libdns.a \
+@HAVE_ATF_TRUE@	../../bind/lib/libisccfg.a \
+@HAVE_ATF_TRUE@	../../bind/lib/libisc.a
+am__misc_unittest_SOURCES_DIST = misc_unittest.c \
+	$(top_srcdir)/tests/t_api_dhcp.c
+@HAVE_ATF_TRUE@am_misc_unittest_OBJECTS = misc_unittest.$(OBJEXT) \
+@HAVE_ATF_TRUE@	t_api_dhcp.$(OBJEXT)
+misc_unittest_OBJECTS = $(am_misc_unittest_OBJECTS)
+@HAVE_ATF_TRUE@misc_unittest_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 @HAVE_ATF_TRUE@	../libdhcp.a ../../omapip/libomapi.a \
 @HAVE_ATF_TRUE@	../../bind/lib/libirs.a ../../bind/lib/libdns.a \
 @HAVE_ATF_TRUE@	../../bind/lib/libisccfg.a \
@@ -146,9 +156,11 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(alloc_unittest_SOURCES) $(dns_unittest_SOURCES)
+SOURCES = $(alloc_unittest_SOURCES) $(dns_unittest_SOURCES) \
+	$(misc_unittest_SOURCES)
 DIST_SOURCES = $(am__alloc_unittest_SOURCES_DIST) \
-	$(am__dns_unittest_SOURCES_DIST)
+	$(am__dns_unittest_SOURCES_DIST) \
+	$(am__misc_unittest_SOURCES_DIST)
 RECURSIVE_TARGETS = all-recursive check-recursive cscopelist-recursive \
 	ctags-recursive dvi-recursive html-recursive info-recursive \
 	install-data-recursive install-dvi-recursive \
@@ -334,6 +346,12 @@ ATF_TESTS = $(am__append_1)
 @HAVE_ATF_TRUE@	../../bind/lib/libdns.a \
 @HAVE_ATF_TRUE@	../../bind/lib/libisccfg.a \
 @HAVE_ATF_TRUE@	../../bind/lib/libisc.a
+@HAVE_ATF_TRUE@misc_unittest_SOURCES = misc_unittest.c $(top_srcdir)/tests/t_api_dhcp.c
+@HAVE_ATF_TRUE@misc_unittest_LDADD = $(ATF_LDFLAGS) ../libdhcp.a \
+@HAVE_ATF_TRUE@	../../omapip/libomapi.a ../../bind/lib/libirs.a \
+@HAVE_ATF_TRUE@	../../bind/lib/libdns.a \
+@HAVE_ATF_TRUE@	../../bind/lib/libisccfg.a \
+@HAVE_ATF_TRUE@	../../bind/lib/libisc.a
 all: all-recursive
 
 .SUFFIXES:
@@ -380,6 +398,10 @@ dns_unittest$(EXEEXT): $(dns_unittest_OBJECTS) $(dns_unittest_DEPENDENCIES) $(EX
 	@rm -f dns_unittest$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(dns_unittest_OBJECTS) $(dns_unittest_LDADD) $(LIBS)
 
+misc_unittest$(EXEEXT): $(misc_unittest_OBJECTS) $(misc_unittest_DEPENDENCIES) $(EXTRA_misc_unittest_DEPENDENCIES) 
+	@rm -f misc_unittest$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(misc_unittest_OBJECTS) $(misc_unittest_LDADD) $(LIBS)
+
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
 
@@ -387,6 +409,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dns_unittest.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/misc_unittest.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t_api_dhcp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_alloc.Po@am__quote@
 

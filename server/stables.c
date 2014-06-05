@@ -265,6 +265,8 @@ static struct option server_options[] = {
 	{ "ddns-local-address4", "I",		&server_universe,  80, 1 },
 	{ "ddns-local-address6", "6",		&server_universe,  81, 1 },
 	{ "ignore-client-uids", "f",		&server_universe,  82, 1 },
+	{ "log-threshold-low", "B",		&server_universe,  83, 1 },
+	{ "log-threshold-high", "B",		&server_universe,  84, 1 },
 	{ NULL, NULL, NULL, 0, 0 }
 };
 

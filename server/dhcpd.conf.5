@@ -2476,6 +2476,31 @@ possible.
 .RE
 .PP
 The
+.I log-threshold-high
+and 
+.I log-threshold-low
+statements
+.RS 0.25i
+.PP
+.B log-threshold-high \fIpercentage\fB;\fR
+.PP
+.B log-threshold-low \fIpercentage\fB;\fR
+.PP
+The \fIlog-threshold-low\fR and \fIlog-threshold-high\fR statements
+are used to control when a message is output about pool usage.  The
+value for both of them is the percentage of the pool in use.  If the
+high threshold is 0 or has not been specified, no messages will be
+produced.  If a high threshold is given, a message is output once the
+pool usage passes that level.  After that, no more messages will be
+output until the pool usage falls below the low threshold.  If the low
+threshold is not given, it default to a value of zero.
+.PP
+A special case occurs when the low threshold is set to be higer than
+the high threshold.  In this case, a message will be generated each time
+a lease is acknowledged when the pool usage is above the high threshold.
+.RE
+.PP
+The
 .I max-lease-time
 statement
 .RS 0.25i

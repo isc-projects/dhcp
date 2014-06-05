@@ -1745,6 +1745,98 @@ void nak_lease (packet, cip)
 
 }
 
+void check_pool_threshold (packet, lease, state)
+     struct packet *packet;
+     struct lease *lease;
+     struct lease_state *state;
+
+{
+
+	struct pool *pool = lease->pool;
+	int used, count, high_threshold, poolhigh = 0, poollow = 0;
+	char *shared_name = "no name";
+
+	if (pool == NULL)
+		return;
+
+	/* get a pointer to the name if we have one */
+	if ((pool->shared_network != NULL) &&
+	    (pool->shared_network->name != NULL)) {
+		shared_name = pool->shared_network->name;
+	}
+
+	count = pool->lease_count;
+	used = count - (pool->free_leases + pool->backup_leases);
+
+	/* The logged flag indicates if we have already crossed the high
+	 * threshold and emitted a log message.  If it is set we check to
+	 * see if we have re-crossed the low threshold and need to reset
+	 * things.  When we cross the high threshold we determine what
+	 * the low threshold is and save it into the low_threshold value.
+	 * When we cross that threshold we reset the logged flag and
+	 * the low_threshold to 0 which allows the high threshold message
+	 * to be emitted once again.
+	 * if we haven't recrossed the boundry we don't need to do anything.
+	 */
+	if (pool->logged !=0) {
+		if (used <= pool->low_threshold) {
+			pool->low_threshold = 0;
+			pool->logged = 0;
+			log_error("Pool threshold reset - shared subnet: %s; "
+				  "address: %s; low threshold %d/%d.",
+				  shared_name, piaddr(lease->ip_addr),
+				  used, count);
+		}
+		return;
+	}
+
+	/* find the high threshold */
+	if (get_option_int(&poolhigh, &server_universe, packet, lease,  NULL,
+			   packet->options, state->options, state->options,
+			   &lease->scope, SV_LOG_THRESHOLD_HIGH, MDL) == 0) {
+		/* no threshold bail out */
+		return;
+	}
+
+	/* We do have a threshold for this pool, see if its valid */
+	if ((poolhigh <= 0) || (poolhigh > 100)) {
+		/* not valid */
+		return;
+	}
+
+	/* we have a valid value, have we exceeded it */
+	high_threshold = FIND_PERCENT(count, poolhigh);
+	if (used < high_threshold) {
+		/* nope, no more to do */
+		return;
+	}
+
+	/* we've exceeded it, output a message */
+	log_error("Pool threshold exceeded - shared subnet: %s; "
+		  "address: %s; high threshold %d%% %d/%d.",
+		  shared_name, piaddr(lease->ip_addr),
+		  poolhigh, used, count);
+
+	/* handle the low threshold now, if we don't
+	 * have a valid one we default to 0. */
+	if ((get_option_int(&poollow, &server_universe, packet, lease,  NULL,
+			    packet->options, state->options, state->options,
+			    &lease->scope, SV_LOG_THRESHOLD_LOW, MDL) == 0) ||
+	    (poollow > 100)) {
+		poollow = 0;
+	}
+
+	/*
+	 * If the low theshold is higher than the high threshold we continue to log
+	 * If it isn't then we set the flag saying we already logged and determine
+	 * what the reset threshold is.
+	 */
+	if (poollow < poolhigh) {
+		pool->logged = 1;
+		pool->low_threshold = FIND_PERCENT(count, poollow);
+	}
+}
+
 void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 	struct packet *packet;
 	struct lease *lease;
@@ -2390,6 +2482,14 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 			data_string_forget(&d1, MDL);
 		}
 
+
+		/*
+		 * If this is an ack check to see if we have used enough of
+		 * the pool to want to log a message
+		 */
+		if (offer == DHCPACK)
+			check_pool_threshold(packet, lease, state);
+
 		/* a client requests an address which is not yet active*/
 		if (lease->pool && lease->pool->valid_from && 
                     cur_time < lease->pool->valid_from) {
@@ -2410,7 +2510,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		b) extend lease only up to the expiration date, but not
 		below min-lease-time
 		Setting min-lease-time is essential for this to work!
-		The value of min-lease-time determines the lenght
+		The value of min-lease-time determines the length
 		of the transition window:
 		A client renewing a second before the deadline will
 		get a min-lease-time lease. Since the current ip might not

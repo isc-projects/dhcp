@@ -3837,6 +3837,12 @@ add_ipv6_pool_to_subnet(struct subnet *subnet, u_int16_t type,
 	 */
 	ipv6_pool_reference(&pond->ipv6_pools[num_pools], pool, MDL);
 	pond->ipv6_pools[num_pools+1] = NULL;
+	/* Update the number of elements in the pond.  Conveniently
+	 * we have the total size of the block in bits and the amount
+	 * we would allocate per element in units.  For an address units
+	 * will always be 128, for a prefix it will be something else.
+	 */
+	pond->num_total += 1 << (units - bits);
 }
 
 /*!

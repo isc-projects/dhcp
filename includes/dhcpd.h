@@ -730,6 +730,8 @@ struct lease_state {
 #define SV_DDNS_LOCAL_ADDRESS4		80
 #define SV_DDNS_LOCAL_ADDRESS6		81
 #define SV_IGNORE_CLIENT_UIDS		82
+#define SV_LOG_THRESHOLD_LOW		83
+#define SV_LOG_THRESHOLD_HIGH		84
 
 #if !defined (DEFAULT_PING_TIMEOUT)
 # define DEFAULT_PING_TIMEOUT 1
@@ -925,6 +927,8 @@ struct pool {
 #if defined (FAILOVER_PROTOCOL)
 	dhcp_failover_state_t *failover_peer;
 #endif
+	int logged;		/* already logged a message */
+	int low_threshold;	/* low threshold to restart logging */
 };
 
 struct shared_network {
@@ -1606,6 +1610,10 @@ struct ipv6_pond {
 	struct ipv6_pool **ipv6_pools;	/* NULL-terminated array */
 	int last_ipv6_pool;		/* offset of last IPv6 pool
 					   used to issue a lease */
+	int num_total;			/* Total number of elements in the pond */
+	int num_active;			/* Number of elements in the pond in use */
+	int logged;			/* already logged a message */
+	int low_threshold;		/* low threshold to restart logging */
 };
 
 /* Flags and state for dhcp_ddns_cb_t */
@@ -1774,6 +1782,11 @@ int get_option (struct data_string *, struct universe *,
 		struct option_state *, struct option_state *,
 		struct option_state *, struct binding_scope **, unsigned,
 		const char *, int);
+int get_option_int (int *, struct universe *,
+		    struct packet *, struct lease *, struct client_state *,
+		    struct option_state *, struct option_state *,
+		    struct option_state *, struct binding_scope **, unsigned,
+		    const char *, int);
 void set_option (struct universe *, struct option_state *,
 		 struct option_cache *, enum statement_op);
 struct option_cache *lookup_option (struct universe *,
@@ -3617,3 +3630,12 @@ void mark_interfaces_unavailable(void);
 
 #define MAX_ADDRESS_STRING_LEN \
    (sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255"))
+
+/* Find the percentage of count.  We need to try two different
+ * ways to avoid rounding mistakes.
+ */
+#define FIND_PERCENT(count, percent)	\
+	((count) > (INT_MAX / 100) ?	\
+	 ((count) / 100) * (percent) : ((count) * (percent)) / 100)
+
+	
