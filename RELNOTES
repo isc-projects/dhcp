@@ -164,7 +164,7 @@ by Eric Young (eay@cryptsoft.com).
   process to start up even if the resolv.conf file has problems.
   [ISC-Bugs #35989]
 
-- Add theshold logging functionality.  Two new options,
+- Add threshold logging functionality.  Two new options,
   log-threshold-low and log-threshold-high, indicate to the
   server if and when it should log an error message as addresses
   in a pool are used.
