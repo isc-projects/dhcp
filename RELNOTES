@@ -170,6 +170,10 @@ by Eric Young (eay@cryptsoft.com).
   in a pool are used.
   [ISC-Bugs #34487]
 
+- Add code to properly dereference a pointer in the dhclient code
+  on an error condition.
+  [ISC-Bugs #36194
+
 			Changes since 4.3.0rc1
 
 - None
