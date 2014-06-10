@@ -2370,9 +2370,11 @@ make_client_options(struct client_state *client, struct client_lease *lease,
 						      dhcp_universe.code_hash,
 						      &code, 0, MDL) &&
 			      make_const_option_cache(&oc, &bp, NULL, len,
-						      option, MDL)))
+						      option, MDL))) {
+				if (bp != NULL)
+					buffer_dereference(&bp, MDL);
 				log_error ("can't make option cache");
-			else {
+			} else {
 				save_option (&dhcp_universe, *op, oc);
 				option_cache_dereference (&oc, MDL);
 			}
