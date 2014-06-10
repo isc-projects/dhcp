@@ -128,6 +128,10 @@ by Eric Young (eay@cryptsoft.com).
   Thanks to Steinar Haug for the suggestion.
   [ISC-Bugs #36033]
 
+- Add code to properly deference a pointer in the dhclient code
+  on an error condition.
+  [ISC-Bugs #36194
+
 			Changes since 4.2.6rc1
 
 - None
