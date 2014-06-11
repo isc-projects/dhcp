@@ -142,12 +142,11 @@ manual page.
 .B DDNS Variables
 .PP
 .nf
-.B The \fIddns-text\fB and \fIddns-dhcid\fB variables
+.B The \fIddns-text\fB variable
 .PP
-These variables are used to record the value of the client's identification
+This variable is used to record the value of the client's identification
 record when the server has updated DNS for a particular lease.  The text
-record is used with the interim DDNS update style while the dhcid record
-is used for the standard DDNS update style.
+record is used with the interim DDNS update style.
 .PP
 .B The \fIddns-fwd-name\fB variable
 .PP
@@ -158,7 +157,7 @@ update the client's PTR record.
 .PP
 .B The \fIddns-client-fqdn\fB variable
 .PP
-If the server is configured both to use the interim or standard DDNS update
+If the server is configured both to use the interim DDNS update
 style, and to allow clients to update their own FQDNs, then if the
 client did in fact update its own FQDN, the
 \fIddns-client-fqdn\fR variable records the name that the client has
