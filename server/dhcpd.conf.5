@@ -1237,19 +1237,15 @@ name in the \fBfqdn\fR option, the server uses only the leftmost part of the
 domain name - in the example above, "jschmoe" instead of
 "jschmoe.radish.org".
 .PP
+If the defaults for choosing the host name are not appropriate
+you can write your own statement to set the ddns-hostname variable
+as you wish.
+.PP
 Further, if the \fIignore client-updates;\fR directive is used, then
 the server will in addition send a response in the DHCP packet, using
 the FQDN Option, that implies to the client that it should perform its
 own updates if it chooses to do so.  With \fIdeny client-updates;\fR, a
 response is sent which indicates the client may not perform updates.
-.PP
-Also, if the
-.I use-host-decl-names
-configuration option is enabled, then the host declaration's
-.I hostname
-will be used in place of the
-.I hostname
-option, and the same rules will apply as described above.
 .PP
 The other difference between the ad-hoc scheme and the interim
 scheme is that with the interim scheme, a method is used that
