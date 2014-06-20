@@ -143,6 +143,29 @@ static struct iasubopt *prefix_compare(struct reply_state *reply,
 				       struct iasubopt *beta);
 static int find_hosts_by_duid_chaddr(struct host_decl **host,
 				     const struct data_string *client_id);
+static void schedule_lease_timeout_reply(struct reply_state *reply);
+
+/*
+ * Schedule lease timeouts for all of the iasubopts in the reply.
+ * This is currently used to schedule timeouts for soft leases.
+ */
+
+static void
+schedule_lease_timeout_reply(struct reply_state *reply) {
+	struct iasubopt *tmp;
+	int i;
+
+	/* sanity check the reply */
+	if ((reply == NULL) || (reply->ia == NULL) || (reply->ia->iasubopt == NULL))
+		return;
+
+	/* walk through the list, scheduling as we go */
+	for (i = 0 ; i < reply->ia->num_iasubopt ; i++) {
+		tmp = reply->ia->iasubopt[i];
+		schedule_lease_timeout(tmp->ipv6_pool);
+	}
+}
+
 /*
  * This function returns the time since DUID time start for the
  * given time_t value.
@@ -1930,6 +1953,8 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 			    ia_id->len, reply->ia, MDL);
 
 		write_ia(reply->ia);
+	} else {
+		schedule_lease_timeout_reply(reply);
 	}
 
       cleanup:
@@ -2619,6 +2644,8 @@ reply_process_ia_ta(struct reply_state *reply, struct option_cache *ia) {
 			    ia_id->len, reply->ia, MDL);
 
 		write_ia(reply->ia);
+	} else {
+		schedule_lease_timeout_reply(reply);
 	}
 
       cleanup:
@@ -3522,6 +3549,8 @@ reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia) {
 			    ia_id->len, reply->ia, MDL);
 
 		write_ia(reply->ia);
+	} else {
+		schedule_lease_timeout_reply(reply);
 	}
 
       cleanup:
