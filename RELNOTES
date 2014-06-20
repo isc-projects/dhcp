@@ -142,6 +142,9 @@ by Eric Young (eay@cryptsoft.com).
   on an error condition.
   [ISC-Bugs #36194
 
+- Add code to help clean up soft leases.
+  [ISC-Bugs #36304]
+
 			Changes since 4.1-ESV-R9rc1
 
 - None
