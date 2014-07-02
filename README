@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-			      Version 4.3.0
-			     3 February 2014
+			      Version 4.3.1b1
+			       8 July 2014
 
 			      README FILE
 
@@ -99,7 +99,7 @@ directory, it may not have up-to-date information).
 
 			    RELEASE STATUS
 
-This is ISC DHCP 4.3.0.  The major theme for this release is "ipv6 uplift",
+This is ISC DHCP 4.3.x  The major theme for this release is "ipv6 uplift",
 in which we enhance the v6 code to support many of the features found
 in the v4 code.  These include: support for v6, support for on_commit,
 on_expiry and on_release in v6, support for accessing v6 relay options
@@ -141,12 +141,12 @@ information.   On Digital Unix, type ``man pfilt''.
 To build the DHCP Distribution, unpack the compressed tar file using
 the tar utility and the gzip command - type something like:
 
-	gunzip dhcp-4.3.0.tar.gz
-	tar xvf dhcp-4.3.0.tar
+	gunzip dhcp-4.3.1b1.tar.gz
+	tar xvf dhcp-4.3.1b1.tar
 
 			    CONFIGURING IT
 
-Now, cd to the dhcp-4.3.0 subdirectory that you've just created and
+Now, cd to the dhcp-4.3.1b1 subdirectory that you've just created and
 configure the source tree by typing:
 
 	./configure
