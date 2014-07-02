@@ -694,9 +694,12 @@ main(int argc, char **argv) {
 	dmalloc_outstanding = 0;
 #endif
 
+#if defined(ENABLE_GENTLE_SHUTDOWN)
+	/* no signal handlers until we deal with the side effects */
         /* install signal handlers */
 	signal(SIGINT, dhcp_signal_handler);   /* control-c */
 	signal(SIGTERM, dhcp_signal_handler);  /* kill */
+#endif
 
 	/* If we're not supposed to wait before getting the address,
 	   don't. */

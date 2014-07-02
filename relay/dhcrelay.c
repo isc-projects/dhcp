@@ -572,9 +572,12 @@ main(int argc, char **argv) {
 		dhcpv6_packet_handler = do_packet6;
 #endif
 
+#if defined(ENABLE_GENTLE_SHUTDOWN)
+	/* no signal handlers until we deal with the side effects */
         /* install signal handlers */
 	signal(SIGINT, dhcp_signal_handler);   /* control-c */
 	signal(SIGTERM, dhcp_signal_handler);  /* kill */
+#endif
 
 	/* Start dispatching packets and timeouts... */
 	dispatch();
