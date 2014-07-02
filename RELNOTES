@@ -172,10 +172,14 @@ by Eric Young (eay@cryptsoft.com).
 
 - Add code to properly dereference a pointer in the dhclient code
   on an error condition.
-  [ISC-Bugs #36194
+  [ISC-Bugs #36194]
 
 - Add code to help clean up soft leases.
   [ISC-Bugs #36304]
+
+- Disable the gentle shutdown functionality until we can determine
+  the best way to present it to remove or reduce the side effects.
+  [ISC-Bugs #36066]
 
 			Changes since 4.3.0rc1
 

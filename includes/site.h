@@ -295,6 +295,15 @@
    prefix. */
 #define DHCLIENT_DEFAULT_PREFIX_LEN 64
 
+/* Enable the gentle shutdown signal handling.  Currently this
+   means that on SIGINT or SIGTERM a client will release its
+   address and a server in a failover pair will go through
+   partner down.  Both of which can be undesireable in some
+   situations.  We plan to revisit this feature and may
+   make non-backwards compatible changes including the
+   removal of this define.  Use at your own risk.  */
+/* #define ENABLE_GENTLE_SHUTDOWN */
+
 /* Include definitions for various options.  In general these
    should be left as is, but if you have already defined one
    of these and prefer your definition you can comment the 
