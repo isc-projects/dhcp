@@ -1,12 +1,12 @@
 	      Internet Systems Consortium DHCP Distribution
 			     Version 4.3.1b1
-			      8 Julyy 2014
+			      8 July 2014
 
 			      Release Notes
 
 			      NEW FEATURES
 
-The major "theme" for ISC DHCP 4.3.x was to update the suport for
+The major "theme" for ISC DHCP 4.3.x was to update the support for
 DHCPv6 to include several of the features that have been available
 for DHCPv4.  These include:
 
@@ -54,7 +54,7 @@ by Eric Young (eay@cryptsoft.com).
 
 			Changes since 4.3.0
 
-- Tidy up several small tickets
+- Tidy up several small tickets.
   Correct parsing of DUID from config file, previously the LL type
   was put in the wrong place in the DUID string.
   [ISC-Bugs #20962] 
@@ -77,14 +77,14 @@ by Eric Young (eay@cryptsoft.com).
 - Fix some minor issues in the dst code.
   [ISC-Bugs #34172]
 
-- Properly #ifdef functions so that the code can compile without NSUPDATE
+- Properly #ifdef functions so that the code can compile without NSUPDATE.
   [ISC-Bugs #35058]
 
 - Update the partner's stos (start time of state, basically when we last
   heard from this partner) field when updating the state in failover.
   [ISC-Bugs #35549]
 
-- Modify the overload processing to allow space for the remote agent ID
+- Modify the overload processing to allow space for the remote agent ID.
   [ISC-Bugs #35569]
   Handle the ordering of the SUBNET_MASK option even if it is the last
   option in the list.
@@ -100,7 +100,7 @@ by Eric Young (eay@cryptsoft.com).
 
 - Correct the v6 client timing code.  When doing the timing backoff
   for MRT limit it to MRD.
-  Thanks to Jiri Popelka at Red Hat for the bug and fix.
+  Thanks to Jiri Popelka at Red Hat for the bug report and fix.
   [ISC-Bugs #21238
 
 - Add a log entry when killing a client and remove the PID files
@@ -108,12 +108,12 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Bugs #16970]
   [ISC-Bugs #17258]
 
-- Some minor cleanups in the client code
-  In addition to checking for dhcpc check for bootpc in the services list
+- Some minor cleanups in the client code.
+  In addition to checking for dhcpc check for bootpc in the services list.
   [ISC-Bugs #18933]
   Correct the client code to only try to get a lease once when the
   given the "-1" argument.
-  Thanks to Jiri Popelka at Red Hat for the bug and fix.
+  Thanks to Jiri Popelka at Red Hat for the bug report and fix.
   [ISC-Bugs #26735]
   When asked for the version don't send the output to syslog.
   [ISC-Bugs #29772]
@@ -123,17 +123,17 @@ by Eric Young (eay@cryptsoft.com).
   Thanks to Tomas Hozza at Red Hat for the suggestion and a prototype fix.
   [ISC-Bugs #33098]
 
-- Several updates to the dhcp server code
+- Several updates to the dhcp server code.
   When not in quiet mode print out the files being used.
   [ISC-Bugs #17551]
   As accessing some pid files may require privileges move the dropping
   of permission bits due to the paranoia patch to be after the pid code.
-  Thanks to Jiri Popelka at Red Hat for the bug and fix.
+  Thanks to Jiri Popelka at Red Hat for the bug report and fix.
   [ISC-Bugs #25806]
   When processing a "--version" request don't output the version information
   to syslog.
 
-- Add the "enable-log-pid" option to the configure script.  When enabled
+- Add the "enable-log-pid" build option to the configure script.  When enabled
   this causes the client, server and relay programs to include the PID
   number in syslog messages.
   Thanks to Marius Tomaschewski for the suggestion and proto-patch.
