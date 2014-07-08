@@ -108,7 +108,7 @@ by Eric Young (eay@cryptsoft.com).
   Thanks to Tomas Hozza at Red Hat for the suggestion and a prototype fix.
   [ISC-Bugs #33098]
 
-- Add the "enable-log-pid" option to the configure script.  When enabled
+- Add the "enable-log-pid" build option to the configure script.  When enabled
   this causes the client, server and relay programs to include the PID
   number in syslog messages.
   Thanks to Marius Tomaschewski for the suggestion and proto-patch.
