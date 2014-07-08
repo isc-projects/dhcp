@@ -64,6 +64,8 @@ by Eric Young (eay@cryptsoft.com).
   bug report and patch.
   [ISC-Bugs 36102]
 
+			Changes since 4.1-ESV-R9
+
 - Tidy up several small tickets.
   Correct parsing of DUID from config file, previously the LL type
   was put in the wrong place in the DUID string.
