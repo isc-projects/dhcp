@@ -102,7 +102,7 @@ This is ISC DHCP 4.1-ESV-R10, an extended support (ESV) release that
 provides patches for several bugs.
 
 ESVs are intended for users who have longer upgrade constraints 
-Please see our web page http://www.isc.org/downloads/extended-support
+Please see our web page http://www.isc.org/downloads/software-support-policy/
 for more information on ESVs
 
 In this release, the DHCPv6 server should be fully functional on Linux,
