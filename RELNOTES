@@ -43,13 +43,14 @@ ISC DHCP is open source software maintained by Internet Systems
 Consortium.  This product includes cryptographic software written
 by Eric Young (eay@cryptsoft.com).
 
-
-			Changes since 4.2.6
+			Changes since 4.2.7b1
 
 - Modify the linux and openwrt dhclient scripts to process information
   from a stateless request.  Thanks to Jiri Popelka at Red Hat for the
   bug report and patch.
   [ISC-Bugs 36102]
+
+			Changes since 4.2.6
 
 - Tidy up several small tickets.
   Correct parsing of DUID from config file, previously the LL type
