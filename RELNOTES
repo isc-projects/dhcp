@@ -46,7 +46,7 @@ by Eric Young (eay@cryptsoft.com).
 
 			Changes since 4.2.6
 
-- Tidy up several small tickets
+- Tidy up several small tickets.
   Correct parsing of DUID from config file, previously the LL type
   was put in the wrong place in the DUID string.
   [ISC-Bugs #20962] 
@@ -69,14 +69,14 @@ by Eric Young (eay@cryptsoft.com).
 - Fix some minor issues in the dst code.
   [ISC-Bugs #34172]
 
-- Properly #ifdef functions so that the code can compile without NSUPDATE
+- Properly #ifdef functions so that the code can compile without NSUPDATE.
   [ISC-Bugs #35058]
 
 - Update the partner's stos (start time of state, basically when we last
   heard from this partner) field when updating the state in failover.
   [ISC-Bugs #35549]
 
-- Modify the overload processing to allow space for the remote agent ID
+- Modify the overload processing to allow space for the remote agent ID.
   [ISC-Bugs #35569]
   Handle the ordering of the SUBNET_MASK option even if it is the last
   option in the list.
@@ -90,15 +90,15 @@ by Eric Young (eay@cryptsoft.com).
 
 - Correct the v6 client timing code.  When doing the timing backoff
   for MRT limit it to MRD.
-  Thanks to Jiri Popelka at Red Hat for the bug and fix.
+  Thanks to Jiri Popelka at Red Hat for the bug report and fix.
   [ISC-Bugs #21238
 
-- Some minor cleanups in the client code
-  In addition to checking for dhcpc check for bootpc in the services list
+- Some minor cleanups in the client code.
+  In addition to checking for dhcpc check for bootpc in the services list.
   [ISC-Bugs #18933]
   Correct the client code to only try to get a lease once when the
   given the "-1" argument.
-  Thanks to Jiri Popelka at Red Hat for the bug and fix.
+  Thanks to Jiri Popelka at Red Hat for the bug report and fix.
   [ISC-Bugs #26735]
   When asked for the version don't send the output to syslog.
   [ISC-Bugs #29772]
