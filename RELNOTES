@@ -59,6 +59,11 @@ by Eric Young (eay@cryptsoft.com).
   bug report and patch.
   [ISC-Bugs 36102]
 
+- Remove more unused RCSID tags.  These weren't noticed in 4.3 as
+  the code isn't used anymore but we remove them here to keep the
+  code consistent across versions.
+  [ISC-Bugs #36451]
+
 			Changes since 4.3.0
 
 - Tidy up several small tickets.

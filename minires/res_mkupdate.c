@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2004,2007-2009,2013 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2013-2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004,2007-2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -25,10 +26,6 @@
  * Based on the Dynamic DNS reference implementation by Viraj Bais
  * <viraj_bais@ccm.fm.intel.com>
  */
-
-#if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_mkupdate.c,v 1.16 2009/11/24 02:06:57 sar Exp $";
-#endif /* not lint */
 
 #include <sys/types.h>
 #include <sys/param.h>

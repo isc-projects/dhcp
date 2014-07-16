@@ -1,9 +1,6 @@
-#if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_update.c,v 1.17 2009/11/24 02:06:57 sar Exp $";
-#endif /* not lint */
-
 /*
- * Copyright (c) 2004,2007,2009,2013 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2013-2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004,2007,2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
