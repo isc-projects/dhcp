@@ -48,7 +48,8 @@
  */
 
 /*
- * Portions Copyright (c) 2004,2007,2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Portions Copyright (c) 2009,2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Portions Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
  * Portions Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -69,11 +70,6 @@
  *   <info@isc.org>
  *   https://www.isc.org/
  */
-
-#if defined(LIBC_SCCS) && !defined(lint)
-static const char sccsid[] = "@(#)res_query.c	8.1 (Berkeley) 6/4/93";
-static const char rcsid[] = "$Id: res_query.c,v 1.10.24.1 2009/11/20 01:49:01 sar Exp $";
-#endif /* LIBC_SCCS and not lint */
 
 #include <sys/types.h>
 #include <sys/param.h>

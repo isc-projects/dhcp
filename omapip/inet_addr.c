@@ -29,14 +29,6 @@
  * SUCH DAMAGE.
  */
 
-#if defined(LIBC_SCCS) && !defined(lint)
-#if 0
-static char sccsid[] = "@(#)inet_addr.c	8.1 (Berkeley) 6/17/93";
-#else
-static char rcsid[] = "$NetBSD: inet_addr.c,v 1.6 1996/02/02 15:22:23 mrg Exp $";
-#endif
-#endif /* LIBC_SCCS and not lint */
-
 #include "dhcpd.h"
 
 #include "omapip/omapip_p.h"
