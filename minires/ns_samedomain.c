@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004,2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004,2009,2014 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -20,10 +20,6 @@
  *   <info@isc.org>
  *   https://www.isc.org/
  */
-
-#ifndef lint
-static const char rcsid[] = "$Id: ns_samedomain.c,v 1.4.786.2 2009/07/24 22:04:52 sar Exp $";
-#endif
 
 #include <sys/types.h>
 #include <errno.h>

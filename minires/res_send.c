@@ -48,7 +48,7 @@
  */
 
 /*
- * Portions Copyright (c) 2004,2008-2009
+ * Portions Copyright (c) 2004,2008-2009,2014
  * by Internet Systems Consortium, Inc. ("ISC")
  * Portions Copyright (c) 1996-2003 by Internet Software Consortium
  *
@@ -70,11 +70,6 @@
  *   <info@isc.org>
  *   https://www.isc.org/
  */
-
-#if defined(LIBC_SCCS) && !defined(lint)
-static const char sccsid[] = "@(#)res_send.c	8.1 (Berkeley) 6/4/93";
-static const char rcsid[] = "$Id: res_send.c,v 1.11.116.2 2009/07/24 22:04:52 sar Exp $";
-#endif /* LIBC_SCCS and not lint */
 
 /*
  * Send query to name server and wait for reply.

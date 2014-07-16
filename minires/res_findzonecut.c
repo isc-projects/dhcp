@@ -1,9 +1,6 @@
-#if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_findzonecut.c,v 1.16.786.3.6.2 2012/03/09 21:45:09 sar Exp $";
-#endif /* not lint */
-
 /*
- * Copyright (c) 2009-2010,2013 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2013-2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
