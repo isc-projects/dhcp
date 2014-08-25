@@ -90,6 +90,7 @@ int if_register_lpf (info)
 	memset (&sa, 0, sizeof sa);
 	sa.sa_family = AF_PACKET;
 	strncpy (sa.sa_data, (const char *)info -> ifp, sizeof sa.sa_data);
+	sa.sa_data[sizeof(sa.sa_data)-1] = '\0';
 	if (bind (sock, &sa, sizeof sa)) {
 		if (errno == ENOPROTOOPT || errno == EPROTONOSUPPORT ||
 		    errno == ESOCKTNOSUPPORT || errno == EPFNOSUPPORT ||
@@ -102,6 +103,7 @@ int if_register_lpf (info)
 			log_fatal ("configuration!");
 		}
 		log_fatal ("Bind socket to interface: %m");
+
 	}
 
 	get_hw_addr(info->name, &info->hw_address);
@@ -320,6 +322,7 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	sa.spkt_family = AF_PACKET;
 	strncpy ((char *)sa.spkt_device,
 		 (const char *)interface -> ifp, sizeof sa.spkt_device);
+	sa.spkt_device[sizeof(sa.spkt_device) - 1] = '\0';
 	sa.spkt_protocol = htons(ETH_P_IP);
 
 	result = sendto (interface -> wfdesc,
