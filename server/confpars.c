@@ -892,7 +892,6 @@ void parse_failover_peer (cfile, group, type)
 
 	token = next_token (&val, (unsigned *)0, cfile);
 	if (token == SEMI) {
-		dfree (name, MDL);
 		if (type != SHARED_NET_DECL)
 			parse_warn (cfile, "failover peer reference not %s",
 				    "in shared-network declaration");
@@ -900,6 +899,7 @@ void parse_failover_peer (cfile, group, type)
 			if (!peer) {
 				parse_warn (cfile, "reference to unknown%s%s",
 					    " failover peer ", name);
+                                dfree (name, MDL);
 				return;
 			}
 			dhcp_failover_state_reference
@@ -907,15 +907,18 @@ void parse_failover_peer (cfile, group, type)
 				 peer, MDL);
 		}
 		dhcp_failover_state_dereference (&peer, MDL);
+                dfree (name, MDL);
 		return;
 	} else if (token == STATE) {
 		if (!peer) {
 			parse_warn (cfile, "state declaration for unknown%s%s",
 				    " failover peer ", name);
+                        dfree (name, MDL);
 			return;
 		}
 		parse_failover_state_declaration (cfile, peer);
 		dhcp_failover_state_dereference (&peer, MDL);
+                dfree (name, MDL);
 		return;
 	} else if (token != LBRACE) {
 		parse_warn (cfile, "expecting left brace");
@@ -927,6 +930,7 @@ void parse_failover_peer (cfile, group, type)
 		parse_warn (cfile, "redeclaration of failover peer %s", name);
 		skip_to_rbrace (cfile, 1);
 		dhcp_failover_state_dereference (&peer, MDL);
+                dfree (name, MDL);
 		return;
 	}
 
@@ -4041,6 +4045,7 @@ parse_fixed_prefix6(struct parse *cfile, struct host_decl *host_decl) {
 	*h = ia;
 	return;
 }
+
 #endif /* DHCPv6 */
 
 /* allow-deny-keyword :== BOOTP
@@ -4101,6 +4106,7 @@ int parse_allow_deny (oc, cfile, flag)
 	      default:
 		parse_warn (cfile, "expecting allow/deny key");
 		skip_to_semi (cfile);
+		expression_dereference (&data, MDL);
 		return 0;
 	}
 	/* Reference on option is passed to option cache. */

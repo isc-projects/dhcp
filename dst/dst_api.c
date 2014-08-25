@@ -339,7 +339,6 @@ DST_KEY *
 dst_read_key(const char *in_keyname, const unsigned in_id, 
 	     const int in_alg, const int type)
 {
-	char keyname[PATH_MAX];
 	DST_KEY *dg_key = NULL, *pubkey = NULL;
 
 	if (!dst_check_algorithm(in_alg)) { /* make sure alg is available */
@@ -352,22 +351,21 @@ dst_read_key(const char *in_keyname, const unsigned in_id,
 	if (in_keyname == NULL) {
 		EREPORT(("dst_read_private_key(): Null key name passed in\n"));
 		return (NULL);
-	} else
-		strncpy(keyname, in_keyname, PATH_MAX);
+    }
 
 	/* before I read in the public key, check if it is allowed to sign */
-	if ((pubkey = dst_s_read_public_key(keyname, in_id, in_alg)) == NULL)
+	if ((pubkey = dst_s_read_public_key(in_keyname, in_id, in_alg)) == NULL)
 		return (NULL);
 
 	if (type == DST_PUBLIC) 
 		return pubkey; 
 
-	if (!(dg_key = dst_s_get_key_struct(keyname, pubkey->dk_alg,
+	if (!(dg_key = dst_s_get_key_struct(in_keyname, pubkey->dk_alg,
 					    pubkey->dk_flags, pubkey->dk_proto,
 					    0)))
 		return (dg_key);
 	/* Fill in private key and some fields in the general key structure */
-	if (dst_s_read_private_key_file(keyname, dg_key, pubkey->dk_id,
+	if (dst_s_read_private_key_file((char *)(in_keyname), dg_key, pubkey->dk_id,
 					pubkey->dk_alg) == 0)
 		dg_key = dst_free_key(dg_key);
 
@@ -404,6 +402,7 @@ dst_write_key(const DST_KEY *key, const int type)
  *	Write a private key to disk.  The filename will be of the form:
  *	K<key->dk_name>+<key->dk_alg>+<key->dk_id>.<private key suffix>.
  *	If there is already a file with this name, an error is returned.
+ *
  *
  *  Parameters
  *	key     A DST managed key structure that contains
@@ -482,6 +481,7 @@ dst_s_read_public_key(const char *in_name, const unsigned in_id, int in_alg)
         unsigned char *notspace;
 	u_char deckey[RAW_KEY_SIZE];
 	FILE *fp;
+	DST_KEY *pubkey = NULL;
 
 	if (in_name == NULL) {
 		EREPORT(("dst_read_public_key(): No key name given\n"));
@@ -584,11 +584,16 @@ dst_s_read_public_key(const char *in_name, const unsigned in_id, int in_alg)
 			 dlen));
 		return (NULL);
 	}
+
 	/* store key and info in a key structure that is returned */
-/*	return dst_store_public_key(in_name, alg, proto, 666, flags, deckey,
-				    dlen);*/
-	return dst_buffer_to_key(in_name, alg,
-				 flags, proto, deckey, (unsigned)dlen);
+	/* Set the key id after we create because somehow this got missed. */
+	pubkey = dst_buffer_to_key(in_name, alg, flags, proto,
+			           deckey, (unsigned)dlen);
+	if (pubkey) {
+		pubkey->dk_id = in_id;
+	}
+
+	return (pubkey);
 }
 
 
@@ -844,7 +849,7 @@ dst_s_read_private_key_file(char *name, DST_KEY *pk_key, unsigned in_id,
 	int cnt, alg, len, major, minor, file_major, file_minor;
 	int id;
 	char filename[PATH_MAX];
-	u_char in_buff[RAW_KEY_SIZE];
+	u_char in_buff[RAW_KEY_SIZE + 1];
 	char *p;
 	FILE *fp;
 
@@ -866,8 +871,9 @@ dst_s_read_private_key_file(char *name, DST_KEY *pk_key, unsigned in_id,
 			 (char *) getcwd(NULL, PATH_MAX - 1)));
 		return (0);
 	}
+
 	/* now read the header info from the file */
-	if ((cnt = fread(in_buff, 1, sizeof(in_buff), fp)) < 5) {
+	if ((cnt = fread(in_buff, 1, sizeof(in_buff) - 1, fp)) < 5) {
 		fclose(fp);
 		EREPORT(("dst_s_read_private_key_file: error reading file %s (empty file)\n",
 			 filename));
@@ -875,6 +881,8 @@ dst_s_read_private_key_file(char *name, DST_KEY *pk_key, unsigned in_id,
 	}
 	/* decrypt key */
 	fclose(fp);
+	in_buff[cnt] = '\0';
+
 	if (memcmp(in_buff, "Private-key-format: v", 20) != 0)
 		goto fail;
 	len = cnt;
@@ -1075,24 +1083,19 @@ dst_sig_size(DST_KEY *key) {
 int 
 dst_random(const int mode, unsigned wanted, u_char *outran)
 {
-	u_int32_t *buff = NULL, *bp = NULL;
-	int i;
-	if (wanted <= 0 || outran == NULL) 
+	if (wanted <= 0 || outran == NULL)
 		return (0);
 
 	switch (mode) {
-	case DST_RAND_SEMI: 
-		bp = buff = (u_int32_t *) malloc(wanted+sizeof(u_int32_t));
-		if (bp == NULL) {
-			EREPORT(("malloc() failed for buff in function dst_random\n"));
-			return (0);
+	case DST_RAND_SEMI: {
+		u_int32_t *op = (u_int32_t *)outran;
+		int i;
+		for (i = 0; i < wanted; i+= sizeof(u_int32_t), op++) {
+			*op = dst_s_quick_random(i);
 		}
-		for (i = 0; i < wanted; i+= sizeof(u_int32_t), bp++) {
-			*bp = dst_s_quick_random(i);
-		}
-		memcpy(outran, buff, (unsigned)wanted);
-		SAFE_FREE(buff);
+
 		return (wanted);
+		}
 	case DST_RAND_STD:
 		return (dst_s_semi_random(outran, wanted));
 	case DST_RAND_KEY:
@@ -1103,4 +1106,3 @@ dst_random(const int mode, unsigned wanted, u_char *outran)
 		return (0);
 	}
 }
-

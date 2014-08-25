@@ -1763,21 +1763,14 @@ class_set_value (omapi_object_t *h,
 	class = (struct class *)h;
 
 	if (!omapi_ds_strcmp(name, "name")) {
-		char *tname;
-
 		if (class->name)
 			return ISC_R_EXISTS;
 
-		if ((tname = dmalloc(value->u.buffer.len + 1, MDL)) == NULL) {
-			return ISC_R_NOMEMORY;
-		}
-
-		/* tname is null terminated from dmalloc() */
-		memcpy(tname, value->u.buffer.value, value->u.buffer.len);
-
 		if (issubclass) {
+			char tname[value->u.buffer.len + 1];
+			memcpy(tname, value->u.buffer.value, value->u.buffer.len);
+			tname[sizeof(tname)-1] = '\0';
 			status = find_class(&superclass, tname, MDL);
-			dfree(tname, MDL);
 
 			if (status == ISC_R_NOTFOUND)
 				return status;
