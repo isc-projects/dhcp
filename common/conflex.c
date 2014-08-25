@@ -464,7 +464,7 @@ read_whitespace(int c, struct parse *cfile) {
 	 */
 	ofs = 0;
 	do {
-		if (ofs >= sizeof(cfile->tokbuf)) {
+		if (ofs >= (sizeof(cfile->tokbuf) - 1)) {
 			/*
 			 * As the file includes a huge amount of whitespace,
 			 * it's probably broken.

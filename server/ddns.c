@@ -1135,8 +1135,7 @@ ddns_update_lease_ptr(struct lease    *lease,
 		return (ISC_R_FAILURE);
 	}
 	else {
-		strncpy(ddns_address, piaddr(ddns_cb->address), 
-			MAX_ADDRESS_STRING_LEN);
+		strcpy(ddns_address, piaddr(ddns_cb->address));
 	}
 #if defined (DEBUG_DNS_UPDATES)
 	log_info("%s(%d): Updating lease_ptr for ddns_cp=%p (addr=%s)",

@@ -243,6 +243,7 @@ dhcpctl_status dhcpctl_get_boolean (int *result,
 	}
 	memcpy (&rv, data -> value, sizeof rv);
 	*result = ntohl (rv);
+	omapi_data_string_dereference (&data, MDL);
 	return ISC_R_SUCCESS;
 }
 

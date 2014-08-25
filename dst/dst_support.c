@@ -426,26 +426,29 @@ dst_s_build_filename(char *filename, const char *name, unsigned id,
 FILE *
 dst_s_fopen(const char *filename, const char *mode, unsigned perm)
 {
-	FILE *fp;
-	char pathname[PATH_MAX];
-	unsigned plen = sizeof(pathname);
+    FILE *fp;
+    char pathname[PATH_MAX];
 
-	if (*dst_path != '\0') {
-		strncpy(pathname, dst_path, PATH_MAX);
-		plen -= strlen(pathname);
-	}
-	else 
-		pathname[0] = '\0';
+    /* Make sure the length is ok before we try to build it. */
+    if ((strlen(dst_path) + strlen(filename)) > PATH_MAX - 1) {
+        /* set errno in case anyone bothers to look */
+        errno = ENAMETOOLONG;
+        return (NULL);
+    }
 
-	if (plen > strlen(filename))
-		strncpy(&pathname[PATH_MAX - plen], filename, plen-1);
-	else 
+    /* dst_path if not empty has a terminating "/" already */
+    strcpy(pathname, dst_path);
+    strcpy(pathname + strlen(pathname), filename);
+
+    fp = fopen(pathname, mode);
+    if ((fp != NULL) && (perm != 0)) {
+	if (chmod(pathname, perm) < 0) {
+		fclose(fp);
 		return (NULL);
-	
-	fp = fopen(pathname, mode);
-	if (perm)
-		chmod(pathname, perm);
-	return (fp);
+	}
+    }
+
+    return (fp);
 }
 
 #if 0
