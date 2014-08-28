@@ -53,7 +53,12 @@ int main (int argc, char **argv)
 		exit(1);
 	}
 
-	omapi_init ();
+	status = omapi_init ();
+	if (status != ISC_R_SUCCESS) {
+		fprintf(stderr, "omapi_init failed: %s\n",
+			isc_result_totext(status));
+		exit(1);
+	}
 
 	if (argc > 1 && !strcmp (argv [1], "listen")) {
 		if (argc < 3) {

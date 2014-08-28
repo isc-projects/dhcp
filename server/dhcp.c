@@ -1081,7 +1081,7 @@ void dhcpinform (packet, ms_nulltp)
 	if (subnet == NULL) {
 		log_info("%s: unknown subnet for %s address %s",
 			 msgbuf, addr_type, piaddr(sip));
-		option_state_dereference (&options, MDL);
+		option_state_dereference(&options, MDL);
 		return;
 	}
 
@@ -1089,48 +1089,47 @@ void dhcpinform (packet, ms_nulltp)
 	   It would be nice if a per-host value could override this, but
 	   there's overhead involved in checking this, so let's see how people
 	   react first. */
-	if (subnet && !subnet -> group -> authoritative) {
+	if (!subnet->group->authoritative) {
 		static int eso = 0;
-		log_info ("%s: not authoritative for subnet %s",
+		log_info("%s: not authoritative for subnet %s",
 			  msgbuf, piaddr (subnet -> net));
 		if (!eso) {
-			log_info ("If this DHCP server is authoritative for%s",
+			log_info("If this DHCP server is authoritative for%s",
 				  " that subnet,");
-			log_info ("please write an `authoritative;' directi%s",
+			log_info("please write an `authoritative;' directi%s",
 				  "ve either in the");
-			log_info ("subnet declaration or in some scope that%s",
+			log_info("subnet declaration or in some scope that%s",
 				  " encloses the");
-			log_info ("subnet declaration - for example, write %s",
+			log_info("subnet declaration - for example, write %s",
 				  "it at the top");
-			log_info ("of the dhcpd.conf file.");
+			log_info("of the dhcpd.conf file.");
 		}
 		if (eso++ == 100)
 			eso = 0;
-		subnet_dereference (&subnet, MDL);
-		option_state_dereference (&options, MDL);
+		subnet_dereference(&subnet, MDL);
+		option_state_dereference(&options, MDL);
 		return;
 	}
 	
-	memset (&outgoing, 0, sizeof outgoing);
-	memset (&raw, 0, sizeof raw);
+	memset(&outgoing, 0, sizeof outgoing);
+	memset(&raw, 0, sizeof raw);
 	outgoing.raw = &raw;
 
 	maybe_return_agent_options(packet, options);
 
 	/* Execute statements in scope starting with the subnet scope. */
-	if (subnet)
-		execute_statements_in_scope (NULL, packet, NULL, NULL,
-					     packet->options, options,
-					     &global_scope, subnet->group,
-					     NULL, NULL);
+	execute_statements_in_scope(NULL, packet, NULL, NULL,
+				    packet->options, options,
+				    &global_scope, subnet->group,
+				    NULL, NULL);
  		
 	/* Execute statements in the class scopes. */
-	for (i = packet -> class_count; i > 0; i--) {
+	for (i = packet->class_count; i > 0; i--) {
 		execute_statements_in_scope(NULL, packet, NULL, NULL,
 					    packet->options, options,
 					    &global_scope,
 					    packet->classes[i - 1]->group,
-					    subnet ? subnet->group : NULL,
+					    subnet->group,
 					    NULL);
 	}
 

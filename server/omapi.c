@@ -2190,7 +2190,9 @@ isc_result_t dhcp_class_create (omapi_object_t **lp,
 	if (status != ISC_R_SUCCESS)
 		return (status);
 
-	clone_group(&cp->group, root_group, MDL);
+	if (clone_group(&cp->group, root_group, MDL) == 0)
+		return (ISC_R_NOMEMORY);
+
 	cp->flags = CLASS_DECL_DYNAMIC;
 	status = omapi_object_reference(lp, (omapi_object_t *)cp, MDL);
 	class_dereference(&cp, MDL);

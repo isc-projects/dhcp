@@ -606,7 +606,9 @@ isc_result_t trace_get_next_packet (trace_type_t **ttp,
 	paylen = tpkt -> length;
 	if (paylen % 8)
 		paylen += 8 - (tpkt -> length % 8);
-	if (paylen > (*bufmax)) {
+
+	/* allocate a buffer if we need one or current buffer is too small */
+	if ((*buf == NULL) || (paylen > (*bufmax))) {
 		if ((*buf))
 			dfree ((*buf), MDL);
 		(*bufmax) = ((paylen + 1023) & ~1023U);
@@ -617,7 +619,7 @@ isc_result_t trace_get_next_packet (trace_type_t **ttp,
 			return ISC_R_NOMEMORY;
 		}
 	}
-	
+
 	status = fread ((*buf), 1, paylen, traceinfile);
 	if (status < paylen) {
 		if (ferror (traceinfile))

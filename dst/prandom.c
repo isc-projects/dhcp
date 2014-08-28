@@ -492,8 +492,7 @@ digest_file(dst_work *work)
 		if (i > 0) 
 			work->filled += i;
 	}
-	else if (i > 0)
-		my_digest(work, buf, (unsigned)i);
+
 	my_digest(work, (const u_char *)name, strlen(name));
 	return (no + strlen(name));
 }

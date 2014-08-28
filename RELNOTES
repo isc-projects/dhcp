@@ -55,6 +55,9 @@ by Eric Young (eay@cryptsoft.com).
 			Changes since 4.3.1
 
 - Addressed Coverity issues reported as of 07-31-2014:
+  [ISC-Bugs #36933] Corrects Coverity reported "medium" impact issues
+
+- Addressed Coverity issues reported as of 07-31-2014:
   [ISC-Bugs #36712] Corrects Coverity reported "high" impact issues
 
 			Changes since 4.3.1b1

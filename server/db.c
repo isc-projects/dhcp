@@ -1206,7 +1206,7 @@ int new_lease_file ()
       fail:
 	lease_file_is_corrupt = db_validity;
       fdfail:
-	unlink (newfname);
+	(void)unlink (newfname);
 	return 0;
 }
 
