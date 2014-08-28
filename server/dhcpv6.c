@@ -3188,6 +3188,8 @@ lease_compare(struct iasubopt *alpha, struct iasubopt *beta) {
 			if (alpha->hard_lifetime_end_time <
 			    beta->hard_lifetime_end_time)
 				return alpha;
+			else
+				return beta;
 
 		      default:
 			log_fatal("Impossible condition at %s:%d.", MDL);
@@ -4245,6 +4247,8 @@ prefix_compare(struct reply_state *reply,
 			if (alpha->hard_lifetime_end_time <
 			    beta->hard_lifetime_end_time)
 				return alpha;
+			else
+				return beta;
 
 		      default:
 			log_fatal("Impossible condition at %s:%d.", MDL);

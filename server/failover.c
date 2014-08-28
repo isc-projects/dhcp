@@ -720,7 +720,10 @@ static isc_result_t do_a_failover_option (c, link)
 
 		/* FT_DDNS* are special - one or two bytes of status
 		   followed by the client FQDN. */
-		if (ft_options [option_code].type == FT_DDNS1 ||
+
+		/* Note: FT_DDNS* option support appears to be incomplete.
+		   ISC-Bugs #36996 has been opened to address this. */
+		if (ft_options [option_code].type == FT_DDNS ||
 		    ft_options [option_code].type == FT_DDNS1) {
 			ddns_fqdn_t *ddns =
 				((ddns_fqdn_t *)
@@ -2248,6 +2251,8 @@ isc_result_t dhcp_failover_peer_state_changed (dhcp_failover_state_t *state,
 		switch (new_state) {
 		      case recover_done:
 			log_error("Both servers have entered recover-done!");
+			/* Fall through and tranistion to normal anyway */
+
 		      case normal:
 			dhcp_failover_set_state (state, normal);
 			break;

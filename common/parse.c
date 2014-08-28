@@ -4987,14 +4987,6 @@ int parse_expression (expr, cfile, lose, context, plhs, binop)
 	tmp = (struct expression *)0;
 	rhs = (struct expression *)0;
 
-	/* Recursions don't return until we have parsed the end of the
-	   expression, so if we recursed earlier, we can now return what
-	   we got. */
-	if (next_op == expr_none) {
-		*expr = lhs;
-		return 1;
-	}
-
 	binop = next_op;
 	goto new_rhs;
 }	

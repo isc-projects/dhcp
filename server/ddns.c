@@ -343,10 +343,9 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 			goto out;
 		}
 
-		buffer_allocate (&ddns_fwd_name.buffer,
+		if (buffer_allocate (&ddns_fwd_name.buffer,
 				 ddns_hostname.len + ddns_domainname.len + 2,
-				 MDL);
-		if (ddns_fwd_name.buffer) {
+				 MDL)) {
 			ddns_fwd_name.data = ddns_fwd_name.buffer -> data;
 			data_string_append (&ddns_fwd_name, &ddns_hostname);
 			ddns_fwd_name.buffer -> data [ddns_fwd_name.len] = '.';
@@ -518,8 +517,8 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 	}
 
 	if (s1) {
-		buffer_allocate(&ddns_rev_name.buffer, rev_name_len, MDL);
-		if (ddns_rev_name.buffer != NULL) {
+		if (buffer_allocate(&ddns_rev_name.buffer,
+				    rev_name_len, MDL)) {
 			ddns_rev_name.data = ddns_rev_name.buffer->data;
 
 			if (addr.len == 4) {

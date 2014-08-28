@@ -1843,6 +1843,15 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 			 * of the last format type and we add 1 to
 			 * cover the entire first record.
 			 */
+
+			/* If format string had no valid entries prior to
+			 * 'a' hunkinc will be 0. Ex: "a", "oa", "aA" */
+			if (hunkinc == 0) {
+				log_error ("%s: invalid 'a' format: %s",
+					   option->name, option->format);
+				return ("<error>");
+			}
+
 			numhunk = ((len - hunksize) / hunkinc) + 1;
 			len_used = hunksize + ((numhunk - 1) * hunkinc);
 		} else {
@@ -1850,6 +1859,15 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 			 * It is an 'A' type array - we repeat the
 			 * entire record
 			 */
+
+			/* If format string had no valid entries prior to
+			 * 'A' hunksize will be 0. Ex: "A", "oA", "foA" */
+			if (hunksize == 0) {
+				log_error ("%s: invalid 'A' format: %s",
+					   option->name, option->format);
+				return ("<error>");
+			}
+
 			numhunk = len / hunksize;
 			len_used = numhunk * hunksize;
 		}

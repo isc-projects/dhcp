@@ -818,7 +818,7 @@ dst_key_to_buffer(DST_KEY *key, u_char *out_buff, unsigned buf_len)
   /* this function will extract the secret of HMAC into a buffer */
 	if(key == NULL) 
 		return (0);
-	if(key->dk_func != NULL && key->dk_func != NULL) {
+	if(key->dk_func != NULL && key->dk_func->to_dns_key != NULL) {
 		len = key->dk_func->to_dns_key(key, out_buff, buf_len);
 		if (len < 0)
 			return (0);
