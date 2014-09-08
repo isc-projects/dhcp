@@ -161,6 +161,8 @@ typedef struct {
 #define FTM_CONTACT		11
 #define FTM_DISCONNECT		12
 
+#define FTM_MAX			FTM_DISCONNECT
+
 /* Reject reasons from Section 12.21: */
 #define FTR_ILLEGAL_IP_ADDR	1
 #define FTR_FATAL_CONFLICT	2

@@ -62,6 +62,9 @@ by Eric Young (eay@cryptsoft.com).
   and hmac-sha512
   [ISC-Bugs #36947]
 
+- Added check for invalid failover message type.
+  [ISC-Bugs #36653]
+
 - Corrected rate limiting checks for bad packet logging.
   [ISC-Bugs #36897]
 

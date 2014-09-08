@@ -626,6 +626,12 @@ static isc_result_t do_a_failover_option (c, link)
 		return DHCP_R_PROTOCOLERROR;
 	}
 
+	if (link->imsg->type > FTM_MAX) {
+		log_error ("FAILOVER: invalid message type: %d",
+			   link->imsg->type);
+		return DHCP_R_PROTOCOLERROR;
+	}
+
 	/* Get option code. */
 	omapi_connection_get_uint16 (c, &option_code);
 	link -> imsg_count += 2;
