@@ -629,7 +629,7 @@ static isc_result_t do_a_failover_option (c, link)
 	if (link->imsg->type > FTM_MAX) {
 		log_error ("FAILOVER: invalid message type: %d",
 			   link->imsg->type);
-		return DHCP_R_PROTOCOLERROR;
+		return ISC_R_PROTOCOLERROR;
 	}
 
 	/* Get option code. */
