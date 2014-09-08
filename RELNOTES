@@ -59,6 +59,9 @@ by Eric Young (eay@cryptsoft.com).
 
 			Changes since 4.1.-ESV
 
+- Corrected rate limiting checks for bad packet logging.
+  [ISC-Bugs #36897]
+
 - Addressed Coverity issues reported as of 07-31-2014:
   [ISC-Bugs #36712] Corrects Coverity reported "high" impact issues
   [ISC-Bugs #36933] Corrects Coverity reported "medium" impact issues
