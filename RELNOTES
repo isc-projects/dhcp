@@ -54,12 +54,15 @@ by Eric Young (eay@cryptsoft.com).
 
 			Changes since 4.3.1
 
+- Corrected parser's right brace matching when a statement contains an error.
+  [ISC-Bugs #36021]
+
 - TSIG-authenticated dynamic DNS updates now support the use of these
   additional algorithms: hmac-sha1, hmac-sha224, hmac-sha256, hmac-sha384,
   and hmac-sha512
   [ISC-Bugs #36947]
 
-- Corrected rate limiting checks for bad packet logging. 
+- Corrected rate limiting checks for bad packet logging.
   [ISC-Bugs #36897]
 
 - Log statements depicting what files will be used by the server now occur
