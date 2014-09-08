@@ -54,6 +54,9 @@ by Eric Young (eay@cryptsoft.com).
 
 			Changes since 4.3.1
 
+- Corrected rate limiting checks for bad packet logging. 
+  [ISC-Bugs #36897]
+
 - Log statements depicting what files will be used by the server now occur
   after the configuration file has been processed.
   [ISC-Bugs #36671]

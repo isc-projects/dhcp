@@ -3,7 +3,7 @@
    Packet assembly code, originally contributed by Archie Cobbs. */
 
 /*
- * Copyright (c) 2009,2012 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009,2012,2014 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004,2005,2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
@@ -234,12 +234,12 @@ decode_udp_ip_header(struct interface_info *interface,
   unsigned char *upp, *endbuf;
   u_int32_t ip_len, ulen, pkt_len;
   u_int32_t sum, usum;
-  static int ip_packets_seen;
-  static int ip_packets_bad_checksum;
-  static int udp_packets_seen;
-  static int udp_packets_bad_checksum;
-  static int udp_packets_length_checked;
-  static int udp_packets_length_overflow;
+  static unsigned int ip_packets_seen = 0;
+  static unsigned int ip_packets_bad_checksum = 0;
+  static unsigned int udp_packets_seen = 0;
+  static unsigned int udp_packets_bad_checksum = 0;
+  static unsigned int udp_packets_length_checked = 0;
+  static unsigned int udp_packets_length_overflow = 0;
   unsigned len;
 
   /* Designate the end of the input buffer for bounds checks. */
@@ -287,10 +287,10 @@ decode_udp_ip_header(struct interface_info *interface,
   udp_packets_length_checked++;
   if ((upp + ulen) > endbuf) {
 	udp_packets_length_overflow++;
-	if ((udp_packets_length_checked > 4) &&
-	    ((udp_packets_length_checked /
-	      udp_packets_length_overflow) < 2)) {
-		log_info("%d udp packets in %d too long - dropped",
+	if (((udp_packets_length_checked > 4) &&
+	     (udp_packets_length_overflow != 0)) &&
+	    ((udp_packets_length_checked / udp_packets_length_overflow) < 2)) {
+		log_info("%u udp packets in %u too long - dropped",
 			 udp_packets_length_overflow,
 			 udp_packets_length_checked);
 		udp_packets_length_overflow = 0;
@@ -299,20 +299,29 @@ decode_udp_ip_header(struct interface_info *interface,
 	return -1;
   }
 
-  if ((ulen < sizeof(udp)) || ((upp + ulen) > endbuf))
-	return -1;
+  /* If at least 5 with less than 50% bad, start over */
+  if (udp_packets_length_checked > 4) {
+	udp_packets_length_overflow = 0;
+	udp_packets_length_checked = 0;
+  }
 
   /* Check the IP header checksum - it should be zero. */
-  ++ip_packets_seen;
+  ip_packets_seen++;
   if (wrapsum (checksum (buf + bufix, ip_len, 0))) {
 	  ++ip_packets_bad_checksum;
-	  if (ip_packets_seen > 4 &&
-	      (ip_packets_seen / ip_packets_bad_checksum) < 2) {
-		  log_info ("%d bad IP checksums seen in %d packets",
+	  if (((ip_packets_seen > 4) && (ip_packets_bad_checksum != 0)) &&
+	      ((ip_packets_seen / ip_packets_bad_checksum) < 2)) {
+		  log_info ("%u bad IP checksums seen in %u packets",
 			    ip_packets_bad_checksum, ip_packets_seen);
 		  ip_packets_seen = ip_packets_bad_checksum = 0;
 	  }
 	  return -1;
+  }
+
+  /* If at least 5 with less than 50% bad, start over */
+  if (ip_packets_seen > 4) {
+	ip_packets_bad_checksum = 0;
+	ip_packets_seen = 0;
   }
 
   /* Copy out the IP source address... */
@@ -339,13 +348,19 @@ decode_udp_ip_header(struct interface_info *interface,
   udp_packets_seen++;
   if (usum && usum != sum) {
 	  udp_packets_bad_checksum++;
-	  if (udp_packets_seen > 4 &&
-	      (udp_packets_seen / udp_packets_bad_checksum) < 2) {
-		  log_info ("%d bad udp checksums in %d packets",
+	  if (((udp_packets_seen > 4) && (udp_packets_bad_checksum != 0)) &&
+	      ((udp_packets_seen / udp_packets_bad_checksum) < 2)) {
+		  log_info ("%u bad udp checksums in %u packets",
 			    udp_packets_bad_checksum, udp_packets_seen);
 		  udp_packets_seen = udp_packets_bad_checksum = 0;
 	  }
 	  return -1;
+  }
+
+  /* If at least 5 with less than 50% bad, start over */
+  if (udp_packets_seen > 4) {
+	udp_packets_bad_checksum = 0;
+	udp_packets_seen = 0;
   }
 
   /* Copy out the port... */
