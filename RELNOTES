@@ -45,8 +45,16 @@ by Eric Young (eay@cryptsoft.com).
 
 			Changes since 4.2.7
 
+- TSIG-authenticated dynamic DNS updates now support the use of these
+  additional algorithms: hmac-sha1, hmac_sha224, hmac_sha256, hmac_sha384,
+  and hmac_sha512
+  [ISC-Bugs #36947]
+
 - Added check for invalid failover message type.
   [ISC-Bugs #36653]
+
+- Corrected rate limiting checks for bad packet logging.
+  [ISC-Bugs #36897]
 
 - Corrected rate limiting checks for bad packet logging.
   [ISC-Bugs #36897]

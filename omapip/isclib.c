@@ -203,12 +203,24 @@ isclib_make_dst_key(char          *inname,
 	dns_name_t *name;
 	dns_fixedname_t name0;
 	isc_buffer_t b;
+	unsigned int algorithm_code;
 
 	isc_buffer_init(&b, secret, length);
 	isc_buffer_add(&b, length);
 
-	/* We only support HMAC_MD5 currently */
-	if (strcasecmp(algorithm, DHCP_HMAC_MD5_NAME) != 0) {
+	if (strcasecmp(algorithm, DHCP_HMAC_MD5_NAME) == 0) {
+		algorithm_code =  DST_ALG_HMACMD5;
+	} else if (strcasecmp(algorithm, DHCP_HMAC_SHA1_NAME) == 0) {
+		algorithm_code =  DST_ALG_HMACSHA1;
+	} else if (strcasecmp(algorithm, DHCP_HMAC_SHA224_NAME) == 0) {
+		algorithm_code =  DST_ALG_HMACSHA224;
+	} else if (strcasecmp(algorithm, DHCP_HMAC_SHA256_NAME) == 0) {
+		algorithm_code =  DST_ALG_HMACSHA256;
+	} else if (strcasecmp(algorithm, DHCP_HMAC_SHA384_NAME) == 0) {
+		algorithm_code =  DST_ALG_HMACSHA384;
+	} else if (strcasecmp(algorithm, DHCP_HMAC_SHA512_NAME) == 0) {
+		algorithm_code =  DST_ALG_HMACSHA512;
+	} else {
 		return(DHCP_R_INVALIDARG);
 	}
 
@@ -217,7 +229,7 @@ isclib_make_dst_key(char          *inname,
 		return(result);
 	}
 
-	return(dst_key_frombuffer(name, DST_ALG_HMACMD5, DNS_KEYOWNER_ENTITY,
+	return(dst_key_frombuffer(name, algorithm_code, DNS_KEYOWNER_ENTITY,
 				  DNS_KEYPROTO_DNSSEC, dns_rdataclass_in,
 				  &b, dhcp_gbl_ctx.mctx, dstkey));
 }
