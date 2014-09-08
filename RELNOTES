@@ -62,10 +62,14 @@ by Eric Young (eay@cryptsoft.com).
 - Corrected parser's right brace matching when a statement contains an error.
   [ISC-Bugs #36021]
 
-- Added check for invalid failover message type.
+- Added check for invalid failover message type. Thanks to Tobias Stoeckmann
+  working with the OpendBSD project who spotted the issue and provided the
+  patch.
   [ISC-Bugs #36653]
 
-- Corrected rate limiting checks for bad packet logging.
+- Corrected rate limiting checks for bad packet logging. Thanks to Tobias 
+  Stoeckmann working with the OpendBSD project who spotted the issue and 
+  provided the patch.
   [ISC-Bugs #36897]
 
 - Addressed Coverity issues reported as of 07-31-2014:
