@@ -72,11 +72,18 @@ struct enumeration_value *find_enumeration_value (const char *name,
 }
 
 /* Skip to the semicolon ending the current statement.   If we encounter
-   braces, the matching closing brace terminates the statement.   If we
-   encounter a right brace but haven't encountered a left brace, return
-   leaving the brace in the token buffer for the caller.   If we see a
-   semicolon and haven't seen a left brace, return.   This lets us skip
-   over:
+   braces, the matching closing brace terminates the statement.
+*/
+void skip_to_semi (cfile)
+	struct parse *cfile;
+{
+	skip_to_rbrace(cfile, 0);
+}
+
+/* Skips everything from the current point upto (and including) the given
+ number of right braces.  If we encounter a semicolon but haven't seen a
+ left brace, consume it and return.
+ This lets us skip over:
 
    	statement;
 	statement foo bar { }
@@ -84,13 +91,6 @@ struct enumeration_value *find_enumeration_value (const char *name,
 	statement}
  
 	...et cetera. */
-
-void skip_to_semi (cfile)
-	struct parse *cfile;
-{
-	skip_to_rbrace (cfile, 0);
-}
-
 void skip_to_rbrace (cfile, brace_count)
 	struct parse *cfile;
 	int brace_count;
@@ -99,30 +99,36 @@ void skip_to_rbrace (cfile, brace_count)
 	const char *val;
 
 #if defined (DEBUG_TOKEN)
-	log_error ("skip_to_rbrace: %d\n", brace_count);
+	log_error("skip_to_rbrace: %d\n", brace_count);
 #endif
 	do {
-		token = peek_token (&val, (unsigned *)0, cfile);
+		token = peek_token(&val, NULL, cfile);
 		if (token == RBRACE) {
-			skip_token(&val, (unsigned *)0, cfile);
-			if (brace_count) {
-				if (!--brace_count)
-					return;
-			} else
+			if (brace_count > 0) {
+				--brace_count;
+			}
+
+			if (brace_count == 0) {
+				/* Eat the brace and return. */
+				skip_token(&val, NULL, cfile);
 				return;
+			}
 		} else if (token == LBRACE) {
 			brace_count++;
-		} else if (token == SEMI && !brace_count) {
-			skip_token(&val, (unsigned *)0, cfile);
+		} else if (token == SEMI && (brace_count == 0)) {
+			/* Eat the semicolon and return. */
+			skip_token(&val, NULL, cfile);
 			return;
 		} else if (token == EOL) {
 			/* EOL only happens when parsing /etc/resolv.conf,
 			   and we treat it like a semicolon because the
 			   resolv.conf file is line-oriented. */
-			skip_token(&val, (unsigned *)0, cfile);
+			skip_token(&val, NULL, cfile);
 			return;
 		}
-		token = next_token (&val, (unsigned *)0, cfile);
+
+		/* Eat the current token */
+		token = next_token(&val, NULL, cfile);
 	} while (token != END_OF_FILE);
 }
 

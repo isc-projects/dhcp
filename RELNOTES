@@ -59,6 +59,9 @@ by Eric Young (eay@cryptsoft.com).
 
 			Changes since 4.1.-ESV
 
+- Corrected parser's right brace matching when a statement contains an error.
+  [ISC-Bugs #36021]
+
 - Added check for invalid failover message type.
   [ISC-Bugs #36653]
 
