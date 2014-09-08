@@ -45,6 +45,9 @@ by Eric Young (eay@cryptsoft.com).
 
 			Changes since 4.2.7
 
+- Added check for invalid failover message type.
+  [ISC-Bugs #36653]
+
 - Corrected rate limiting checks for bad packet logging.
   [ISC-Bugs #36897]
 
