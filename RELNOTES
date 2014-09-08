@@ -45,6 +45,9 @@ by Eric Young (eay@cryptsoft.com).
 
 			Changes since 4.2.7
 
+- Corrected parser's right brace matching when a statement contains an error.
+  [ISC-Bugs #36021]
+
 - TSIG-authenticated dynamic DNS updates now support the use of these
   additional algorithms: hmac-sha1, hmac-sha224, hmac-sha256, hmac-sha384,
   and hmac-sha512
@@ -52,9 +55,6 @@ by Eric Young (eay@cryptsoft.com).
 
 - Added check for invalid failover message type.
   [ISC-Bugs #36653]
-
-- Corrected rate limiting checks for bad packet logging.
-  [ISC-Bugs #36897]
 
 - Corrected rate limiting checks for bad packet logging.
   [ISC-Bugs #36897]
