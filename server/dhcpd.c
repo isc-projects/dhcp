@@ -400,11 +400,7 @@ main(int argc, char **argv) {
 		log_info (copyright);
 		log_info (arr);
 		log_info (url);
-		log_info ("Config file: %s", path_dhcpd_conf);
-		log_info ("Database file: %s", path_dhcpd_db);
-		log_info ("PID file: %s", path_dhcpd_pid);
 	} else {
-		quiet = 0;
 		log_perror = 0;
 	}
 
@@ -616,7 +612,7 @@ main(int argc, char **argv) {
 		log_fatal ("Configuration file errors encountered -- exiting");
 
 	postconf_initialization (quiet);
- 
+
 #if defined (PARANOIA) && !defined (EARLY_CHROOT)
 	if (set_chroot) setup_chroot (set_chroot);
 #endif /* PARANOIA && !EARLY_CHROOT */
@@ -1018,6 +1014,12 @@ void postconf_initialization (int quiet)
 	}
 #endif
 
+	if (!quiet) {
+		log_info ("Config file: %s", path_dhcpd_conf);
+		log_info ("Database file: %s", path_dhcpd_db);
+		log_info ("PID file: %s", path_dhcpd_pid);
+	}
+
 	oc = lookup_option(&server_universe, options, SV_LOG_FACILITY);
 	if (oc) {
 		if (evaluate_option_cache(&db, NULL, NULL, NULL, options, NULL,
@@ -1027,17 +1029,14 @@ void postconf_initialization (int quiet)
 				openlog("dhcpd", DHCP_LOG_OPTIONS, db.data[0]);
 				/* Log the startup banner into the new
 				   log file. */
-				if (!quiet) {
-					/* Don't log to stderr twice. */
-					tmp = log_perror;
-					log_perror = 0;
-					log_info("%s %s",
-						 message, PACKAGE_VERSION);
-					log_info(copyright);
-					log_info(arr);
-					log_info(url);
-					log_perror = tmp;
-				}
+				/* Don't log to stderr twice. */
+				tmp = log_perror;
+				log_perror = 0;
+				log_info("%s %s", message, PACKAGE_VERSION);
+				log_info(copyright);
+				log_info(arr);
+				log_info(url);
+				log_perror = tmp;
 			} else
 				log_fatal("invalid log facility");
 			data_string_forget(&db, MDL);
