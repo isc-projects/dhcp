@@ -675,7 +675,7 @@ The
 statement
 .RS 0.25i
 .PP
-.B split \fIindex\fR\fB;\fR
+.B split \fIbits\fR\fB;\fR
 .PP
 The split statement specifies the split between the primary and
 secondary for the purposes of load balancing.  Whenever a client
@@ -687,7 +687,9 @@ the secondary is responsible.  The \fBsplit\fR value determines
 how many of the leading bits are set to one.  So, in practice, higher
 split values will cause the primary to serve more clients than the
 secondary.  Lower split values, the converse.  Legal values are between
-0 and 255, of which the most reasonable is 128.
+0 and 256 inclusive, of which the most reasonable is 128.  Note that
+a value of 0 makes the secondary responsible for all clients and a value
+of 256 makes the primary responsible for all clients.
 .RE
 .PP
 The 
