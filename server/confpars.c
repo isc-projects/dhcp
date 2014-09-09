@@ -1068,8 +1068,9 @@ void parse_failover_peer (cfile, group, type)
 				return;
 			}
 			split = atoi (val);
-			if (split > 255) {
-				parse_warn (cfile, "split must be < 256");
+			if (split > 256) {
+				parse_warn (cfile, "split must be between "
+                                                   "0 and 256, inclusive");
 			} else {
 				memset (hba, 0, sizeof hba);
 				for (i = 0; i < split; i++) {
