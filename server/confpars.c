@@ -3962,6 +3962,14 @@ parse_address_range6(struct parse *cfile,
 		return;
 	}
 
+	/* Make sure starting address is within the subnet */
+	if (!addr_eq(group->subnet->net,
+		     subnet_number(lo, group->subnet->netmask))) {
+		parse_warn(cfile, "range6 start address is outside the subnet");
+                skip_to_semi(cfile);
+		return;
+	}
+
 	/*
 	 * zero out the net entry in case we use it
 	 */
@@ -3990,13 +3998,17 @@ parse_address_range6(struct parse *cfile,
 			skip_to_semi(cfile);
 			return;
 		}
-
+		if (bits < group->subnet->prefix_len) {
+			parse_warn(cfile,
+				   "network mask smaller than subnet mask");
+			skip_to_semi(cfile);
+			return;
+		}
 		if (!is_cidr_mask_valid(&net.cidrnet.lo_addr, bits)) {
 			parse_warn(cfile, "network mask too short");
 			skip_to_semi(cfile);
 			return;
 		}
-
 		/*
 		 * can be temporary (RFC 4941 like)
 		 */
@@ -4034,6 +4046,15 @@ parse_address_range6(struct parse *cfile,
 		 * the IPv6 pool.
 		 */
 		if (!parse_ip6_addr(cfile, &hi)) {
+			return;
+		}
+
+		/* Make sure ending address is within the subnet */
+		if (!addr_eq(group->subnet->net,
+			     subnet_number(hi, group->subnet->netmask))) {
+			parse_warn(cfile,
+				   "range6 end address is outside the subnet");
+			skip_to_semi(cfile);
 			return;
 		}
 
@@ -4111,7 +4132,26 @@ parse_prefix6(struct parse *cfile,
 	if (!parse_ip6_addr(cfile, &lo)) {
 		return;
 	}
+
+	/* Make sure starting prefix is within the subnet */
+	if (!addr_eq(group->subnet->net,
+		     subnet_number(lo, group->subnet->netmask))) {
+			      parse_warn(cfile, "prefix6 start prefix"
+                                                " is outside the subnet");
+			      skip_to_semi(cfile);
+		return;
+	}
+
 	if (!parse_ip6_addr(cfile, &hi)) {
+		return;
+	}
+
+	/* Make sure ending prefix is within the subnet */
+	if (!addr_eq(group->subnet->net,
+		     subnet_number(hi, group->subnet->netmask))) {
+			      parse_warn(cfile, "prefix6 end prefix"
+                                                " is outside the subnet");
+			      skip_to_semi(cfile);
 		return;
 	}
 
@@ -4137,9 +4177,15 @@ parse_prefix6(struct parse *cfile,
 		parse_warn(cfile, "networks have 0 to 128 bits (exclusive)");
 		return;
 	}
+	if (bits < group->subnet->prefix_len) {
+		parse_warn(cfile, "network mask smaller than subnet mask");
+		skip_to_semi(cfile);
+		return;
+	}
 	if (!is_cidr_mask_valid(&lo, bits) ||
 	    !is_cidr_mask_valid(&hi, bits)) {
 		parse_warn(cfile, "network mask too short");
+		skip_to_semi(cfile);
 		return;
 	}
 	token = next_token(NULL, NULL, cfile);
