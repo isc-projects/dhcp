@@ -302,3 +302,10 @@
    removal of this define.  Use at your own risk.  */
 /* #define ENABLE_GENTLE_SHUTDOWN */
 
+/* Include old error codes.  This is provided in case you
+   are building an external program similar to omshell for
+   which you need the ISC_R_* error codes.  You should switch
+   to DHCP_R_* error codes for those that have been defined
+   (see includes/omapip/result.h).  The extra defines and
+   this option will be removed at some time. */
+/* #define INCLUDE_OLD_DHCP_ISC_ERROR_CODES */

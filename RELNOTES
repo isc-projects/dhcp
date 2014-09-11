@@ -70,11 +70,20 @@ by Eric Young (eay@cryptsoft.com).
 - Server now supports a failover split value of 256.
   [ISC-Bugs] #36664]
 
+- Remove unneeded error #defines.  These defines were included in case
+  external programs required the older versions of the macro.  They
+  have been #ifdeffed for now and will be removed at a future date.
+  See site.h for the #define to include them again, but you should
+  switch to using the DHCP_R_* versions instead of the ISC_R_* versions.
+  Also ISC_R_MULTIPLE has been removed as it is also deifned in bind.
+  [ISC-Bugs #37128]
+
 			Changes since 4.2.7rc1
 
 - None
 
 			Changes since 4.2.7b1
+
 
 - Modify the linux and openwrt dhclient scripts to process information
   from a stateless request.  Thanks to Jiri Popelka at Red Hat for the
