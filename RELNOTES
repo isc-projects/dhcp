@@ -78,12 +78,16 @@ by Eric Young (eay@cryptsoft.com).
   Also ISC_R_MULTIPLE has been removed as it is also deifned in bind.
   [ISC-Bugs #37128]
 
+- Added checks in range6 and prefix6 statement parsing to ensure addresses
+  are within the declared. Thanks to Jiri Popelka at Red Hat for the bug
+  report and patch.
+  [ISC-Bugs #32453]
+
 			Changes since 4.2.7rc1
 
 - None
 
 			Changes since 4.2.7b1
-
 
 - Modify the linux and openwrt dhclient scripts to process information
   from a stateless request.  Thanks to Jiri Popelka at Red Hat for the
