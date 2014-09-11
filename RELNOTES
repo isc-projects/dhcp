@@ -79,6 +79,11 @@ by Eric Young (eay@cryptsoft.com).
 - Server now supports a failover split value of 256.
   [ISC-Bugs] #36664]
 
+- Added checks in range6 and prefix6 statement parsing to ensure addresses
+  are within the declared. Thanks to Jiri Popelka at Red Hat for the bug
+  report and patch.
+  [ISC-Bugs #32453]
+
 			Changes since 4.1-ESV-R10rc1
 
 - None
