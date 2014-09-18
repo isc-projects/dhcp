@@ -2617,7 +2617,7 @@ ssize_t decode_hw_header (struct interface_info *, unsigned char *,
 			  unsigned, struct hardware *);
 ssize_t decode_udp_ip_header (struct interface_info *, unsigned char *,
 			      unsigned, struct sockaddr_in *,
-			      unsigned, unsigned *);
+			      unsigned, unsigned *, int);
 
 /* ethernet.c */
 void assemble_ethernet_header (struct interface_info *, unsigned char *,
