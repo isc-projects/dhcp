@@ -363,7 +363,7 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 
 	/* Decode the IP and UDP headers... */
 	offset = decode_udp_ip_header (interface, ibuf, bufix,
-				       from, length, &paylen);
+				       from, length, &paylen, 1);
 
 	/* If the IP or UDP checksum was bad, skip the packet... */
 	if (offset < 0)
