@@ -226,14 +226,13 @@ ssize_t
 decode_udp_ip_header(struct interface_info *interface,
 		     unsigned char *buf, unsigned bufix,
 		     struct sockaddr_in *from, unsigned buflen,
-		     unsigned *rbuflen)
+		     unsigned *rbuflen, int csum_ready)
 {
   unsigned char *data;
   struct ip ip;
   struct udphdr udp;
   unsigned char *upp, *endbuf;
   u_int32_t ip_len, ulen, pkt_len;
-  u_int32_t sum, usum;
   static unsigned int ip_packets_seen = 0;
   static unsigned int ip_packets_bad_checksum = 0;
   static unsigned int udp_packets_seen = 0;
@@ -327,34 +326,30 @@ decode_udp_ip_header(struct interface_info *interface,
   /* Copy out the IP source address... */
   memcpy(&from->sin_addr, &ip.ip_src, 4);
 
-  /* Compute UDP checksums, including the ``pseudo-header'', the UDP
-     header and the data.   If the UDP checksum field is zero, we're
-     not supposed to do a checksum. */
-
   data = upp + sizeof(udp);
   len = ulen - sizeof(udp);
 
-  usum = udp.uh_sum;
-  udp.uh_sum = 0;
-
-  /* XXX: We have to pass &udp, because we have to zero the checksum
-   * field before calculating the sum...'upp' isn't zeroed.
-   */
-  sum = wrapsum(checksum((unsigned char *)&udp, sizeof(udp),
-			 checksum(data, len,
-				  checksum((unsigned char *)&ip.ip_src,
-					   8, IPPROTO_UDP + ulen))));
-
+  /* UDP check sum may be optional (udp.uh_sum == 0) or not ready if checksum
+   * offloading is in use */
   udp_packets_seen++;
-  if (usum && usum != sum) {
-	  udp_packets_bad_checksum++;
-	  if (((udp_packets_seen > 4) && (udp_packets_bad_checksum != 0)) &&
-	      ((udp_packets_seen / udp_packets_bad_checksum) < 2)) {
-		  log_info ("%u bad udp checksums in %u packets",
-			    udp_packets_bad_checksum, udp_packets_seen);
-		  udp_packets_seen = udp_packets_bad_checksum = 0;
-	  }
-	  return -1;
+  if (udp.uh_sum && csum_ready) {
+	/* Check the UDP header checksum - since the received packet header
+	 * contains the UDP checksum calculated by the transmitter, calculating
+	 * it now should come out to zero. */
+	if (wrapsum(checksum((unsigned char *)&udp, sizeof(udp),
+			       checksum(data, len,
+				        checksum((unsigned char *)&ip.ip_src,
+					         8, IPPROTO_UDP + ulen))))) {
+		udp_packets_bad_checksum++;
+		if (((udp_packets_seen > 4) && (udp_packets_bad_checksum != 0))
+		    && ((udp_packets_seen / udp_packets_bad_checksum) < 2)) {
+			log_info ("%u bad udp checksums in %u packets",
+			          udp_packets_bad_checksum, udp_packets_seen);
+			udp_packets_seen = udp_packets_bad_checksum = 0;
+		}
+
+		return -1;
+	}
   }
 
   /* If at least 5 with less than 50% bad, start over */

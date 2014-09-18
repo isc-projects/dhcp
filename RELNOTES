@@ -95,6 +95,25 @@ by Eric Young (eay@cryptsoft.com).
   are within the declared. Thanks to Jiri Popelka at Red Hat for the bug
   report and patch.
   [ISC-Bugs #32453]
+  [ISC-Bugs #17766]
+  [ISC-Bugs #18510]
+  [ISC-Bugs #23698]
+  [ISC-Bugs #28883]
+
+- Addressed checksum issues:
+  Added checksum readiness check to Linux packet filtering which eliminates
+  invalid packet drops due to checksum errors when checksum offloading is
+  in use.  Based on dhcp-4.2.2-xen-checksum.patch made to the Fedora project.
+  [ISC-Bugs #22806]
+  [ISC-Bugs #15902]
+  [ISC-Bugs #17739]
+  [ISC-Bugs #18010]
+  [ISC-Bugs #22556]
+  [ISC-Bugs #29769]
+  Inbound packets with UPD checksums of 0xffff now validate correctly rather
+  than being dropped.
+  [ISC-Bus #24216]
+  [ISC-Bus #25587]
 
 			Changes since 4.3.1b1
 
