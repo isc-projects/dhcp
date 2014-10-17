@@ -662,6 +662,15 @@ cons_options(struct packet *inpacket, struct dhcp_packet *outpacket,
 					DHO_SUBNET_SELECTION;
 		}
 
+		/* If echo-client-id is on, then we add client identifier to
+		 * the priority_list. This way we'll send it whether or not it
+		 * is in the PRL. */
+		if ((inpacket != NULL) && (priority_len < PRIORITY_COUNT) &&
+		    (inpacket->sv_echo_client_id == ISC_TRUE)) {
+			priority_list[priority_len++] =
+				DHO_DHCP_CLIENT_IDENTIFIER;
+		}
+
 		data_string_truncate(prl, (PRIORITY_COUNT - priority_len));
 
 		/*

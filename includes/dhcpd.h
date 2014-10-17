@@ -426,6 +426,10 @@ struct packet {
 	 * Only used in DHCPv6.
 	 */
 	isc_boolean_t unicast;
+
+	/* Propogates server value SV_ECHO_CLIENT_ID so it is available
+         * in cons_options() */
+	int sv_echo_client_id;
 };
 
 /*
@@ -732,6 +736,7 @@ struct lease_state {
 #define SV_IGNORE_CLIENT_UIDS		82
 #define SV_LOG_THRESHOLD_LOW		83
 #define SV_LOG_THRESHOLD_HIGH		84
+#define SV_ECHO_CLIENT_ID		85
 
 #if !defined (DEFAULT_PING_TIMEOUT)
 # define DEFAULT_PING_TIMEOUT 1
@@ -2223,9 +2228,11 @@ void dhcprequest (struct packet *, int, struct lease *);
 void dhcprelease (struct packet *, int);
 void dhcpdecline (struct packet *, int);
 void dhcpinform (struct packet *, int);
-void nak_lease (struct packet *, struct iaddr *cip);
+void nak_lease (struct packet *, struct iaddr *cip, struct group*);
 void ack_lease (struct packet *, struct lease *,
 		unsigned int, TIME, char *, int, struct host_decl *);
+void echo_client_id(struct packet*, struct lease*, struct option_state*,
+		    struct option_state*);
 void delayed_ack_enqueue(struct lease *);
 void commit_leases_readerdry(void *);
 void flush_ackqueue(void *);
@@ -2250,9 +2257,10 @@ void get_server_source_address(struct in_addr *from,
 			       struct option_state *options,
 			       struct option_state *out_options,
 			       struct packet *packet);
-void setup_server_source_address(struct in_addr *from,
-				 struct option_state *options,
-				 struct packet *packet);
+
+void eval_network_statements(struct option_state **options,
+			    struct packet *packet,
+			    struct group *network_group);
 
 /* dhcpleasequery.c */
 void dhcpleasequery (struct packet *, int);

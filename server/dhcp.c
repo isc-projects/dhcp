@@ -546,7 +546,7 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 		if (lease -> binding_state == FTS_RESET &&
 		    !lease_mine_to_reallocate (lease)) {
 			log_debug ("%s: lease reset by administrator", msgbuf);
-			nak_lease (packet, &cip);
+			nak_lease (packet, &cip, lease->subnet->group);
 			goto out;
 		}
 
@@ -563,7 +563,12 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 		if ((sip.len == 4) &&
 		    (memcmp(sip.iabuf, "\0\0\0\0", sip.len) != 0)) {
 			struct in_addr from;
-			setup_server_source_address(&from, NULL, packet);
+			struct option_state *eval_options = NULL;
+
+			eval_network_statements(&eval_options, packet, NULL);
+			get_server_source_address(&from, eval_options, NULL,
+						  packet);
+			option_state_dereference (&eval_options, MDL);
 			if (memcmp(sip.iabuf, &from, sip.len) != 0) {
 				log_debug("%s: not our server id", msgbuf);
 				goto out;
@@ -651,7 +656,7 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 		if (!packet -> shared_network) {
 			if (subnet && subnet -> group -> authoritative) {
 				log_info ("%s: wrong network.", msgbuf);
-				nak_lease (packet, &cip);
+				nak_lease (packet, &cip, NULL);
 				goto out;
 			}
 			/* Otherwise, ignore it. */
@@ -670,7 +675,7 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 			if (packet -> shared_network -> group -> authoritative)
 			{
 				log_info ("%s: wrong network.", msgbuf);
-				nak_lease (packet, &cip);
+				nak_lease (packet, &cip, NULL);
 				goto out;
 			}
 			log_info ("%s: ignored (not authoritative).", msgbuf);
@@ -682,7 +687,7 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 	   available for the client, NAK it. */
 	if (!lease && ours) {
 		log_info ("%s: lease %s unavailable.", msgbuf, piaddr (cip));
-		nak_lease (packet, &cip);
+		nak_lease (packet, &cip, (subnet ? subnet->group : NULL));
 		goto out;
 	}
 
@@ -1562,9 +1567,22 @@ void dhcpinform (packet, ms_nulltp)
 		subnet_dereference (&subnet, MDL);
 }
 
-void nak_lease (packet, cip)
+/*!
+ * \brief Constructs and sends a DHCP Nak
+ *
+ * In order to populate options such as dhcp-server-id and
+ * dhcp-client-identifier, the function creates a temporary option cache
+ * and evaluates options based on the packet's shared-network or the
+ * network_group in its absence, as well as the packet->clasess (if any).
+ *
+ * \param packet inbound packet received from the client
+ * \param cip address requested by the client
+ * \param network_group optional scope for use in setting up options
+ */
+void nak_lease (packet, cip, network_group)
 	struct packet *packet;
 	struct iaddr *cip;
+	struct group *network_group; /* scope to use for options */
 {
 	struct sockaddr_in to;
 	struct in_addr from;
@@ -1575,6 +1593,7 @@ void nak_lease (packet, cip)
 	unsigned i;
 	struct option_state *options = (struct option_state *)0;
 	struct option_cache *oc = (struct option_cache *)0;
+	struct option_state *eval_options = NULL;
 
 	option_state_allocate (&options, MDL);
 	memset (&outgoing, 0, sizeof outgoing);
@@ -1620,22 +1639,20 @@ void nak_lease (packet, cip)
 	save_option (&dhcp_universe, options, oc);
 	option_cache_dereference (&oc, MDL);
 
-	/*
-	 * If we are configured to do so we try to find a server id
-	 * option even for NAKS by calling setup_server_source_address().
-	 * This function will set up an options list from the global
-	 * and subnet scopes before trying to get the source address.
-	 * 
-	 * Otherwise we simply call get_server_source_address()
-	 * directly, without a server options list, this means
-	 * we'll get the source address from the interface address.
-	 */
+	/* Setup the options at the global and subnet scopes.  These
+	 * may be used to locate sever id option if enabled as well
+	 * for echo-client-id further on. (This allocates eval_options). */
+	eval_network_statements(&eval_options, packet, network_group);
+
 #if defined(SERVER_ID_FOR_NAK)
-	setup_server_source_address(&from, options, packet);
+	/* Pass in the evaluated options so they can be searched for
+         * server-id, otherwise source address comes from the interface
+	 * address. */
+	get_server_source_address(&from, eval_options, options, packet);
 #else
+	/* Get server source address from the interface address */
 	get_server_source_address(&from, NULL, options, packet);
 #endif /* if defined(SERVER_ID_FOR_NAK) */
-
 
 	/* If there were agent options in the incoming packet, return
 	 * them.  We do not check giaddr to detect the presence of a
@@ -1651,6 +1668,20 @@ void nak_lease (packet, cip)
 		     packet -> options -> universes [agent_universe.index],
 		     MDL);
 	}
+
+        /* echo-client-id can specified at the class level so add class-scoped
+	 * options into eval_options. */
+        for (i = packet->class_count; i > 0; i--) {
+                execute_statements_in_scope(NULL, packet, NULL, NULL,
+					    packet->options, eval_options,
+					    &global_scope,
+					    packet->classes[i - 1]->group,
+		                            NULL, NULL);
+        }
+
+	/* Echo client id if we received and it's enabled */
+	echo_client_id(packet, NULL, eval_options, options);
+	option_state_dereference (&eval_options, MDL);
 
 	/* Do not use the client's requested parameter list. */
 	delete_option (&dhcp_universe, packet -> options,
@@ -1742,6 +1773,75 @@ void nak_lease (packet, cip)
                            packet->interface->name);
         }
 
+}
+
+/*!
+ * \brief Adds a dhcp-client-id option to a set of options
+ * Given a set of input options, it searches for echo-client-id.  If it is
+ * defined and enabled, the given packet is searched for dhcp-client-id.  If
+ * the option is found it is replicated into the given set of output options.
+ * This allows us to provide compliance with RFC 6842. It is called when we ack
+ * or nak a lease.  In the latter case we may or may not have created the
+ * requisite scope to lookup echo-client-id.
+ *
+ * Note the flag packet.sv_echo_client_id is set to reflect the configuration
+ * option.  This bypases inaccessiblity of server_universe in cons_options()
+ * which must amend the PRL (when not empty) if echoing is enabled.
+ *
+ * \param packet inbound packet received from the client
+ * \param lease lease associated with this client (if one)
+ * \param in_options options in which to search for echo-client-id
+ * \param out_options options to which to save the client-id
+ */
+void echo_client_id(packet, lease, in_options, out_options)
+	struct packet *packet;
+	struct lease *lease;
+	struct option_state *in_options;
+	struct option_state *out_options;
+{
+	struct option_cache *oc;
+	int ignorep;
+
+	/* Check if echo-client-id is enabled */
+	oc = lookup_option(&server_universe, in_options, SV_ECHO_CLIENT_ID);
+	if (oc && evaluate_boolean_option_cache(&ignorep, packet, lease,
+                                                NULL, packet->options,
+						in_options,
+                                                (lease ? &lease->scope : NULL),
+						oc, MDL)) {
+		struct data_string client_id;
+		unsigned int opcode = DHO_DHCP_CLIENT_IDENTIFIER;
+
+		/* Save knowledge that echo is enabled to the packet */
+		packet->sv_echo_client_id = ISC_TRUE;
+
+		/* Now see if inbound packet contains client-id */
+		oc = lookup_option(&dhcp_universe, packet->options, opcode);
+		memset(&client_id, 0, sizeof client_id);
+		if (oc && evaluate_option_cache(&client_id,
+						packet, NULL, NULL,
+						packet->options, NULL,
+						(lease ? &lease->scope : NULL),
+						oc, MDL)) {
+			/* Packet contained client-id, add it to out_options. */
+			oc = NULL;
+			if (option_cache_allocate(&oc, MDL)) {
+				if (make_const_data(&oc->expression,
+						    client_id.data,
+						    client_id.len,
+                                                    1, 0, MDL)) {
+					option_code_hash_lookup(&oc->option,
+							        dhcp_universe.
+                                                                code_hash,
+							        &opcode,
+                                                                0, MDL);
+					save_option(&dhcp_universe,
+						    out_options, oc);
+				}
+				option_cache_dereference(&oc, MDL);
+			}
+		}
+	}
 }
 
 void check_pool_threshold (packet, lease, state)
@@ -2495,7 +2595,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 			/* NAK leases before pool activation date */
 			cip.len = 4;
 			memcpy (cip.iabuf, &lt->ip_addr.iabuf, 4);
-			nak_lease(packet, &cip);
+			nak_lease(packet, &cip, lease->subnet->group);
 			free_lease_state (state, MDL);
 			lease_dereference (&lt, MDL);
 			if (host)
@@ -2525,7 +2625,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 				/* NAK leases after pool expiration date */
 				cip.len = 4;
 				memcpy (cip.iabuf, &lt->ip_addr.iabuf, 4);
-				nak_lease(packet, &cip);
+				nak_lease(packet, &cip, lease->subnet->group);
 				free_lease_state (state, MDL);
 				lease_dereference (&lt, MDL);
 				if (host)
@@ -3143,6 +3243,9 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 			option_cache_dereference (&oc, MDL);
 		}
 	}
+
+	/* Send client_id back if we received it and echo-client-id is on. */
+	echo_client_id(packet, lease, state->options, state->options);
 
 	/* If we don't have a hostname yet, and we've been asked to do
 	   a reverse lookup to find the hostname, do it. */
@@ -4788,9 +4891,9 @@ int locate_network (packet)
  * options from the incoming packet and configuration information.
  *
  * out_options is the outgoing option cache.  This cache
- * may be the same as options.  If send_options isn't NULL
+ * may be the same as options.  If out_options isn't NULL
  * we may save the server address option into it.  We do so
- * if send_options is different than options or if the option
+ * if out_options is different than options or if the option
  * wasn't in options and we needed to find the address elsewhere.
  *
  * packet is the state structure for the incoming packet
@@ -4873,29 +4976,39 @@ get_server_source_address(struct in_addr *from,
 	return;
 }
 
-/*
- * Set up an option state list to try and find a server option.
- * We don't go through all possible options - in particualr we
- * skip the hosts and we don't include the lease to avoid 
- * making changes to it.  This means that we won't get the
- * correct server id if the admin puts them on hosts or
- * builds the server id with information from the lease.
+/*!
+ * \brief Builds option set from statements at the global and network scope
  *
- * As this is a fallback function (used to handle NAKs or
- * sort out server id mismatch in failover) and requires
- * configuration by the admin, it should be okay.
+ * Set up an option state list based on the global and network scopes.
+ * These are primarily used by NAK logic to locate dhcp-server-id and
+ * echo-client-id.
+ *
+ * We don't go through all possible options - in particualr we skip the hosts
+ * and we don't include the lease to avoid making changes to it. This means
+ * that using these, we won't get the correct server id if the admin puts them
+ * on hosts or builds the server id with information from the lease.
+ *
+ * As this is a fallback function (used to handle NAKs or sort out server id
+ * mismatch in failover) and requires configuration by the admin, it should be
+ * okay.
+ *
+ * \param network_options option_state to which options will be added. If it
+ * refers to NULL, it will be allocated.  Caller is responsible to delete it.
+ * \param packet inbound packet
+ * \param network_group scope group to use if packet->shared_network is null.
  */
- 
 void
-setup_server_source_address(struct in_addr *from,
-			    struct option_state *options,
-			    struct packet *packet) {
+eval_network_statements(struct option_state **network_options,
+			struct packet *packet,
+			struct group *network_group) {
 
-	struct option_state *sid_options = NULL;
+	if (*network_options == NULL) {
+		option_state_allocate (network_options, MDL);
+	}
 
+	/* Use the packet's shared_network if it has one.  If not use
+         * network_group and if it is null then use global scope. */
 	if (packet->shared_network != NULL) {
-		option_state_allocate (&sid_options, MDL);
-
 		/*
 		 * If we have a subnet and group start with that else start
 		 * with the shared network group.  The first will recurse and
@@ -4904,13 +5017,13 @@ setup_server_source_address(struct in_addr *from,
 		if ((packet->shared_network->subnets != NULL) &&
 		    (packet->shared_network->subnets->group != NULL)) {
 			execute_statements_in_scope(NULL, packet, NULL, NULL,
-					packet->options, sid_options,
+					packet->options, *network_options,
 					&global_scope,
 					packet->shared_network->subnets->group,
 					NULL, NULL);
 		} else {
 			execute_statements_in_scope(NULL, packet, NULL, NULL,
-					packet->options, sid_options,
+					packet->options, *network_options,
 					&global_scope,
 					packet->shared_network->group,
 					NULL, NULL);
@@ -4919,23 +5032,23 @@ setup_server_source_address(struct in_addr *from,
 		/* do the pool if there is one */
 		if (packet->shared_network->pools != NULL) {
 			execute_statements_in_scope(NULL, packet, NULL, NULL,
-					packet->options, sid_options,
+					packet->options, *network_options,
 					&global_scope,
 					packet->shared_network->pools->group,
 					packet->shared_network->group,
 					NULL);
 		}
-
-		/* currently we don't bother with classes or hosts as
-		 * neither seems to be useful in this case */
-	}
-
-	/* Make the call to get the server address */
-	get_server_source_address(from, sid_options, options, packet);
-
-	/* get rid of the option cache */
-	if (sid_options != NULL)
-		option_state_dereference(&sid_options, MDL);
+	} else if (network_group != NULL) {
+                execute_statements_in_scope(NULL, packet, NULL, NULL,
+                                            packet->options, *network_options,
+                                            &global_scope, network_group,
+                                            NULL, NULL);
+	} else {
+                execute_statements_in_scope(NULL, packet, NULL, NULL,
+                                            packet->options, *network_options,
+                                            &global_scope, root_group,
+                                            NULL, NULL);
+    }
 }
 
 /*

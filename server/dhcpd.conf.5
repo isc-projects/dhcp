@@ -2202,6 +2202,22 @@ caution.
 .RE
 .PP
 The
+.I echo-client-id
+statement
+.RS 0.25i
+.PP
+.B echo-client-id\fR \fIflag\fR\fB;\fR
+.PP
+The \fIecho-client-id\fR statement is used to enable or disable RFC 6842
+compliant behavior.  If the echo-client-id statement is present and has a
+value of true or on, and a DHCP DISCOVER or REQUEST is received which contains
+the client identifier option (Option code 61), the server will copy the option
+into its response (DHCP ACK or NAK) per RFC 6842.  In other words if the
+client sends the option it will receive it back. By default, this flag is off
+and client identifiers will not echoed back to the client.
+.RE
+.PP
+The
 .I filename
 statement
 .RS 0.25i

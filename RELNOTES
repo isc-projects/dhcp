@@ -112,8 +112,18 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Bugs #29769]
   Inbound packets with UPD checksums of 0xffff now validate correctly rather
   than being dropped.
-  [ISC-Bus #24216]
-  [ISC-Bus #25587]
+  [ISC-Bugs #24216]
+  [ISC-Bugs #25587]
+
+- Added the echo-client-id configuration parameter to the server configuration.
+  The server now supports RFC 6842 compliant behavior by setting a new
+  configuration parameter, echo-client-id.  When enabled, the server will
+  include the client identifier option (Option code 61) if received, in its
+  responses.  The server identifier returned in NAKs (if enabled) will now
+  be the globally defined value (if one) if the server cannot attribute the
+  inbound request to a known subnet.
+  [ISC-Bugs 35958]
+  [ISC-Bugs 32545]
 
 			Changes since 4.3.1b1
 
