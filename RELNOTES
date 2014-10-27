@@ -103,11 +103,15 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Bus #24216]
   [ISC-Bus #25587]
 
+- Added support of the configuration parameter, use-host-decl-names, to
+  BOOTP request handling.
+  [ISC-Bugs #36233]
+
 			Changes since 4.1-ESV-R10rc1
 
 - None
 
-			Changes since 4.1-ESV-R10b1
+			Changes since 4.3.1b1
 
 - Modify the linux and openwrt dhclient scripts to process information
   from a stateless request.  Thanks to Jiri Popelka at Red Hat for the

@@ -2010,7 +2010,8 @@ isc_result_t get_client_id(struct packet *, struct data_string *);
 void dhcpv6(struct packet *);
 
 /* bootp.c */
-void bootp (struct packet *);
+void bootp(struct packet *);
+void use_host_decl_name(struct packet *, struct lease* , struct option_state *);
 
 /* memory.c */
 extern int (*group_write_hook) (struct group_object *);

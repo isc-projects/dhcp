@@ -2900,9 +2900,16 @@ int evaluate_option_cache (result, packet, lease, client_state,
 					 oc -> expression, file, line);
 }
 
-/* Evaluate an option cache and extract a boolean from the result,
-   returning the boolean.   Return false if there is no data. */
-
+/* Evaluate an option cache and extract a boolean from the result.
+ * The boolean option cache is actually a trinary value where:
+ *
+ *     0 = return 0, ignore parameter 0 (also the case for no data)
+ *     1 = return 1, ignore parameter 0
+ *     2 = return 0, ignore parameter 1
+ *
+ * This supports both classic boolean flags on/off as well as the
+ * allow/deny/ignore keywords
+*/
 int evaluate_boolean_option_cache (ignorep, packet,
 				   lease, client_state, in_options,
 				   cfg_options, scope, oc, file, line)
@@ -2917,36 +2924,35 @@ int evaluate_boolean_option_cache (ignorep, packet,
 	const char *file;
 	int line;
 {
-	struct data_string ds;
-	int result;
+	int result = 0;
+	if (ignorep)
+		*ignorep = 0;
 
-	/* So that we can be called with option_lookup as an argument. */
-	if (!oc || !in_options)
-		return 0;
-	
-	memset (&ds, 0, sizeof ds);
-	if (!evaluate_option_cache (&ds, packet,
-				    lease, client_state, in_options,
-				    cfg_options, scope, oc, file, line))
-		return 0;
+	/* Only attempt to evaluate if option_cache is not null. This permits
+	 * us to be called with option_lookup() as an argument. */
+	if (oc && in_options) {
+		struct data_string ds;
 
-	/* The boolean option cache is actually a trinary value.  Zero is
-	 * off, one is on, and 2 is 'ignore'.
-	 */
-	if (ds.len) {
-		result = ds.data [0];
-		if (result == 2) {
-			result = 0;
-			if (ignorep != NULL)
-				*ignorep = 1;
-		} else if (ignorep != NULL)
-			*ignorep = 0;
-	} else
-		result = 0;
-	data_string_forget (&ds, MDL);
-	return result;
+		memset(&ds, 0, sizeof ds);
+		if (evaluate_option_cache(&ds, packet,
+					  lease, client_state, in_options,
+					  cfg_options, scope, oc, file,
+					  line)) {
+			/* We have a value for the option set result and
+			 * ignore parameter accordingly. */
+			if (ds.len) {
+				if (ds.data[0] == 1)
+					result = 1;
+				else if ((ds.data[0] == 2) && (ignorep != NULL))
+					*ignorep = 1;
+			}
+
+			data_string_forget(&ds, MDL);
+		}
+	}
+
+	return (result);
 }
-		
 
 /* Evaluate a boolean expression and return the result of the evaluation,
    or FALSE if it failed. */

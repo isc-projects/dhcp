@@ -2732,33 +2732,10 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		}
 	}
 
-	/* Use the hostname from the host declaration if there is one
+	/* Use the name of the host declaration if there is one
 	   and no hostname has otherwise been provided, and if the 
 	   use-host-decl-name flag is set. */
-	i = DHO_HOST_NAME;
-	j = SV_USE_HOST_DECL_NAMES;
-	if (!lookup_option (&dhcp_universe, state -> options, i) &&
-	    lease -> host && lease -> host -> name &&
-	    (evaluate_boolean_option_cache
-	     (&ignorep, packet, lease, (struct client_state *)0,
-	      packet -> options, state -> options, &lease -> scope,
-	      lookup_option (&server_universe, state -> options, j), MDL))) {
-		oc = (struct option_cache *)0;
-		if (option_cache_allocate (&oc, MDL)) {
-			if (make_const_data (&oc -> expression,
-					     ((unsigned char *)
-					      lease -> host -> name),
-					     strlen (lease -> host -> name),
-					     1, 0, MDL)) {
-				option_code_hash_lookup(&oc->option,
-							dhcp_universe.code_hash,
-							&i, 0, MDL);
-				save_option (&dhcp_universe,
-					     state -> options, oc);
-			}
-			option_cache_dereference (&oc, MDL);
-		}
-	}
+	use_host_decl_name(packet, lease, state->options);
 
 	/* If we don't have a hostname yet, and we've been asked to do
 	   a reverse lookup to find the hostname, do it. */
@@ -4538,3 +4515,43 @@ lowest_site_code(const void *key, unsigned len, void *object)
 	return ISC_R_SUCCESS;
 }
 
+/*!
+ * \brief Adds hostname option when use-host-decl-names is enabled.
+ *
+ * Constructs a hostname option from the name of the host declaration if
+ * there is one and no hostname has otherwise been provided and the
+ * use-host-decl-names flag is set, then adds the new option to the given
+ * option_state.  This funciton is used for both bootp and dhcp.
+ *
+ * \param packet inbound packet received from the client
+ * \param lease lease associated with the client
+ * \param options option state to search and update
+ */
+void use_host_decl_name(struct packet* packet,
+			struct lease *lease,
+			struct option_state *options) {
+	unsigned int ocode = SV_USE_HOST_DECL_NAMES;
+        if ((lease->host && lease->host->name) &&
+	    !lookup_option(&dhcp_universe, options, DHO_HOST_NAME) &&
+            (evaluate_boolean_option_cache(NULL, packet, lease, NULL,
+					   packet->options, options,
+					   &lease->scope,
+					   lookup_option(&server_universe,
+							 options, ocode),
+					   MDL))) {
+		struct option_cache *oc = NULL;
+                if (option_cache_allocate (&oc, MDL)) {
+                        if (make_const_data(&oc -> expression,
+                                            ((unsigned char*)lease->host->name),
+                                            strlen(lease->host->name),
+					    1, 0, MDL)) {
+				ocode = DHO_HOST_NAME;
+                                option_code_hash_lookup(&oc->option,
+                                                        dhcp_universe.code_hash,
+                                                        &ocode, 0, MDL);
+                                save_option(&dhcp_universe, options, oc);
+                        }
+                        option_cache_dereference(&oc, MDL);
+                }
+        }
+}

@@ -43,17 +43,11 @@ static int prepare_option_buffer(struct universe *universe, struct buffer *bp,
 				 struct option_cache **opp);
 
 /* Parse all available options out of the specified packet. */
-
+/* Note, the caller is responsible for allocating packet->options. */
 int parse_options (packet)
 	struct packet *packet;
 {
-	struct option_cache *op = (struct option_cache *)0;
-
-	/* Allocate a new option state. */
-	if (!option_state_allocate (&packet -> options, MDL)) {
-		packet -> options_valid = 0;
-		return 0;
-	}
+	struct option_cache *op = NULL;
 
 	/* If we don't see the magic cookie, there's nothing to parse. */
 	if (memcmp (packet -> raw -> options, DHCP_OPTIONS_COOKIE, 4)) {
@@ -3790,12 +3784,15 @@ void do_packet (interface, packet, len, from_port, from, hfrom)
 		return;
 	}
 
+	/* Allocate packet->options now so it is non-null for all packets */
+	decoded_packet->options_valid = 0;
+	if (!option_state_allocate (&decoded_packet->options, MDL)) {
+		return;
+	}
+
 	/* If there's an option buffer, try to parse it. */
 	if (decoded_packet->packet_length >= DHCP_FIXED_NON_UDP + 4) {
 		if (!parse_options(decoded_packet)) {
-			if (decoded_packet->options)
-				option_state_dereference
-					(&decoded_packet->options, MDL);
 			packet_dereference (&decoded_packet, MDL);
 			return;
 		}
