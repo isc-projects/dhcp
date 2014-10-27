@@ -180,21 +180,21 @@ void bootp (packet)
 	
 	/* Drop the request if it's not allowed for this client. */
 	if ((oc = lookup_option (&server_universe, options, SV_ALLOW_BOOTP)) &&
-	    !evaluate_boolean_option_cache (&ignorep, packet, lease,
-					    (struct client_state *)0,
-					    packet -> options, options,
-					    &lease -> scope, oc, MDL)) {
+	    !evaluate_boolean_option_cache(&ignorep, packet, lease,
+					   NULL,
+					   packet->options, options,
+					   &lease->scope, oc, MDL)) {
 		if (!ignorep)
 			log_info ("%s: bootp disallowed", msgbuf);
 		goto out;
 	} 
 
-	if ((oc = lookup_option (&server_universe,
+	if ((oc = lookup_option(&server_universe,
 				 options, SV_ALLOW_BOOTING)) &&
-	    !evaluate_boolean_option_cache (&ignorep, packet, lease,
-					    (struct client_state *)0,
-					    packet -> options, options,
-					    &lease -> scope, oc, MDL)) {
+	    !evaluate_boolean_option_cache(&ignorep, packet, lease,
+					   NULL,
+					   packet->options, options,
+					   &lease->scope, oc, MDL)) {
 		if (!ignorep)
 			log_info ("%s: booting disallowed", msgbuf);
 		goto out;
@@ -207,20 +207,26 @@ void bootp (packet)
 
 	/* If we didn't get a known vendor magic number on the way in,
 	   just copy the input options to the output. */
-	if (!packet -> options_valid &&
-	    !(evaluate_boolean_option_cache
-	      (&ignorep, packet, lease, (struct client_state *)0,
-	       packet -> options, options, &lease -> scope,
-	       lookup_option (&server_universe, options,
-			      SV_ALWAYS_REPLY_RFC1048), MDL))) {
-		memcpy (outgoing.raw -> options,
-			packet -> raw -> options, DHCP_MAX_OPTION_LEN);
-		outgoing.packet_length = BOOTP_MIN_LEN;
+	i = SV_ALWAYS_REPLY_RFC1048;
+	if (!packet->options_valid &&
+	    !(evaluate_boolean_option_cache(&ignorep, packet, lease, NULL,
+					    packet->options, options,
+					    &lease->scope,
+					    lookup_option (&server_universe,
+							   options, i), MDL))) {
+		if (packet->packet_length > DHCP_FIXED_NON_UDP) {
+			memcpy(outgoing.raw->options, packet->raw->options,
+			packet->packet_length - DHCP_FIXED_NON_UDP);
+		}
+
+		outgoing.packet_length =
+			(packet->packet_length < BOOTP_MIN_LEN)
+					       ? BOOTP_MIN_LEN
+					       : packet->packet_length;
 	} else {
 
 		/* Use the subnet mask from the subnet declaration if no other
 		   mask has been provided. */
-
 		oc = (struct option_cache *)0;
 		i = DHO_SUBNET_MASK;
 		if (!lookup_option (&dhcp_universe, options, i)) {
@@ -239,6 +245,11 @@ void bootp (packet)
 				option_cache_dereference (&oc, MDL);
 			}
 		}
+
+		/* If use-host-decl-names is enabled and there is a hostname
+		 * defined in the host delcartion, send it back in hostname
+		 * option */
+		use_host_decl_name(packet, lease, options);
 
 		/* Pack the options into the buffer.  Unlike DHCP, we
 		   can't pack options into the filename and server
