@@ -4478,10 +4478,9 @@ setup_server_source_address(struct in_addr *from,
 			    struct packet *packet) {
 
 	struct option_state *sid_options = NULL;
+	option_state_allocate (&sid_options, MDL);
 
 	if (packet->shared_network != NULL) {
-		option_state_allocate (&sid_options, MDL);
-
 		/*
 		 * If we have a subnet and group start with that else start
 		 * with the shared network group.  The first will recurse and
@@ -4513,6 +4512,12 @@ setup_server_source_address(struct in_addr *from,
 
 		/* currently we don't bother with classes or hosts as
 		 * neither seems to be useful in this case */
+	} else {
+		/* Look for global server identity for unknown networks */
+		execute_statements_in_scope(NULL, packet, NULL, NULL,
+					    packet->options, sid_options,
+					    &global_scope, root_group,
+					    NULL);
 	}
 
 	/* Make the call to get the server address */
