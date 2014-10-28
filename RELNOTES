@@ -107,6 +107,12 @@ by Eric Young (eay@cryptsoft.com).
   BOOTP request handling.
   [ISC-Bugs #36233]
 
+- When the server cannot attribute an inbound request to a known subnet
+  and returning the server identifier in NAKS is enabled; the server
+  will use value of the configuration parameter server-identifier if it
+  is defined globally.
+  [ISC-Bugs #32545]
+
 			Changes since 4.1-ESV-R10rc1
 
 - None
