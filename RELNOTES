@@ -122,8 +122,8 @@ by Eric Young (eay@cryptsoft.com).
   responses.  The server identifier returned in NAKs (if enabled) will now
   be the globally defined value (if one) if the server cannot attribute the
   inbound request to a known subnet.
-  [ISC-Bugs 35958]
-  [ISC-Bugs 32545]
+  [ISC-Bugs #35958]
+  [ISC-Bugs #32545]
 
 - Added support of the configuration parameter, use-host-decl-names, to
   BOOTP request handling.
@@ -134,7 +134,7 @@ by Eric Young (eay@cryptsoft.com).
 - Modify the linux and openwrt dhclient scripts to process information
   from a stateless request.  Thanks to Jiri Popelka at Red Hat for the
   bug report and patch.
-  [ISC-Bugs 36102]
+  [ISC-Bugs #36102]
 
 - Remove more unused RCSID tags.  These weren't noticed in 4.3 as
   the code isn't used anymore but we remove them here to keep the
