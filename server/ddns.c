@@ -221,6 +221,22 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 	else
 		s1 = 0;
 
+	/* If we don't have a host name based on ddns-hostname then use
+	 * the host declaration name if there is one and use-host-decl-names
+	 * is turned on. */
+	if ((s1 == 0) && (lease && lease->host && lease->host->name)) {
+		oc = lookup_option(&server_universe, options,
+				   SV_USE_HOST_DECL_NAMES);
+		if (evaluate_boolean_option_cache(NULL, packet, lease,
+						  NULL, packet->options,
+						  options, scope, oc, MDL)) {
+			s1 = ((data_string_new(&ddns_hostname,
+					      lease->host->name,
+					      strlen(lease->host->name),
+                                              MDL) && ddns_hostname.len > 0));
+		}
+	}
+
 	oc = lookup_option(&server_universe, options, SV_DDNS_DOMAIN_NAME);
 	if (oc)
 		s2 = evaluate_option_cache(&ddns_domainname, packet, lease,

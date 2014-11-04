@@ -63,10 +63,9 @@ int server_identifier_matched;
 
 /* This stuff is always executed to figure the default values for certain
    ddns variables. */
-
 char std_nsupdate [] = "						    \n\
 option server.ddns-hostname =						    \n\
-  pick (option fqdn.hostname, option host-name);			    \n\
+  pick (option fqdn.hostname, option host-name, config-option host-name);   \n\
 option server.ddns-domainname =	config-option domain-name;		    \n\
 option server.ddns-rev-domainname = \"in-addr.arpa.\";";
 
