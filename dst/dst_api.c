@@ -65,7 +65,7 @@ const char *dst_path = "";
 /* internal I/O functions */
 static DST_KEY *dst_s_read_public_key(const char *in_name, 
 				      const unsigned in_id, int in_alg);
-static int dst_s_read_private_key_file(char *name, DST_KEY *pk_key,
+static int dst_s_read_private_key_file(const char *name, DST_KEY *pk_key,
 				       unsigned in_id, int in_alg);
 static int dst_s_write_public_key(const DST_KEY *key);
 static int dst_s_write_private_key(const DST_KEY *key);
@@ -364,7 +364,7 @@ dst_read_key(const char *in_keyname, const unsigned in_id,
 					    0)))
 		return (dg_key);
 	/* Fill in private key and some fields in the general key structure */
-	if (dst_s_read_private_key_file((char *)(in_keyname), dg_key, pubkey->dk_id,
+	if (dst_s_read_private_key_file(in_keyname, dg_key, pubkey->dk_id,
 					pubkey->dk_alg) == 0)
 		dg_key = dst_free_key(dg_key);
 
@@ -842,7 +842,7 @@ dst_key_to_buffer(DST_KEY *key, u_char *out_buff, unsigned buf_len)
  */
 
 static int
-dst_s_read_private_key_file(char *name, DST_KEY *pk_key, unsigned in_id,
+dst_s_read_private_key_file(const char *name, DST_KEY *pk_key, unsigned in_id,
 			    int in_alg)
 {
 	int cnt, alg, len, major, minor, file_major, file_minor;
