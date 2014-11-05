@@ -129,6 +129,12 @@ by Eric Young (eay@cryptsoft.com).
   BOOTP request handling.
   [ISC-Bugs #36233]
 
+- Added logic to ignore the signal, SIGPIPE, which ensures write failures
+  will be delivered as errors rather than as SIGPIPE signals on all OSs.
+  Thanks to Marius Tomaschewski from SUSE who reported the issue and provided
+  the patch upon which the fix is based.
+  [ISC-Bugs #32222]
+
 			Changes since 4.3.1b1
 
 - Modify the linux and openwrt dhclient scripts to process information
