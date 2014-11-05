@@ -69,6 +69,20 @@ isclib_cleanup(void)
 	return;
 }
 
+/* Installs a handler for a signal using sigaction */
+static void
+handle_signal(int sig, void (*handler)(int)) {
+	struct sigaction sa;
+
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = handler;
+	sigfillset(&sa.sa_mask);
+	if (sigaction(sig, &sa, NULL) != 0) {
+		log_debug("handle_signal() failed for signal %d error: %s",
+                          sig, strerror(errno));
+	}
+}
+
 isc_result_t
 dhcp_context_create(void) {
 	isc_result_t result;
@@ -118,6 +132,11 @@ dhcp_context_create(void) {
 	if (result != ISC_R_SUCCESS)
 		return (result);
 	dhcp_gbl_ctx.actx_started = ISC_TRUE;
+
+	/* Not all OSs support suppressing SIGPIPE through socket
+	* options, so set the sigal action to be ignore.  This allows
+	* broken connections to fail gracefully with EPIPE on writes */
+	handle_signal(SIGPIPE, SIG_IGN);
 
 	result = isc_taskmgr_createinctx(dhcp_gbl_ctx.mctx,
 					 dhcp_gbl_ctx.actx,
