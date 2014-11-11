@@ -137,6 +137,15 @@ by Eric Young (eay@cryptsoft.com).
   the patch upon which the fix is based.
   [ISC-Bugs #32222]
 
+- In the failover code, handle the case of communications being interrupted
+  when the servers are dealing with POTENTIAL-CONFLICT.  This patch allows
+  the primary to accept the secondary moving from POTENTIAL-CONFLICT to
+  RESOLUTION-INTERRUPTED as well as handling the bind update process better.
+  In addition the code to resend update or update all requests has been
+  modified to send requests more often.
+  [ISC-Bugs #36810]
+  [ISC-Bugs #20352]
+
 			Changes since 4.3.1b1
 
 - Modify the linux and openwrt dhclient scripts to process information
