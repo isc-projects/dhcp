@@ -3357,6 +3357,7 @@ isc_result_t dhcp_failover_state_signal (omapi_object_t *,
 isc_result_t dhcp_failover_state_transition (dhcp_failover_state_t *,
 					     const char *);
 isc_result_t dhcp_failover_set_service_state (dhcp_failover_state_t *state);
+void dhcp_failover_rescind_updates (dhcp_failover_state_t *);
 isc_result_t dhcp_failover_set_state (dhcp_failover_state_t *,
 				      enum failover_state);
 isc_result_t dhcp_failover_peer_state_changed (dhcp_failover_state_t *,
