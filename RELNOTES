@@ -128,6 +128,15 @@ by Eric Young (eay@cryptsoft.com).
   and no other value is available.
   [ISC-Bugs #21323]
 
+- In the failover code, handle the case of communications being interrupted
+  when the servers are dealing with POTENTIAL-CONFLICT.  This patch allows
+  the primary to accept the secondary moving from POTENTIAL-CONFLICT to
+  RESOLUTION-INTERRUPTED as well as handling the bind update process better.
+  In addition the code to resend update or update all requests has been
+  modified to send requests more often.
+  [ISC-Bugs #36810]
+  [ISC-Bugs #20352]
+
 			Changes since 4.1-ESV-R10rc1
 
 - None
