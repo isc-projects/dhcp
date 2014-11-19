@@ -1153,17 +1153,23 @@ IP address, it can update its own A record, assuming that the
 .PP
 If the server is configured not to allow client updates, or if the
 client doesn\'t want to do its own update, the server will simply
-choose a name for the client from either the \fBfqdn\fR option (if present)
-or the hostname option (if present).  It will use its own
-domain name for the client.  It will then update both the A and PTR
-record, using the name that it chose for the client.  If the client
-sends a fully-qualified domain name in the \fBfqdn\fR option, the
-server uses only the leftmost part of the domain name - in the
-example above, "jschmoe" instead of "jschmoe.radish.org".
+choose a name for the client. By default, the server will choose
+from the following three values:
 .PP
-If the defaults for choosing the host name are not appropriate
+     1. \fBfqdn\fR option (if present)
+     2. hostname option (if present)
+     3. Configured hostname option (if defined).
+.PP
+If these defaults for choosing the host name are not appropriate
 you can write your own statement to set the ddns-hostname variable
-as you wish.
+as you wish.  If none of the above are found the server will use
+the host declaration name (if one) and use-host-decl-names is on.
+.PP
+It will use its own domain name for the client.  It will then update
+both the A and PTR record, using the name that it chose for the client.
+If the client sends a fully-qualified domain name in the \fBfqdn\fR option,
+the server uses only the leftmost part of the domain name - in the example
+above, "jschmoe" instead of "jschmoe.radish.org".
 .PP
 Further, if the \fIignore client-updates;\fR directive is used, then
 the server will in addition send a response in the DHCP packet, using
@@ -2930,6 +2936,11 @@ is equivalent to
         option host-name "joe";
       }
 .fi
+.PP
+Additionally, enabling use-host-decl-names instructs the server to use
+the host declaration name in the the forward DNS name, if no other values
+are available.  This value selection process is discussed in more detail
+under DNS updates.
 .PP
 An \fIoption host-name\fR statement within a host declaration will
 override the use of the name in the host declaration.

@@ -146,6 +146,19 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Bugs #36810]
   [ISC-Bugs #20352]
 
+- By default, the server will now choose the value to use in the forward DNS
+  name from the following in order of preference:
+
+    1. FQDN option if provided by the client
+    2. Host name option if provided by the client
+    3. Configured option host-name if defined
+
+  As before, this may be overridden by defining ddns-hostname to the desired
+  value (or expression).  In addition, the server logic has been extended to
+  use the value of the host name declaration if use-host-decl-names is enabled
+  and no other value is available.
+  [ISC-Bugs #21323]
+
 			Changes since 4.3.1b1
 
 - Modify the linux and openwrt dhclient scripts to process information
