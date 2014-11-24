@@ -34,6 +34,9 @@
 static void commit_leases_ackout(void *foo);
 static void maybe_return_agent_options(struct packet *packet,
 				       struct option_state *options);
+static int reuse_lease (struct packet* packet, struct lease* new_lease,
+			struct lease* lease, struct lease_state *state,
+			int offer);
 
 int outstanding_pings;
 
@@ -2318,8 +2321,13 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 				if (packet -> classes [i] ==
 				    lease -> billing_class)
 					break;
-			if (i == packet -> class_count)
+			if (i == packet -> class_count) {
 				unbill_class (lease, lease -> billing_class);
+				/* Active lease billing change negates reuse */
+				if (lease->binding_state == FTS_ACTIVE) {
+					lease->cannot_reuse = 1;
+				}
+			}
 		}
 
 		/* If we don't have an active billing, see if we need
@@ -2367,6 +2375,11 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 			    lease->billing_class != NULL &&
 			    lease->binding_state != FTS_ACTIVE)
 				unbill_class(lease, lease->billing_class);
+
+			/* Lease billing change negates reuse */
+			if (lease->billing_class != NULL) {
+				lease->cannot_reuse = 1;
+			}
 		}
 	}
 
@@ -2824,9 +2837,9 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 			   DHO_VENDOR_CLASS_IDENTIFIER);
 	if (oc != NULL &&
 	    evaluate_option_cache(&d1, packet, NULL, NULL, packet->options,
-				  NULL, &lease->scope, oc, MDL)) {
+				  NULL, &lt->scope, oc, MDL)) {
 		if (d1.len != 0) {
-			bind_ds_value(&lease->scope, "vendor-class-identifier",
+			bind_ds_value(&lt->scope, "vendor-class-identifier",
 				      &d1);
 		}
 
@@ -2935,51 +2948,12 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 			sizeof packet -> raw -> chaddr); /* XXX */
 	} else {
 		int commit = (!offer || (offer == DHCPACK));
-		int thresh = DEFAULT_CACHE_THRESHOLD;
 
-		/*
-		 * Check if the lease was issued recently, if so replay the 
-		 * current lease and do not require a database sync event.  
-		 * Recently is defined as being issued less than a given 
-		 * percentage of the lease previously. The percentage can be 
-		 * chosen either from a default value or via configuration.
-		 *
-		 */
-		if ((oc = lookup_option(&server_universe, state->options,
-					SV_CACHE_THRESHOLD)) &&
-		    evaluate_option_cache(&d1, packet, lt, NULL,
-					  packet->options, state->options,
-					  &lt->scope, oc, MDL)) {
-			if (d1.len == 1 && (d1.data[0] < 100))
-				thresh = d1.data[0];
-
-			data_string_forget(&d1, MDL);
-		}
-
-		/*
-		 * We check on ddns_cb to see if the ddns code has
-		 * updated the lt structure.  We could probably simply
-		 * copy the ddns_cb pointer in that case but lets be
-		 * simple and safe and update the entire lease.
-		 */
-		if ((lt->ddns_cb == NULL) &&
-		    (thresh > 0) && (offer == DHCPACK) &&
-		    (lease->binding_state == FTS_ACTIVE)) {
-			int limit;
-			int prev_lease = lease->ends - lease->starts;
-
-			/* it is better to avoid division by 0 */
-			if (prev_lease <= (INT_MAX / thresh))
-				limit = prev_lease * thresh / 100;
-			else
-				limit = prev_lease / 100 * thresh;
-
-			if ((lt->starts - lease->starts) <= limit) {
-				lt->starts = lease->starts;
-				state->offered_expiry = lt->ends = lease->ends;
-				commit = 0;
-				use_old_lease = 1;
-			}
+		/* If dhcp-cache-threshold is enabled, see if "lease" can
+		 * be reused. */
+		use_old_lease = reuse_lease(packet, lt, lease, state, offer);
+		if (use_old_lease == 1) {
+			commit = 0;
 		}
 
 #if !defined(DELAYED_ACK)
@@ -5161,4 +5135,114 @@ void use_host_decl_name(struct packet* packet,
                         option_cache_dereference(&oc, MDL);
                 }
         }
+}
+
+/*!
+ * \brief Checks and preps for lease resuse based on dhcp-cache-threshold
+ *
+ * If dhcp-cache-threshold is enabled (i.e. greater than zero), this function
+ * determines if the current lease is young enough to be reused.  If the lease
+ * can be resused the function returns 1, O if not.  This function is called
+ * by ack_lease when responding to both DISCOVERs and REQUESTS.
+ *
+ * The current lease can be reused only if all of the following are true:
+ *  a. dhcp-cache-threshold is > 0
+ *  b. The current lease is active
+ *  c. The lease "age" is less than that allowed by the threshold
+ *  d. DNS updates are not being performed on the new lease.
+ *  e. Lease has not been otherwise disqualified for reuse (Ex: billing class
+ *  changed)
+ *
+ * Clients may renew leases using full DORA cycles or just RAs. This means
+ * that reusability must be checked when acking both DISCOVERs and REQUESTs.
+ * When a lease cannot be reused, ack_lease() calls supersede_lease() which
+ * updates the lease start time (among other things).  If this occurs on the
+ * DISCOVER, then the lease will virtually always be seen as young enough to
+ * reuse on the ensuing REQUEST and the lease updates will not get committed
+ * to the lease file.  The lease.cannot_reuse flag is used to handle this
+ * this situation.
+ *
+ * \param packet inbound packet received from the client
+ * \param new_lease candidate new lease to associate with the client
+ * \param lease current lease associated with the client
+ * \param options option state to search and update
+ */
+int
+reuse_lease (struct packet* packet,
+	     struct lease* new_lease,
+	     struct lease* lease,
+	     struct lease_state *state,
+	     int offer) {
+	int reusable = 0;
+
+	/* To even consider reuse all of the following must be true:
+	 * 1 - reuse hasn't already disqualified
+	 * 2 - current lease is active
+	 * 3 - DNS info hasn't changed */
+	if ((lease->cannot_reuse == 0) &&
+	    (lease->binding_state == FTS_ACTIVE) &&
+	    (new_lease->ddns_cb == NULL)) {
+		int thresh = DEFAULT_CACHE_THRESHOLD;
+		struct option_cache* oc = NULL;
+		struct data_string d1;
+
+		/* Look up threshold value */
+		memset(&d1, 0, sizeof(struct data_string));
+		if ((oc = lookup_option(&server_universe, state->options,
+					SV_CACHE_THRESHOLD)) &&
+		     (evaluate_option_cache(&d1, packet, new_lease, NULL,
+				      packet->options, state->options,
+				      &new_lease->scope, oc, MDL))) {
+			if (d1.len == 1 && (d1.data[0] < 100))
+				thresh = d1.data[0];
+
+			data_string_forget(&d1, MDL);
+		}
+
+		/* If threshold is enabled, check lease age */
+		if (thresh > 0) {
+			int limit = 0;
+			int lease_length = 0;
+			long lease_age = 0;
+
+			/* Calculate limit in seconds */
+			lease_length = lease->ends - lease->starts;
+			if (lease_length <= (INT_MAX / thresh))
+				limit = lease_length * thresh / 100;
+			else
+				limit = lease_length / 100 * thresh;
+
+			/* Note new_lease->starts is really just cur_time */
+			lease_age = new_lease->starts - lease->starts;
+
+			/* Is the lease is young enough to reuse? */
+			if (lease_age <= limit) {
+				/* Restore expiry to its original value */
+				state->offered_expiry = lease->ends;
+
+				/* Restore bindings. This fixes 37368. */
+				if (new_lease->scope != NULL) {
+					if (lease->scope != NULL) {
+						binding_scope_dereference(
+								&lease->scope,
+								MDL);
+					}
+
+					binding_scope_reference(&lease->scope,
+							new_lease->scope, MDL);
+				}
+
+				/* We're cleared to reuse it */
+				log_debug("reuse_lease: lease age %ld"
+					  " under %d%% limit, reusing it",
+					  lease_age, limit);
+				reusable = 1;
+			}
+		}
+	}
+
+	/* If we can't reuse it and this is an offer disqualify reuse for
+	 * ensuing REQUEST, otherwise clear the flag. */
+	lease->cannot_reuse = (!reusable && offer == DHCPOFFER);
+	return (reusable);
 }

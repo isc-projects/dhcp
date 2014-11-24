@@ -2115,9 +2115,22 @@ update and write the database frequently resulting in a performance
 impact on the server.  The \fIdhcp-cache-threshold\fR
 statement instructs the DHCP server to avoid updating leases too
 frequently thus avoiding this behavior.  Instead the server assigns the
-same lease with no modifications except for CLTT (Client Last
+same lease (i.e. reuses it) with no modifications except for CLTT (Client Last
 Transmission Time) which does not require disk operations. This
 feature applies to IPv4 only.
+.PP
+When an existing lease is matched to a renewing client, it will be reused
+if all of the following conditions are true:
+.nf
+    1. The dhcp-cache-threshold is larger than zero
+    2. The current lease is active
+    3. The percentage of the lease time that has elapsed is less than
+    dhcp-cache-threshold
+    4. The client information provided in the renewal does not alter
+    any of the following:
+       a. DNS information and DNS updates are enabled
+       b. Billing class to which the lease is associated
+.fi
 .RE
 .PP
 The

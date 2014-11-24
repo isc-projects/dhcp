@@ -592,6 +592,9 @@ struct lease {
 	 * update if we want to do a different update.
 	 */
 	struct dhcp_ddns_cb *ddns_cb;
+
+	/* Set when a lease has been disqualified for cache-threshold reuse */
+	unsigned short cannot_reuse;
 };
 
 struct lease_state {

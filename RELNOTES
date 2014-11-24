@@ -159,6 +159,11 @@ by Eric Young (eay@cryptsoft.com).
   and no other value is available.
   [ISC-Bugs #21323]
 
+- DNS updates were being attempted when dhcp-cache-threshold enabled the use of
+  the existing lease and the forward DNS name had not changed.  This has been
+  corrected.
+  [ISC-Bugs #37368]
+
 			Changes since 4.3.1b1
 
 - Modify the linux and openwrt dhclient scripts to process information
