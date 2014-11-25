@@ -191,7 +191,8 @@ enum expr_op {
 	expr_regex_match,
 	expr_iregex_match,
 	expr_gethostname,
-	expr_v6relay
+	expr_v6relay,
+	expr_concat_dclist
 };
 
 struct expression {

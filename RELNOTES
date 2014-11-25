@@ -164,6 +164,12 @@ by Eric Young (eay@cryptsoft.com).
   corrected.
   [ISC-Bugs #37368]
 
+- Corrected an issue which caused dhclient to incorrectly form the result when
+  prepending or appending to the IPv4 domain-search option,received from the
+  server, when either of the values being combined contain compressed
+  components.
+  [ISC-Bugs #20558]
+
 			Changes since 4.3.1b1
 
 - Modify the linux and openwrt dhclient scripts to process information
