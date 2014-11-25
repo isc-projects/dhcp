@@ -2207,6 +2207,29 @@ void set_option (universe, options, option, op)
 				break;
 			}
 		}
+
+		/* If we are trying to combine compressed domain-lists then
+		 * we need to change the expression opcode.  The lists must
+		 * be decompressed, combined, and then recompressed to work
+		 * correctly.  You cannot simply add two compressed lists
+		 * together. */
+		switch (((memcmp(option->option->format, "Dc", 2) == 0) +
+			 (memcmp(oc->option->format, "Dc", 2) == 0))) {
+			case 1:
+				/* Only one is "Dc", this won't work
+				 * Not sure if you make this occur, but just
+				 * in case. */
+				log_error ("Both options must be Dc format");
+				return;
+			case 2:
+				/* Both are "Dc", change the code */
+				noc->expression->op = expr_concat_dclist;
+				break;
+			default:
+				/* Neither are "Dc", so as you were */
+				break;
+		}
+
 		option_reference(&(noc->option), oc->option, MDL);
 		save_option (universe, options, noc);
 		option_cache_dereference (&noc, MDL);

@@ -193,7 +193,8 @@ enum expr_op {
 	expr_lcase,
 	expr_regex_match,
 	expr_iregex_match,
-	expr_gethostname
+	expr_gethostname,
+	expr_concat_dclist
 };
 
 struct expression {
