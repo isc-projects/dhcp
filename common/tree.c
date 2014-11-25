@@ -945,6 +945,7 @@ int evaluate_dns_expression (result, packet, lease, client_state, in_options,
 	      case expr_config_option:
 	      case expr_leased_address:
 	      case expr_null:
+	      case expr_concat_dclist:
 		log_error ("Data opcode in evaluate_dns_expression: %d",
 		      expr -> op);
 		return 0;
@@ -1369,6 +1370,7 @@ int evaluate_boolean_expression (result, packet, lease, client_state,
 	      case expr_null:
 	      case expr_filename:
 	      case expr_sname:
+	      case expr_concat_dclist:
 		log_error ("Data opcode in evaluate_boolean_expression: %d",
 		      expr -> op);
 		return 0;
@@ -2291,6 +2293,49 @@ int evaluate_data_expression (result, packet, lease, client_state,
 			  s0 ? (const char *)(result -> data) : "NULL");
 #endif
 		return s0;
+
+	      case expr_concat_dclist: {
+		/* Operands are compressed domain-name lists ("Dc" format)
+		 * Fetch both compressed lists then call concat_dclists which
+		 * combines them into a single compressed list. */
+		memset(&data, 0, sizeof data);
+		int outcome = 0;
+		s0 = evaluate_data_expression(&data, packet, lease,
+					      client_state,
+					      in_options, cfg_options, scope,
+					      expr->data.concat[0], MDL);
+
+		memset (&other, 0, sizeof other);
+		s1 = evaluate_data_expression (&other, packet, lease,
+					       client_state,
+					       in_options, cfg_options, scope,
+					       expr->data.concat[1], MDL);
+
+		if (s0 && s1) {
+			outcome = concat_dclists(result, &data, &other);
+			if (outcome == 0) {
+				log_error ("data: concat_dclist failed");
+			}
+		}
+
+#if defined (DEBUG_EXPRESSIONS)
+		log_debug ("data: concat_dclists (%s, %s) = %s",
+		      (s0 ? print_hex_1(data.len, data.data, data.len)
+			  : "NULL"),
+		      (s1 ? print_hex_2(other.len, other.data, other.len)
+			  : "NULL"),
+		      (((s0 && s1) && result->len > 0)
+		       ? print_hex_3 (result->len, result->data, result->len)
+		       : "NULL"));
+#endif
+		if (s0)
+			data_string_forget (&data, MDL);
+
+		if (s1)
+			data_string_forget (&other, MDL);
+
+		return (outcome);
+		} /* expr_concat_dclist */
 
 	      case expr_check:
 	      case expr_equal:
@@ -3383,6 +3428,7 @@ static int op_val (op)
 	      case expr_binary_or:
 	      case expr_binary_xor:
 	      case expr_client_state:
+	      case expr_concat_dclist:
 		return 100;
 
 	      case expr_equal:
@@ -3476,6 +3522,7 @@ enum expression_context op_context (op)
 	      case expr_arg:
 	      case expr_funcall:
 	      case expr_function:
+	      case expr_concat_dclist:
 		return context_any;
 
 	      case expr_equal:
@@ -4426,6 +4473,130 @@ int unset (struct binding_scope *scope, const char *name)
 		return 1;
 	}
 	return 0;
+}
+
+/*!
+ * \brief Adds two Dc-formatted lists into a single Dc-formatted list
+ *
+ * Given two data_strings containing compressed lists, it constructs a 
+ * third data_string containing a single compressed list:
+ *
+ * 1. Decompressing the first list into a buffer
+ * 2. Decompressing the second list onto the end of the buffer 
+ * 3. Compressing the buffer into the result
+ *
+ * If either list is empty, the result will be the equal to the compressed
+ * content of the non-empty list.  If both lists are empty, the result will
+ * be an "empty" list: a 1 byte buffer containing 0x00.
+ *
+ * It relies on two functions to decompress and compress:
+ *
+ *  - ns_name_uncompress_list() - produces a null-terminated string of 
+ *  comma-separated domain-names from a buffer containing  "Dc" formatted
+ *  data
+ *
+ *  - ns_name_compress_list() - produces a buffer containing "Dc" formatted
+ *  data from a null-terminated string containing comma-separated domain-names
+ * 
+ * \param result data_string which will contain the combined list
+ * in Dc format
+ * \param list1 data_string containing first Dc formatted list 
+ * \param list2 data_string containing second Dc formatted list 
+ * \return 0 if there is an error, the length of the new list when successful
+ */
+int concat_dclists (struct data_string* result,
+	struct data_string* list1,
+	struct data_string* list2)
+{
+	char uncompbuf[32*NS_MAXCDNAME];
+	char *uncomp = uncompbuf;
+	int uncomp_len = 0;
+	int compbuf_max = 0;
+	int list_len = 0;
+	int i;
+
+	/* If not empty, uncompress first list into the uncompressed buffer */
+	if ((list1->data) && (list1->len)) {
+		list_len = MRns_name_uncompress_list(list1->data, list1->len,
+						     uncomp, sizeof(uncompbuf));
+		if (list_len < 0) {
+			log_error ("concat_dclists:"
+				   " error decompressing domain list 1");
+			return (0);
+		}
+
+		uncomp_len = list_len;
+		uncomp += list_len;
+	}
+
+	/* If not empty, uncompress second list into the uncompressed buffer */
+	if ((list2->data) && (list2->len)) {
+		/* If first list wasn't empty, add a comma */
+		if (uncomp_len > 0)  {
+			*uncomp++ =  ',';
+			uncomp_len++;
+		}
+
+		list_len = MRns_name_uncompress_list(list2->data, list2->len,
+					 	     uncomp, (sizeof(uncompbuf)
+							    - uncomp_len));
+		if (list_len < 0) {
+			log_error ("concat_dclists:"
+				   " error decompressing domain list 2");
+			return (0);
+		}
+
+		uncomp_len += list_len;
+		uncomp += list_len;
+	}
+
+	/* If both lists were empty, return an "empty" result */
+	if (uncomp_len == 0) {
+		if (!buffer_allocate (&result->buffer, 1, MDL)) {
+			log_error ("concat_dclists: empty list allocate fail");
+			result->len = 0;
+			return (0);
+		}
+
+		result->len = 1;
+		result->data = result->buffer->data;
+		return (1);
+	}
+
+	/* Estimate the buffer size needed for decompression. The largest
+	 * decompression would if one where there are no repeated portions,
+	 * (i.e. no compressions). Therefore that size should be the
+	 * decompressed string length + 2 for each comma + a final null. Each
+	 * dot gets replaced with a length byte and is accounted for in string
+	 * length. Mininum length is * uncomp_len + 3. */
+	compbuf_max = uncomp_len + 3;
+	uncomp = uncompbuf;
+	for (i = 0; i < uncomp_len; i++)
+		if (*uncomp++ == ',')
+			compbuf_max += 2;
+
+	/* Allocate compression buffer based on estimated max */
+	if (!buffer_allocate (&result->buffer, compbuf_max, MDL)) {
+		log_error ("concat_dclists: No memory for result");
+		result->len = 0;
+		return (0);
+	}
+
+	/* Compress the combined list into result */
+	list_len = MRns_name_compress_list(uncompbuf, uncomp_len,
+					   result->buffer->data, compbuf_max);
+
+	if (list_len <= 0) {
+		log_error ("concat_dlists: error compressing result");
+		data_string_forget(result, MDL);
+		result->len = 0;
+		return (0);
+	}
+
+	/* Update result length to actual size */
+	result->len = list_len;
+	result->data = result->buffer->data;
+	return (list_len);
 }
 
 /* vim: set tabstop=8: */

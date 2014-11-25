@@ -1951,6 +1951,8 @@ int find_bound_string (struct data_string *,
 		       struct binding_scope *, const char *);
 int unset (struct binding_scope *, const char *);
 int data_string_sprintfa(struct data_string *ds, const char *fmt, ...);
+int concat_dclists (struct data_string *, struct data_string *,
+		    struct data_string *);
 
 /* dhcp.c */
 extern int outstanding_pings;

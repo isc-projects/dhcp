@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004,2007-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004,2007-2014 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2001-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -53,6 +53,10 @@ int MRns_name_unpack(const unsigned char *, const unsigned char *,
 		     const unsigned char *, unsigned char *, size_t);
 int MRns_name_ntop(const unsigned char *, char *, size_t);
 int MRns_name_pton(const char *, u_char *, size_t);
+
+int MRns_name_uncompress_list(const unsigned char*, int buflen, char*, size_t);
+int MRns_name_compress_list(const char*, int buflen, unsigned char*, size_t);
+
 
 #if defined (MINIRES_LIB)
 #define res_update minires_update
@@ -118,6 +122,8 @@ int MRns_name_pton(const char *, u_char *, size_t);
 #define ns_verify_tcp_init MRns_verify_tcp_init
 #define ns_verify_tcp MRns_verify_tcp
 #define b64_ntop MRb64_ntop
+#define ns_name_uncompress_list MRns_name_uncompress_list
+#define ns_name_compress_list MRns_name_compress_list
 
 extern const struct res_sym __p_type_syms[];
 extern struct timeval cur_tv;
