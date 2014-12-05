@@ -4516,7 +4516,7 @@ int concat_dclists (struct data_string* result,
 	int i;
 
 	/* If not empty, uncompress first list into the uncompressed buffer */
-	if ((list1->data) && (list1->len)) {
+	if (list1 && (list1->data) && (list1->len)) {
 		list_len = MRns_name_uncompress_list(list1->data, list1->len,
 						     uncomp, sizeof(uncompbuf));
 		if (list_len < 0) {
@@ -4530,7 +4530,7 @@ int concat_dclists (struct data_string* result,
 	}
 
 	/* If not empty, uncompress second list into the uncompressed buffer */
-	if ((list2->data) && (list2->len)) {
+	if (list2 && (list2->data) && (list2->len)) {
 		/* If first list wasn't empty, add a comma */
 		if (uncomp_len > 0)  {
 			*uncomp++ =  ',';
