@@ -77,7 +77,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-@HAVE_ATF_TRUE@am__append_1 = alloc_unittest
+@HAVE_ATF_TRUE@am__append_1 = alloc_unittest ns_name_unittest
 check_PROGRAMS = $(am__EXEEXT_2)
 subdir = common/tests
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
@@ -90,7 +90,8 @@ mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/includes/config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
-@HAVE_ATF_TRUE@am__EXEEXT_1 = alloc_unittest$(EXEEXT)
+@HAVE_ATF_TRUE@am__EXEEXT_1 = alloc_unittest$(EXEEXT) \
+@HAVE_ATF_TRUE@	ns_name_unittest$(EXEEXT)
 am__EXEEXT_2 = $(am__EXEEXT_1)
 am__alloc_unittest_SOURCES_DIST = test_alloc.c \
 	$(top_srcdir)/tests/t_api_dhcp.c
@@ -99,6 +100,14 @@ am__alloc_unittest_SOURCES_DIST = test_alloc.c \
 alloc_unittest_OBJECTS = $(am_alloc_unittest_OBJECTS)
 am__DEPENDENCIES_1 =
 @HAVE_ATF_TRUE@alloc_unittest_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+@HAVE_ATF_TRUE@	../libdhcp.a ../../omapip/libomapi.a \
+@HAVE_ATF_TRUE@	../../bind/lib/libdns.a ../../bind/lib/libisc.a
+am__ns_name_unittest_SOURCES_DIST = ns_name_test.c \
+	$(top_srcdir)/tests/t_api_dhcp.c
+@HAVE_ATF_TRUE@am_ns_name_unittest_OBJECTS = ns_name_test.$(OBJEXT) \
+@HAVE_ATF_TRUE@	t_api_dhcp.$(OBJEXT)
+ns_name_unittest_OBJECTS = $(am_ns_name_unittest_OBJECTS)
+@HAVE_ATF_TRUE@ns_name_unittest_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 @HAVE_ATF_TRUE@	../libdhcp.a ../../omapip/libomapi.a \
 @HAVE_ATF_TRUE@	../../bind/lib/libdns.a ../../bind/lib/libisc.a
 AM_V_P = $(am__v_P_@AM_V@)
@@ -133,8 +142,9 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(alloc_unittest_SOURCES)
-DIST_SOURCES = $(am__alloc_unittest_SOURCES_DIST)
+SOURCES = $(alloc_unittest_SOURCES) $(ns_name_unittest_SOURCES)
+DIST_SOURCES = $(am__alloc_unittest_SOURCES_DIST) \
+	$(am__ns_name_unittest_SOURCES_DIST)
 RECURSIVE_TARGETS = all-recursive check-recursive cscopelist-recursive \
 	ctags-recursive dvi-recursive html-recursive info-recursive \
 	install-data-recursive install-dvi-recursive \
@@ -312,6 +322,10 @@ ATF_TESTS = $(am__append_1)
 @HAVE_ATF_TRUE@alloc_unittest_LDADD = $(ATF_LDFLAGS) ../libdhcp.a \
 @HAVE_ATF_TRUE@	../../omapip/libomapi.a ../../bind/lib/libdns.a \
 @HAVE_ATF_TRUE@	../../bind/lib/libisc.a
+@HAVE_ATF_TRUE@ns_name_unittest_SOURCES = ns_name_test.c $(top_srcdir)/tests/t_api_dhcp.c
+@HAVE_ATF_TRUE@ns_name_unittest_LDADD = $(ATF_LDFLAGS) ../libdhcp.a \
+@HAVE_ATF_TRUE@	../../omapip/libomapi.a ../../bind/lib/libdns.a \
+@HAVE_ATF_TRUE@	../../bind/lib/libisc.a
 all: all-recursive
 
 .SUFFIXES:
@@ -354,12 +368,17 @@ alloc_unittest$(EXEEXT): $(alloc_unittest_OBJECTS) $(alloc_unittest_DEPENDENCIES
 	@rm -f alloc_unittest$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(alloc_unittest_OBJECTS) $(alloc_unittest_LDADD) $(LIBS)
 
+ns_name_unittest$(EXEEXT): $(ns_name_unittest_OBJECTS) $(ns_name_unittest_DEPENDENCIES) $(EXTRA_ns_name_unittest_DEPENDENCIES) 
+	@rm -f ns_name_unittest$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(ns_name_unittest_OBJECTS) $(ns_name_unittest_LDADD) $(LIBS)
+
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
 
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ns_name_test.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t_api_dhcp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_alloc.Po@am__quote@
 
