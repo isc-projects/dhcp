@@ -10,6 +10,7 @@ client/tests/test-suite.log
 common/tests/alloc_unittest
 common/tests/dns_unittest
 common/tests/misc_unittest
+common/tests/ns_name_unittest
 config.log
 config.report
 config.status

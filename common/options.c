@@ -2277,9 +2277,10 @@ void set_option (universe, options, option, op)
 			 (memcmp(oc->option->format, "Dc", 2) == 0))) {
 			case 1:
 				/* Only one is "Dc", this won't work
-				 * Not sure if you make this occur, but just
+				 * Not sure if you can make this occur, but just
 				 * in case. */
 				log_error ("Both options must be Dc format");
+				option_cache_dereference (&noc, MDL);
 				return;
 			case 2:
 				/* Both are "Dc", change the code */
