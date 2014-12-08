@@ -740,6 +740,7 @@ struct lease_state {
 #define SV_LOG_THRESHOLD_LOW		83
 #define SV_LOG_THRESHOLD_HIGH		84
 #define SV_ECHO_CLIENT_ID		85
+#define SV_SERVER_ID_CHECK		86
 
 #if !defined (DEFAULT_PING_TIMEOUT)
 # define DEFAULT_PING_TIMEOUT 1
@@ -1950,6 +1951,7 @@ extern struct timeval cur_tv;
 
 extern int ddns_update_style;
 extern int dont_use_fsync;
+extern int server_id_check;
 
 extern const char *path_dhcpd_conf;
 extern const char *path_dhcpd_db;

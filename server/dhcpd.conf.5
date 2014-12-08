@@ -2792,6 +2792,44 @@ to using the server-identifier statement.
 .RE
 .PP
 The
+.I server-id-check
+statement
+.RS 0.25i
+.PP
+.B server-id-check \fIflag\fR\fB;\fR
+.PP
+The server-id-check statement is used to control whether or not a server,
+participating in failover, verifies that the value of the
+dhcp-server-identifier option in received DHCP REQUESTs match the server's
+id before processing the request. Server id checking is disabled by default.
+Setting this flag enables id checking and thereafter the server will only
+process requests that match.  Note the flag setting should be consistent
+between failover partners.
+.PP
+Unless overridden by use of the server-identifier statement, the value the
+server uses as its id will be the first IP address associated with the
+physical network interface on which the request arrived.
+.PP
+In order to reduce runtime overhead the server only checks for a server id
+option in the global and subnet scopes.  Complicated configurations
+may result in differnet server ids for this check and when the server id for
+a reply packet is determined, which would prohibit the server from responding.
+.PP
+The primary use for this option is when a client broadcasts a request
+but requires that the response come from a specific failover peer.
+An example of this would be when a client reboots while its lease is still
+active - in this case both servers will normally respond.  Most of the
+time the client won't check the server id and can use either of the responses.
+However if the client does check the server id it may reject the response
+if it came from the wrong peer.  If the timing is such that the "wrong"
+peer responds first most of the time the client may not get an address for
+some time.
+.PP
+Care should be taken before enabling this option.
+.PP
+.RE
+.PP
+The
 .I server-duid
 statement
 .RS 0.25i

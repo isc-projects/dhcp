@@ -246,32 +246,9 @@
 
 #define SERVER_ID_FOR_NAK
 
-/* When processing a request do a simple check to compare the
-   server id the client sent with the one the server would send.
-   In order to minimize the complexity of the code the server
-   only checks for a server id option in the global and subnet
-   scopes.  Complicated configurations may result in differnet
-   server ids for this check and when the server id for a reply
-   packet is determined, which would prohibit the server from
-   responding.
-
-   The primary use for this option is when a client broadcasts
-   a request but requires the response to come from one of the
-   failover peers.  An example of this would be when a client
-   reboots while its lease is still active - in this case both
-   servers will normally respond.  Most of the time the client
-   won't check the server id and can use either of the responses.
-   However if the client does check the server id it may reject
-   the response if it came from the wrong peer.  If the timing
-   is such that the "wrong" peer responds first most of the time
-   the client may not get an address for some time.
-
-   Currently this option is only available when failover is in
-   use.
-
-   Care should be taken before enabling this option. */
-
-/* #define SERVER_ID_CHECK */
+/* NOTE:  SERVER_ID_CHECK switch has been removed. Enabling server id
+ * checking is now done via the server-id-check statement. Please refer
+ * to the dhcpd manpage (server/dhcpd.conf.5) */
 
 /* Include code to do a slow transition of DDNS records
    from the interim to the standard version, or backwards.

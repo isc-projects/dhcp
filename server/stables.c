@@ -268,6 +268,7 @@ static struct option server_options[] = {
 	{ "log-threshold-low", "B",		&server_universe,  83, 1 },
 	{ "log-threshold-high", "B",		&server_universe,  84, 1 },
 	{ "echo-client-id", "f",		&server_universe,  SV_ECHO_CLIENT_ID, 1 },
+	{ "server-id-check", "f",		&server_universe,  SV_SERVER_ID_CHECK, 1 },
 	{ NULL, NULL, NULL, 0, 0 }
 };
 

@@ -553,31 +553,28 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 			goto out;
 		}
 
-#if defined(SERVER_ID_CHECK)
-		/* Do a quick check on the server source address to see if
-		   it is ours.  sip is the incoming servrer id.  To avoid
-		   problems with confused clients we do some sanity checks
-		   to verify sip's length and that it isn't all zeros.
-		   We then get the server id we would likely use for this
-		   packet and compare them.  If they don't match it we assume
-		   we didn't send the offer and so we don't process the request.
-		*/
-
-		if ((sip.len == 4) &&
+		/* If server-id-check is enabled, verify that the client's
+		 * server source address (sip from incoming packet) is ours.
+		 * To avoid problems with confused clients we do some sanity
+		 * checks to verify sip's length and that it isn't all zeros.
+		 * We then get the server id we would likely use for this
+		 * packet and compare them.  If they don't match it we assume
+		 * we didn't send the offer and so we don't process the
+		 * request. */
+		if ((server_id_check == 1) && (sip.len == 4) &&
 		    (memcmp(sip.iabuf, "\0\0\0\0", sip.len) != 0)) {
 			struct in_addr from;
 			struct option_state *eval_options = NULL;
 
 			eval_network_statements(&eval_options, packet, NULL);
-			get_server_source_address(&from, eval_options, NULL,
-						  packet);
+			get_server_source_address(&from, eval_options,
+						  NULL, packet);
 			option_state_dereference (&eval_options, MDL);
 			if (memcmp(sip.iabuf, &from, sip.len) != 0) {
 				log_debug("%s: not our server id", msgbuf);
 				goto out;
 			}
 		}
-#endif /* if defined(SERVER_ID_CHECK) */
 
 		/* At this point it's possible that we will get a broadcast
 		   DHCPREQUEST for a lease that we didn't offer, because

@@ -72,6 +72,7 @@ option server.ddns-rev-domainname = \"in-addr.arpa.\";";
 #endif /* NSUPDATE */
 int ddns_update_style;
 int dont_use_fsync = 0; /* 0 = default, use fsync, 1 = don't use fsync */
+int server_id_check = 0; /* 0 = default, don't check server id, 1 = do check */
 
 const char *path_dhcpd_conf = _PATH_DHCPD_CONF;
 const char *path_dhcpd_db = _PATH_DHCPD_DB;
@@ -1076,6 +1077,14 @@ void postconf_initialization (int quiet)
 					  &global_scope, oc, MDL)) {
 		dont_use_fsync = 1;
 		log_error("Not using fsync() to flush lease writes");
+	}
+
+       oc = lookup_option(&server_universe, options, SV_SERVER_ID_CHECK);
+       if ((oc != NULL) &&
+	   evaluate_boolean_option_cache(NULL, NULL, NULL, NULL, options, NULL,
+					 &global_scope, oc, MDL)) {
+		log_info("Setting server-id-check true");
+		server_id_check = 1;
 	}
 
 	/* Don't need the options anymore. */
