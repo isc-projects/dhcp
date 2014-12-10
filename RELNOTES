@@ -193,7 +193,8 @@ by Eric Young (eay@cryptsoft.com).
   the wrong scope.  The two examples we've heard of are getting subnet
   instead of group information associated with a host entry, or getting
   global information instead of subnet if the host entry was built via
-  omapi.
+  omapi.  Thanks to Julien Soula at University of Lille for finding the
+  bug and supplying a patch.
   [ISC-Bugs #35712]
 
 			Changes since 4.3.1b1
