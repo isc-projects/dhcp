@@ -309,3 +309,12 @@
    (see includes/omapip/result.h).  The extra defines and
    this option will be removed at some time. */
 /* #define INCLUDE_OLD_DHCP_ISC_ERROR_CODES */
+
+/* Enable conversion at startup of leases from FTS_BACKUP to FTS_FREE
+   when either their pool has no configured failover peer or 
+   FAILOVER_PROTOCOL is not enabled.  This allows the leases to be
+   reclaimed by the server after a pool's configuration has changed
+   from failover to standalone. Prior to this such leases would remain
+   stuck in the backup state. */
+/* #define CONVERT_BACKUP_TO_FREE */
+

@@ -2562,6 +2562,24 @@ lease_instantiate(const void *key, unsigned len, void *object)
 				     lease->ip_addr.len, MDL);
 		return ISC_R_SUCCESS;
 	}
+
+#if defined (CONVERT_BACKUP_TO_FREE)
+#if defined (FAILOVER_PROTOCOL)
+	/* If the lease is in FTS_BACKUP but there is no peer, then the
+ 	 * pool must have been formerly configured for failover and
+ 	 * is now configured as standalone. This means we need to
+ 	 * move the lease to FTS_FREE to make it available. */
+	if ((lease->binding_state == FTS_BACKUP) && 
+	    (lease->pool->failover_peer == NULL)) {
+#else
+	/* We aren't compiled for failover, so just move to FTS_FREE */
+	if (lease->binding_state == FTS_BACKUP) { 
+#endif
+		lease->binding_state = FTS_FREE;
+		lease->next_binding_state = FTS_FREE;
+		lease->rewind_binding_state = FTS_FREE;
+	}
+#endif
 		
 	/* Put the lease on the right queue.  Failure to queue is probably
 	 * due to a bogus binding state.  In such a case, we claim success,
