@@ -272,3 +272,12 @@
    64 indicates that the first 64 bits are the subnet or on-link
    prefix. */
 #define DHCLIENT_DEFAULT_PREFIX_LEN 64
+
+/* Enable conversion at startup of leases from FTS_BACKUP to FTS_FREE
+   when either their pool has no configured failover peer or 
+   FAILOVER_PROTOCOL is not enabled.  This allows the leases to be
+   reclaimed by the server after a pool's configuration has changed
+   from failover to standalone. Prior to this such leases would remain
+   stuck in the backup state. */
+/* #define CONVERT_BACKUP_TO_FREE */
+
