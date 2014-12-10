@@ -179,6 +179,15 @@ by Eric Young (eay@cryptsoft.com).
   The functionality is now only available through the new runtime paramater.
   [ISC-Bugs #37551]
 
+- During startup, when the server encounters a lease whose binding state is
+  FTS_BACKUP but whose pool has no configured failover peer, it will reset the
+  lease's binding state to FTS_FREE.  This allows the leases to be reclaimed
+  by the server after a pool's configuration has changed from failover to
+  standalone. Prior to this such leases would remain stuck in the backup state
+  making them unavailable for assignment.  Note this conversion will occur
+  whether or not the server is compiled for failover.
+  [ISC-Bugs #36960]
+
 			Changes since 4.3.1b1
 
 - Modify the linux and openwrt dhclient scripts to process information
