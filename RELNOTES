@@ -188,6 +188,14 @@ by Eric Young (eay@cryptsoft.com).
   whether or not the server is compiled for failover.
   [ISC-Bugs #36960]
 
+- Fixed a small issue in the treatment of hosts in the inform processing
+  that could cause the response to an inform to include information from
+  the wrong scope.  The two examples we've heard of are getting subnet
+  instead of group information associated with a host entry, or getting
+  global information instead of subnet if the host entry was built via
+  omapi.
+  [ISC-Bugs #35712]
+
 			Changes since 4.3.1b1
 
 - Modify the linux and openwrt dhclient scripts to process information

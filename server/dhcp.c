@@ -1305,8 +1305,7 @@ void dhcpinform (packet, ms_nulltp)
 		execute_statements_in_scope(NULL, packet, NULL, NULL,
 					    packet->options, options,
 					    &global_scope, host->group,
-					    host->group ?
-					      host->group->next : NULL,
+					    subnet->group,
 					    NULL);
 		host_dereference (&host, MDL);
 	}
