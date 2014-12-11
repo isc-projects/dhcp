@@ -1038,11 +1038,12 @@ void enter_lease (lease)
    list of leases by expiry time so that we can always find the oldest
    lease. */
 
-int supersede_lease (comp, lease, commit, propogate, pimmediate)
+int supersede_lease (comp, lease, commit, propogate, pimmediate, from_pool)
 	struct lease *comp, *lease;
 	int commit;
 	int propogate;
 	int pimmediate;
+	int from_pool;
 {
 	struct lease *lp, **lq, *prev;
 	struct timeval tv;
@@ -1363,15 +1364,17 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 		dhcp_failover_pool_check(comp->pool);
 #endif
 
-	/* If the current binding state has already expired, do an
-	   expiry event right now. */
+	/* If the current binding state has already expired and we haven't
+	 * been called from pool_timer, do an expiry event right now.
+	 */
 	/* XXX At some point we should optimize this so that we don't
 	   XXX write the lease twice, but this is a safe way to fix the
 	   XXX problem for 3.0 (I hope!). */
-	if ((commit || !pimmediate) &&
-	    comp -> sort_time < cur_time &&
-	    comp -> next_binding_state != comp -> binding_state)
-		pool_timer (comp -> pool);
+	if ((from_pool == 0) &&
+	    (commit || !pimmediate) &&
+	    (comp->sort_time < cur_time) &&
+	    (comp->next_binding_state != comp->binding_state))
+		pool_timer(comp->pool);
 
 	return 1;
 }
@@ -1688,7 +1691,7 @@ void release_lease (lease, packet)
 #else
 		lease -> next_binding_state = FTS_FREE;
 #endif
-		supersede_lease (lease, (struct lease *)0, 1, 1, 1);
+		supersede_lease(lease, NULL, 1, 1, 1, 0);
 	}
 }
 
@@ -1721,7 +1724,7 @@ void abandon_lease (lease, message)
 	lt -> uid = (unsigned char *)0;
 	lt -> uid_len = 0;
 	lt -> uid_max = 0;
-	supersede_lease (lease, lt, 1, 1, 1);
+	supersede_lease (lease, lt, 1, 1, 1, 0);
 	lease_dereference (&lt, MDL);
 }
 
@@ -1755,7 +1758,7 @@ void dissociate_lease (lease)
 	lt -> uid = (unsigned char *)0;
 	lt -> uid_len = 0;
 	lt -> uid_max = 0;
-	supersede_lease (lease, lt, 1, 1, 1);
+	supersede_lease (lease, lt, 1, 1, 1, 0);
 	lease_dereference (&lt, MDL);
 }
 
@@ -1764,8 +1767,8 @@ void pool_timer (vpool)
 	void *vpool;
 {
 	struct pool *pool;
-	struct lease *next = (struct lease *)0;
-	struct lease *lease = (struct lease *)0;
+	struct lease *next = NULL;
+	struct lease *lease = NULL;
 #define FREE_LEASES 0
 #define ACTIVE_LEASES 1
 #define EXPIRED_LEASES 2
@@ -1779,11 +1782,11 @@ void pool_timer (vpool)
 
 	pool = (struct pool *)vpool;
 
-	lptr [FREE_LEASES] = &pool -> free;
-	lptr [ACTIVE_LEASES] = &pool -> active;
-	lptr [EXPIRED_LEASES] = &pool -> expired;
-	lptr [ABANDONED_LEASES] = &pool -> abandoned;
-	lptr [BACKUP_LEASES] = &pool -> backup;
+	lptr[FREE_LEASES] = &pool->free;
+	lptr[ACTIVE_LEASES] = &pool->active;
+	lptr[EXPIRED_LEASES] = &pool->expired;
+	lptr[ABANDONED_LEASES] = &pool->abandoned;
+	lptr[BACKUP_LEASES] = &pool->backup;
 	lptr[RESERVED_LEASES] = &pool->reserved;
 
 	for (i = FREE_LEASES; i <= RESERVED_LEASES; i++) {
@@ -1806,20 +1809,20 @@ void pool_timer (vpool)
 				continue;
 		}
 #endif		
-		lease_reference (&lease, *(lptr [i]), MDL);
+		lease_reference(&lease, *(lptr [i]), MDL);
 
 		while (lease) {
 			/* Remember the next lease in the list. */
 			if (next)
-				lease_dereference (&next, MDL);
+				lease_dereference(&next, MDL);
 			if (lease -> next)
-				lease_reference (&next, lease -> next, MDL);
+				lease_reference(&next, lease->next, MDL);
 
 			/* If we've run out of things to expire on this list,
 			   stop. */
-			if (lease -> sort_time > cur_time) {
-				if (lease -> sort_time < next_expiry)
-					next_expiry = lease -> sort_time;
+			if (lease->sort_time > cur_time) {
+				if (lease->sort_time < next_expiry)
+					next_expiry = lease->sort_time;
 				break;
 			}
 
@@ -1828,29 +1831,35 @@ void pool_timer (vpool)
 			   state change should happen, just call
 			   supersede_lease on it to make the change
 			   happen. */
-			if (lease -> next_binding_state !=
-			    lease -> binding_state)
-				supersede_lease (lease,
-						 (struct lease *)0, 1, 1, 1);
+			if (lease->next_binding_state != lease->binding_state)
+				supersede_lease(lease, NULL, 1, 1, 1, 1);
 
-			lease_dereference (&lease, MDL);
+			lease_dereference(&lease, MDL);
 			if (next)
-				lease_reference (&lease, next, MDL);
+				lease_reference(&lease, next, MDL);
 		}
 		if (next)
-			lease_dereference (&next, MDL);
+			lease_dereference(&next, MDL);
 		if (lease)
-			lease_dereference (&lease, MDL);
+			lease_dereference(&lease, MDL);
 	}
-	if (next_expiry != MAX_TIME) {
-		pool -> next_event_time = next_expiry;
-		tv . tv_sec = pool -> next_event_time;
-		tv . tv_usec = 0;
+
+	/* If we found something to expire and its expiration time
+	 * is either less than the current expiration time or the
+	 * current expiration time is already expired update the
+	 * timer.
+	 */
+	if ((next_expiry != MAX_TIME) &&
+	    ((pool->next_event_time > next_expiry) ||
+	     (pool->next_event_time <= cur_time))) {
+		pool->next_event_time = next_expiry;
+		tv.tv_sec = pool->next_event_time;
+		tv.tv_usec = 0;
 		add_timeout (&tv, pool_timer, pool,
 			     (tvref_t)pool_reference,
 			     (tvunref_t)pool_dereference);
 	} else
-		pool -> next_event_time = MIN_TIME;
+		pool->next_event_time = MIN_TIME;
 
 }
 
