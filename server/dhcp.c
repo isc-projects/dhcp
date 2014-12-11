@@ -2509,7 +2509,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		 * a conflict.
 		 */
 		if (!supersede_lease(lease, lt, !offer || (offer == DHCPACK),
-				     offer == DHCPACK, offer == DHCPACK)) {
+				     offer == DHCPACK, offer == DHCPACK, 0)) {
 #else /* defined(DELAYED_ACK) */
 		/* Install the new information on 'lt' onto the lease at
 		 * 'lease'.  We will not 'commit' this information to disk
@@ -2520,8 +2520,9 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		 * BOOTREPLY either); we may give the same lease out to a
 		 * different client, and that would be a conflict.
 		 */
+
 		if (!supersede_lease(lease, lt, 0, !offer || offer == DHCPACK,
-				     0)) {
+				     0, 0)) {
 #endif
 			log_info ("%s: database update failed", msg);
 			free_lease_state (state, MDL);

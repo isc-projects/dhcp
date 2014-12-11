@@ -158,11 +158,17 @@ by Eric Young (eay@cryptsoft.com).
   will occur whether or not the server is compiled for failover.
   [ISC-Bugs #36960]
 
+- Avoid calling pool_timer() recursively from supersede_lease().  This could
+  result in leases changing state incorrectly or delaying the running of the
+  leae expiration code.
+  [ISC-Bugs #38002]
+
 			Changes since 4.2.7rc1
 
 - None
 
 			Changes since 4.2.7b1
+
 
 - Modify the linux and openwrt dhclient scripts to process information
   from a stateless request.  Thanks to Jiri Popelka at Red Hat for the

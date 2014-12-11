@@ -227,7 +227,7 @@ isc_result_t dhcp_lease_set_value  (omapi_object_t *h,
 	    
 	    if (lease -> binding_state != bar) {
 		lease -> next_binding_state = bar;
-		if (supersede_lease (lease, 0, 1, 1, 1)) {
+		if (supersede_lease (lease, NULL, 1, 1, 1, 0)) {
 			log_info ("lease %s state changed from %s to %s",
 				  piaddr(lease->ip_addr), ols, nls);
 			return ISC_R_SUCCESS;
@@ -260,7 +260,7 @@ isc_result_t dhcp_lease_set_value  (omapi_object_t *h,
 		return status;
 	    old_lease_end = lease->ends;
 	    lease->ends = lease_end;
-	    if (supersede_lease (lease, 0, 1, 1, 1)) {
+	    if (supersede_lease (lease, NULL, 1, 1, 1, 0)) {
 		log_info ("lease %s end changed from %lu to %lu",
 			  piaddr(lease->ip_addr), old_lease_end, lease_end);
 		return ISC_R_SUCCESS;
@@ -279,7 +279,7 @@ isc_result_t dhcp_lease_set_value  (omapi_object_t *h,
 			   (lease->flags & ~EPHEMERAL_FLAGS);
 	    if(oldflags == lease->flags)
 		return ISC_R_SUCCESS;
-	    if (!supersede_lease(lease, NULL, 1, 1, 1)) {
+	    if (!supersede_lease(lease, NULL, 1, 1, 1, 0)) {
 		log_error("Failed to update flags for lease %s.",
 			  piaddr(lease->ip_addr));
 		return ISC_R_IOERROR;

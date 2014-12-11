@@ -3265,7 +3265,7 @@ void new_shared_network_interface (struct parse *,
 int subnet_inner_than(const struct subnet *, const struct subnet *, int);
 void enter_subnet (struct subnet *);
 void enter_lease (struct lease *);
-int supersede_lease (struct lease *, struct lease *, int, int, int);
+int supersede_lease (struct lease *, struct lease *, int, int, int, int);
 void make_binding_state_transition (struct lease *);
 int lease_copy (struct lease **, struct lease *, const char *, int);
 void release_lease (struct lease *, struct packet *);
