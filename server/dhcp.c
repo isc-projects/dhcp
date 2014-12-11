@@ -2963,7 +2963,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		 */
 		if ((use_old_lease == 0) &&
 		    !supersede_lease(lease, lt, commit,
-				     offer == DHCPACK, offer == DHCPACK)) {
+				     offer == DHCPACK, offer == DHCPACK, 0)) {
 #else /* defined(DELAYED_ACK) */
 		/*
 		 * If there already isn't a need for a lease commit, and we
@@ -2983,7 +2983,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		 */
 		if ((use_old_lease == 0) &&
 		    !supersede_lease(lease, lt, 0,
-				     !offer || offer == DHCPACK, 0)) {
+				     !offer || offer == DHCPACK, 0, 0)) {
 #endif
 			log_info ("%s: database update failed", msg);
 			free_lease_state (state, MDL);

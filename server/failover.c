@@ -2602,7 +2602,7 @@ dhcp_failover_pool_dobalance(dhcp_failover_state_t *state,
 			    lp->tstp = cur_time;
 			    lp->starts = cur_time;
 
-			    if (!supersede_lease(lp, NULL, 0, 1, 0) ||
+			    if (!supersede_lease(lp, NULL, 0, 1, 0, 0) ||
 			        !write_lease(lp))
 			    	    log_error("can't commit lease %s on "
 					      "giveaway", piaddr(lp->ip_addr));
@@ -5412,7 +5412,7 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 	lease->rewind_binding_state = lt->next_binding_state;
 
 	/* Try to install the new information. */
-	if (!supersede_lease (lease, lt, 0, 0, 0) ||
+	if (!supersede_lease (lease, lt, 0, 0, 0, 0) ||
 	    !write_lease (lease)) {
 		message = "database update failed";
 	      bad:
@@ -5430,7 +5430,7 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 		lease->tstp = cur_time;
 		lease->starts = cur_time;
 
-		if (!supersede_lease(lease, NULL, 0, 1, 0) ||
+		if (!supersede_lease(lease, NULL, 0, 1, 0, 0) ||
 		    !write_lease(lease))
 			log_error("can't commit lease %s for mac addr "
 				  "affinity", piaddr(lease->ip_addr));
@@ -5557,7 +5557,7 @@ isc_result_t dhcp_failover_process_bind_ack (dhcp_failover_state_t *state,
 		/* The peer will have made this state change, so set rewind. */
 		lease->rewind_binding_state = lease->next_binding_state;
 
-		supersede_lease(lease, (struct lease *)0, 0, 0, 0);
+		supersede_lease(lease, NULL, 0, 0, 0, 0);
 		write_lease(lease);
 
 		/* Lease has returned to FREE state from the
@@ -5582,8 +5582,7 @@ isc_result_t dhcp_failover_process_bind_ack (dhcp_failover_state_t *state,
 		if (lease->desired_binding_state != lease->binding_state) {
 			lease->next_binding_state =
 				lease->desired_binding_state;
-			supersede_lease(lease,
-					(struct lease *)0, 0, 0, 0);
+			supersede_lease(lease, NULL, 0, 0, 0, 0);
 		}
 		write_lease(lease);
 		/* Commit the lease only after a two-second timeout,
@@ -5613,7 +5612,7 @@ isc_result_t dhcp_failover_process_bind_ack (dhcp_failover_state_t *state,
 		lease->next_binding_state = FTS_BACKUP;
 		lease->tstp = lease->starts = cur_time;
 
-		if (!supersede_lease(lease, NULL, 0, 1, 0) ||
+		if (!supersede_lease(lease, NULL, 0, 1, 0, 0) ||
 		    !write_lease(lease))
 			log_error("can't commit lease %s for "
 				  "client affinity", piaddr(lease->ip_addr));
