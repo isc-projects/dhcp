@@ -684,6 +684,34 @@ main(int argc, char **argv) {
  	if (cftest && !lftest) 
  		exit(0);
 
+	/*
+	 * First part of dealing with pid files.  Check to see if
+	 * we should continue running or not.  We run if:
+	 * - we are testing the lease file out
+	 * - we don't have a pid file to check
+	 * - there is no other process running
+	 */
+	if ((lftest == 0) && (no_pid_file == ISC_FALSE)) {
+		/*Read previous pid file. */
+		if ((i = open(path_dhcpd_pid, O_RDONLY)) >= 0) {
+			status = read(i, pbuf, (sizeof pbuf) - 1);
+			close(i);
+			if (status > 0) {
+				pbuf[status] = 0;
+				pid = atoi(pbuf);
+
+				/*
+				 * If there was a previous server process and
+				 * it is still running, abort
+				 */
+				if (!pid ||
+				    (pid != getpid() && kill(pid, 0) == 0))
+					log_fatal("There's already a "
+						  "DHCP server running.");
+			}
+		}
+	}
+
 	group_write_hook = group_writer;
 
 	/* Start up the database... */
@@ -775,34 +803,15 @@ main(int argc, char **argv) {
 #endif /* PARANOIA */
 
 	/*
-	 * Deal with pid files.  If the user told us
-	 * not to write a file we don't read one either
+	 * Second part of dealing with pid files.  Now
+	 * that we have forked we can write our pid if
+	 * appropriate.
 	 */
 	if (no_pid_file == ISC_FALSE) {
-		/*Read previous pid file. */
-		if ((i = open (path_dhcpd_pid, O_RDONLY)) >= 0) {
-			status = read(i, pbuf, (sizeof pbuf) - 1);
-			close (i);
-			if (status > 0) {
-				pbuf[status] = 0;
-				pid = atoi(pbuf);
-
-				/*
-				 * If there was a previous server process and
-				 * it is still running, abort
-				 */
-				if (!pid ||
-				    (pid != getpid() && kill(pid, 0) == 0))
-					log_fatal("There's already a "
-						  "DHCP server running.");
-			}
-		}
-
-		/* Write new pid file. */
 		i = open(path_dhcpd_pid, O_WRONLY|O_CREAT|O_TRUNC, 0644);
 		if (i >= 0) {
 			sprintf(pbuf, "%d\n", (int) getpid());
-			IGNORE_RET (write(i, pbuf, strlen(pbuf)));
+			IGNORE_RET(write(i, pbuf, strlen(pbuf)));
 			close(i);
 		} else {
 			log_error("Can't create PID file %s: %m.",
