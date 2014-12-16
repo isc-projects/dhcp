@@ -163,12 +163,18 @@ by Eric Young (eay@cryptsoft.com).
   leae expiration code.
   [ISC-Bugs #38002]
 
+- Move the check for a PID file and process to be before we rewrite the
+  lease file.  This avoids the possibility of starting a second instance
+  of a server which changes the current lease file confusing the first
+  instance.  This check is only included if the admin hasn't disabled PID
+  files.
+  [ISC-Bugs #38078]
+
 			Changes since 4.2.7rc1
 
 - None
 
 			Changes since 4.2.7b1
-
 
 - Modify the linux and openwrt dhclient scripts to process information
   from a stateless request.  Thanks to Jiri Popelka at Red Hat for the
