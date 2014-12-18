@@ -170,6 +170,11 @@ by Eric Young (eay@cryptsoft.com).
   files.
   [ISC-Bugs #38078]
 
+- In the client code change the way preferred_life and max_life are printed
+  for environment variables to be unsigned rather than signed.
+  Thanks to Jiri Popelka at Red Hat for the bug report and patch.
+  [ISC-Bugs #37084]
+
 			Changes since 4.2.7rc1
 
 - None
