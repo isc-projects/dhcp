@@ -3862,10 +3862,10 @@ dhc6_marshall_values(const char *prefix, struct client_state *client,
 		}
 		client_envadd(client, prefix, "life_starts", "%d",
 			      (int)(addr->starts));
-		client_envadd(client, prefix, "preferred_life", "%d",
-			      (int)(addr->preferred_life));
-		client_envadd(client, prefix, "max_life", "%d",
-			      (int)(addr->max_life));
+		client_envadd(client, prefix, "preferred_life", "%u",
+			      addr->preferred_life);
+		client_envadd(client, prefix, "max_life", "%u",
+			      addr->max_life);
 	}
 
 	/* ia fields. */
