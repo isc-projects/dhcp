@@ -150,9 +150,9 @@ main(int argc, char **argv) {
 	char *s;
 	int cftest = 0;
 	int lftest = 0;
-#ifndef DEBUG
 	int pid;
 	char pbuf [20];
+#ifndef DEBUG
 	int daemon = 1;
 #endif
 	int quiet = 0;
