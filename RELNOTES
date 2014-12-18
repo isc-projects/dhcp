@@ -169,6 +169,7 @@ by Eric Young (eay@cryptsoft.com).
   instance.  This check is only included if the admin hasn't disabled PID
   files.
   [ISC-Bugs #38078]
+  [ISC-Bugs #38143]
 
 - In the client code change the way preferred_life and max_life are printed
   for environment variables to be unsigned rather than signed.
