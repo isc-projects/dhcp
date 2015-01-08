@@ -215,9 +215,6 @@ by Eric Young (eay@cryptsoft.com).
   Thanks to Jiri Popelka at Red Hat for the bug report and patch.
   [ISC-Bugs #37084]
 
-- Corrected linux packet handling which was causing packets received via VLAN
-  to be seen by both the VLAN interface and its parent interface.
-
 - Modified linux packet handling such that packets received via VLAN are now
   seen only by the VLAN interface. Prior to this, such packets were seen by
   both the VLAN interface and its parent (physical) interface, causing the
