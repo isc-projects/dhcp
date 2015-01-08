@@ -150,6 +150,10 @@ static int find_hosts_by_duid_chaddr(struct host_decl **host,
 				     const struct data_string *client_id);
 static void schedule_lease_timeout_reply(struct reply_state *reply);
 
+static int eval_prefix_mode(int thislen, int preflen, int prefix_mode);
+static isc_result_t pick_v6_prefix_helper(struct reply_state *reply,
+					  int prefix_mode);
+
 /*
  * Schedule lease timeouts for all of the iasubopts in the reply.
  * This is currently used to schedule timeouts for soft leases.
@@ -1319,9 +1323,27 @@ try_client_v6_prefix(struct iasubopt **pref,
  *
  * \brief  Get an IPv6 prefix for the client.
  *
- * Attempt to find a usable prefix for the client.  We walk through
- * the ponds checking for permit and deny then through the pools
- * seeing if they have an available prefix.
+ * Attempt to find a usable prefix for the client.  Based upon the prefix
+ * length mode and the plen supplied by the client (if one), we make one
+ * or more calls to pick_v6_prefix_helper() to find a prefix as follows:
+ *
+ * PLM_IGNORE or client specifies a plen of zero, use the first available
+ * prefix regardless of it's length.
+ *
+ * PLM_PREFER – look for an exact match to client's plen first, if none
+ * found, use the first available prefix of any length
+ *
+ * PLM_EXACT – look for an exact match first, if none found then fail. This
+ * is the default behavior.
+ *
+ * PLM_MAXIMUM  - look for an exact match first, then the first available whose
+ * prefix length is less than client's plen, otherwise fail.
+ *
+ * PLM_MINIMUM  - look for an exact match first, then the first available whose
+ * prefix length is greater than client's plen, otherwise fail.
+ *
+ * Note that the selection mode is configurable at the global scope only via
+ * prefix-len-mode.
  *
  * \param reply = the state structure for the current work on this request
  *                if we create a lease we return it using reply->lease
@@ -1336,21 +1358,17 @@ try_client_v6_prefix(struct iasubopt **pref,
  *                     hash the address.  After a number of failures we
  *                     conclude the pool is basically full.
  */
-
 static isc_result_t 
-pick_v6_prefix(struct reply_state *reply)
-{
-	struct ipv6_pool *p = NULL;
-	struct ipv6_pond *pond;
-	int i;
-	unsigned int attempts;
-	char tmp_buf[INET6_ADDRSTRLEN];
-	struct iasubopt **pref = &reply->lease;
+pick_v6_prefix(struct reply_state *reply) {
+        struct ipv6_pool *p = NULL;
+        struct ipv6_pond *pond;
+        int i;
+	isc_result_t result;
 
 	/*
 	 * Do a quick walk through of the ponds and pools
 	 * to see if we have any prefix pools
-	 */
+	*/
 	for (pond = reply->shared->ipv6_pond; pond != NULL; pond = pond->next) {
 		if (pond->ipv6_pools == NULL)
 			continue;
@@ -1370,13 +1388,93 @@ pick_v6_prefix(struct reply_state *reply)
 		return ISC_R_NORESOURCES;
 	}
 
+	if (reply->preflen <= 0) {
+		/* If we didn't get a plen (-1) or client plen is 0, then just
+		 * select first available (same as PLM_INGORE) */
+		result = pick_v6_prefix_helper(reply, PLM_IGNORE);
+	} else {
+		switch (prefix_length_mode) {
+		case PLM_PREFER:
+			/* First we look for an exact match, if not found
+			 * then first available */
+			result = pick_v6_prefix_helper(reply, PLM_EXACT);
+			if (result != ISC_R_SUCCESS) {
+				result = pick_v6_prefix_helper(reply,
+							      PLM_IGNORE);
+			}
+			break;
+
+		case PLM_EXACT:
+			/* Match exactly or fail */
+			result = pick_v6_prefix_helper(reply, PLM_EXACT);
+			break;
+
+		case PLM_MINIMUM:
+		case PLM_MAXIMUM:
+			/* First we look for an exact match, if not found
+			 * then first available by mode */
+			result = pick_v6_prefix_helper(reply, PLM_EXACT);
+			if (result != ISC_R_SUCCESS) {
+				result = pick_v6_prefix_helper(reply,
+							    prefix_length_mode);
+			}
+			break;
+
+		default:
+			/* First available */
+			result = pick_v6_prefix_helper(reply, PLM_IGNORE);
+			break;
+		}
+	}
+
+	if (result == ISC_R_SUCCESS) {
+		char tmp_buf[INET6_ADDRSTRLEN];
+
+		log_debug("Picking pool prefix %s/%u",
+			  inet_ntop(AF_INET6, &(reply->lease->addr),
+				    tmp_buf, sizeof(tmp_buf)),
+				    (unsigned)(reply->lease->plen));
+		return (ISC_R_SUCCESS);
+	}
+
 	/*
-	 * We have at least one pool that could provide a prefix
-	 * Now we walk through the ponds and pools again and check
-	 * to see if the client is permitted and if an prefix is
-	 * available
-	 * 
-	 */
+	 * If we failed to pick an IPv6 prefix
+	 * Presumably that means we have no prefixes for the client.
+	*/
+	log_debug("Unable to pick client prefix: no prefixes available");
+	return ISC_R_NORESOURCES;
+}
+
+/*!
+ *
+ * \brief  Get an IPv6 prefix for the client based upon selection mode.
+ *
+ * We walk through the ponds checking for permit and deny. If a pond is
+ * permissable to use, loop through its PD pools checking prefix lengths
+ * against the client plen based on the prefix length mode, looking for
+ * available prefixes.
+ *
+ * \param reply = the state structure for the current work on this request
+ *                if we create a lease we return it using reply->lease
+ * \prefix_mode = selection mode to use
+ *
+ * \return
+ * ISC_R_SUCCESS = we were able to find a prefix and are returning a
+ *                 pointer to the lease
+ * ISC_R_NORESOURCES = there don't appear to be any free addresses.  This
+ *                     is probabalistic.  We don't exhaustively try the
+ *                     address range, instead we hash the duid and if
+ *                     the address derived from the hash is in use we
+ *                     hash the address.  After a number of failures we
+ *                     conclude the pool is basically full.
+ */
+isc_result_t
+pick_v6_prefix_helper(struct reply_state *reply, int prefix_mode) {
+	struct ipv6_pool *p = NULL;
+	struct ipv6_pond *pond;
+	int i;
+	unsigned int attempts;
+	struct iasubopt **pref = &reply->lease;
 
 	for (pond = reply->shared->ipv6_pond; pond != NULL; pond = pond->next) {
 		if (((pond->prohibit_list != NULL) &&
@@ -1386,35 +1484,62 @@ pick_v6_prefix(struct reply_state *reply)
 			continue;
 
 		for (i = 0; (p = pond->ipv6_pools[i]) != NULL; i++) {
-			if (p->pool_type != D6O_IA_PD) {
-				continue;
-			}
-
-			/*
-			 * Try only pools with the requested prefix length if any.
-			 */
-			if ((reply->preflen >= 0) && (p->units != reply->preflen)) {
-				continue;
-			}
-
-			if (create_prefix6(p, pref, &attempts, &reply->ia->iaid_duid,
-					   cur_time + 120) == ISC_R_SUCCESS) {
-				log_debug("Picking pool prefix %s/%u",
-					  inet_ntop(AF_INET6, &((*pref)->addr),
-						    tmp_buf, sizeof(tmp_buf)),
-					  (unsigned) (*pref)->plen);
-
+			if ((p->pool_type == D6O_IA_PD) &&
+			    (eval_prefix_mode(p->units, reply->preflen,
+					      prefix_mode) == 1) &&
+			    (create_prefix6(p, pref, &attempts,
+					    &reply->ia->iaid_duid,
+					    cur_time + 120) == ISC_R_SUCCESS)) {
 				return (ISC_R_SUCCESS);
 			}
 		}
 	}
 
-	/*
-	 * If we failed to pick an IPv6 prefix
-	 * Presumably that means we have no prefixes for the client.
-	 */
-	log_debug("Unable to pick client prefix: no prefixes available");
 	return ISC_R_NORESOURCES;
+}
+
+/*!
+ *
+ * \brief Test a prefix length against another based on prefix length mode
+ *
+ * \param len - prefix length to test
+ * \param preflen - preferred prefix length against which to test
+ * \param prefix_mode - prefix selection mode with which to test
+ *
+ * Note that the case of preferred length of 0 is not short-cut here as it
+ * is assumed to be done at a higher level.
+ *
+ * \return 1 if the given length is usable based upon mode and a preferred
+ * length, 0 if not.
+ */
+int
+eval_prefix_mode(int len, int preflen, int prefix_mode) {
+	int use_it = 1;
+	switch (prefix_mode) {
+	case PLM_EXACT:
+		use_it = (len == preflen);
+		break;
+	case PLM_MINIMUM:
+		/* they asked for a prefix length no "shorter" than preflen */
+		use_it = (len >= preflen);
+		break;
+	case PLM_MAXIMUM:
+		/* they asked for a prefix length no "longer" than preflen */
+		use_it = (len <= preflen);
+		break;
+	default:
+		/* otherwise use it */
+		break;
+	}
+
+#if defined (DEBUG)
+	log_debug("eval_prefix_mode: "
+		  "len %d, preflen %d, mode %s, use_it %d",
+		  len, preflen,
+		  prefix_length_modes.values[prefix_mode].name, use_it);
+#endif
+
+	return (use_it);
 }
 
 /*

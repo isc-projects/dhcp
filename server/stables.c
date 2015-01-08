@@ -3,7 +3,7 @@
    Tables of information only used by server... */
 
 /*
- * Copyright (c) 2004-2011,2013-2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2011,2013-2015 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -269,6 +269,7 @@ static struct option server_options[] = {
 	{ "log-threshold-high", "B",		&server_universe,  84, 1 },
 	{ "echo-client-id", "f",		&server_universe,  SV_ECHO_CLIENT_ID, 1 },
 	{ "server-id-check", "f",		&server_universe,  SV_SERVER_ID_CHECK, 1 },
+	{ "prefix-length-mode", "Nprefix_length_modes.",	&server_universe,  SV_PREFIX_LEN_MODE, 1 },
 	{ NULL, NULL, NULL, 0, 0 }
 };
 
@@ -340,6 +341,21 @@ struct enumeration ddns_styles = {
 	(struct enumeration *)0,
 	"ddns-styles", 1,
 	ddns_styles_values
+};
+
+struct enumeration_value prefix_length_modes_values[] = {
+        { "ignore", PLM_IGNORE },
+        { "prefer", PLM_PREFER },
+        { "exact", PLM_EXACT },
+        { "minimum", PLM_MINIMUM },
+        { "maximum", PLM_MAXIMUM },
+        { (char *)0, 0 }
+};
+
+struct enumeration prefix_length_modes = {
+        (struct enumeration *)0,
+        "prefix_length_modes", 1,
+        prefix_length_modes_values
 };
 
 struct enumeration_value syslog_values [] = {

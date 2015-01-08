@@ -235,6 +235,16 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Bugs #26376]
   [ISC-Bugs #38131]
 
+- Added a global parameter, prefix-length-mode, which may be used to determine
+  how the server uses a non-zero value for prefix-length supplied by clients
+  when soliciting DHCPv6 prefixes.  The server supports selection modes of:
+  ignore, prefer, exact, minimum and maximum which are described in detail in
+  the server man pages.  The prior behavior of the server was to only offer a
+  prefix whose length exactly matched the prefix-length value requested. If
+  no such prefixes were available, the server returned a status of none
+  available.  Note the default mode, "exact", provides this same behavior.
+  [ISC-Bugs #36780]
+
 			Changes since 4.3.1b1
 
 - Modify the linux and openwrt dhclient scripts to process information

@@ -741,6 +741,7 @@ struct lease_state {
 #define SV_LOG_THRESHOLD_HIGH		84
 #define SV_ECHO_CLIENT_ID		85
 #define SV_SERVER_ID_CHECK		86
+#define SV_PREFIX_LEN_MODE		87
 
 #if !defined (DEFAULT_PING_TIMEOUT)
 # define DEFAULT_PING_TIMEOUT 1
@@ -788,6 +789,12 @@ struct lease_state {
 #if !defined (MIN_LEASE_WRITE)
 # define MIN_LEASE_WRITE 15
 #endif
+
+#define PLM_IGNORE 0
+#define PLM_PREFER 1
+#define PLM_EXACT 2
+#define PLM_MINIMUM 3
+#define PLM_MAXIMUM 4
 
 /* Client option names */
 
@@ -1962,6 +1969,8 @@ extern int ddns_update_style;
 extern int dont_use_fsync;
 extern int server_id_check;
 
+extern int prefix_length_mode;
+
 extern const char *path_dhcpd_conf;
 extern const char *path_dhcpd_db;
 extern const char *path_dhcpd_pid;
@@ -2750,6 +2759,8 @@ extern struct universe server_universe;
 extern struct enumeration ddns_styles;
 extern struct enumeration syslog_enum;
 void initialize_server_option_spaces (void);
+
+extern struct enumeration prefix_length_modes;
 
 /* inet.c */
 struct iaddr subnet_number (struct iaddr, struct iaddr);

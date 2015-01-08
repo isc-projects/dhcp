@@ -73,6 +73,7 @@ option server.ddns-rev-domainname = \"in-addr.arpa.\";";
 int ddns_update_style;
 int dont_use_fsync = 0; /* 0 = default, use fsync, 1 = don't use fsync */
 int server_id_check = 0; /* 0 = default, don't check server id, 1 = do check */
+int prefix_length_mode = PLM_EXACT;
 
 const char *path_dhcpd_conf = _PATH_DHCPD_CONF;
 const char *path_dhcpd_db = _PATH_DHCPD_DB;
@@ -548,6 +549,7 @@ main(int argc, char **argv) {
 	dhcp_interface_setup_hook = dhcpd_interface_setup_hook;
 	bootp_packet_handler = do_packet;
 #ifdef DHCPv6
+	add_enumeration (&prefix_length_modes);
 	dhcpv6_packet_handler = do_packet6;
 #endif /* DHCPv6 */
 
@@ -1098,6 +1100,19 @@ void postconf_initialization (int quiet)
 					 &global_scope, oc, MDL)) {
 		log_info("Setting server-id-check true");
 		server_id_check = 1;
+	}
+
+	oc = lookup_option(&server_universe, options, SV_PREFIX_LEN_MODE);
+	if ((oc != NULL) && 
+	    evaluate_option_cache(&db, NULL, NULL, NULL, options, NULL,
+					  &global_scope, oc, MDL)) {
+		if (db.len == 1) {
+			prefix_length_mode = db.data[0];
+		} else {
+			log_fatal("invalid prefix-len-mode");
+		}
+
+		data_string_forget(&db, MDL);
 	}
 
 	/* Don't need the options anymore. */

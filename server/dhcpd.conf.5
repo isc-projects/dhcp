@@ -1,6 +1,6 @@
 .\"	dhcpd.conf.5
 .\"
-.\" Copyright (c) 2004-2014 by Internet Systems Consortium, Inc. ("ISC")
+.\" Copyright (c) 2004-2015 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
@@ -2783,6 +2783,80 @@ applications move off of the address and onto currently valid addresses
 .PP
 The preferred lifetime defaults to the renew+rebind timers, or 3/4 the
 default lease time if none were specified.
+.RE
+.PP
+The
+.I prefix-length-mode
+statement
+.RS 0.25i
+.PP
+.B prefix-length-mode
+.I mode\fR\fB;\fR
+.PP
+According to RFC 3633, DHCPv6 clients may specify preferences when soliciting
+prefixes by including an IA_PD Prefix option within the IA_PD option. Among
+the preferences that may be conveyed is the "prefix-length". When non-zero it
+indicates a client's desired length for offered prefixes.  The RFC states that
+servers "MAY choose to use the information...to select prefix(es)" but does
+not specify any particular rules for doing so. The prefix-length-mode statement
+can be used to set the prefix selection rules employed by the server,
+when clients send a non-zero prefix-length value. The mode parameter must
+be one of \fBignore\fR, \fBprefer\fR, \fBexact\fR, \fBminimum\fR, or
+\fBmaximum\fR where:
+.PP
+1. ignore - The requested length is ignored. The server will offer the first
+available prefix.
+.PP
+2. prefer - The server will offer the first available prefix with the same
+length as the requested length.  If none are found then it will offer the
+first available prefix of any length.
+.PP
+3. exact - The server will offer the first available prefix with the same
+length as the requested length.  If none are found, it will return a status
+indicating no prefixes available.  This is the default behavior.
+.PP
+4. minimum - The server will offer the first available prefix with the same
+length as the requested length.  If none are found, it will return the first
+available prefix whose length is greater than (e.g. longer than), the
+requested value.  If none of those are found, it will return a status
+indicating no prefixes available.  For example, if client requests a length
+of /60, and the server has available prefixes of lengths /56 and /64, it will
+offer prefix of length /64.
+.PP
+5. maximum - The server will offer the first available prefix with the same
+length as the requested length.  If none are found, it will return the first
+available prefix whose length is less than (e.g. shorter than), the
+requested value.  If none of those are found, it will return a status
+indicating no prefixes available.  For example, if client requests a length
+of /60, and the server has available prefixes of lengths /56 and /64, it will
+offer a prefix of length /56.
+.PP
+In general "first available" is determined by the order in which pools are
+defined in the server's configuration.  For example, if a subnet is defined
+with three prefix pools A,B, and C:
+.PP
+.nf
+subnet 3000::/64 {
+	# pool A
+	pool6 {
+		:
+	}
+	# pool B
+	pool6 {
+		:
+	}
+	# pool C 
+	pool6 {
+		:
+	}
+}
+.fi
+.PP
+then the pools will be checked in the order A, B, C. For modes \fBprefer\fR,
+\fBminimum\fR, and \fBmaximum\fR this may mean checking the pools in that order
+twice.  A first pass through is made looking for an available prefix of exactly
+the preferred length.  If none are found, then a second pass is performed
+starting with pool A but with appropriately adjusted length criteria.
 .RE
 .PP
 The
