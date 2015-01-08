@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2013 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2007-2015 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -1191,6 +1191,12 @@ cleanup_lease6(ia_hash_t *ia_table,
 	if (pool->ipv6_pond)
 		pool->ipv6_pond->num_active--;
 
+	if (lease->state == FTS_ABANDONED) {
+		pool->num_abandoned--;
+		if (pool->ipv6_pond)
+			pool->ipv6_pond->num_abandoned--;
+	}
+
 	iasubopt_hash_delete(pool->leases, &test_iasubopt->addr,
 			     sizeof(test_iasubopt->addr), MDL);
 	ia_remove_iasubopt(old_ia, test_iasubopt, MDL);
@@ -1257,6 +1263,12 @@ add_lease6(struct ipv6_pool *pool, struct iasubopt *lease,
 			pool->num_active--;
 			if (pool->ipv6_pond)
 				pool->ipv6_pond->num_active--;
+
+			if (test_iasubopt->state == FTS_ABANDONED) {
+				pool->num_abandoned--;
+				if (pool->ipv6_pond)
+					pool->ipv6_pond->num_abandoned--;
+			}
 		} else {
 			isc_heap_delete(pool->inactive_timeouts,
 					test_iasubopt->heap_index);
@@ -1295,6 +1307,12 @@ add_lease6(struct ipv6_pool *pool, struct iasubopt *lease,
 			pool->num_active++;
 			if (pool->ipv6_pond)
 				pool->ipv6_pond->num_active++;
+
+			if (tmp_iasubopt->state == FTS_ABANDONED) {
+				pool->num_abandoned++;
+				if (pool->ipv6_pond)
+					pool->ipv6_pond->num_abandoned++;
+			}
 		}
 
 	} else {
@@ -1387,6 +1405,7 @@ move_lease_to_active(struct ipv6_pool *pool, struct iasubopt *lease) {
 		lease->state = FTS_ACTIVE;
 		if (pool->ipv6_pond)
 			pool->ipv6_pond->num_active++;
+
 	}
 	return insert_result;
 }
@@ -1443,6 +1462,11 @@ renew_lease6(struct ipv6_pool *pool, struct iasubopt *lease) {
 		log_info("Reclaiming previously abandoned address %s",
 			 inet_ntop(AF_INET6, &(lease->addr), tmp_addr,
 				   sizeof(tmp_addr)));
+
+		pool->num_abandoned--;
+		if (pool->ipv6_pond)
+			pool->ipv6_pond->num_abandoned--;
+
                 return ISC_R_SUCCESS;
 	} else {
 		return move_lease_to_active(pool, lease);
@@ -1515,6 +1539,12 @@ move_lease_to_inactive(struct ipv6_pool *pool, struct iasubopt *lease,
 		pool->num_inactive++;
 		if (pool->ipv6_pond)
 			pool->ipv6_pond->num_active--;
+
+		if (lease->state == FTS_ABANDONED) {
+			pool->num_abandoned--;
+			if (pool->ipv6_pond)
+				pool->ipv6_pond->num_abandoned--;
+		}
 	}
 	return insert_result;
 }
@@ -1575,6 +1605,11 @@ decline_lease6(struct ipv6_pool *pool, struct iasubopt *lease) {
 		}
 	}
 	lease->state = FTS_ABANDONED;
+
+	pool->num_abandoned++;
+	if (pool->ipv6_pond)
+		pool->ipv6_pond->num_abandoned++;
+
 	lease->hard_lifetime_end_time = MAX_TIME;
 	isc_heap_decreased(pool->active_timeouts, lease->heap_index);
 	return ISC_R_SUCCESS;
@@ -2457,6 +2492,72 @@ ipv6_pond_dereference(struct ipv6_pond **pond, const char *file, int line) {
 	}
 
 	return ISC_R_SUCCESS;
+}
+
+/*
+ * Emits a log for each pond that has been flagged as being a "jumbo range"
+ * A pond is considered a "jumbo range" when the total number of elements
+ * exceeds the maximum value of POND_TRACK_MAX (currently maximum value
+ * that can be stored by ipv6_pond.num_total).  Since we disable threshold
+ * logging for jumbo ranges, we need to report this to the user.  This
+ * function allows us to report jumbo ponds after config parsing, so the
+ * logs can be seen both on the console (-T) and the log facility (i.e syslog).
+ *
+ * Note, threshold logging is done at the pond level, so we need emit a list
+ * of the addresses ranges of the pools in the pond affected.
+ */
+void
+report_jumbo_ranges() {
+	struct shared_network* s;
+	char log_buf[1084];
+
+	/* Loop thru all the networks looking for jumbo range ponds */
+	for (s = shared_networks; s; s = s -> next) {
+		struct ipv6_pond* pond = s->ipv6_pond;
+		while (pond) {
+			/* if its a jumbo and has pools(sanity check) */
+			if (pond->jumbo_range == 1 && (pond->ipv6_pools)) {
+				struct ipv6_pool* pool;
+				char *bufptr = log_buf;
+				size_t space_left = sizeof(log_buf) - 1;
+				int i = 0;
+				int used = 0;
+
+				/* Build list containing the start-address/CIDR
+				 * of each pool */
+				*bufptr = '\0';
+				while ((pool = pond->ipv6_pools[i++]) &&
+				        (space_left > (INET6_ADDRSTRLEN + 6))) {
+					/* more than one so add a comma */
+					if (i > 1) {
+						*bufptr++ = ',';
+						*bufptr++ = ' ';
+						*bufptr = '\0';
+						space_left -= 2;
+					}
+
+					/* add the address */
+					inet_ntop(AF_INET6, &pool->start_addr,
+						  bufptr, INET6_ADDRSTRLEN);
+
+					used = strlen(bufptr);
+					bufptr += used;
+					space_left -= used;
+
+					/* add the CIDR */
+					sprintf (bufptr, "/%d",pool->bits);
+					used = strlen(bufptr);
+					bufptr += used;
+					space_left -= used;
+					*bufptr = '\0';
+				}
+
+				log_info("Threshold logging disabled for shared"
+					 " subnet of ranges: %s", log_buf);
+			}
+			pond = pond->next;
+		}
+	}
 }
 
 /* unittest moved to server/tests/mdb6_unittest.c */

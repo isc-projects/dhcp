@@ -3,7 +3,7 @@
    Definitions for dhcpd... */
 
 /*
- * Copyright (c) 2004-2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2015 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -1583,7 +1583,8 @@ struct ipv6_pool {
 	int bits;				/* number of bits, CIDR style */
 	int units;				/* allocation unit in bits */
 	iasubopt_hash_t *leases;		/* non-free leases */
-	int num_active;				/* count of active leases */
+	isc_uint64_t num_active;		/* count of active leases */
+	isc_uint64_t num_abandoned;		/* count of abandoned leases */
 	isc_heap_t *active_timeouts;		/* timeouts for active leases */
 	int num_inactive;			/* count of inactive leases */
 	isc_heap_t *inactive_timeouts;		/* timeouts for expired or
@@ -1619,11 +1620,19 @@ struct ipv6_pond {
 	struct ipv6_pool **ipv6_pools;	/* NULL-terminated array */
 	int last_ipv6_pool;		/* offset of last IPv6 pool
 					   used to issue a lease */
-	int num_total;			/* Total number of elements in the pond */
-	int num_active;			/* Number of elements in the pond in use */
+	isc_uint64_t num_total;	    /* Total number of elements in the pond */
+	isc_uint64_t num_active;    /* Number of elements in the pond in use */
+	isc_uint64_t num_abandoned;	/* count of abandoned leases */
 	int logged;			/* already logged a message */
-	int low_threshold;		/* low threshold to restart logging */
+	isc_uint64_t low_threshold;	/* low threshold to restart logging */
+	int jumbo_range;
 };
+
+/*
+ * Max addresses in a pond that can be supported by log threshold
+ * Currently based on max value supported by isc_uint64_t.
+*/
+#define POND_TRACK_MAX ULLONG_MAX
 
 /* Flags and state for dhcp_ddns_cb_t */
 #define DDNS_UPDATE_ADDR        0x01
@@ -3646,6 +3655,7 @@ void schedule_all_ipv6_lease_timeouts();
 void mark_hosts_unavailable(void);
 void mark_phosts_unavailable(void);
 void mark_interfaces_unavailable(void);
+void report_jumbo_ranges();
 
 #define MAX_ADDRESS_STRING_LEN \
    (sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255"))
@@ -3657,4 +3667,7 @@ void mark_interfaces_unavailable(void);
 	((count) > (INT_MAX / 100) ?	\
 	 ((count) / 100) * (percent) : ((count) * (percent)) / 100)
 
-	
+#define FIND_POND6_PERCENT(count, percent)	\
+	((count) > (POND_TRACK_MAX / 100) ?	\
+	 ((count) / 100) * (percent) : ((count) * (percent)) / 100)
+

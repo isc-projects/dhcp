@@ -3,7 +3,7 @@
    DHCP Server Daemon. */
 
 /*
- * Copyright (c) 2004-2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2015 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -617,6 +617,11 @@ main(int argc, char **argv) {
 	if (set_chroot) setup_chroot (set_chroot);
 #endif /* PARANOIA && !EARLY_CHROOT */
 
+#ifdef DHCPv6
+	/* log info about ipv6_ponds with large address ranges */
+	report_jumbo_ranges();
+#endif
+
         /* test option should cause an early exit */
  	if (cftest && !lftest) 
  		exit(0);
@@ -676,7 +681,6 @@ main(int argc, char **argv) {
 		mark_interfaces_unavailable();
 	}
 #endif /* DHCPv6 */
-
 
 	/* Make up a seed for the random number generator from current
 	   time plus the sum of the last four bytes of each

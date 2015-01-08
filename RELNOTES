@@ -225,6 +225,16 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Bugs #36668]
   [ISC-Bugs #36652]
 
+- Log content has been changed to more directly suggest that admins should
+  check for multiple IPv6 clients attempting to use the same DUID when only
+  abandoned addresses are available.  Debug level logging will now emit counts
+  of the total number of, in-use, and abandoned addresses in a shared subnet
+  when the server finds no addresses available for a given DUID.  Lastly,
+  threshold logging is now automatically disabled for shared subnets whose
+  total number of possible addresses exceeds (2^64)-1.
+  [ISC-Bugs #26376]
+  [ISC-Bugs #38131]
+
 			Changes since 4.3.1b1
 
 - Modify the linux and openwrt dhclient scripts to process information

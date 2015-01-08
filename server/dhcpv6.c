@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2006-2015 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -823,7 +823,8 @@ void check_pool6_threshold(struct reply_state *reply,
 			   struct iasubopt *lease)
 {
 	struct ipv6_pond *pond;
-	int used, count, high_threshold, poolhigh = 0, poollow = 0;
+	isc_uint64_t used, count, high_threshold;
+	int poolhigh = 0, poollow = 0;
 	char *shared_name = "no name";
 	char tmp_addr[INET6_ADDRSTRLEN];
 
@@ -831,8 +832,19 @@ void check_pool6_threshold(struct reply_state *reply,
 		return;
 	pond = lease->ipv6_pool->ipv6_pond;
 
+	/* If the address range is too large to track, just skip all this. */
+	if (pond->jumbo_range == 1) {
+		return;
+	}
+
 	count = pond->num_total;
 	used = pond->num_active;
+
+	/* get network name for logging */
+	if ((pond->shared_network != NULL) &&
+	    (pond->shared_network->name != NULL)) {
+		shared_name = pond->shared_network->name;
+	}
 
 	/* The logged flag indicates if we have already crossed the high
 	 * threshold and emitted a log message.  If it is set we check to
@@ -849,7 +861,7 @@ void check_pool6_threshold(struct reply_state *reply,
 			pond->low_threshold = 0;
 			pond->logged = 0;
 			log_error("Pool threshold reset - shared subnet: %s; "
-				  "address: %s; low threshold %d/%d.",
+				  "address: %s; low threshold %llu/%llu.",
 				  shared_name,
 				  inet_ntop(AF_INET6, &lease->addr,
 					    tmp_addr, sizeof(tmp_addr)),
@@ -874,19 +886,15 @@ void check_pool6_threshold(struct reply_state *reply,
 	}
 
 	/* we have a valid value, have we exceeded it */
-	high_threshold = FIND_PERCENT(count, poolhigh);
+	high_threshold = FIND_POND6_PERCENT(count, poolhigh);
 	if (used < high_threshold) {
 		/* nope, no more to do */
 		return;
 	}
 
 	/* we've exceeded it, output a message */
-	if ((pond->shared_network != NULL) &&
-	    (pond->shared_network->name != NULL)) {
-		shared_name = pond->shared_network->name;
-	}
 	log_error("Pool threshold exceeded - shared subnet: %s; "
-		  "address: %s; high threshold %d%% %d/%d.",
+		  "address: %s; high threshold %d%% %llu/%llu.",
 		  shared_name,
 		  inet_ntop(AF_INET6, &lease->addr, tmp_addr, sizeof(tmp_addr)),
 		  poolhigh, used, count);
@@ -908,7 +916,7 @@ void check_pool6_threshold(struct reply_state *reply,
 	 */
 	if (poollow < poolhigh) {
 		pond->logged = 1;
-		pond->low_threshold = FIND_PERCENT(count, poollow);
+		pond->low_threshold = FIND_POND6_PERCENT(count, poollow);
 	}
 }
 
@@ -1134,6 +1142,12 @@ pick_v6_address(struct reply_state *reply)
 	unsigned int attempts;
 	char tmp_buf[INET6_ADDRSTRLEN];
 	struct iasubopt **addr = &reply->lease;
+        isc_uint64_t total = 0;
+        isc_uint64_t active = 0;
+        isc_uint64_t abandoned = 0;
+	int jumbo_range = 0;
+	char *shared_name = (reply->shared->name ?
+			     reply->shared->name : "(no name)");
 
 	/*
 	 * Do a quick walk through of the ponds and pools
@@ -1170,6 +1184,8 @@ pick_v6_address(struct reply_state *reply)
 	 */
 
 	for (pond = reply->shared->ipv6_pond; pond != NULL; pond = pond->next) {
+		isc_result_t result;
+
 		if (((pond->prohibit_list != NULL) &&
 		     (permitted(reply->packet, pond->prohibit_list))) ||
 		    ((pond->permit_list != NULL) &&
@@ -1180,26 +1196,31 @@ pick_v6_address(struct reply_state *reply)
 		i = start_pool;
 		do {
 			p = pond->ipv6_pools[i];
-			if ((p->pool_type == D6O_IA_NA) &&
-			    (create_lease6(p, addr, &attempts,
-					   &reply->ia->iaid_duid,
-					   cur_time + 120) == ISC_R_SUCCESS)) {
-				/*
-				 * Record the pool used (or next one if there 
-				 * was a collision).
-				 */
-				if (attempts > 1) {
-					i++;
-					if (pond->ipv6_pools[i] == NULL) {
-						i = 0;
+			if (p->pool_type == D6O_IA_NA) {
+				result = create_lease6(p, addr, &attempts,
+					               &reply->ia->iaid_duid,
+					               cur_time + 120);
+				if (result == ISC_R_SUCCESS) {
+					/*
+					 * Record the pool used (or next one if
+					 * there was a collision).
+					 */
+					if (attempts > 1) {
+						i++;
+						if (pond->ipv6_pools[i]
+						    == NULL) {
+							i = 0;
+						}
 					}
-				}
-				pond->last_ipv6_pool = i;
 
-				log_debug("Picking pool address %s",
-					  inet_ntop(AF_INET6, &((*addr)->addr),
-						    tmp_buf, sizeof(tmp_buf)));
-				return (ISC_R_SUCCESS);
+					pond->last_ipv6_pool = i;
+
+					log_debug("Picking pool address %s",
+						  inet_ntop(AF_INET6,
+						  &((*addr)->addr),
+						  tmp_buf, sizeof(tmp_buf)));
+					return (ISC_R_SUCCESS);
+				}
 			}
 
 			i++;
@@ -1207,13 +1228,31 @@ pick_v6_address(struct reply_state *reply)
 				i = 0;
 			}
 		} while (i != start_pool);
+
+		if (result == ISC_R_NORESOURCES) {
+			jumbo_range += pond->jumbo_range;
+			total += pond->num_total;
+			active += pond->num_active;
+			abandoned += pond->num_abandoned;
+		}
 	}
 
 	/*
 	 * If we failed to pick an IPv6 address from any of the subnets.
 	 * Presumably that means we have no addresses for the client.
 	 */
-	log_debug("Unable to pick client address: no addresses available");
+	if (jumbo_range != 0) {
+		log_debug("Unable to pick client address: "
+			  "no addresses available  - shared network %s: "
+			  " 2^64-1 < total, %llu active,  %llu abandoned",
+			  shared_name, active - abandoned, abandoned);
+	} else {
+		log_debug("Unable to pick client address: "
+			  "no addresses available  - shared network %s: "
+			  "%llu total, %llu active,  %llu abandoned",
+			  shared_name, total, active - abandoned, abandoned);
+	}
+
 	return ISC_R_NORESOURCES;
 }
 
@@ -3140,9 +3179,11 @@ find_client_address(struct reply_state *reply) {
 	/* Pick the abandoned lease as a last resort. */
 	if ((status == ISC_R_NORESOURCES) && (best_lease != NULL)) {
 		/* I don't see how this is supposed to be done right now. */
-		log_error("Reclaiming abandoned addresses is not yet "
-			  "supported.  Treating this as an out of space "
-			  "condition.");
+		log_error("Best match for DUID %s is an abandoned address,"
+			  " This may be a result of multiple clients attempting"
+			  " to use this DUID",
+			 print_hex_1(reply->client_id.len,
+				     reply->client_id.data, 60));
 		/* iasubopt_reference(&reply->lease, best_lease, MDL); */
 	}
 

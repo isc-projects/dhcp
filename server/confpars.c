@@ -3,7 +3,7 @@
    Parser for dhcpd config file... */
 
 /*
- * Copyright (c) 2004-2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2015 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -3842,12 +3842,40 @@ add_ipv6_pool_to_subnet(struct subnet *subnet, u_int16_t type,
 	 */
 	ipv6_pool_reference(&pond->ipv6_pools[num_pools], pool, MDL);
 	pond->ipv6_pools[num_pools+1] = NULL;
+
 	/* Update the number of elements in the pond.  Conveniently
 	 * we have the total size of the block in bits and the amount
 	 * we would allocate per element in units.  For an address units
 	 * will always be 128, for a prefix it will be something else.
-	 */
-	pond->num_total += 1 << (units - bits);
+	 *
+	 * We need to make sure the number of elements isn't too large
+	 * to track.  If so, we flag it to avoid wasting time with log
+	 * threshold logic.  We also emit a log stating that log-threshold
+	 * will be disabled for the shared-network but that's done
+	 * elsewhere via report_log_threshold().
+	 *
+	*/
+
+	/* Only bother if we aren't already flagged as jumbo */
+	if (pond->jumbo_range == 0) {
+		if ((units - bits) > (sizeof(isc_uint64_t) * 8)) {
+			pond->jumbo_range = 1;
+			pond->num_total = POND_TRACK_MAX;
+		}
+		else {
+			isc_uint64_t space_left
+				= POND_TRACK_MAX - pond->num_total;
+			isc_uint64_t addon
+				= (isc_uint64_t)(1) << (units - bits);
+
+			if (addon > space_left) {
+				pond->jumbo_range = 1;
+				pond->num_total = POND_TRACK_MAX;
+			} else {
+				pond->num_total += addon;
+			}
+		}
+	}
 }
 
 /*!

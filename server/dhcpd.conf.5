@@ -1716,11 +1716,42 @@ lease the server has offered is not valid.  When the server receives
 a DHCPDECLINE for a particular address, it normally abandons that
 address, assuming that some unauthorized system is using it.
 Unfortunately, a malicious or buggy client can, using DHCPDECLINE
-messages, completely exhaust the DHCP server's allocation pool.  The
-server will reclaim these leases, but while the client is running
-through the pool, it may cause serious thrashing in the DNS, and it
-will also cause the DHCP server to forget old DHCP client address
+messages, to completely exhaust the DHCP server's allocation pool.  The
+server will eventually reclaim these leases, but not while the client
+is running through the pool. This may cause serious thrashing in the DNS,
+and it will also cause the DHCP server to forget old DHCP client address
 allocations.
+.PP
+Currently, abandoned IPv6 addresses are reclaimed in one of two ways:
+    a) Client renews a specific address:
+    If a client using a given DUID submits a DHCP REQUEST containing the
+    last address abandoned by that DUID, the address will be reassigned to
+    that client.
+
+    b) Upon the second restart following an address abandonment.  When an
+    address is abandoned it is both recorded as such in the lease file and
+    retained as abandoned in server memory until the server is restarted. Upon
+    restart, the server will process the lease file and all addresses whose
+    last known state is abandoned will be retained as such in memory but not
+    rewritten to the lease file.  This means that a subsequent restart of the
+    server will not see the abandoned addresses in the lease file and 
+    therefore have no record of them as abandoned in memory and as such
+    perceive them as free for assignment.
+.PP
+The total number addresses in a pool, available for a given DUID value,
+is internally limited by the server's address generation mechanism.  If
+through mistaken configuration, multiple clients are using the same
+DUID they will competing for the same addresses causing the server to reach
+this internal limit rather quickly.  The internal limit isolates this type
+of activity such that address range is not exhausted for other DUID values.
+The appearance of the following error log, can be an indication of this
+condition:
+
+    "Best match for DUID <XX> is an abandoned address, This may be a result of
+     multiple clients attempting to use this DUID"
+
+    where <XX> is an actual DUID value depicted as colon separated string of
+    bytes in hexadecimal values.
 .PP
 The \fBdeclines\fR flag tells the DHCP server whether or not to honor
 DHCPDECLINE messages.  If it is set to \fBdeny\fR or \fBignore\fR in
@@ -2543,6 +2574,16 @@ threshold is not given, it default to a value of zero.
 A special case occurs when the low threshold is set to be higer than
 the high threshold.  In this case, a message will be generated each time
 a lease is acknowledged when the pool usage is above the high threshold.
+.PP
+Note that threshold logging will be automatically disabled for shared
+subnets whose total number of addresses is larger than (2^64)-1.  The server
+will emit a log statement at startup when threshold logging is disabled as
+shown below:
+
+    "Threshold logging disabled for shared subnet of ranges: <addresses>"
+
+This is likely to have no practical runtime effect as CPUs are unlikely
+to support a server actually reaching such a large number of leases.
 .RE
 .PP
 The
