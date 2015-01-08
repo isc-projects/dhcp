@@ -244,6 +244,7 @@ by Eric Young (eay@cryptsoft.com).
   no such prefixes were available, the server returned a status of none
   available.  Note the default mode, "exact", provides this same behavior.
   [ISC-Bugs #36780]
+  [ISC-Bugs #32228]
 
 			Changes since 4.3.1b1
 

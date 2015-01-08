@@ -1188,7 +1188,7 @@ pick_v6_address(struct reply_state *reply)
 	 */
 
 	for (pond = reply->shared->ipv6_pond; pond != NULL; pond = pond->next) {
-		isc_result_t result;
+		isc_result_t result = ISC_R_FAILURE;
 
 		if (((pond->prohibit_list != NULL) &&
 		     (permitted(reply->packet, pond->prohibit_list))) ||
