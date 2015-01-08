@@ -4,7 +4,8 @@
    Support Services in Vancouver, B.C. */
 
 /*
- * Copyright (c) 2009,2012,2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2014-2015 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009,2012 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
@@ -376,14 +377,32 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 
 #ifdef PACKET_AUXDATA
 	{
-	/*  Determine if checksum is valid for use. It may not be if checksum
-	    offloading is enabled on the interface.  */
+	/*  Use auxiliary packet data to:
+	 *
+	 *  a. Weed out extraneous VLAN-tagged packets - If the NIC driver is
+	 *  handling VLAN encapsulation (i.e. stripping/adding VLAN tags),
+	 *  then an inbound VLAN packet will be seen twice: Once by
+	 *  the parent interface (e.g. eth0) with a VLAN tag != 0; and once
+	 *  by the vlan interface (e.g. eth0.n) with a VLAN tag of 0 (i.e none).
+	 *  We want to discard the packet sent to the parent and thus respond
+	 *  only over the vlan interface.  (Drivers for Intel PRO/1000 series
+	 *  NICs perform VLAN encapsulation, while drivers for PCnet series
+	 *  do not, for example. The linux kernel makes stripped vlan info
+	 *  visible to user space via CMSG/auxdata, this appears to not be
+	 *  true for BSD OSs.)
+	 *
+	 *  b. Determine if checksum is valid for use. It may not be if
+	 *  checksum offloading is enabled on the interface.  */
 	struct cmsghdr *cmsg;
 
 	for (cmsg = CMSG_FIRSTHDR(&msg); cmsg; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
 		if (cmsg->cmsg_level == SOL_PACKET &&
 		    cmsg->cmsg_type == PACKET_AUXDATA) {
 			struct tpacket_auxdata *aux = (void *)CMSG_DATA(cmsg);
+			/* Discard packets with stripped vlan id */
+			if (aux->tp_vlan_tci != 0)
+				return 0;
+
 			csum_ready = ((aux->tp_status & TP_STATUS_CSUMNOTREADY)
 				      ? 0 : 1);
 		}
