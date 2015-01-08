@@ -215,6 +215,19 @@ by Eric Young (eay@cryptsoft.com).
   Thanks to Jiri Popelka at Red Hat for the bug report and patch.
   [ISC-Bugs #37084]
 
+- Corrected linux packet handling which was causing packets received via VLAN
+  to be seen by both the VLAN interface and its parent interface.
+
+- Modified linux packet handling such that packets received via VLAN are now
+  seen only by the VLAN interface. Prior to this, such packets were seen by
+  both the VLAN interface and its parent (physical) interface, causing the
+  server to respond to both.  Note this remains an issue for non-Linux OSs.
+  Thanks to Jiri Popelka at Red Hat for the patch.
+  [ISC-Bugs #37415]
+  [ISC-Bugs #37133]
+  [ISC-Bugs #36668]
+  [ISC-Bugs #36652]
+
 			Changes since 4.3.1b1
 
 - Modify the linux and openwrt dhclient scripts to process information
