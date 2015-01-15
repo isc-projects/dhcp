@@ -1639,7 +1639,7 @@ struct ipv6_pond {
  * Max addresses in a pond that can be supported by log threshold
  * Currently based on max value supported by isc_uint64_t.
 */
-#define POND_TRACK_MAX ULLONG_MAX
+#define POND_TRACK_MAX ISC_UINT64_MAX
 
 /* Flags and state for dhcp_ddns_cb_t */
 #define DDNS_UPDATE_ADDR        0x01
