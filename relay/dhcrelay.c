@@ -1168,8 +1168,8 @@ parse_downstream(char *arg) {
 	/* Share with up side? */
 	for (up = upstreams; up; up = up->next) {
 		if (strcmp(ifname, up->ifp->name) == 0) {
-			log_info("Interface '%s' is both down and up.",
-				 ifname);
+			log_info("parse_downstream: Interface '%s' is "
+				 "both down and up.", ifname);
 			ifp = up->ifp;
 			break;
 		}
@@ -1187,8 +1187,8 @@ parse_downstream(char *arg) {
 			interface_dereference(&interfaces, MDL);
 		}
 		interface_reference(&interfaces, ifp, MDL);
-		ifp->flags |= INTERFACE_REQUESTED | INTERFACE_DOWNSTREAM;
 	}
+	ifp->flags |= INTERFACE_REQUESTED | INTERFACE_DOWNSTREAM;
 
 	/* New downstream. */
 	dp = (struct stream_list *) dmalloc(sizeof(*dp), MDL);
@@ -1239,6 +1239,8 @@ parse_upstream(char *arg) {
 	}
 	for (dp = downstreams; dp; dp = dp->next) {
 		if (strcmp(ifname, dp->ifp->name) == 0) {
+			log_info("parse_upstream: Interface '%s' is "
+				 "both down and up.", ifname);
 			ifp = dp->ifp;
 			break;
 		}
@@ -1256,8 +1258,8 @@ parse_upstream(char *arg) {
 			interface_dereference(&interfaces, MDL);
 		}
 		interface_reference(&interfaces, ifp, MDL);
-		ifp->flags |= INTERFACE_REQUESTED | INTERFACE_UPSTREAM;
 	}
+	ifp->flags |= INTERFACE_REQUESTED | INTERFACE_UPSTREAM;
 
 	/* New upstream. */
 	up = (struct stream_list *) dmalloc(sizeof(*up), MDL);
@@ -1325,6 +1327,13 @@ setup_streams(void) {
 		if (up->ifp->v6address_count == 0)
 			log_fatal("Interface '%s' has no IPv6 addresses.",
 				  up->ifp->name);
+
+		/* RFC 3315 Sec 20 - "If the relay agent relays messages to
+		 * the All_DHCP_Servers address or other multicast addresses,
+		 * it sets the Hop Limit field to 32." */
+		if (IN6_IS_ADDR_MULTICAST(&up->link.sin6_addr)) {
+			set_multicast_hop_limit(up->ifp, HOP_COUNT_LIMIT);
+		}
 	}
 }
 

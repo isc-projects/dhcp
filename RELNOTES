@@ -181,6 +181,15 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Bugs #36668]
   [ISC-Bugs #36652]
 
+- Corrected inconsistencies in dhcrelay's setting the upper interface hop count
+  limit such that it now sets it to 32 when the upstream address is a multicast
+  address per RFC 3315 Section 20. Prior to this if the -u argument preceded
+  the -l argument on the command line or if the same interface was specified
+  for both; the logic to set the hop limit count for the upper interface was
+  skipped.  This caused the hop count limit to be set to the default value
+  (typically 1) in the outbound upstream packets.
+  [ISC-Bugs #37426]
+
 			Changes since 4.1-ESV-R10rc1
 
 - None
