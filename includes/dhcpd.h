@@ -2386,6 +2386,8 @@ void get_hw_addr(const char *name, struct hardware *hw);
 #if defined (USE_SOCKET_SEND) || defined (USE_SOCKET_RECEIVE) \
 	|| defined (USE_SOCKET_FALLBACK)
 int if_register_socket(struct interface_info *, int, int *, struct in6_addr *);
+
+void set_multicast_hop_limit(struct interface_info* info, int hop_limit);
 #endif
 
 #if defined (USE_SOCKET_FALLBACK) && !defined (USE_SOCKET_SEND)
