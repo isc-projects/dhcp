@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-			      Version 4.2.7
-			      11 August 2014
+			     Version 4.2.8b1
+			     05 February 2015
 
 			      Release Notes
 
@@ -81,8 +81,8 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Bugs #37128]
 
 - Added checks in range6 and prefix6 statement parsing to ensure addresses
-  are within the declared. Thanks to Jiri Popelka at Red Hat for the bug
-  report and patch.
+  are within the declared subnet. Thanks to Jiri Popelka at Red Hat for the
+  bug report and patch.
   [ISC-Bugs #32453]
   [ISC-Bugs #17766]
   [ISC-Bugs #18510]
@@ -160,7 +160,7 @@ by Eric Young (eay@cryptsoft.com).
 
 - Avoid calling pool_timer() recursively from supersede_lease().  This could
   result in leases changing state incorrectly or delaying the running of the
-  leae expiration code.
+  lease expiration code.
   [ISC-Bugs #38002]
 
 - Move the check for a PID file and process to be before we rewrite the
