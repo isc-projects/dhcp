@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-			   Version 4.3.2b1
-			     08 January 2015
+			     Version 4.3.2b1
+			     05 February 2015
 
 			      Release Notes
 
@@ -105,8 +105,8 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Bugs #37128]
 
 - Added checks in range6 and prefix6 statement parsing to ensure addresses
-  are within the declared. Thanks to Jiri Popelka at Red Hat for the bug
-  report and patch.
+  are within the declared subnet. Thanks to Jiri Popelka at Red Hat for the
+  bug report and patch.
   [ISC-Bugs #32453]
   [ISC-Bugs #17766]
   [ISC-Bugs #18510]
