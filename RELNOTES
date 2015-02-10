@@ -52,16 +52,11 @@ ISC DHCP is open source software maintained by Internet Systems
 Consortium.  This product includes cryptographic software written
 by Eric Young (eay@cryptsoft.com).
 
-			Changes since 4.3.2.pre-beta
+			Changes since 4.3.2b1
 
-- Corrected inconsistencies in dhcrelay's setting the upper interface hop count
-  limit such that it now sets it to 32 when the upstream address is a multicast
-  address per RFC 3315 Section 20. Prior to this if the -u argument preceded
-  the -l argument on the command line or if the same interface was specified
-  for both; the logic to set the hop limit count for the upper interface was
-  skipped.  This caused the hop count limit to be set to the default value
-  (typically 1) in the outbound upstream packets.
-  [ISC-Bugs #37426]
+- Specifying the option, --disable-debug, on the configure script command line
+  now disables debug features.  Prior to this, specifying the --disable-debug
+  incorrectly enabled debug features.
 
 			Changes since 4.3.1
 
@@ -74,12 +69,12 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Bugs #36947]
 
 - Added check for invalid failover message type. Thanks to Tobias Stoeckmann
-  working with the OpendBSD project who spotted the issue and provided the
+  working with the OpenBSD project who spotted the issue and provided the
   patch.
   [ISC-Bugs #36653]
 
 - Corrected rate limiting checks for bad packet logging.  Thanks to Tobias
-  Stoeckmann working with the OpendBSD project who spotted the issue and
+  Stoeckmann working with the OpenBSD project who spotted the issue and
   provided the patch.
   [ISC-Bugs #36897]
 
@@ -123,7 +118,7 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Bugs #18010]
   [ISC-Bugs #22556]
   [ISC-Bugs #29769]
-  Inbound packets with UPD checksums of 0xffff now validate correctly rather
+  Inbound packets with UDP checksums of 0xffff now validate correctly rather
   than being dropped.
   [ISC-Bugs #24216]
   [ISC-Bugs #25587]
@@ -176,7 +171,7 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Bugs #37368]
 
 - Corrected an issue which caused dhclient to incorrectly form the result when
-  prepending or appending to the IPv4 domain-search option,received from the
+  prepending or appending to the IPv4 domain-search option, received from the
   server, when either of the values being combined contain compressed
   components.
   [ISC-Bugs #20558]
@@ -256,6 +251,16 @@ by Eric Young (eay@cryptsoft.com).
   available.  Note the default mode, "exact", provides this same behavior.
   [ISC-Bugs #36780]
   [ISC-Bugs #32228]
+
+- Corrected inconsistencies in dhcrelay's setting the upper interface hop count
+  limit such that it now sets it to 32 when the upstream address is a multicast
+  address per RFC 3315 Section 20. Prior to this if the -u argument preceded
+  the -l argument on the command line or if the same interface was specified
+  for both; the logic to set the hop limit count for the upper interface was
+  skipped.  This caused the hop count limit to be set to the default value
+  (typically 1) in the outbound upstream packets.
+  [ISC-Bugs #37426]
+
 
 			Changes since 4.3.1b1
 
@@ -1265,8 +1270,8 @@ by Eric Young (eay@cryptsoft.com).
   calculations.  Invalid renew and rebinding times (e.g., greater than the
   determined lease time) are omitted.
 
-- Processing the DHCP to DNS server transactions in an asyncrhonous fashion.
-  The DHCP server or client can now continue with its processing while
+- Processing the DHCP to DNS server transactions in an asyncrhonous fashion,
+  the DHCP server or client can now continue with its processing while
   awaiting replies from the DNS server.
 
 - The 'hardware [ethernet|etc] ...;' parameter in host records has been

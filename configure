@@ -5238,19 +5238,21 @@ _ACEOF
 # Optional compile-time DEBUGging.
 # Check whether --enable-debug was given.
 if test "${enable_debug+set}" = set; then :
-  enableval=$enable_debug; enable_debug=yes
+  enableval=$enable_debug; case "${enableval}" in
+    yes) enable_debug=yes
+
+$as_echo "#define DEBUG 1" >>confdefs.h
+
+        # Just override CFLAGS to totally to remove optimization.
+        CFLAGS="-g";;
+    no)  enable_debug=no ;;
+    *)   as_fn_error $? "bad value ${enableval} for --enable-debug" "$LINENO" 5 ;;
+  esac
 else
   enable_debug=no
 fi
 
-# This is very much off by default.
-if test "$enable_debug" = "yes" ; then
 
-$as_echo "#define DEBUG 1" >>confdefs.h
-
-	# Just override CFLAGS to totally to remove optimization.
-	CFLAGS="-g"
-fi
 # XXX: there are actually quite a lot more DEBUG_ features we could enable,
 # but I don't want to pollute the --help space.
 #
