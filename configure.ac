@@ -51,16 +51,17 @@ AC_DEFINE_UNQUOTED([DHCP_BYTE_ORDER], [$byte_order],
 
 # Optional compile-time DEBUGging.
 AC_ARG_ENABLE(debug,
-	AC_HELP_STRING([--enable-debug],
-		[create a debug-only version of the software (default is no).]),
-		[enable_debug=yes],[enable_debug=no])
-# This is very much off by default.
-if test "$enable_debug" = "yes" ; then
-	AC_DEFINE([DEBUG], [1],
-		[Define to compile debug-only DHCP software.])
-	# Just override CFLAGS to totally to remove optimization.
-	CFLAGS="-g"
-fi
+	AC_HELP_STRING([--enable-debug],[create a debug-only version of the software (default is no).]),
+	[case "${enableval}" in
+	  yes) enable_debug=yes
+		AC_DEFINE([DEBUG], [1],
+			[Define to compile debug-only DHCP software.])
+		# Just override CFLAGS totally to remove optimization.
+		CFLAGS="-g";;
+	  no)  enable_debug=no ;;
+	  *)   AC_MSG_ERROR([bad value ${enableval} for --enable-debug]);;
+	esac],[enable_debug=no])
+
 # XXX: there are actually quite a lot more DEBUG_ features we could enable,
 # but I don't want to pollute the --help space.
 #
