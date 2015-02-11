@@ -61,7 +61,8 @@ by Eric Young (eay@cryptsoft.com).
 
 - Specifying the option, --disable-debug, on the configure script command line
   now disables debug features.  Prior to this, specifying --disable-debug
-  incorrectly enabled debug features.
+  incorrectly enabled debug features. Thanks to Gustavo Zacarias for reporting
+  the issue.
   [ISC-Bugs #37780]
 
 			Changes since 4.1.-ESV-R10
