@@ -1,6 +1,7 @@
 .\"	dhcpd.leases.5
 .\"
-.\" Copyright (c) 2004,2009,2014 by Internet Systems Consortium, Inc. ("ISC")
+.\" Copyright (c) 2014-2015 by Internet Systems Consortium, Inc. ("ISC")
+.\" Copyright (c) 2004,2009 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
@@ -238,14 +239,6 @@ recorded on the lease with a \fBclient-hostname\fR statement.   This
 is not required by the protocol, however, so many specialized DHCP
 clients do not send a host-name option.
 .PP
-.B abandoned;
-.PP
-The \fBabandoned\fR statement indicates that the DHCP server has
-abandoned the lease.   In that case, the \fBabandoned\fR statement
-will be used to indicate that the lease should not be reassigned.
-Please see the \fBdhcpd.conf(5)\fR manual page for information about
-abandoned leases.
-.PP
 .nf
 .B binding state \fIstate\fB;
 .B next binding state \fIstate\fB;
@@ -253,10 +246,11 @@ abandoned leases.
 .PP
 The \fBbinding state\fR statement declares the lease's binding state.
 When the DHCP server is not configured to use the failover protocol, a
-lease's binding state will be either \fBactive\fR or \fBfree\fR.   The
-failover protocol adds some additional transitional states, as well as
+lease's binding state may be \fBactive\fR, \fBfree\fR or \fBabandoned\fR.
+The failover protocol adds some additional transitional states, as well as
 the \fBbackup\fR state, which indicates that the lease is available
-for allocation by the failover secondary.
+for allocation by the failover secondary. Please see the \fBdhcpd.conf(5)\fR
+manual page for more information about abandoned leases.
 .PP
 The \fBnext binding state\fR statement indicates what state the lease
 will move to when the current state expires.   The time when the
@@ -310,7 +304,7 @@ of them in the section on common structures.
 Each lease declaration starts with a tag indicating the type of the lease.
 ia_ta is for temporary addresses, ia_na is for non-temporary addresses and
 ia_pd is for prefix delegation.  Following this tag is the combined IAID
-and DUID from the client for this lease.  
+and DUID from the client for this lease.
 .PP
 The IAID_DUID value is recorded as a colon-separated hexadecimal
 list or as a quoted string.   If it is recorded as a quoted string and
@@ -331,7 +325,7 @@ See the description of dates in the section on common structures.
 Within a given lease there can be multiple iaaddr and iaprefix statements.
 Each will have either an IPv6 address or an IPv6 prefix (an address and
 a prefix length indicating a CIDR style block of addresses).  The following
-statements may occur Within each iaaddr or iaprefix. 
+statements may occur Within each iaaddr or iaprefix.
 .PP
 .B binding state \fIstate\fB;
 .PP
