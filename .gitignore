@@ -28,3 +28,5 @@ server/tests/load_bal_unittests
 server/tests/test-suite.log
 tests/libt_api.a
 minires/libres.a
+common/tests/ns_name_unittest
+tests/unittest.sh
