@@ -60,6 +60,21 @@ by Eric Young (eay@cryptsoft.com).
   the issue.
   [ISC-Bugs #37780]
 
+- Unit test execution now uses a path augmented during configuration
+  processing of the --with-atf option to locate ATF runtime tools, atf-run
+  and atf-report. For most installations of ATF, this should alleviate the
+  need to manually include them in the PATH, as was formerly required.
+  If the configure script cannot locate the tools it will emit a warning,
+  informing the user that the tools must be in the PATH when running unit
+  tests.
+  Secondly, please note that "make check" will now exit with a failure status
+  code (non-zero) if one or more unit tests fail.  This means that invoking
+  "make check" from an upper level directory will cause the make process to
+  STOP after the first test subdirectory with failed test(s).  To force all
+  tests in all subdirectories to run, regardless of individual test outcome,
+  use the command "make -k check".
+  [ISC-Bugs #38619]
+
 			Changes since 4.3.1
 
 - Corrected parser's right brace matching when a statement contains an error.
@@ -281,7 +296,7 @@ by Eric Young (eay@cryptsoft.com).
 - Tidy up several small tickets.
   Correct parsing of DUID from config file, previously the LL type
   was put in the wrong place in the DUID string.
-  [ISC-Bugs #20962] 
+  [ISC-Bugs #20962]
   Add code to parse "do-forward-updates" as well as "do-forward-update"
   Thanks to Jiri Popelka at Red Hat.
   [ISC-Bugs #31328]
@@ -655,7 +670,7 @@ by Eric Young (eay@cryptsoft.com).
   in dhcpd - based on a patch from David Cantrell at Red Hat.
   [ISC-Bugs #20039] Correct some error messages in dhcpd.c
   [ISC-Bugs #20070] Better range check on values when creating a DHCID.
-  [ISC-Bugs #20198] Avoid writing past the end of the field when adding 
+  [ISC-Bugs #20198] Avoid writing past the end of the field when adding
   overly long file or server names to a packet and add a log message
   if the configuration supplied overly long names for these fields.
   Thanks to Martin Pala.
@@ -732,7 +747,7 @@ by Eric Young (eay@cryptsoft.com).
   listed as a failover peer would cause the server to become
   non-responsive.  Thanks to a report from Brad Bendily, brad@bendily.com.
   [ISC-Bugs #22679]
-  CERT: VU#159528 CVE: CVE-2010-3616 
+  CERT: VU#159528 CVE: CVE-2010-3616
 
 - Don't pass the ISC_R_INPROGRESS status to the omapi signal handlers.
   Passing it through to the handlers caused the omshell program to fail
@@ -764,7 +779,7 @@ by Eric Young (eay@cryptsoft.com).
   crashing on an assert failure.  Also retag the lease as active
   and reset its timeout value.
   [ISC-Bugs #21921]
- 
+
 - Removed the restriction on using IPv6 addresses in IPv4 mode.  This
   allows IPv4 options which contain IPv6 addresses to be specified.  For
   example the 6rd option can be specified and used like this:
@@ -776,7 +791,7 @@ by Eric Young (eay@cryptsoft.com).
 
 - Handle some DDNS corner cases better.  Maintain the DDNS transaction
   information when updating a lease and cancel any existing transactions
-  when removing the ddns information.  
+  when removing the ddns information.
   [ISC-Bugs #23103]
 
 - Some fixes for LDAP
@@ -806,12 +821,12 @@ by Eric Young (eay@cryptsoft.com).
 
 - 'dhclient' no longer waits a random interval after first starting up to
   begin in the INIT state.  This conforms to RFC 2131, but elects not to
-  implement a 'SHOULD' direction in section 4.1. The goal of this change 
+  implement a 'SHOULD' direction in section 4.1. The goal of this change
   is to start up faster. [ISC-Bugs #19660]
-  
-- Added 'initial-delay' parameter that specifies maximum amount of time 
-  before client goes to the INIT state. The default value is 0. In previous 
-  versions of the code client could wait up to 5 seconds. The old behavior 
+
+- Added 'initial-delay' parameter that specifies maximum amount of time
+  before client goes to the INIT state. The default value is 0. In previous
+  versions of the code client could wait up to 5 seconds. The old behavior
   may be restored by using 'initial-delay 5;' in the client config file.
   [ISC-Bugs #19660]
 
@@ -851,7 +866,7 @@ by Eric Young (eay@cryptsoft.com).
   configuration parameter, in the case of an agent not covered by a configured
   subnet the root configuration area is examined. Server now also returns
   vendor-class-id option, if client sent it. [ISC-Bugs #21094]
-  
+
 - Documentation fixes
   [ISC-Bugs #17959] add text to AIX section describing how to have it send
   responses to the all-ones address.
@@ -866,8 +881,8 @@ by Eric Young (eay@cryptsoft.com).
 - Relay now properly logs that packet was received over interface without
   global IPv6 address [ISC-Bugs #24070]
 
-- Linux Packet Filter interface improvement. sockaddr_pkt structure is used, 
-  rather than sockaddr. Packet ethertype is now forced to ETH_P_IP. 
+- Linux Packet Filter interface improvement. sockaddr_pkt structure is used,
+  rather than sockaddr. Packet ethertype is now forced to ETH_P_IP.
   [ISC-Bugs #18975]
 
 - Minor code cleanups - but note port change for #23196
@@ -883,7 +898,7 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Bugs #19368] - Tidy up variable types in validate_port.
 
 - Code cleanup: remove obsolete PROTO, KandR, INLINE and ANSI_DECL macros
-  [ISC-Bugs #13151] 
+  [ISC-Bugs #13151]
 
 - Compilation problem with gcc4.5 and omshell.c resolved. [ISC-Bugs #23831]
 
@@ -898,7 +913,7 @@ by Eric Young (eay@cryptsoft.com).
 - Documentation cleanup
   [ISC-Bugs #23326] Updated References document, several man page updates
 
-- Server no longer complains about NULL pointer when configured 
+- Server no longer complains about NULL pointer when configured
   server-identifier expression fails to evaluate. [ISC-Bugs #24547]
 
 - Convert ISC_R_INPROGRESS status to ISC_R_SUCCESS when called from other
@@ -913,9 +928,9 @@ by Eric Young (eay@cryptsoft.com).
 - In Solaris 11 switch to using sockets instead of DLPI, thanks
   to a patch form Oracle.  [ISC-Bugs #24634].
 
-- Strict checks for content of domain-name DHCPv4 option can now be 
-  configured during compilation time. Even though RFC2132 does not allow 
-  to store more than one domain in domain-name option, such behavior is 
+- Strict checks for content of domain-name DHCPv4 option can now be
+  configured during compilation time. Even though RFC2132 does not allow
+  to store more than one domain in domain-name option, such behavior is
   now enabled by default, but this may change some time in the future.
   See ACCEPT_LIST_IN_DOMAIN_NAME define in includes/site.h.
   [ISC-Bugs #24167]
@@ -983,7 +998,7 @@ by Eric Young (eay@cryptsoft.com).
 
 - Tidy up the receive calls and eliminate the need for found_pkt.
   [ISC-Bugs #25066]
- 
+
 - Add support for Infiniband over sockets to the server and
   relay code.  We've tested this on Solaris and hope to expand
   support for Infiniband in the future.  This patch also corrects
@@ -1078,14 +1093,14 @@ by Eric Young (eay@cryptsoft.com).
   minimize disruption.  The restriction will likely be tightened in
   the future to disallow ids with a length of 1.
   Thanks to Markus Hietava of Codenomicon CROSS project for the
-  finding this issue and CERT-FI for vulnerability coordination. 
+  finding this issue and CERT-FI for vulnerability coordination.
   [ISC-Bugs #29851]
   CVE: CVE-2012-3571
 
 ! When attempting to convert a DUID from a client id option
   into a hardware address handle unexpected client ids properly.
   Thanks to Markus Hietava of Codenomicon CROSS project for the
-  finding this issue and CERT-FI for vulnerability coordination. 
+  finding this issue and CERT-FI for vulnerability coordination.
   [ISC-Bugs #29852]
   CVE: CVE-2012-3570
 
@@ -1139,7 +1154,7 @@ by Eric Young (eay@cryptsoft.com).
   and patches.
   [ISC-Bugs #23833]
 
-- Parsing unquoted base64 strings improved. Parser now properly handles 
+- Parsing unquoted base64 strings improved. Parser now properly handles
   strings that contain reserved names. [ISC-Bugs #23048]
 
 - Modify the nak_lease function to make some attempts to find a
@@ -1422,7 +1437,7 @@ by Eric Young (eay@cryptsoft.com).
 - Clean up to allow compilation with gcc 2.95.4 on FreeBSD.  Remove an
   extra semi-colon from common/dns.c and moved setting a variable to NULL
   in server/dhcpv6.c to allow the compiler to decide that the variable
-  was always properly set.  
+  was always properly set.
 
 			Changes since 4.1.0b1
 
@@ -1581,7 +1596,7 @@ by Eric Young (eay@cryptsoft.com).
   This is useful if you want not only to release a lease, but also make
   it available for reuse right away.  Hat tip to Christof Chen.
 
-- Fixed definition of the iaaddr hash functions to use the correct 
+- Fixed definition of the iaaddr hash functions to use the correct
   functions when referencing and dereferencing memory.
 
 - Some definitions not in phase with the IANA registry were updated.
@@ -1664,7 +1679,7 @@ by Eric Young (eay@cryptsoft.com).
 - When server is configured with options that it overrides, a warning is
   issued when the configuration file is read, rather than at the time the
   option is overridden. This was important, because the warning was given
-  every time the option was overridden, which could create a lot of 
+  every time the option was overridden, which could create a lot of
   unnecessary logging.
 
 - Fixed a compilation problems on platforms that define a value for FDDI,
@@ -1680,7 +1695,7 @@ by Eric Young (eay@cryptsoft.com).
 - Fix startup error messages to report a missing "subnet6 declaration", rather
   than a missing "subnet declaration", when running as a DHCPv6 server.
 
-- DHCPv6 client timestamp in DUID was based on the year 1970 rather 
+- DHCPv6 client timestamp in DUID was based on the year 1970 rather
   than the year 2000.
 
 - Warn when attempting to use a hardware parameter in DHCPv6.
@@ -1698,12 +1713,12 @@ by Eric Young (eay@cryptsoft.com).
 - dhc6_lease_destroy() and dhc6_ia_destroy() now set lease and IA pointers
   to NULL after freeing, to prevent subsequent accesses to freed memory.
 
-- The DHCPv6 server would not send the preference option unless the 
+- The DHCPv6 server would not send the preference option unless the
   client requested it, via the ORO. This has been fixed, so the DHCPv6
   server will always send the preference value if it is configured.
 
-- When addresses were passed as hints to the server in an IA, they were 
-  incorrectly handled, sometimes being treated as an error. Now the 
+- When addresses were passed as hints to the server in an IA, they were
+  incorrectly handled, sometimes being treated as an error. Now the
   server will treat these as hints and ignore them if it cannot supply
   a requested address.
 
@@ -1741,8 +1756,8 @@ by Eric Young (eay@cryptsoft.com).
   to put dhcpd.leases and dhclient.leases in /usr/local/var/db, which no
   one ever has.
 
-- Regression fix for bug where server advertised a IPv6 address in 
-  response to a SOLICIT but would not return the address in response 
+- Regression fix for bug where server advertised a IPv6 address in
+  response to a SOLICIT but would not return the address in response
   to a REQUEST.
 
 - A bug was fixed where the DHCPv6 server puts the NoAddrsAvail status
@@ -1774,7 +1789,7 @@ by Eric Young (eay@cryptsoft.com).
 
 - Eliminated a spurious error message from the client
 
-- A number of bugs with the internal handling of lease state on the 
+- A number of bugs with the internal handling of lease state on the
   server have been fixed. Some of these could cause server crashes.
 
 - The peer_wants_leases() changes pulled up from 3.1.0 were corrected,
@@ -1789,13 +1804,13 @@ by Eric Young (eay@cryptsoft.com).
 
 			Changes since 4.0.0a3
 
-- The DHCP server no longer requires a "ddns-update-style" statement, 
+- The DHCP server no longer requires a "ddns-update-style" statement,
   and now defaults to "none", which means DNS updates are disabled.
 
 - Log messages when failover peer names mismatch have been improved to
   point out the problem.
 
-- Bug where server advertised a IPv6 address in response to a SOLICIT 
+- Bug where server advertised a IPv6 address in response to a SOLICIT
   but would not return the address in response to a REQUEST. Thanks to
   Dennis Kou for finding the bug.
 
@@ -1808,7 +1823,7 @@ by Eric Young (eay@cryptsoft.com).
 
 - Compilation with DLPI and -Werror has been repaired.
 
-- Error in decoding IA_NA option if multiple interfaces are present 
+- Error in decoding IA_NA option if multiple interfaces are present
   fixed by Marcus Goller.
 
 - DHCPv6 server Confirm message processing has been enhanced - it no
@@ -1834,7 +1849,7 @@ by Eric Young (eay@cryptsoft.com).
 - Fixed file descriptor leak on listen failure. Thanks to Tom Clark.
 
 - Bug in server configuration parser caused server to get stuck on
-  startup for certain bad pool declarations. Thanks to Guillaume 
+  startup for certain bad pool declarations. Thanks to Guillaume
   Knispel for the bug report and fix.
 
 - Code cleaned to remove warnings reported by "gcc -Wall".
@@ -1850,8 +1865,8 @@ by Eric Young (eay@cryptsoft.com).
   the DHCPv6 client configuration.  'send dhcp6.oro' is no longer
   necessary.
 
-- Bug fixed where configuration file parsing did not work with 
-  zero-length options; this made it impossible to set the 
+- Bug fixed where configuration file parsing did not work with
+  zero-length options; this made it impossible to set the
   rapid-commit option.
 
 - Bogus messages about host records with IPv4 fixed-addresses being of
@@ -3235,7 +3250,7 @@ by Eric Young (eay@cryptsoft.com).
   had been done for a client with no name, even though no update had
   been done, and then when the client's lease expired the deletion of
   that nonexistant record would time out because the name was the null
-  string. 
+  string.
 
 - Clean up the omshell, dhcpctl and omapi man pages a bit.
 
@@ -3758,7 +3773,7 @@ by Eric Young (eay@cryptsoft.com).
 
 - When we get a bogus state lease binding state transition, don't do
   the transition.
-  
+
 
 		Changes since 3.0 Beta 2 Patchlevel 12
 

@@ -28,3 +28,4 @@ server/tests/legacy_unittests
 server/tests/load_bal_unittests
 server/tests/test-suite.log
 tests/libt_api.a
+tests/unittest.sh

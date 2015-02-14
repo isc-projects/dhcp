@@ -629,6 +629,7 @@ LDAP_CFLAGS
 ac_prefix_program
 HAVE_ATF_FALSE
 HAVE_ATF_TRUE
+ATF_BIN
 ATF_LDFLAGS
 ATF_CFLAGS
 byte_order
@@ -5243,7 +5244,7 @@ if test "${enable_debug+set}" = set; then :
 
 $as_echo "#define DEBUG 1" >>confdefs.h
 
-        # Just override CFLAGS to totally to remove optimization.
+        # Just override CFLAGS totally to remove optimization.
         CFLAGS="-g";;
     no)  enable_debug=no ;;
     *)   as_fn_error $? "bad value ${enableval} for --enable-debug" "$LINENO" 5 ;;
@@ -5443,16 +5444,32 @@ if test "$atf_path" != "no" ; then
         do
             if test -f $d/lib/pkgconfig/atf-c.pc ; then
                 atf_pcp=$d/lib/pkgconfig
+                atf_path=$d
             elif test -f $d/lib64/pkgconfig/atf-c.pc ; then
                 atf_pcp=$d/lib64/pkgconfig
+                atf_path=$d
             fi
         done
     fi
+
     if test "$atf_pcp" = "" ; then
         as_fn_error $? "Unable to find atf files in location specified" "$LINENO" 5
     else
         ATF_CFLAGS="`PKG_CONFIG_PATH=$atf_pcp pkg-config --cflags atf-c` -DUNIT_TEST"
         ATF_LDFLAGS="`PKG_CONFIG_PATH=$atf_pcp pkg-config --libs atf-c`"
+        if  test -f $atf_pcp/atf-sh.pc ; then
+                ATF_BIN="`PKG_CONFIG_PATH=$atf_pcp pkg-config --variable=exec_prefix atf-sh`/bin"
+        else
+                # older versions don't have atf-sh, try usual place
+                ATF_BIN=$atf_path/bin
+        fi
+
+        if test ! -x $ATF_BIN/atf-run  -o  ! -x $ATF_BIN/atf-report ; then
+            { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: atf-run,atf-report not found, assuming they are in your path" >&5
+$as_echo "$as_me: WARNING: atf-run,atf-report not found, assuming they are in your path" >&2;}
+        fi
+
+
 
 
     fi
@@ -5466,8 +5483,11 @@ else
   HAVE_ATF_FALSE=
 fi
 
-### Uncomment this once docs.lab.isc.org upgrades to automake 1.11
-### AM_COND_IF([HAVE_ATF], [AC_DEFINE([HAVE_ATF], [1], [ATF framework specified?])])
+if test -z "$HAVE_ATF_TRUE"; then :
+
+$as_echo "#define HAVE_ATF 1" >>confdefs.h
+
+fi
 
 ###
 ### Path fun.  Older versions of DHCP were installed in /usr/sbin, so we
@@ -6782,7 +6802,7 @@ $as_echo "#define FLEXIBLE_ARRAY_MEMBER /**/" >>confdefs.h
   fi
 
 
-ac_config_files="$ac_config_files Makefile client/Makefile client/tests/Makefile common/Makefile common/tests/Makefile dhcpctl/Makefile dst/Makefile includes/Makefile omapip/Makefile relay/Makefile server/Makefile tests/Makefile server/tests/Makefile doc/devel/doxyfile"
+ac_config_files="$ac_config_files Makefile client/Makefile client/tests/Makefile common/Makefile common/tests/Makefile dhcpctl/Makefile dst/Makefile includes/Makefile omapip/Makefile relay/Makefile server/Makefile tests/Makefile tests/unittest.sh server/tests/Makefile doc/devel/doxyfile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -7532,6 +7552,7 @@ do
     "relay/Makefile") CONFIG_FILES="$CONFIG_FILES relay/Makefile" ;;
     "server/Makefile") CONFIG_FILES="$CONFIG_FILES server/Makefile" ;;
     "tests/Makefile") CONFIG_FILES="$CONFIG_FILES tests/Makefile" ;;
+    "tests/unittest.sh") CONFIG_FILES="$CONFIG_FILES tests/unittest.sh" ;;
     "server/tests/Makefile") CONFIG_FILES="$CONFIG_FILES server/tests/Makefile" ;;
     "doc/devel/doxyfile") CONFIG_FILES="$CONFIG_FILES doc/devel/doxyfile" ;;
 
@@ -8254,6 +8275,7 @@ if test "$atf_path" != "no"
 then
 echo "ATF_CFLAGS  : $ATF_CFLAGS" >> config.report
 echo "ATF_LDFLAGS : $ATF_LDFLAGS" >> config.report
+echo "ATF_BIN : $ATF_BIN" >> config.report
 echo
 fi
 

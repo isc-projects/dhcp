@@ -243,6 +243,7 @@ am__relativize = \
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
 AM_DEFAULT_VERBOSITY = @AM_DEFAULT_VERBOSITY@
+ATF_BIN = @ATF_BIN@
 ATF_CFLAGS = @ATF_CFLAGS@
 ATF_LDFLAGS = @ATF_LDFLAGS@
 AUTOCONF = @AUTOCONF@
@@ -740,7 +741,7 @@ uninstall-am:
 
 
 @HAVE_ATF_TRUE@check: $(ATF_TESTS)
-@HAVE_ATF_TRUE@	atf-run | atf-report
+@HAVE_ATF_TRUE@	sh ${top_srcdir}/tests/unittest.sh
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
