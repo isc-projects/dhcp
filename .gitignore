@@ -20,3 +20,11 @@ includes/stamp-h1
 omapip/svtest
 relay/dhcrelay
 server/dhcpd
+common/tests/alloc_unittest
+common/tests/ns_name_unittest
+server/tests/dhcpd_unittests
+server/tests/hash_unittests
+server/tests/legacy_unittests
+server/tests/load_bal_unittests
+tests/libt_api.a
+tests/unittest.sh

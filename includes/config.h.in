@@ -34,6 +34,9 @@
    MSVC and with C++ compilers. */
 #undef FLEXIBLE_ARRAY_MEMBER
 
+/* ATF framework specified? */
+#undef HAVE_ATF
+
 /* Define to 1 to use the Berkeley Packet Filter interface code. */
 #undef HAVE_BPF
 
