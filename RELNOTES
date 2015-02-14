@@ -51,6 +51,21 @@ by Eric Young (eay@cryptsoft.com).
   the issue.
   [ISC-Bugs #37780]
 
+- Unit test execution now uses a path augmented during configuration
+  processing of the --with-atf option to locate ATF runtime tools, atf-run
+  and atf-report. For most installations of ATF, this should alleviate the
+  need to manually include them in the PATH, as was formerly required.
+  If the configure script cannot locate the tools it will emit a warning,
+  informing the user that the tools must be in the PATH when running unit
+  tests.
+  Secondly, please note that "make check" will now exit with a failure status
+  code (non-zero) if one or more unit tests fail.  This means that invoking
+  "make check" from an upper level directory will cause the make process to
+  STOP after the first test subdirectory with failed test(s).  To force all
+  tests in all subdirectories to run, regardless of individual test outcome,
+  use the command "make -k check".
+  [ISC-Bugs #38619]
+
 			Changes since 4.2.7
 
 - Corrected parser's right brace matching when a statement contains an error.

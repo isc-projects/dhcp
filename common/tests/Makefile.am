@@ -23,7 +23,7 @@ ns_name_unittest_LDADD += ../libdhcp.a  \
         ../../bind/lib/libisc.a
 
 check: $(ATF_TESTS)
-	atf-run | atf-report
+	sh ${top_srcdir}/tests/unittest.sh
 
 endif
 

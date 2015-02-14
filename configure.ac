@@ -216,24 +216,38 @@ if test "$atf_path" != "no" ; then
         do
             if test -f $d/lib/pkgconfig/atf-c.pc ; then
                 atf_pcp=$d/lib/pkgconfig
+                atf_path=$d
             elif test -f $d/lib64/pkgconfig/atf-c.pc ; then
                 atf_pcp=$d/lib64/pkgconfig
+                atf_path=$d
             fi
         done
     fi
+
     if test "$atf_pcp" = "" ; then
         AC_MSG_ERROR([Unable to find atf files in location specified])
     else
         ATF_CFLAGS="`PKG_CONFIG_PATH=$atf_pcp pkg-config --cflags atf-c` -DUNIT_TEST"
         ATF_LDFLAGS="`PKG_CONFIG_PATH=$atf_pcp pkg-config --libs atf-c`"
+        if  test -f $atf_pcp/atf-sh.pc ; then
+                ATF_BIN="`PKG_CONFIG_PATH=$atf_pcp pkg-config --variable=exec_prefix atf-sh`/bin"
+        else
+                # older versions don't have atf-sh, try usual place
+                ATF_BIN=$atf_path/bin
+        fi
+
+        if test ! -x $ATF_BIN/atf-run  -o  ! -x $ATF_BIN/atf-report ; then
+            AC_MSG_WARN([atf-run,atf-report not found, assuming they are in your path])
+        fi
+
         AC_SUBST(ATF_CFLAGS)
         AC_SUBST(ATF_LDFLAGS)
+        AC_SUBST(ATF_BIN)
     fi
 fi
 
 AM_CONDITIONAL(HAVE_ATF, test "$atf_pcp" != "")
-### Uncomment this once docs.lab.isc.org upgrades to automake 1.11
-### AM_COND_IF([HAVE_ATF], [AC_DEFINE([HAVE_ATF], [1], [ATF framework specified?])])
+AM_COND_IF([HAVE_ATF], [AC_DEFINE([HAVE_ATF], [1], [ATF framework specified?])])
 
 ###
 ### Path fun.  Older versions of DHCP were installed in /usr/sbin, so we
@@ -671,6 +685,7 @@ AC_OUTPUT([
   relay/Makefile
   server/Makefile
   tests/Makefile
+  tests/unittest.sh
   server/tests/Makefile
   doc/devel/doxyfile
 ])
@@ -707,6 +722,7 @@ if test "$atf_path" != "no"
 then
 echo "ATF_CFLAGS  : $ATF_CFLAGS" >> config.report
 echo "ATF_LDFLAGS : $ATF_LDFLAGS" >> config.report
+echo "ATF_BIN : $ATF_BIN" >> config.report
 echo
 fi
 

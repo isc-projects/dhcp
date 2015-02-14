@@ -22,11 +22,7 @@ DHCPLIBS = $(top_builddir)/common/libdhcp.a $(top_builddir)/omapip/libomapi.a   
           $(top_builddir)/bind/lib/libisc.a
 
 ATF_TESTS =
-TESTS = 
 if HAVE_ATF
-
-check: $(ATF_TESTS)
-	atf-run | atf-report
 
 ATF_TESTS += dhcpd_unittests legacy_unittests hash_unittests load_bal_unittests
 
@@ -49,6 +45,9 @@ legacy_unittests_LDADD = $(DHCPLIBS) $(ATF_LDFLAGS)
 load_bal_unittests_SOURCES = $(DHCPSRC) load_bal_unittest.c
 load_bal_unittests_LDADD = $(DHCPLIBS) $(ATF_LDFLAGS)
 
+check: $(ATF_TESTS)
+	sh ${top_srcdir}/tests/unittest.sh
+
 endif
 
-check_PROGRAMS = $(ATF_TESTS) $(TESTS)
+check_PROGRAMS = $(ATF_TESTS)
