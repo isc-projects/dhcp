@@ -21,7 +21,7 @@ ns_name_unittest_LDADD += ../libdhcp.a  \
 	../../omapip/libomapi.a ../../dst/libdst.a ../../minires/libres.a
 
 check: $(ATF_TESTS)
-	atf-run | atf-report
+	sh ${top_srcdir}/tests/unittest.sh
 
 endif
 
