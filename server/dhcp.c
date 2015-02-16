@@ -5229,9 +5229,11 @@ reuse_lease (struct packet* packet,
 				}
 
 				/* We're cleared to reuse it */
-				log_debug("reuse_lease: lease age %ld"
-					  " under %d%% limit, reusing it",
-					  lease_age, limit);
+				log_debug("reuse_lease: lease age %ld (secs)"
+					  " under %d%% threshold, reply with "
+					  "unaltered, existing lease",
+					  lease_age, thresh);
+
 				reusable = 1;
 			}
 		}
