@@ -398,7 +398,8 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 	 *  NICs perform VLAN encapsulation, while drivers for PCnet series
 	 *  do not, for example. The linux kernel makes stripped vlan info
 	 *  visible to user space via CMSG/auxdata, this appears to not be
-	 *  true for BSD OSs.)
+	 *  true for BSD OSs.).  NOTE: this is only supported on linux flavors
+	 *  which define the tpacket_auxdata.tp_vlan_tci.
 	 *
 	 *  b. Determine if checksum is valid for use. It may not be if
 	 *  checksum offloading is enabled on the interface.  */
@@ -409,8 +410,11 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 		    cmsg->cmsg_type == PACKET_AUXDATA) {
 			struct tpacket_auxdata *aux = (void *)CMSG_DATA(cmsg);
 			/* Discard packets with stripped vlan id */
+
+#ifdef VLAN_TCI_PRESENT
 			if (aux->tp_vlan_tci != 0)
 				return 0;
+#endif
 
 			csum_ready = ((aux->tp_status & TP_STATUS_CSUMNOTREADY)
 				      ? 0 : 1);
