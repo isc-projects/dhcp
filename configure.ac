@@ -611,6 +611,10 @@ AC_CHECK_MEMBER(struct msghdr.msg_control,,
 #include <sys/socket.h>
 	])
 
+AC_CHECK_MEMBER(struct tpacket_auxdata.tp_vlan_tci,
+	[AC_DEFINE([VLAN_TCI_PRESENT], [1], [tpacket_auxdata.tp_vlan_tci present])]
+	,, [#include <linux/if_packet.h>])
+
 libbind=
 AC_ARG_WITH(libbind,
 	AC_HELP_STRING([--with-libbind=PATH],
