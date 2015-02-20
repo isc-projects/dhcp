@@ -6561,6 +6561,16 @@ fi
 fi
 
 
+ac_fn_c_check_member "$LINENO" "struct tpacket_auxdata" "tp_vlan_tci" "ac_cv_member_struct_tpacket_auxdata_tp_vlan_tci" "#include <linux/if_packet.h>
+"
+if test "x$ac_cv_member_struct_tpacket_auxdata_tp_vlan_tci" = xyes; then :
+
+$as_echo "#define VLAN_TCI_PRESENT 1" >>confdefs.h
+
+
+fi
+
+
 # Append selected warning levels to CFLAGS before substitution (but after
 # AC_TRY_COMPILE & etc).
 CFLAGS="$CFLAGS $STD_CWARNINGS"
