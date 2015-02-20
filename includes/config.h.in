@@ -185,6 +185,9 @@
 /* Version number of package */
 #undef VERSION
 
+/* tpacket_auxdata.tp_vlan_tci present */
+#undef VLAN_TCI_PRESENT
+
 /* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */
 #if defined AC_APPLE_UNIVERSAL_BUILD
