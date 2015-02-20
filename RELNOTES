@@ -57,6 +57,14 @@ ISC DHCP is open source software maintained by Internet Systems
 Consortium.  This product includes cryptographic software written
 by Eric Young (eay@cryptsoft.com).
 
+			Changes since 4.1.-ESV-R11rc1
+
+- Corrected a compilation error introduced by the fix for ISC-Bugs #37415.
+  The error occurs on Linux variants that do not support VLAN tag information
+  in packet auxiliary data.  The configure script now only enables inclusion
+  of the VLAN tag-based logic if it is supported by the underlying OS.
+  [ISC-Bugs #38677]
+
 			Changes since 4.1.-ESV-R11b1
 
 - Specifying the option, --disable-debug, on the configure script command line
