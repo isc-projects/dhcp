@@ -58,6 +58,7 @@ case $# in
 	### For ease of use, this records the sticky tag of versions
 	### released with each point release.
 	###
+	4.2.8rc2) BINDTAG=v9_9_7 ;;
 	4.2.8rc1) BINDTAG=v9_9_7rc2 ;;
 	4.2.8b1) BINDTAG=v9_9_7rc1 ;;
 	4.2.7b1|4.2.7rc1|4.2.7) BINDTAG=v9_9_5_P1 ;;
