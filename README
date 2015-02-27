@@ -1,8 +1,8 @@
-	      Internet Systems Consortium DHCP Distribution
-			       Version 4.2.8rc2
-			       26 February 2015
+          Internet Systems Consortium DHCP Distribution
+                          Version 4.2.8
+                          05 March 2015
 
-			        README FILE
+                           README FILE
 
 You should read this file carefully before trying to install or use
 the ISC DHCP Distribution.
@@ -99,7 +99,7 @@ directory, it may not have up-to-date information).
 
 			    RELEASE STATUS
 
-This is ISC DHCP 4.2.8rc2, a maintenance release containing patches.
+This is ISC DHCP 4.2.8, a maintenance release containing patches.
 
 In this release, the DHCPv6 server should be fully functional on Linux,
 Solaris, or any BSD.  The DHCPv6 client should be similarly functional
@@ -134,12 +134,12 @@ information.   On Digital Unix, type ``man pfilt''.
 To build the DHCP Distribution, unpack the compressed tar file using
 the tar utility and the gzip command - type something like:
 
-	gunzip dhcp-4.2.8rc2.tar.gz
-	tar xvf dhcp-4.2.8rc2.tar
+	gunzip dhcp-4.2.8.tar.gz
+	tar xvf dhcp-4.2.8.tar
 
 			    CONFIGURING IT
 
-Now, cd to the dhcp-4.2.8rc2 subdirectory that you've just created and
+Now, cd to the dhcp-4.2.8 subdirectory that you've just created and
 configure the source tree by typing:
 
 	./configure
