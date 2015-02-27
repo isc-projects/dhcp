@@ -52,7 +52,11 @@ ISC DHCP is open source software maintained by Internet Systems
 Consortium.  This product includes cryptographic software written
 by Eric Young (eay@cryptsoft.com).
 
-			Changes since 4.3.2c1
+			Changes since 4.3.2rc2
+
+- None
+
+			Changes since 4.3.2rc1
 
 - Corrected a compilation error introduced by the fix for ISC-Bugs #37415.
   The error occurs on Linux variants that do not support VLAN tag information
