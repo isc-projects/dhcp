@@ -43,6 +43,10 @@ ISC DHCP is open source software maintained by Internet Systems
 Consortium.  This product includes cryptographic software written
 by Eric Young (eay@cryptsoft.com).
 
+			Changes since 4.2.8rc2
+
+- None
+
 			Changes since 4.2.8rc1
 
 - Corrected a compilation error introduced by the fix for ISC-Bugs #37415.
