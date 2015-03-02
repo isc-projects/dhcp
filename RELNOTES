@@ -28,8 +28,8 @@ release, which will be addressed in the future:
   not both.  To use both protocols simultaneously, two instances of the
   relevant daemon are required, one with the '-6' command line option.
 
-                       ------ EOL NOTICE -------
 
+-------------------------------- EOL NOTICE -----------------------------------
 Version 4.2.8 is the last regular maintenance release on the ISC DHCP 4.2 train.
 ISC will cease regular maintenance on this train at the end of March, 2015, as
 previously announced.
@@ -50,6 +50,7 @@ provide back ported patches to affected customers where practical.  In addition,
 we will normally also address critical security issues in recently EOLed
 versions.  However, we encourage users to start planning their migration
 to 4.3.
+--------------------------------------------------------------------------------
 
 
 For information on how to install, configure and run this software, as
