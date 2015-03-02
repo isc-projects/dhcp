@@ -125,7 +125,7 @@ by Eric Young (eay@cryptsoft.com).
   have been #ifdeffed for now and will be removed at a future date.
   See site.h for the #define to include them again, but you should
   switch to using the DHCP_R_* versions instead of the ISC_R_* versions.
-  Also ISC_R_MULTIPLE has been removed as it is also deifned in bind.
+  Also ISC_R_MULTIPLE has been removed as it is also defined in bind.
   [ISC-Bugs #37128]
 
 - Added checks in range6 and prefix6 statement parsing to ensure addresses
@@ -212,7 +212,7 @@ by Eric Young (eay@cryptsoft.com).
   DHCP REQUESTs against the server’s id before processing the request.
   Formerly, enabling this behavior was done at compilation time through
   the use of the #define, SERVER_ID_CHECK, which has been removed from site.h
-  The functionality is now only available through the new runtime paramater.
+  The functionality is now only available through the new runtime parameter.
   [ISC-Bugs #37551]
 
 - During startup, when the server encounters a lease whose binding state is
@@ -462,7 +462,7 @@ by Eric Young (eay@cryptsoft.com).
   to perform an fsync() operation on the lease database before reply,
   which improves performance. [ISC-Bugs #22228]
   Updated this patch to support asynchronous DDNS.  If the server is
-  attempting to do DDNS on a lease it should be udpated and written to
+  attempting to do DDNS on a lease it should be updated and written to
   disk even if that wouldn't be necessary due to the thresholding.
   [ISC-Bugs #26311]
 
@@ -727,7 +727,7 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Bugs #19761] Restore address when doing a rebind in DHCPv6
   [ISC-Bugs #19945] Properly close the quote on some arguments.
   [ISC-Bugs #20952] Add 64 bit types to configure.ac
-  [ISC-Bugs #21308] Add "PATH=" to CLIENT_PATH envrionment variable
+  [ISC-Bugs #21308] Add "PATH=" to CLIENT_PATH environment variable
 
 - Update the code to parse dhcpv6 lease files to accept a semi-colon at
   the end of the max-life and preferred-life clauses.  In order to be
@@ -766,7 +766,7 @@ by Eric Young (eay@cryptsoft.com).
   Passing it through to the handlers caused the omshell program to fail
   to connect to the server.  [ISC-Bugs #21839]
 
-- Fix the paranthesis in the code to process configuration statements
+- Fix the parenthesis in the code to process configuration statements
   beginning with "auth".  The previous arrangement caused
   "auto-partner-down" to be processed incorrectly.  [ISC-Bugs #21854]
 
@@ -1192,7 +1192,7 @@ by Eric Young (eay@cryptsoft.com).
 - Tidy up some compiler issues in the debug code.
   [ISC-Bugs #26460]
 
-- Move the dhcpd.conf exmample file to dhcpd.conf.example to avoid
+- Move the dhcpd.conf example file to dhcpd.conf.example to avoid
   overwriting the dhcpd.conf file when installing a new version of
   ISC DHCP.  The user will now need to manual copy and edit the
   dhcpd.conf file as desired.
@@ -1300,7 +1300,7 @@ by Eric Young (eay@cryptsoft.com).
   calculations.  Invalid renew and rebinding times (e.g., greater than the
   determined lease time) are omitted.
 
-- Processing the DHCP to DNS server transactions in an asyncrhonous fashion,
+- Processing the DHCP to DNS server transactions in an asynchronous fashion,
   the DHCP server or client can now continue with its processing while
   awaiting replies from the DNS server.
 
@@ -1577,7 +1577,7 @@ by Eric Young (eay@cryptsoft.com).
 - A warning was added since the DHCPv6 processing software does not yet
   support class statements.
 
-- Compliation warnings on GCC 4.3 relating to bootp source address
+- Compilation warnings on GCC 4.3 relating to bootp source address
   selection were repaired.
 
 - The v6 BSD socket method was updated to use a single UDP BSD socket
@@ -1632,7 +1632,7 @@ by Eric Young (eay@cryptsoft.com).
   allows the client to work in 'captive' network environments, where the
   operator does not want clients to crosstalk directly.
 
-- MINUS tokens should be parseable again.
+- MINUS tokens should be parsable again.
 
 - Multiple (up to "delayed-ack x;" maximum) DHCPv4 packets are now queued and
   released in bursts after single fsync() events when the upper limit is
@@ -1794,7 +1794,7 @@ by Eric Young (eay@cryptsoft.com).
 			Changes since 4.0.0b1
 
 - Use different paths for PID and lease files when running in DHCPv4
-  or DHCPv6 mode, so that servers for both protcols can be run
+  or DHCPv6 mode, so that servers for both protocols can be run
   simultaneously on a single interface.
 
 - Fixed a buffer overflow error which could have allowed a denial
@@ -2031,7 +2031,7 @@ by Eric Young (eay@cryptsoft.com).
 
 			Changes since 3.1.0rc1
 
-- The parse warning that 'deny dyanmic bootp;' must be configured for
+- The parse warning that 'deny dynamic bootp;' must be configured for
   failover protected subnets was removed.
 
 			Changes since 3.1.0b2
@@ -2699,7 +2699,7 @@ by Eric Young (eay@cryptsoft.com).
 - A host byte order problem in tracefiles was repaired.
 
 - Pools configured in DHCPD for failover possessing permission lists that
-  previously were assumed to not include dyanmic bootp clients are now
+  previously were assumed to not include dynamic bootp clients are now
   a little more pessimistic.  The result is, dhcpd will nag you about just
   about most pools that possess a 'allow' statement with no 'deny' that
   would definitely match a dynamic bootp client.
