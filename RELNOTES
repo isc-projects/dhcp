@@ -28,6 +28,30 @@ release, which will be addressed in the future:
   not both.  To use both protocols simultaneously, two instances of the
   relevant daemon are required, one with the '-6' command line option.
 
+                       ------ EOL NOTICE -------
+
+Version 4.2.8 is the last regular maintenance release on the ISC DHCP 4.2 train.
+ISC will cease regular maintenance on this train at the end of March, 2015, as
+previously announced.
+
+This is an exception to our stated policy that we keep every train until two
+subsequent feature releases. We need to reduce the number of supported trains,
+and decided that keeping the 4.1.x train was important to provide options for
+applications in constrained memory environments.  We have extended support
+for 4.1.x until at least December, 2015.
+
+We feel that ISC DHCP 4.3.2 provides a stable platform for most users and we
+are declaring it to be our next Extended Support Version. We plan to support
+the 4.3.x train through 2017.
+
+ISC Technical support will continue to provide commercial support for
+ISC DHCP 4.2.8 through 2015 to provide plenty of time for migration. We will
+provide back ported patches to affected customers where practical.  In addition,
+we will normally also address critical security issues in recently EOLed
+versions.  However, we encourage users to start planning their migration
+to 4.3.
+
+
 For information on how to install, configure and run this software, as
 well as how to find documentation and report bugs, please consult the
 README file.
