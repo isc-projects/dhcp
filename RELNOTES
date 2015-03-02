@@ -209,7 +209,7 @@ by Eric Young (eay@cryptsoft.com).
 - Added the server-id-check parameter to the server configuration.
   This parameter allows run-time control over whether or not a server,
   participating in failover, verifies the dhcp-server-identifier option in
-  DHCP REQUESTs against the server’s id before processing the request.
+  DHCP REQUESTs against the server's id before processing the request.
   Formerly, enabling this behavior was done at compilation time through
   the use of the #define, SERVER_ID_CHECK, which has been removed from site.h
   The functionality is now only available through the new runtime parameter.
