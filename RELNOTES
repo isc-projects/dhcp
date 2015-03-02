@@ -897,7 +897,7 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Bugs #19761] Restore address when doing a rebind in DHCPv6
   [ISC-Bugs #19945] Properly close the quote on some arguments.
   [ISC-Bugs #20952] Add 64 bit types to configure.ac
-  [ISC-Bugs #21308] Add "PATH=" to CLIENT_PATH envrionment variable
+  [ISC-Bugs #21308] Add "PATH=" to CLIENT_PATH environment variable
 
 ! Handle pipe failures more gracefully.  Some OSes pass a SIGPIPE
   signal to a process and will kill the process if the signal isn't
@@ -1196,7 +1196,7 @@ by Eric Young (eay@cryptsoft.com).
 - A warning was added since the DHCPv6 processing software does not yet
   support class statements.
 
-- Compliation warnings on GCC 4.3 relating to bootp source address
+- Compilation warnings on GCC 4.3 relating to bootp source address
   selection were repaired.
 
 - The v6 BSD socket method was updated to use a single UDP BSD socket
@@ -1251,7 +1251,7 @@ by Eric Young (eay@cryptsoft.com).
   allows the client to work in 'captive' network environments, where the
   operator does not want clients to crosstalk directly.
 
-- MINUS tokens should be parseable again.
+- MINUS tokens should be parsable again.
 
 - Multiple (up to "delayed-ack x;" maximum) DHCPv4 packets are now queued and
   released in bursts after single fsync() events when the upper limit is
@@ -1413,7 +1413,7 @@ by Eric Young (eay@cryptsoft.com).
 			Changes since 4.0.0b1
 
 - Use different paths for PID and lease files when running in DHCPv4
-  or DHCPv6 mode, so that servers for both protcols can be run
+  or DHCPv6 mode, so that servers for both protocols can be run
   simultaneously on a single interface.
 
 - Fixed a buffer overflow error which could have allowed a denial
@@ -1650,7 +1650,7 @@ by Eric Young (eay@cryptsoft.com).
 
 			Changes since 3.1.0rc1
 
-- The parse warning that 'deny dyanmic bootp;' must be configured for
+- The parse warning that 'deny dynamic bootp;' must be configured for
   failover protected subnets was removed.
 
 			Changes since 3.1.0b2
@@ -2318,7 +2318,7 @@ by Eric Young (eay@cryptsoft.com).
 - A host byte order problem in tracefiles was repaired.
 
 - Pools configured in DHCPD for failover possessing permission lists that
-  previously were assumed to not include dyanmic bootp clients are now
+  previously were assumed to not include dynamic bootp clients are now
   a little more pessimistic.  The result is, dhcpd will nag you about just
   about most pools that possess a 'allow' statement with no 'deny' that
   would definitely match a dynamic bootp client.
