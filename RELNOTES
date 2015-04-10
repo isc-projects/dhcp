@@ -64,6 +64,8 @@ by Eric Young (eay@cryptsoft.com).
   which the requested lease belongs. In other words, the server will map
   the first IA_XX address found within the client message to a shared-network
   and look for the presence of the unicast option there and then globally.
+  Thanks to Jiri Popelka at Red Hat for this issue and his patch which
+  inspired the fix.
   [ISC-Bugs #21235]
 
 			Changes since 4.3.2rc2
