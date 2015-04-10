@@ -7165,8 +7165,6 @@ get_first_ia_addr_val (struct packet* packet, int addr_type,
 	/* Find the first, non-blank IA_XX value within an D6O_IA_XX option. */
 	for (ia = lookup_option(&dhcpv6_universe, packet->options, addr_type);
              ia != NULL && oc == NULL; ia = ia->next) {
-		u_int32_t iaid;
-
                 if (!get_encapsulated_IA_state(&cli_enc_opt_state,
                                                &cli_enc_opt_data,
                                                packet, ia, addr_opt_offset)) {
@@ -7175,7 +7173,6 @@ get_first_ia_addr_val (struct packet* packet, int addr_type,
                         return (ISC_R_FAILURE);
                 }
 
-                iaid = getULong(cli_enc_opt_data.data);
                 oc = lookup_option(&dhcpv6_universe, cli_enc_opt_state,
                                    addr_opt);
                 if (oc == NULL) {
