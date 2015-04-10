@@ -1442,11 +1442,14 @@ software, and is not meant for user configuration.
 .RS 0.25i
 .PP
 The \fBunicast\fR option is provided by DHCPv6 servers which are
-willing (or prefer) to receive Renew packets from their clients
-by exchanging UDP unicasts with them.  Normally, DHCPv6 clients
-will multicast their Renew messages.  This may be configured on
-the server, and should be configured as an address the server
-is ready to reply to.
+willing (or prefer) to receive Request, Renew, Decline, and Release packets
+from their clients via unicast.  Normally, DHCPv6 clients will multicast
+these messages.  Per RFC 3315, the server will reject a unicast message received
+from a client unless it previously sent (or would have sent) the unicast option
+to that client.  This option may be configured on the server at the global and
+shared network level.  When a unicast message is received, the server will
+check for an applicable definition of the unicast option.  If such an option
+is found the message will be accepted, if not it will be rejected.
 .RE
 .PP
 .B option \fBdhcp6.status-code\fR \fIstatus-code\fR [ \fIstring\fR ] \fB;\fR

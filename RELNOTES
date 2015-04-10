@@ -58,6 +58,20 @@ ISC DHCP is open source software maintained by Internet Systems
 Consortium.  This product includes cryptographic software written
 by Eric Young (eay@cryptsoft.com).
 
+			Changes since 4.1-ESV-R11
+
+- The server will now reject unicast Request, Renew, Decline, and Release
+  messages from a client unless the server would have sent that client the
+  dhcp6.unicast option.  This behavior is in compliance with paragraph 1 in
+  each of the sections 18.2,1, 18.2.3, 18.2.6, and 18.2.7 of RFC 3315. Prior
+  to this, the server would simply accept the messages.  Now, in order for
+  the server to accept such a message, the server configuration must include
+  the dhcp6.unicast option either globally or within the shared network to
+  which the requested lease belongs. In other words, the server will map
+  the first IA_XX address found within the client message to a shared-network
+  and look for the presence of the unicast option there and then globally.
+  [ISC-Bugs #21235]
+
 			Changes since 4.1-ESV-R11rc2
 
 - None

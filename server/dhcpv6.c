@@ -143,6 +143,19 @@ static struct iasubopt *prefix_compare(struct reply_state *reply,
 				       struct iasubopt *beta);
 static void schedule_lease_timeout_reply(struct reply_state *reply);
 
+static void unicast_reject(struct data_string *reply_ret, struct packet *packet,
+			   const struct data_string *client_id,
+			   const struct data_string *server_id);
+
+static isc_boolean_t is_unicast_option_defined(struct packet *packet);
+
+static isc_result_t shared_network_from_requested_addr (struct shared_network
+							**shared,
+							struct packet* packet);
+
+static isc_result_t get_first_ia_addr_val (struct packet* packet, int addr_type,
+					   struct iaddr* iaddr);
+
 /*
  * Schedule lease timeouts for all of the iasubopts in the reply.
  * This is currently used to schedule timeouts for soft leases.
@@ -734,6 +747,13 @@ static const int required_opts_IA_PD[] = {
 	0
 };
 static const int required_opts_STATUS_CODE[] = {
+	D6O_STATUS_CODE,
+	0
+};
+
+static const int unicast_reject_opts[] = {
+	D6O_CLIENTID,
+	D6O_SERVERID,
 	D6O_STATUS_CODE,
 	0
 };
@@ -4297,7 +4317,6 @@ dhcpv6_solicit(struct data_string *reply_ret, struct packet *packet) {
  * Very similar to Solicit handling, except the server DUID is required.
  */
 
-/* TODO: reject unicast messages, unless we set unicast option */
 static void
 dhcpv6_request(struct data_string *reply_ret, struct packet *packet) {
 	struct data_string client_id;
@@ -4310,10 +4329,17 @@ dhcpv6_request(struct data_string *reply_ret, struct packet *packet) {
 		return;
 	}
 
-	/*
-	 * Issue our lease.
-	 */
-	lease_to_client(reply_ret, packet, &client_id, &server_id);
+	/* If the REQUEST arrived via unicast and unicast option isn't set,
+	* reject it per RFC 3315, Sec 18.2.1 */
+	if (packet->unicast == ISC_TRUE &&
+	    is_unicast_option_defined(packet) == ISC_FALSE) {
+		unicast_reject(reply_ret, packet, &client_id, &server_id);
+	} else {
+		/*
+		 * Issue our lease.
+		 */
+		lease_to_client(reply_ret, packet, &client_id, &server_id);
+	}
 
 	/*
 	 * Cleanup.
@@ -4627,7 +4653,6 @@ exit:
  * except for the error code of when addresses don't match.
  */
 
-/* TODO: reject unicast messages, unless we set unicast option */
 static void
 dhcpv6_renew(struct data_string *reply, struct packet *packet) {
 	struct data_string client_id;
@@ -4640,10 +4665,17 @@ dhcpv6_renew(struct data_string *reply, struct packet *packet) {
 		return;
 	}
 
-	/*
-	 * Renew our lease.
-	 */
-	lease_to_client(reply, packet, &client_id, &server_id);
+	/* If the RENEW arrived via unicast and unicast option isn't set,
+	 * reject it per RFC 3315, Sec 18.2.3 */
+	if (packet->unicast == ISC_TRUE &&
+	    is_unicast_option_defined(packet) == ISC_FALSE) {
+		unicast_reject(reply, packet, &client_id, &server_id);
+	} else {
+		/*
+		 * Renew our lease.
+		 */
+		lease_to_client(reply, packet, &client_id, &server_id);
+	}
 
 	/*
 	 * Cleanup.
@@ -5060,7 +5092,6 @@ exit:
  * we still need to be aware of this possibility.
  */
 
-/* TODO: reject unicast messages, unless we set unicast option */
 /* TODO: IA_TA */
 static void
 dhcpv6_decline(struct data_string *reply, struct packet *packet) {
@@ -5074,16 +5105,23 @@ dhcpv6_decline(struct data_string *reply, struct packet *packet) {
 		return;
 	}
 
-	/*
-	 * Undefined for IA_PD.
-	 */
-	delete_option(&dhcpv6_universe, packet->options, D6O_IA_PD);
-
-	/*
-	 * And operate on each IA_NA in this packet.
-	 */
-	iterate_over_ia_na(reply, packet, &client_id, &server_id, "Decline", 
-			   ia_na_match_decline, ia_na_nomatch_decline);
+	/* If the DECLINE arrived via unicast and unicast option isn't set,
+	 * reject it per RFC 3315, Sec 18.2.7 */
+	if (packet->unicast == ISC_TRUE &&
+	is_unicast_option_defined(packet) == ISC_FALSE) {
+		unicast_reject(reply, packet, &client_id, &server_id);
+	} else {
+		/*
+		 * Undefined for IA_PD.
+		 */
+		delete_option(&dhcpv6_universe, packet->options, D6O_IA_PD);
+		/*
+		 * And operate on each IA_NA in this packet.
+		 */
+		iterate_over_ia_na(reply, packet, &client_id, &server_id,
+				   "Decline", ia_na_match_decline,
+				   ia_na_nomatch_decline);
+	}
 
 	data_string_forget(&server_id, MDL);
 	data_string_forget(&client_id, MDL);
@@ -5525,7 +5563,6 @@ exit:
  * Release means a client is done with the leases.
  */
 
-/* TODO: reject unicast messages, unless we set unicast option */
 static void
 dhcpv6_release(struct data_string *reply, struct packet *packet) {
 	struct data_string client_id;
@@ -5538,17 +5575,26 @@ dhcpv6_release(struct data_string *reply, struct packet *packet) {
 		return;
 	}
 
-	/*
-	 * And operate on each IA_NA in this packet.
-	 */
-	iterate_over_ia_na(reply, packet, &client_id, &server_id, "Release", 
-			   ia_na_match_release, ia_na_nomatch_release);
+	/* If the RELEASE arrived via unicast and unicast option isn't set,
+	 * reject it per RFC 3315, Sec 18.2.6 */
+	if (packet->unicast == ISC_TRUE &&
+	is_unicast_option_defined(packet) == ISC_FALSE) {
+		unicast_reject(reply, packet, &client_id, &server_id);
+	} else {
+		/*
+		 * And operate on each IA_NA in this packet.
+		 */
+		iterate_over_ia_na(reply, packet, &client_id, &server_id,
+				   "Release", ia_na_match_release,
+				   ia_na_nomatch_release);
 
-	/*
-	 * And operate on each IA_PD in this packet.
-	 */
-	iterate_over_ia_pd(reply, packet, &client_id, &server_id, "Release",
-			   ia_pd_match_release, ia_pd_nomatch_release);
+		/*
+		 * And operate on each IA_PD in this packet.
+		 */
+		iterate_over_ia_pd(reply, packet, &client_id, &server_id,
+				   "Release", ia_pd_match_release,
+				   ia_pd_nomatch_release);
+	}
 
 	data_string_forget(&server_id, MDL);
 	data_string_forget(&client_id, MDL);
@@ -6135,5 +6181,313 @@ fixed_matches_shared(struct host_decl *host, struct shared_network *shared) {
 	return matched;
 }
 
-#endif /* DHCPv6 */
+/*!
+ *
+ * \brief Constructs a REPLY with status of UseMulticast to a given packet
+ *
+ * Per RFC 3315 Secs 18.2.1,3,6 & 7, when a server rejects a client's
+ * unicast-sent packet, the response must only contain the client id,
+ * server id, and a status code option of 5 (UseMulticast).  This function
+ * constructs such a packet and returns it as a data_string.
+ *
+ * \param reply_ret = data_string which will receive the newly constructed
+ * reply
+ * \param packet = client request which is being rejected
+ * \param client_id = data_string which contains the client id
+ * \param server_id = data_string which which contains the server id
+ *
+ */
+void
+unicast_reject(struct data_string *reply_ret,
+	     struct packet *packet,
+	     const struct data_string *client_id,
+	     const struct data_string *server_id)
+{
+	struct reply_state reply;
+	memset(&reply, 0x0, sizeof(struct reply_state));
 
+	/* Locate the client. */ 
+	if (shared_network_from_packet6(&reply.shared, packet)
+		!= ISC_R_SUCCESS) {
+		log_error("unicast_reject: could not locate client.");
+		return;
+	}
+
+	/* Initialize the reply. */
+	packet_reference(&reply.packet, packet, MDL);
+	data_string_copy(&reply.client_id, client_id, MDL);
+
+	if (start_reply(packet, client_id, server_id, &reply.opt_state,
+			 &reply.buf.reply)) {
+		/* Set the UseMulticast status code. */
+		if (!set_status_code(STATUS_UseMulticast,
+				     "Unicast not allowed by server.",
+				     reply.opt_state)) {
+			log_error("unicast_reject: Unable to set status code.");
+		} else {
+			/* Set write cursor to just past the reply header. */
+			reply.cursor = REPLY_OPTIONS_INDEX;
+			reply.cursor += store_options6(((char *)reply.buf.data
+							+ reply.cursor),
+						       (sizeof(reply.buf)
+						        - reply.cursor),
+						       reply.opt_state,
+						       reply.packet,
+						       unicast_reject_opts,
+						       NULL);
+
+			/* Return our reply to the caller. */
+			reply_ret->len = reply.cursor;
+			reply_ret->buffer = NULL;
+			if (!buffer_allocate(&reply_ret->buffer,
+					     reply.cursor, MDL)) {
+				log_fatal("unicast_reject:"
+					  "No memory to store Reply.");
+			}
+
+			memcpy(reply_ret->buffer->data, reply.buf.data,
+			       reply.cursor);
+			reply_ret->data = reply_ret->buffer->data;
+		}
+
+	}
+
+	/* Cleanup. */
+	if (reply.shared != NULL)
+		shared_network_dereference(&reply.shared, MDL);
+	if (reply.opt_state != NULL)
+		option_state_dereference(&reply.opt_state, MDL);
+	if (reply.packet != NULL)
+		packet_dereference(&reply.packet, MDL);
+	if (reply.client_id.data != NULL)
+		data_string_forget(&reply.client_id, MDL);
+}
+
+/*!
+ *
+ * \brief Checks if the dhcp6.unicast option has been defined
+ *
+ * Scans the option space for the presence of the dhcp6.unicast option. The
+ * function attempts to map the inbound packet to a shared network first
+ * by an ip address specified via an D6O_IA_XX option and if that fails then
+ * by the packet's source information (e.g. relay link, link, or interace).
+ * Once the packet is mapped to a shared network, the function executes all
+ * statements from the network's group outward into a local option cache.
+ * The option cache is then scanned for the presence of unicast option.  If
+ * the packet cannot be mapped to a shared network, the function returns
+ * ISC_FALSE.
+ * \param packet inbound packet from the client
+ *
+ * \return ISC_TRUE if the dhcp6.unicast option is defined, false otherwise.
+ *
+ */
+isc_boolean_t
+is_unicast_option_defined(struct packet *packet) {
+        isc_boolean_t is_defined = ISC_FALSE;
+	struct option_state *opt_state = NULL;
+	struct option_cache *oc = NULL;
+	struct shared_network *shared = NULL;
+
+	if (!option_state_allocate(&opt_state, MDL)) {
+		log_fatal("is_unicast_option_defined:"
+			  "No memory for option state.");
+	}
+
+	/* We try to map the packet to a network first by an IA_XX value.
+ 	 * If that fails, we try by packet source. */
+	if (((shared_network_from_requested_addr(&shared, packet)
+	     != ISC_R_SUCCESS) &&
+	    (shared_network_from_packet6(&shared, packet) != ISC_R_SUCCESS))
+	    || (shared == NULL)) {
+		/* @todo what would this really mean? I think wrong network
+		 * logic will catch it */
+		log_error("is_unicast_option_defined:"
+			  "cannot attribute packet to a network.");
+		return (ISC_FALSE);
+	}
+
+	/* Now that we've mapped it to a network, execute statments to that
+	 * scope, looking for the unicast option. We don't care about the
+	 * value of the option, only whether or not it is defined. */
+	execute_statements_in_scope(NULL, NULL, NULL, NULL, NULL, opt_state,
+				    &global_scope, shared->group, NULL);
+
+	oc = lookup_option(&dhcpv6_universe, opt_state, D6O_UNICAST);
+	is_defined = (oc != NULL ? ISC_TRUE : ISC_FALSE);
+	log_debug("is_unicast_option_defined: option found : %d", is_defined);
+
+	if (shared != NULL) {
+		shared_network_dereference(&shared, MDL);
+	}
+
+	if (opt_state != NULL) {
+		option_state_dereference(&opt_state, MDL);
+	}
+
+	return (is_defined);
+}
+
+/*!
+ *
+ * \brief Maps a packet to a shared network based on the requested IP address
+ *
+ * The function attempts to find a subnet that matches the first requested IP
+ * address contained within the given packet.  Note that it looks first for
+ * D6O_IA_NAs, then D6O_IA_PDs and lastly D6O_IA_TAs.  If a matching network is
+ * found, a reference to it is returned in the parameter, shared.
+ *
+ * \param shared shared_network pointer which will receive the matching network
+ * \param packet inbound packet from the client
+ *
+ * \return ISC_R_SUCCESS if the packet can be mapped to a shared_network.
+ *
+ */
+static isc_result_t
+shared_network_from_requested_addr (struct shared_network **shared,
+				    struct packet* packet) {
+	struct iaddr iaddr;
+	struct subnet* subnet = NULL;
+	isc_result_t status = ISC_R_FAILURE;
+
+	/* Try to match first IA_ address or prefix we find to a subnet. In
+ 	 * theory all  IA_ values in a given request are supposed to be in the
+ 	 * same subnet so we only need to try one right? */
+	if ((get_first_ia_addr_val(packet, D6O_IA_NA, &iaddr) != ISC_R_SUCCESS)
+	     && (get_first_ia_addr_val(packet, D6O_IA_PD, &iaddr)
+		 != ISC_R_SUCCESS)
+	     && (get_first_ia_addr_val(packet, D6O_IA_TA, &iaddr)
+		 != ISC_R_SUCCESS))  {
+		/* we found nothing to match against */
+		log_debug("share_network_from_request_addr: nothing to match");
+		return (ISC_R_FAILURE);
+	}
+
+	if (!find_subnet(&subnet, iaddr, MDL)) {
+		log_debug("shared_network_from_requested_addr:"
+			  "No subnet found for addr %s.", piaddr(iaddr));
+	} else {
+		status = shared_network_reference(shared,
+                                                  subnet->shared_network, MDL);
+		subnet_dereference(&subnet, MDL);
+		log_debug("shared_network_from_requested_addr:"
+			  " found shared network %s for address %s.",
+			  ((*shared)->name ? (*shared)->name : "unnamed"),
+			  piaddr(iaddr));
+		return (status);
+	}
+
+	return (ISC_R_FAILURE);
+}
+
+/*!
+ *
+ * \brief Retrieves the first IP address from a given packet of a given type
+ *
+ * Search a packet for options of a given type (D6O_IA_AN, D6O_IA_PD, or
+ * D6O_IA_TA) for the first non-blank IA_XX value and return its IP address
+ * component.
+ *
+ * \param packet packet received from the client
+ * \param addr_type the address option type (D6O_IA_NA , D6O_IA_PD, or
+ * D6O_IP_TA) to look for within the packet.
+ * \param iaddr pointer to the iaddr structure which will receive the extracted
+ * address.
+ *
+ * \return ISC_R_SUCCESS if an address was succesfully extracted, ISC_R_FALURE
+ * otherwise.
+ *
+ */
+static isc_result_t
+get_first_ia_addr_val (struct packet* packet, int addr_type,
+		       struct iaddr* iaddr)  {
+        struct option_cache *ia;
+        struct option_cache *oc = NULL;
+        struct data_string cli_enc_opt_data;
+        struct option_state *cli_enc_opt_state;
+	int addr_opt_offset;
+	int addr_opt;
+	int addr_opt_data_len;
+	int ip_addr_offset;
+
+	isc_result_t status = ISC_R_FAILURE;
+	memset(iaddr, 0, sizeof(struct iaddr));
+
+	/* Set up address type specifics */
+	switch (addr_type) {
+	case D6O_IA_NA:
+		addr_opt_offset = IA_NA_OFFSET;
+		addr_opt = D6O_IAADDR;
+		addr_opt_data_len = 24;
+		ip_addr_offset = 0;
+		break;
+	case D6O_IA_TA:
+		addr_opt_offset = IA_TA_OFFSET;
+		addr_opt = D6O_IAADDR;
+		addr_opt_data_len = 24;
+		ip_addr_offset = 0;
+		break;
+	case D6O_IA_PD:
+		addr_opt_offset = IA_PD_OFFSET;
+		addr_opt = D6O_IAPREFIX;
+		addr_opt_data_len = 25;
+		ip_addr_offset = 9;
+		break;
+	default:
+		/* shouldn't be here */
+		log_error ("get_first_ia_addr_val: invalid opt type %d",
+			   addr_type);
+		return (ISC_R_FAILURE);
+	}
+
+	/* Find the first, non-blank IA_XX value within an D6O_IA_XX option. */
+	for (ia = lookup_option(&dhcpv6_universe, packet->options, addr_type);
+             ia != NULL && oc == NULL; ia = ia->next) {
+                if (!get_encapsulated_IA_state(&cli_enc_opt_state,
+                                               &cli_enc_opt_data,
+                                               packet, ia, addr_opt_offset)) {
+			log_debug ("get_first_ia_addr_val:"
+				   " couldn't unroll enclosing option");
+                        return (ISC_R_FAILURE);
+                }
+
+                oc = lookup_option(&dhcpv6_universe, cli_enc_opt_state,
+                                   addr_opt);
+                if (oc == NULL) {
+			/* no address given for this IA, ignore */
+                	option_state_dereference(&cli_enc_opt_state, MDL);
+                	data_string_forget(&cli_enc_opt_data, MDL);
+		}
+	}
+
+	/* If we found a non-blank IA_XX then extract its ip address. */
+	if (oc != NULL) {
+		struct data_string iaddr_str;
+
+		memset(&iaddr_str, 0, sizeof(iaddr_str));
+		if (!evaluate_option_cache(&iaddr_str, packet, NULL, NULL,
+				   	  packet->options, NULL, &global_scope,
+				    	  oc, MDL)) {
+			log_error("get_first_ia_addr_val: "
+			  	  "error evaluating IA_XX option.");
+		} else {
+			if (iaddr_str.len != addr_opt_data_len) {
+				log_error("shared_network_from_requested_addr:"
+                                  	  " invalid length %d, expected %d",
+				  	  iaddr_str.len, addr_opt_data_len);
+			} else {
+				iaddr->len = 16;
+				memcpy (iaddr->iabuf,
+					iaddr_str.data + ip_addr_offset, 16);
+				status = ISC_R_SUCCESS;
+			}
+			data_string_forget(&iaddr_str, MDL);
+		}
+
+		option_state_dereference(&cli_enc_opt_state, MDL);
+		data_string_forget(&cli_enc_opt_data, MDL);
+	}
+
+	return (status);
+}
+
+#endif /* DHCPv6 */
