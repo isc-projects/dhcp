@@ -21,18 +21,18 @@
 #ifdef DHCPv6
 
 /*
- * We use print_hex_1() to output DUID values. We could actually output 
- * the DUID with more information... MAC address if using type 1 or 3, 
- * and so on. However, RFC 3315 contains Grave Warnings against actually 
+ * We use print_hex_1() to output DUID values. We could actually output
+ * the DUID with more information... MAC address if using type 1 or 3,
+ * and so on. However, RFC 3315 contains Grave Warnings against actually
  * attempting to understand a DUID.
  */
 
-/* 
+/*
  * TODO: gettext() or other method of localization for the messages
  *       for status codes (and probably for log formats eventually)
  * TODO: refactoring (simplify, simplify, simplify)
- * TODO: support multiple shared_networks on each interface (this 
- *       will allow the server to issue multiple IPv6 addresses to 
+ * TODO: support multiple shared_networks on each interface (this
+ *       will allow the server to issue multiple IPv6 addresses to
  *       a single interface)
  */
 
@@ -93,7 +93,7 @@ struct reply_state {
 	} buf;
 };
 
-/* 
+/*
  * Prototypes local to this file.
  */
 static int get_encapsulated_IA_state(struct option_state **enc_opt_state,
@@ -154,6 +154,17 @@ static int eval_prefix_mode(int thislen, int preflen, int prefix_mode);
 static isc_result_t pick_v6_prefix_helper(struct reply_state *reply,
 					  int prefix_mode);
 
+static void unicast_reject(struct data_string *reply_ret, struct packet *packet,
+		  const struct data_string *client_id,
+		  const struct data_string *server_id);
+
+static isc_boolean_t is_unicast_option_defined(struct packet *packet);
+static isc_result_t shared_network_from_requested_addr (struct shared_network
+							**shared,
+							struct packet* packet);
+static isc_result_t get_first_ia_addr_val (struct packet* packet, int addr_type,
+					   struct iaddr* iaddr);
+
 /*
  * Schedule lease timeouts for all of the iasubopts in the reply.
  * This is currently used to schedule timeouts for soft leases.
@@ -194,7 +205,7 @@ duid_time(time_t when) {
 }
 
 
-/* 
+/*
  * Server DUID.
  *
  * This must remain the same for the lifetime of this server, because
@@ -202,9 +213,9 @@ duid_time(time_t when) {
  *
  * We pick the server DUID like this:
  *
- * 1. Check dhcpd.conf - any value the administrator has configured 
+ * 1. Check dhcpd.conf - any value the administrator has configured
  *    overrides any possible values.
- * 2. Check the leases.txt - we want to use the previous value if 
+ * 2. Check the leases.txt - we want to use the previous value if
  *    possible.
  * 3. Check if dhcpd.conf specifies a type of server DUID to use,
  *    and generate that type.
@@ -247,7 +258,7 @@ set_server_duid(struct data_string *new_duid) {
 
 /*
  * Set the server DUID based on the D6O_SERVERID option. This handles
- * the case where the administrator explicitly put it in the dhcpd.conf 
+ * the case where the administrator explicitly put it in the dhcpd.conf
  * file.
  */
 isc_result_t
@@ -289,17 +300,17 @@ set_server_duid_from_option(void) {
 
 /*
  * DUID layout, as defined in RFC 3315, section 9.
- * 
+ *
  * We support type 1 (hardware address plus time) and type 3 (hardware
  * address).
  *
- * We can support type 2 for specific vendors in the future, if they 
+ * We can support type 2 for specific vendors in the future, if they
  * publish the specification. And of course there may be additional
  * types later.
  */
 static int server_duid_type = DUID_LLT;
 
-/* 
+/*
  * Set the DUID type.
  */
 void
@@ -308,7 +319,7 @@ set_server_duid_type(int type) {
 }
 
 /*
- * Generate a new server DUID. This is done if there was no DUID in 
+ * Generate a new server DUID. This is done if there was no DUID in
  * the leases.txt or in the dhcpd.conf file.
  */
 isc_result_t
@@ -496,7 +507,7 @@ exit:
 }
 
 /*
- * Response validation, defined in RFC 3315, sections 15.4, 15.6, 15.8, 
+ * Response validation, defined in RFC 3315, sections 15.4, 15.6, 15.8,
  * 15.9 (slightly different wording, but same meaning):
  *
  *   Servers MUST discard any received Request message that meet any of
@@ -609,11 +620,11 @@ valid_client_info_req(struct packet *packet, struct data_string *server_id) {
 	memset(&client_id, 0, sizeof(client_id));
 
 	/*
-	 * Make a string that we can print out to give more 
+	 * Make a string that we can print out to give more
 	 * information about the client if we need to.
 	 *
-	 * By RFC 3315, Section 18.1.5 clients SHOULD have a 
-	 * client-id on an Information-request packet, but it 
+	 * By RFC 3315, Section 18.1.5 clients SHOULD have a
+	 * client-id on an Information-request packet, but it
 	 * is not strictly necessary.
 	 */
 	if (get_client_id(packet, &client_id) == ISC_R_SUCCESS) {
@@ -699,7 +710,7 @@ exit:
 	return ret_val;
 }
 
-/* 
+/*
  * Options that we want to send, in addition to what was requested
  * via the ORO.
  */
@@ -742,6 +753,14 @@ static const int required_opts_STATUS_CODE[] = {
 	0
 };
 
+static const int unicast_reject_opts[] = {
+	D6O_CLIENTID,
+	D6O_SERVERID,
+	D6O_STATUS_CODE,
+	0
+};
+
+
 /*
  * Extracts from packet contents an IA_* option, storing the IA structure
  * in its entirety in enc_opt_data, and storing any decoded DHCPv6 options
@@ -755,7 +774,7 @@ get_encapsulated_IA_state(struct option_state **enc_opt_state,
 			  struct option_cache *oc,
 			  int offset)
 {
-	/* 
+	/*
 	 * Get the raw data for the encapsulated options.
 	 */
 	memset(enc_opt_data, 0, sizeof(*enc_opt_data));
@@ -773,7 +792,7 @@ get_encapsulated_IA_state(struct option_state **enc_opt_state,
 	}
 
 	/*
-	 * Now create the option state structure, and pass it to the 
+	 * Now create the option state structure, and pass it to the
 	 * function that parses options.
 	 */
 	*enc_opt_state = NULL;
@@ -783,7 +802,7 @@ get_encapsulated_IA_state(struct option_state **enc_opt_state,
 		return 0;
 	}
 	if (!parse_option_buffer(*enc_opt_state,
-				 enc_opt_data->data + offset, 
+				 enc_opt_data->data + offset,
 				 enc_opt_data->len - offset,
 				 &dhcpv6_universe)) {
 		log_error("get_encapsulated_IA_state: error parsing options.");
@@ -809,10 +828,10 @@ set_status_code(u_int16_t status_code, const char *status_message,
 	}
 	d.data = d.buffer->data;
 	putUShort(d.buffer->data, status_code);
-	memcpy(d.buffer->data + sizeof(status_code), 
+	memcpy(d.buffer->data + sizeof(status_code),
 	       status_message, d.len - sizeof(status_code));
-	if (!save_option_buffer(&dhcpv6_universe, opt_state, 
-				d.buffer, (unsigned char *)d.data, d.len, 
+	if (!save_option_buffer(&dhcpv6_universe, opt_state,
+				d.buffer, (unsigned char *)d.data, d.len,
 				D6O_STATUS_CODE, 0)) {
 		log_error("set_status_code: error saving status code.");
 		ret_val = 0;
@@ -930,7 +949,7 @@ void check_pool6_threshold(struct reply_state *reply,
  */
 static int
 start_reply(struct packet *packet,
-	    const struct data_string *client_id, 
+	    const struct data_string *client_id,
 	    const struct data_string *server_id,
 	    struct option_state **opt_state,
 	    struct dhcpv6_packet *reply)
@@ -993,21 +1012,21 @@ start_reply(struct packet *packet,
 		}
 	}
 
-	/* 
+	/*
 	 * Use the client's transaction identifier for the reply.
 	 */
-	memcpy(reply->transaction_id, packet->dhcpv6_transaction_id, 
+	memcpy(reply->transaction_id, packet->dhcpv6_transaction_id,
 	       sizeof(reply->transaction_id));
 
-	/* 
+	/*
 	 * RFC 3315, section 18.2 says we need server identifier and
 	 * client identifier.
 	 *
 	 * If the server ID is defined via the configuration file, then
-	 * it will already be present in the option state at this point, 
+	 * it will already be present in the option state at this point,
 	 * so we don't need to set it.
 	 *
-	 * If we have a server ID passed in from the caller, 
+	 * If we have a server ID passed in from the caller,
 	 * use that, otherwise use the global DUID.
 	 */
 	oc = lookup_option(&dhcpv6_universe, *opt_state, D6O_SERVERID);
@@ -1019,7 +1038,7 @@ start_reply(struct packet *packet,
 			server_id_data = server_id->data;
 			server_id_len = server_id->len;
 		}
-		if (!save_option_buffer(&dhcpv6_universe, *opt_state, 
+		if (!save_option_buffer(&dhcpv6_universe, *opt_state,
 					NULL, (unsigned char *)server_id_data,
 					server_id_len, D6O_SERVERID, 0)) {
 				log_error("start_reply: "
@@ -1029,10 +1048,10 @@ start_reply(struct packet *packet,
 	}
 
 	if (client_id->buffer != NULL) {
-		if (!save_option_buffer(&dhcpv6_universe, *opt_state, 
-					client_id->buffer, 
-					(unsigned char *)client_id->data, 
-					client_id->len, 
+		if (!save_option_buffer(&dhcpv6_universe, *opt_state,
+					client_id->buffer,
+					(unsigned char *)client_id->data,
+					client_id->len,
 					D6O_CLIENTID, 0)) {
 			log_error("start_reply: error saving "
 				  "client identifier.");
@@ -1051,7 +1070,7 @@ start_reply(struct packet *packet,
 			   D6O_RECONF_ACCEPT);
 	if (oc != NULL) {
 		if (!save_option_buffer(&dhcpv6_universe, *opt_state,
-					NULL, (unsigned char *)"", 0, 
+					NULL, (unsigned char *)"", 0,
 					D6O_RECONF_ACCEPT, 0)) {
 			log_error("start_reply: "
 				  "error saving RECONF_ACCEPT option.");
@@ -1136,7 +1155,7 @@ try_client_v6_address(struct iasubopt **addr,
  *                     hash the address.  After a number of failures we
  *                     conclude the pool is basically full.
  */
-static isc_result_t 
+static isc_result_t
 pick_v6_address(struct reply_state *reply)
 {
 	struct ipv6_pool *p = NULL;
@@ -1175,13 +1194,13 @@ pick_v6_address(struct reply_state *reply)
 			  "no IPv6 pools on this shared network");
 		return ISC_R_NORESOURCES;
 	}
-		
+
 	/*
 	 * We have at least one pool that could provide an address
 	 * Now we walk through the ponds and pools again and check
 	 * to see if the client is permitted and if an address is
 	 * available
-	 * 
+	 *
 	 * Within a given pond we start looking at the last pool we
 	 * allocated from, unless it had a collision trying to allocate
 	 * an address. This will tend to move us into less-filled pools.
@@ -1579,7 +1598,7 @@ eval_prefix_mode(int len, int preflen, int prefix_mode) {
 
 static void
 lease_to_client(struct data_string *reply_ret,
-		struct packet *packet, 
+		struct packet *packet,
 		const struct data_string *client_id,
 		const struct data_string *server_id)
 {
@@ -1595,7 +1614,7 @@ lease_to_client(struct data_string *reply_ret,
 					packet) != ISC_R_SUCCESS)
 		goto exit;
 
-	/* 
+	/*
 	 * Initialize the reply.
 	 */
 	packet_reference(&reply.packet, packet, MDL);
@@ -1613,8 +1632,8 @@ lease_to_client(struct data_string *reply_ret,
 	 */
 	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_ORO);
 	if (oc != NULL) {
-		if (!evaluate_option_cache(&packet_oro, packet, 
-					   NULL, NULL, 
+		if (!evaluate_option_cache(&packet_oro, packet,
+					   NULL, NULL,
 					   packet->options, NULL,
 					   &global_scope, oc, MDL)) {
 			log_error("lease_to_client: error evaluating ORO.");
@@ -1622,7 +1641,7 @@ lease_to_client(struct data_string *reply_ret,
 		}
 	}
 
-	/* 
+	/*
 	 * Find a host record that matches from the packet, if any, and is
 	 * valid for the shared network the client is on.
 	 */
@@ -1835,8 +1854,8 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 	packet_ia = NULL;
 	memset(&ia_data, 0, sizeof(ia_data));
 	memset(&data, 0, sizeof(data));
-	/* 
-	 * Note that find_client_address() may set reply->lease. 
+	/*
+	 * Note that find_client_address() may set reply->lease.
 	 */
 
 	/* Make sure there is at least room for the header. */
@@ -1860,7 +1879,7 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 	reply->rebind = getULong(ia_data.data + 8);
 
 	/* Create an IA_NA structure. */
-	if (ia_allocate(&reply->ia, iaid, (char *)reply->client_id.data, 
+	if (ia_allocate(&reply->ia, iaid, (char *)reply->client_id.data,
 			reply->client_id.len, MDL) != ISC_R_SUCCESS) {
 		log_error("reply_process_ia_na: no memory for ia.");
 		status = ISC_R_NOMEMORY;
@@ -1941,7 +1960,7 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 	putULong(reply->buf.data + reply->cursor, reply->rebind);
 	reply->cursor += 4;
 
-	/* 
+	/*
 	 * For each address in this IA_NA, decide what to do about it.
 	 *
 	 * Guidelines:
@@ -2131,7 +2150,7 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 
 		if ((reply->buf.reply.msg_type == DHCPV6_REPLY) &&
 		    (reply->on_star.on_commit != NULL)) {
-			execute_statements(NULL, reply->packet, NULL, NULL, 
+			execute_statements(NULL, reply->packet, NULL, NULL,
 					   reply->packet->options,
 					   reply->opt_state, NULL,
 					   reply->on_star.on_commit, NULL);
@@ -2192,7 +2211,7 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 			/* If we have anything to do on commit do it now */
 			if (tmp->on_star.on_commit != NULL) {
 				execute_statements(NULL, reply->packet,
-						   NULL, NULL, 
+						   NULL, NULL,
 						   reply->packet->options,
 						   reply->opt_state,
 						   &tmp->scope,
@@ -2309,7 +2328,7 @@ reply_process_addr(struct reply_state *reply, struct option_cache *addr) {
 	}
 
 	/* Extract this IAADDR option. */
-	if (!evaluate_option_cache(&iaaddr, reply->packet, NULL, NULL, 
+	if (!evaluate_option_cache(&iaaddr, reply->packet, NULL, NULL,
 				   reply->packet->options, NULL, &global_scope,
 				   addr, MDL) ||
 	    (iaaddr.len < IAADDR_OFFSET)) {
@@ -2330,7 +2349,7 @@ reply_process_addr(struct reply_state *reply, struct option_cache *addr) {
 	    (reply->client_prefer > pref_life))
 		reply->client_prefer = pref_life;
 
-	/* 
+	/*
 	 * Clients may choose to send :: as an address, with the idea to give
 	 * hints about preferred-lifetime or valid-lifetime.
 	 */
@@ -2441,7 +2460,7 @@ reply_process_addr(struct reply_state *reply, struct option_cache *addr) {
 			 * range, continue as normal.  If any other error was
 			 * found, error out.
 			 */
-			if ((status != ISC_R_SUCCESS) && 
+			if ((status != ISC_R_SUCCESS) &&
 			    (status != ISC_R_ADDRINUSE) &&
 			    (status != ISC_R_ADDRNOTAVAIL))
 				goto cleanup;
@@ -2717,7 +2736,7 @@ reply_process_ia_ta(struct reply_state *reply, struct option_cache *ia) {
 	putULong(reply->buf.data + reply->cursor, iaid);
 	reply->cursor += 4;
 
-	/* 
+	/*
 	 * Deal with an IAADDR for lifetimes.
 	 * For all or none, process IAADDRs as hints.
 	 */
@@ -2912,7 +2931,7 @@ reply_process_ia_ta(struct reply_state *reply, struct option_cache *ia) {
 			/* If we have anything to do on commit do it now */
 			if (tmp->on_star.on_commit != NULL) {
 				execute_statements(NULL, reply->packet,
-						   NULL, NULL, 
+						   NULL, NULL,
 						   reply->packet->options,
 						   reply->opt_state,
 						   &tmp->scope,
@@ -3205,7 +3224,7 @@ reply_process_try_addr(struct reply_state *reply, struct iaddr *addr) {
 	 * Now we walk through the ponds and pools again and check
 	 * to see if the client is permitted and if an address is
 	 * available
-	 * 
+	 *
 	 * Within a given pond we start looking at the last pool we
 	 * allocated from, unless it had a collision trying to allocate
 	 * an address. This will tend to move us into less-filled pools.
@@ -3526,7 +3545,7 @@ reply_process_is_addressed(struct reply_state *reply,
 					    reply->packet->classes[i - 1]->group,
 					    group, NULL);
 	}
-	  
+
 	/*
 	 * And bring in host record configuration, if any, but not to overlap
 	 * the previous group or its common enclosers.
@@ -3602,7 +3621,7 @@ lease_compare(struct iasubopt *alpha, struct iasubopt *beta) {
 			/* Choose the lease with the longest lifetime (most
 			 * likely the most recently allocated).
 			 */
-			if (alpha->hard_lifetime_end_time < 
+			if (alpha->hard_lifetime_end_time <
 			    beta->hard_lifetime_end_time)
 				return beta;
 			else
@@ -3686,7 +3705,7 @@ reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia) {
 	packet_ia = NULL;
 	memset(&ia_data, 0, sizeof(ia_data));
 	memset(&data, 0, sizeof(data));
-	/* 
+	/*
 	 * Note that find_client_prefix() may set reply->lease.
 	 */
 
@@ -3711,7 +3730,7 @@ reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia) {
 	reply->rebind = getULong(ia_data.data + 8);
 
 	/* Create an IA_PD structure. */
-	if (ia_allocate(&reply->ia, iaid, (char *)reply->client_id.data, 
+	if (ia_allocate(&reply->ia, iaid, (char *)reply->client_id.data,
 			reply->client_id.len, MDL) != ISC_R_SUCCESS) {
 		log_error("reply_process_ia_pd: no memory for ia.");
 		status = ISC_R_NOMEMORY;
@@ -3772,7 +3791,7 @@ reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia) {
 	putULong(reply->buf.data + reply->cursor, reply->rebind);
 	reply->cursor += 4;
 
-	/* 
+	/*
 	 * For each prefix in this IA_PD, decide what to do about it.
 	 */
 	oc = lookup_option(&dhcpv6_universe, packet_ia, D6O_IAPREFIX);
@@ -3996,7 +4015,7 @@ reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia) {
 			/* If we have anything to do on commit do it now */
 			if (tmp->on_star.on_commit != NULL) {
 				execute_statements(NULL, reply->packet,
-						   NULL, NULL, 
+						   NULL, NULL,
 						   reply->packet->options,
 						   reply->opt_state,
 						   &tmp->scope,
@@ -4091,7 +4110,7 @@ reply_process_prefix(struct reply_state *reply, struct option_cache *pref) {
 	}
 
 	/* Extract this IAPREFIX option. */
-	if (!evaluate_option_cache(&iapref, reply->packet, NULL, NULL, 
+	if (!evaluate_option_cache(&iapref, reply->packet, NULL, NULL,
 				   reply->packet->options, NULL, &global_scope,
 				   pref, MDL) ||
 	    (iapref.len < IAPREFIX_OFFSET)) {
@@ -4115,7 +4134,7 @@ reply_process_prefix(struct reply_state *reply, struct option_cache *pref) {
 	    (reply->client_prefer > pref_life))
 		reply->client_prefer = pref_life;
 
-	/* 
+	/*
 	 * Clients may choose to send ::/0 as a prefix, with the idea to give
 	 * hints about preferred-lifetime or valid-lifetime.
 	 */
@@ -4401,7 +4420,7 @@ reply_process_try_prefix(struct reply_state *reply,
 	 * Now we walk through the ponds and pools again and check
 	 * to see if the client is permitted and if an prefix is
 	 * available
-	 * 
+	 *
 	 */
 
 	for (pond = reply->shared->ipv6_pond; pond != NULL; pond = pond->next) {
@@ -4418,7 +4437,7 @@ reply_process_try_prefix(struct reply_state *reply,
 
 			status = try_client_v6_prefix(&reply->lease, pool,
 						      &data_pref);
-			/* If we found it in this pool (either in use or available), 
+			/* If we found it in this pool (either in use or available),
 			   there is no need to look further. */
 			if ( (status == ISC_R_SUCCESS) || (status == ISC_R_ADDRINUSE) )
 				break;
@@ -4616,7 +4635,7 @@ reply_process_is_prefixed(struct reply_state *reply,
 					    reply->packet->classes[i - 1]->group,
 					    group, on_star);
 	}
-	  
+
 	/*
 	 * If there is a host record, over-ride with values configured there,
 	 * without re-evaluating configuration from the previously executed
@@ -4728,7 +4747,7 @@ reply_process_is_prefixed(struct reply_state *reply,
 					    reply->packet->classes[i - 1]->group,
 					    group, NULL);
 	}
-	  
+
 	/*
 	 * And bring in host record configuration, if any, but not to overlap
 	 * the previous group or its common enclosers.
@@ -4816,7 +4835,7 @@ prefix_compare(struct reply_state *reply,
 			/* Choose the prefix with the longest lifetime (most
 			 * likely the most recently allocated).
 			 */
-			if (alpha->hard_lifetime_end_time < 
+			if (alpha->hard_lifetime_end_time <
 			    beta->hard_lifetime_end_time)
 				return beta;
 			else
@@ -4887,7 +4906,7 @@ prefix_compare(struct reply_state *reply,
 /*
  * Solicit is how a client starts requesting addresses.
  *
- * If the client asks for rapid commit, and we support it, we will 
+ * If the client asks for rapid commit, and we support it, we will
  * allocate the addresses and reply.
  *
  * Otherwise we will send an advertise message.
@@ -4897,7 +4916,7 @@ static void
 dhcpv6_solicit(struct data_string *reply_ret, struct packet *packet) {
 	struct data_string client_id;
 
-	/* 
+	/*
 	 * Validate our input.
 	 */
 	if (!valid_client_msg(packet, &client_id)) {
@@ -4918,7 +4937,6 @@ dhcpv6_solicit(struct data_string *reply_ret, struct packet *packet) {
  * Very similar to Solicit handling, except the server DUID is required.
  */
 
-/* TODO: reject unicast messages, unless we set unicast option */
 static void
 dhcpv6_request(struct data_string *reply_ret, struct packet *packet) {
 	struct data_string client_id;
@@ -4931,10 +4949,17 @@ dhcpv6_request(struct data_string *reply_ret, struct packet *packet) {
 		return;
 	}
 
-	/*
-	 * Issue our lease.
-	 */
-	lease_to_client(reply_ret, packet, &client_id, &server_id);
+	/* If the REQUEST arrived via unicast and unicast option isn't set,
+ 	 * reject it per RFC 3315, Sec 18.2.1 */
+	if (packet->unicast == ISC_TRUE &&
+	    is_unicast_option_defined(packet) == ISC_FALSE) {
+		unicast_reject(reply_ret, packet, &client_id, &server_id);
+	} else {
+		/*
+		 * Issue our lease.
+		 */
+		lease_to_client(reply_ret, packet, &client_id, &server_id);
+	}
 
 	/*
 	 * Cleanup.
@@ -5013,7 +5038,7 @@ shared_network_from_packet6(struct shared_network **shared,
 		 * address and no interface we don't know where to get the
 		 * pool from log an error and return an error.
 		 */
-		log_error("No interface and no link address " 
+		log_error("No interface and no link address "
 			  "can't determine pool");
 		status = DHCP_R_INVALIDARG;
 	}
@@ -5022,7 +5047,7 @@ shared_network_from_packet6(struct shared_network **shared,
 }
 
 /*
- * When a client thinks it might be on a new link, it sends a 
+ * When a client thinks it might be on a new link, it sends a
  * Confirm message.
  *
  * From RFC3315 section 18.2.2:
@@ -5053,7 +5078,7 @@ dhcpv6_confirm(struct data_string *reply_ret, struct packet *packet) {
 	struct dhcpv6_packet *reply = (struct dhcpv6_packet *)reply_data;
 	int reply_ofs = (int)(offsetof(struct dhcpv6_packet, options));
 
-	/* 
+	/*
 	 * Basic client message validation.
 	 */
 	memset(&client_id, 0, sizeof(client_id));
@@ -5074,7 +5099,7 @@ dhcpv6_confirm(struct data_string *reply_ret, struct packet *packet) {
 	 */
 	delete_option(&dhcpv6_universe, packet->options, D6O_IA_PD);
 
-	/* 
+	/*
 	 * Bit of variable initialization.
 	 */
 	opt_state = cli_enc_opt_state = NULL;
@@ -5180,39 +5205,39 @@ dhcpv6_confirm(struct data_string *reply_ret, struct packet *packet) {
 	if (!has_addrs)
 		goto exit;
 
-	/* 
+	/*
 	 * Set up reply.
 	 */
 	if (!start_reply(packet, &client_id, NULL, &opt_state, reply)) {
 		goto exit;
 	}
 
-	/* 
+	/*
 	 * Set our status.
 	 */
 	if (inappropriate) {
-		if (!set_status_code(STATUS_NotOnLink, 
+		if (!set_status_code(STATUS_NotOnLink,
 				     "Some of the addresses are not on link.",
 				     opt_state)) {
 			goto exit;
 		}
 	} else {
-		if (!set_status_code(STATUS_Success, 
+		if (!set_status_code(STATUS_Success,
 				     "All addresses still on link.",
 				     opt_state)) {
 			goto exit;
 		}
 	}
 
-	/* 
+	/*
 	 * Only one option: add it.
 	 */
 	reply_ofs += store_options6(reply_data+reply_ofs,
-				    sizeof(reply_data)-reply_ofs, 
+				    sizeof(reply_data)-reply_ofs,
 				    opt_state, packet,
 				    required_opts, &packet_oro);
 
-	/* 
+	/*
 	 * Return our reply to the caller.
 	 */
 	reply_ret->len = reply_ofs;
@@ -5248,23 +5273,29 @@ exit:
  * except for the error code of when addresses don't match.
  */
 
-/* TODO: reject unicast messages, unless we set unicast option */
 static void
 dhcpv6_renew(struct data_string *reply, struct packet *packet) {
 	struct data_string client_id;
 	struct data_string server_id;
 
-	/* 
+	/*
 	 * Validate the request.
 	 */
 	if (!valid_client_resp(packet, &client_id, &server_id)) {
 		return;
 	}
 
-	/*
-	 * Renew our lease.
-	 */
-	lease_to_client(reply, packet, &client_id, &server_id);
+	/* If the RENEW arrived via unicast and unicast option isn't set,
+	 * reject it per RFC 3315, Sec 18.2.3 */
+	if (packet->unicast == ISC_TRUE &&
+	    is_unicast_option_defined(packet) == ISC_FALSE) {
+		unicast_reject(reply, packet, &client_id, &server_id);
+	} else {
+		/*
+		 * Renew our lease.
+		 */
+		lease_to_client(reply, packet, &client_id, &server_id);
+	}
 
 	/*
 	 * Cleanup.
@@ -5303,7 +5334,7 @@ ia_na_match_decline(const struct data_string *client_id,
 	log_error("Client %s reports address %s is "
 		  "already in use by another host!",
 		  print_hex_1(client_id->len, client_id->data, 60),
-		  inet_ntop(AF_INET6, iaaddr->data, 
+		  inet_ntop(AF_INET6, iaaddr->data,
 		  	    tmp_addr, sizeof(tmp_addr)));
 	if (lease != NULL) {
 		decline_lease6(lease->ipv6_pool, lease);
@@ -5362,9 +5393,9 @@ ia_na_nomatch_decline(const struct data_string *client_id,
 			     required_opts_STATUS_CODE, NULL);
 
 	/*
-	 * Store the non-encapsulated option data for this 
-	 * IA_NA into our reply packet. Defined in RFC 3315, 
-	 * section 22.4.  
+	 * Store the non-encapsulated option data for this
+	 * IA_NA into our reply packet. Defined in RFC 3315,
+	 * section 22.4.
 	 */
 	/* option number */
 	putUShort((unsigned char *)reply_data+(*reply_ofs), D6O_IA_NA);
@@ -5386,7 +5417,7 @@ exit:
 }
 
 static void
-iterate_over_ia_na(struct data_string *reply_ret, 
+iterate_over_ia_na(struct data_string *reply_ret,
 		   struct packet *packet,
 		   const struct data_string *client_id,
 		   const struct data_string *server_id,
@@ -5426,20 +5457,20 @@ iterate_over_ia_na(struct data_string *reply_ret,
 	host_opt_state = NULL;
 	lease = NULL;
 
-	/* 
+	/*
 	 * Find the host record that matches from the packet, if any.
 	 */
 	packet_host = NULL;
-	if (!find_hosts_by_uid(&packet_host, 
+	if (!find_hosts_by_uid(&packet_host,
 			       client_id->data, client_id->len, MDL)) {
 		packet_host = NULL;
-		/* 
+		/*
 		 * Note: In general, we don't expect a client to provide
 		 *       enough information to match by option for these
 		 *       types of messages, but if we don't have a UID
 		 *       match we can check anyway.
 		 */
-		if (!find_hosts_by_option(&packet_host, 
+		if (!find_hosts_by_option(&packet_host,
 					  packet, packet->options, MDL)) {
 			packet_host = NULL;
 
@@ -5449,11 +5480,11 @@ iterate_over_ia_na(struct data_string *reply_ret,
 		}
 	}
 
-	/* 
+	/*
 	 * Set our reply information.
 	 */
 	reply->msg_type = DHCPV6_REPLY;
-	memcpy(reply->transaction_id, packet->dhcpv6_transaction_id, 
+	memcpy(reply->transaction_id, packet->dhcpv6_transaction_id,
 	       sizeof(reply->transaction_id));
 
 	/*
@@ -5464,17 +5495,17 @@ iterate_over_ia_na(struct data_string *reply_ret,
 		log_error("iterate_over_ia_na: no memory for option_state.");
 		goto exit;
 	}
-	execute_statements_in_scope(NULL, packet, NULL, NULL, 
-				    packet->options, opt_state, 
+	execute_statements_in_scope(NULL, packet, NULL, NULL,
+				    packet->options, opt_state,
 				    &global_scope, root_group, NULL, NULL);
 
-	/* 
+	/*
 	 * RFC 3315, section 18.2.7 tells us which options to include.
 	 */
 	oc = lookup_option(&dhcpv6_universe, opt_state, D6O_SERVERID);
 	if (oc == NULL) {
-		if (!save_option_buffer(&dhcpv6_universe, opt_state, NULL, 
-					(unsigned char *)server_duid.data, 
+		if (!save_option_buffer(&dhcpv6_universe, opt_state, NULL,
+					(unsigned char *)server_duid.data,
 					server_duid.len, D6O_SERVERID, 0)) {
 			log_error("iterate_over_ia_na: "
 				  "error saving server identifier.");
@@ -5482,10 +5513,10 @@ iterate_over_ia_na(struct data_string *reply_ret,
 		}
 	}
 
-	if (!save_option_buffer(&dhcpv6_universe, opt_state, 
-				client_id->buffer, 
+	if (!save_option_buffer(&dhcpv6_universe, opt_state,
+				client_id->buffer,
 				(unsigned char *)client_id->data,
-				client_id->len, 
+				client_id->len,
 				D6O_CLIENTID, 0)) {
 		log_error("iterate_over_ia_na: "
 			  "error saving client identifier.");
@@ -5497,11 +5528,11 @@ iterate_over_ia_na(struct data_string *reply_ret,
 		goto exit;
 	}
 
-	/* 
-	 * Add our options that are not associated with any IA_NA or IA_TA. 
+	/*
+	 * Add our options that are not associated with any IA_NA or IA_TA.
 	 */
 	reply_ofs += store_options6(reply_data+reply_ofs,
-				    sizeof(reply_data)-reply_ofs, 
+				    sizeof(reply_data)-reply_ofs,
 				    opt_state, packet,
 				    required_opts, NULL);
 
@@ -5520,14 +5551,14 @@ iterate_over_ia_na(struct data_string *reply_ret,
 
 		iaid = getULong(cli_enc_opt_data.data);
 
-		/* 
+		/*
 		 * XXX: It is possible that we can get multiple addresses
-		 *      sent by the client. We don't send multiple 
-		 *      addresses, so this indicates a client error. 
+		 *      sent by the client. We don't send multiple
+		 *      addresses, so this indicates a client error.
 		 *      We should check for multiple IAADDR options, log
 		 *      if found, and set as an error.
 		 */
-		oc = lookup_option(&dhcpv6_universe, cli_enc_opt_state, 
+		oc = lookup_option(&dhcpv6_universe, cli_enc_opt_state,
 				   D6O_IAADDR);
 		if (oc == NULL) {
 			/* no address given for this IA, ignore */
@@ -5537,7 +5568,7 @@ iterate_over_ia_na(struct data_string *reply_ret,
 		}
 
 		memset(&iaaddr, 0, sizeof(iaaddr));
-		if (!evaluate_option_cache(&iaaddr, packet, NULL, NULL, 
+		if (!evaluate_option_cache(&iaaddr, packet, NULL, NULL,
 					   packet->options, NULL,
 					   &global_scope, oc, MDL)) {
 			log_error("iterate_over_ia_na: "
@@ -5545,7 +5576,7 @@ iterate_over_ia_na(struct data_string *reply_ret,
 			goto exit;
 		}
 
-		/* 
+		/*
 		 * Now we need to figure out which host record matches
 		 * this IA_NA and IAADDR (encapsulated option contents
 		 * matching a host record by option).
@@ -5554,8 +5585,8 @@ iterate_over_ia_na(struct data_string *reply_ret,
 		 *      we will need to do this!
 		 */
 		host = NULL;
-		if (!find_hosts_by_option(&host, packet, 
-					  cli_enc_opt_state, MDL)) { 
+		if (!find_hosts_by_option(&host, packet,
+					  cli_enc_opt_state, MDL)) {
 			if (packet_host != NULL) {
 				host = packet_host;
 			} else {
@@ -5564,10 +5595,10 @@ iterate_over_ia_na(struct data_string *reply_ret,
 		}
 		while (host != NULL) {
 			if (host->fixed_addr != NULL) {
-				if (!evaluate_option_cache(&fixed_addr, NULL, 
-							   NULL, NULL, NULL, 
+				if (!evaluate_option_cache(&fixed_addr, NULL,
+							   NULL, NULL, NULL,
 							   NULL, &global_scope,
-							   host->fixed_addr, 
+							   host->fixed_addr,
 							   MDL)) {
 					log_error("iterate_over_ia_na: error "
 						  "evaluating host address.");
@@ -5587,19 +5618,19 @@ iterate_over_ia_na(struct data_string *reply_ret,
 			/*
 			 * Find existing IA_NA.
 			 */
-			if (ia_make_key(&key, iaid, 
+			if (ia_make_key(&key, iaid,
 					(char *)client_id->data,
-					client_id->len, 
+					client_id->len,
 					MDL) != ISC_R_SUCCESS) {
 				log_fatal("iterate_over_ia_na: no memory for "
 					  "key.");
 			}
 
 			existing_ia_na = NULL;
-			if (ia_hash_lookup(&existing_ia_na, ia_na_active, 
-					   (unsigned char *)key.data, 
+			if (ia_hash_lookup(&existing_ia_na, ia_na_active,
+					   (unsigned char *)key.data,
 					   key.len, MDL)) {
-				/* 
+				/*
 				 * Make sure this address is in the IA_NA.
 				 */
 				for (i=0; i<existing_ia_na->num_iasubopt; i++) {
@@ -5608,7 +5639,7 @@ iterate_over_ia_na(struct data_string *reply_ret,
 
 					tmp = existing_ia_na->iasubopt[i];
 					in6_addr = &tmp->addr;
-					if (memcmp(in6_addr, 
+					if (memcmp(in6_addr,
 						   iaaddr.data, 16) == 0) {
 						iasubopt_reference(&lease,
 								   tmp, MDL);
@@ -5623,9 +5654,9 @@ iterate_over_ia_na(struct data_string *reply_ret,
 		if ((host != NULL) || (lease != NULL)) {
 			ia_na_match(client_id, &iaaddr, lease);
 		} else {
-			ia_na_nomatch(client_id, &iaaddr, 
-				      (u_int32_t *)cli_enc_opt_data.data, 
-				      packet, reply_data, &reply_ofs, 
+			ia_na_nomatch(client_id, &iaaddr,
+				      (u_int32_t *)cli_enc_opt_data.data,
+				      packet, reply_data, &reply_ofs,
 				      sizeof(reply_data));
 		}
 
@@ -5638,7 +5669,7 @@ iterate_over_ia_na(struct data_string *reply_ret,
 		data_string_forget(&cli_enc_opt_data, MDL);
 	}
 
-	/* 
+	/*
 	 * Return our reply to the caller.
 	 */
 	reply_ret->len = reply_ofs;
@@ -5679,37 +5710,45 @@ exit:
  *
  * Since we're only dealing with fixed leases for now, there's not
  * much we can do, other that log the occurrence.
- * 
+ *
  * When we start issuing addresses from pools, then we will have to
  * record our declined addresses and issue another. In general with
  * IPv6 there is no worry about DoS by clients exhausting space, but
  * we still need to be aware of this possibility.
  */
 
-/* TODO: reject unicast messages, unless we set unicast option */
 /* TODO: IA_TA */
 static void
 dhcpv6_decline(struct data_string *reply, struct packet *packet) {
 	struct data_string client_id;
 	struct data_string server_id;
 
-	/* 
+	/*
 	 * Validate our input.
 	 */
 	if (!valid_client_resp(packet, &client_id, &server_id)) {
 		return;
 	}
 
-	/*
-	 * Undefined for IA_PD.
-	 */
-	delete_option(&dhcpv6_universe, packet->options, D6O_IA_PD);
+	/* If the DECLINE arrived via unicast and unicast option isn't set,
+	 * reject it per RFC 3315, Sec 18.2.7 */
+	if (packet->unicast == ISC_TRUE &&
+	    is_unicast_option_defined(packet) == ISC_FALSE) {
+		unicast_reject(reply, packet, &client_id, &server_id);
+	} else {
+		/*
+		 * Undefined for IA_PD.
+		 */
+		delete_option(&dhcpv6_universe, packet->options, D6O_IA_PD);
 
-	/*
-	 * And operate on each IA_NA in this packet.
-	 */
-	iterate_over_ia_na(reply, packet, &client_id, &server_id, "Decline", 
-			   ia_na_match_decline, ia_na_nomatch_decline);
+		/*
+		 * And operate on each IA_NA in this packet.
+		 */
+		iterate_over_ia_na(reply, packet, &client_id, &server_id,
+				   "Decline", ia_na_match_decline,
+				   ia_na_nomatch_decline);
+
+	}
 
 	data_string_forget(&server_id, MDL);
 	data_string_forget(&client_id, MDL);
@@ -5759,7 +5798,7 @@ ia_na_nomatch_release(const struct data_string *client_id,
 		goto exit;
 	}
 
-	if (!set_status_code(STATUS_NoBinding, 
+	if (!set_status_code(STATUS_NoBinding,
 			     "Release for non-leased address.",
 			     host_opt_state)) {
 		goto exit;
@@ -5783,9 +5822,9 @@ ia_na_nomatch_release(const struct data_string *client_id,
 			     required_opts_STATUS_CODE, NULL);
 
 	/*
-	 * Store the non-encapsulated option data for this 
-	 * IA_NA into our reply packet. Defined in RFC 3315, 
-	 * section 22.4.  
+	 * Store the non-encapsulated option data for this
+	 * IA_NA into our reply packet. Defined in RFC 3315,
+	 * section 22.4.
 	 */
 	/* option number */
 	putUShort((unsigned char *)reply_data+(*reply_ofs), D6O_IA_NA);
@@ -5854,7 +5893,7 @@ ia_pd_nomatch_release(const struct data_string *client_id,
 		goto exit;
 	}
 
-	if (!set_status_code(STATUS_NoBinding, 
+	if (!set_status_code(STATUS_NoBinding,
 			     "Release for non-leased prefix.",
 			     host_opt_state)) {
 		goto exit;
@@ -5878,9 +5917,9 @@ ia_pd_nomatch_release(const struct data_string *client_id,
 			     required_opts_STATUS_CODE, NULL);
 
 	/*
-	 * Store the non-encapsulated option data for this 
-	 * IA_PD into our reply packet. Defined in RFC 3315, 
-	 * section 22.4.  
+	 * Store the non-encapsulated option data for this
+	 * IA_PD into our reply packet. Defined in RFC 3315,
+	 * section 22.4.
 	 */
 	/* option number */
 	putUShort((unsigned char *)reply_data+(*reply_ofs), D6O_IA_PD);
@@ -5902,7 +5941,7 @@ exit:
 }
 
 static void
-iterate_over_ia_pd(struct data_string *reply_ret, 
+iterate_over_ia_pd(struct data_string *reply_ret,
 		   struct packet *packet,
 		   const struct data_string *client_id,
 		   const struct data_string *server_id,
@@ -5947,20 +5986,20 @@ iterate_over_ia_pd(struct data_string *reply_ret,
 	reply_len = sizeof(reply_data) - reply_ret->len;
 	reply_ofs = 0;
 
-	/* 
+	/*
 	 * Find the host record that matches from the packet, if any.
 	 */
 	packet_host = NULL;
-	if (!find_hosts_by_uid(&packet_host, 
+	if (!find_hosts_by_uid(&packet_host,
 			       client_id->data, client_id->len, MDL)) {
 		packet_host = NULL;
-		/* 
+		/*
 		 * Note: In general, we don't expect a client to provide
 		 *       enough information to match by option for these
 		 *       types of messages, but if we don't have a UID
 		 *       match we can check anyway.
 		 */
-		if (!find_hosts_by_option(&packet_host, 
+		if (!find_hosts_by_option(&packet_host,
 					  packet, packet->options, MDL)) {
 			packet_host = NULL;
 
@@ -5978,8 +6017,8 @@ iterate_over_ia_pd(struct data_string *reply_ret,
 		log_error("iterate_over_ia_pd: no memory for option_state.");
 		goto exit;
 	}
-	execute_statements_in_scope(NULL, packet, NULL, NULL, 
-				    packet->options, opt_state, 
+	execute_statements_in_scope(NULL, packet, NULL, NULL,
+				    packet->options, opt_state,
 				    &global_scope, root_group, NULL, NULL);
 
 	/*
@@ -5997,7 +6036,7 @@ iterate_over_ia_pd(struct data_string *reply_ret,
 
 	    iaid = getULong(cli_enc_opt_data.data);
 
-	    oc = lookup_option(&dhcpv6_universe, cli_enc_opt_state, 
+	    oc = lookup_option(&dhcpv6_universe, cli_enc_opt_state,
 			       D6O_IAPREFIX);
 	    if (oc == NULL) {
 		/* no prefix given for this IA_PD, ignore */
@@ -6008,7 +6047,7 @@ iterate_over_ia_pd(struct data_string *reply_ret,
 
 	    for (; oc != NULL; oc = oc->next) {
 		memset(&iaprefix, 0, sizeof(iaprefix));
-		if (!evaluate_option_cache(&iaprefix, packet, NULL, NULL, 
+		if (!evaluate_option_cache(&iaprefix, packet, NULL, NULL,
 					   packet->options, NULL,
 					   &global_scope, oc, MDL)) {
 			log_error("iterate_over_ia_pd: "
@@ -6016,7 +6055,7 @@ iterate_over_ia_pd(struct data_string *reply_ret,
 			goto exit;
 		}
 
-		/* 
+		/*
 		 * Now we need to figure out which host record matches
 		 * this IA_PD and IAPREFIX (encapsulated option contents
 		 * matching a host record by option).
@@ -6025,8 +6064,8 @@ iterate_over_ia_pd(struct data_string *reply_ret,
 		 *      we will need to do this!
 		 */
 		host = NULL;
-		if (!find_hosts_by_option(&host, packet, 
-					  cli_enc_opt_state, MDL)) { 
+		if (!find_hosts_by_option(&host, packet,
+					  cli_enc_opt_state, MDL)) {
 			if (packet_host != NULL) {
 				host = packet_host;
 			} else {
@@ -6057,19 +6096,19 @@ iterate_over_ia_pd(struct data_string *reply_ret,
 			/*
 			 * Find existing IA_PD.
 			 */
-			if (ia_make_key(&key, iaid, 
+			if (ia_make_key(&key, iaid,
 					(char *)client_id->data,
-					client_id->len, 
+					client_id->len,
 					MDL) != ISC_R_SUCCESS) {
 				log_fatal("iterate_over_ia_pd: no memory for "
 					  "key.");
 			}
 
 			existing_ia_pd = NULL;
-			if (ia_hash_lookup(&existing_ia_pd, ia_pd_active, 
-					   (unsigned char *)key.data, 
+			if (ia_hash_lookup(&existing_ia_pd, ia_pd_active,
+					   (unsigned char *)key.data,
 					   key.len, MDL)) {
-				/* 
+				/*
 				 * Make sure this prefix is in the IA_PD.
 				 */
 				for (i = 0;
@@ -6097,9 +6136,9 @@ iterate_over_ia_pd(struct data_string *reply_ret,
 		if ((host != NULL) || (prefix != NULL)) {
 			ia_pd_match(client_id, &iaprefix, prefix);
 		} else {
-			ia_pd_nomatch(client_id, &iaprefix, 
-				      (u_int32_t *)cli_enc_opt_data.data, 
-				      packet, reply_data, &reply_ofs, 
+			ia_pd_nomatch(client_id, &iaprefix,
+				      (u_int32_t *)cli_enc_opt_data.data,
+				      packet, reply_data, &reply_ofs,
 				      reply_len - reply_ofs);
 		}
 
@@ -6114,7 +6153,7 @@ iterate_over_ia_pd(struct data_string *reply_ret,
 	    data_string_forget(&cli_enc_opt_data, MDL);
 	}
 
-	/* 
+	/*
 	 * Return our reply to the caller.
 	 * The IA_NA routine has already filled at least the header.
 	 */
@@ -6156,30 +6195,38 @@ exit:
  * Release means a client is done with the leases.
  */
 
-/* TODO: reject unicast messages, unless we set unicast option */
 static void
 dhcpv6_release(struct data_string *reply, struct packet *packet) {
 	struct data_string client_id;
 	struct data_string server_id;
 
-	/* 
+	/*
 	 * Validate our input.
 	 */
 	if (!valid_client_resp(packet, &client_id, &server_id)) {
 		return;
 	}
 
-	/*
-	 * And operate on each IA_NA in this packet.
-	 */
-	iterate_over_ia_na(reply, packet, &client_id, &server_id, "Release", 
-			   ia_na_match_release, ia_na_nomatch_release);
+	/* If the RELEASE arrived via unicast and unicast option isn't set,
+ 	 * reject it per RFC 3315, Sec 18.2.6 */
+	if (packet->unicast == ISC_TRUE &&
+	    is_unicast_option_defined(packet) == ISC_FALSE) {
+		unicast_reject(reply, packet, &client_id, &server_id);
+	} else {
+		/*
+		 * And operate on each IA_NA in this packet.
+		 */
+		iterate_over_ia_na(reply, packet, &client_id, &server_id,
+				   "Release", ia_na_match_release,
+				   ia_na_nomatch_release);
 
-	/*
-	 * And operate on each IA_PD in this packet.
-	 */
-	iterate_over_ia_pd(reply, packet, &client_id, &server_id, "Release",
-			   ia_pd_match_release, ia_pd_nomatch_release);
+		/*
+		 * And operate on each IA_PD in this packet.
+		 */
+		iterate_over_ia_pd(reply, packet, &client_id, &server_id,
+				   "Release", ia_pd_match_release,
+				   ia_pd_nomatch_release);
+	}
 
 	data_string_forget(&server_id, MDL);
 	data_string_forget(&client_id, MDL);
@@ -6211,8 +6258,8 @@ dhcpv6_information_request(struct data_string *reply, struct packet *packet) {
 	}
 
 	/*
-	 * Use the lease_to_client() function. This will work fine, 
-	 * because the valid_client_info_req() insures that we 
+	 * Use the lease_to_client() function. This will work fine,
+	 * because the valid_client_info_req() insures that we
 	 * don't have any IA that would cause us to allocate
 	 * resources to the client.
 	 */
@@ -6228,7 +6275,7 @@ dhcpv6_information_request(struct data_string *reply, struct packet *packet) {
 	data_string_forget(&server_id, MDL);
 }
 
-/* 
+/*
  * The Relay-forw message is sent by relays. It typically contains a
  * single option, which encapsulates an entire packet.
  *
@@ -6254,7 +6301,7 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 	struct dhcpv6_relay_packet *reply;
 	int reply_ofs;
 
-	/* 
+	/*
 	 * Initialize variables for early exit.
 	 */
 	opt_state = NULL;
@@ -6279,7 +6326,7 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 		goto exit;
 	}
 
-	if (!evaluate_option_cache(&enc_opt_data, NULL, NULL, NULL, 
+	if (!evaluate_option_cache(&enc_opt_data, NULL, NULL, NULL,
 				   NULL, NULL, &global_scope, oc, MDL)) {
 		log_error("dhcpv6_forw_relay: error evaluating "
 			  "relayed message.");
@@ -6327,7 +6374,7 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 		       relay->peer_address, sizeof(relay->peer_address));
 
 		if (!parse_option_buffer(enc_packet->options,
-					 relay->options, 
+					 relay->options,
 					 enc_opt_data.len - relaylen,
 					 &dhcpv6_universe)) {
 			/* no logging here, as parse_option_buffer() logs all
@@ -6345,7 +6392,7 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 		       sizeof(enc_packet->dhcpv6_transaction_id));
 
 		if (!parse_option_buffer(enc_packet->options,
-					 msg->options, 
+					 msg->options,
 					 enc_opt_data.len - msglen,
 					 &dhcpv6_universe)) {
 			/* no logging here, as parse_option_buffer() logs all
@@ -6397,7 +6444,7 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 			   D6O_INTERFACE_ID);
 	if (oc != NULL) {
 		if (!evaluate_option_cache(&a_opt, packet,
-					   NULL, NULL, 
+					   NULL, NULL,
 					   packet->options, NULL,
 					   &global_scope, oc, MDL)) {
 			log_error("dhcpv6_relay_forw: error evaluating "
@@ -6415,7 +6462,7 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 		data_string_forget(&a_opt, MDL);
 	}
 
-	/* 
+	/*
 	 * Append our encapsulated stuff for caller.
 	 */
 	if (!save_option_buffer(&dhcpv6_universe, opt_state, NULL,
@@ -6520,12 +6567,12 @@ dhcpv6_discard(struct packet *packet) {
 	/* INSIST(packet->msg_type > 0); */
 	/* INSIST(packet->msg_type < dhcpv6_type_name_max); */
 
-	log_debug("Discarding %s from %s; message type not handled by server", 
+	log_debug("Discarding %s from %s; message type not handled by server",
 		  dhcpv6_type_names[packet->dhcpv6_msg_type],
 		  piaddr(packet->client_addr));
 }
 
-static void 
+static void
 build_dhcpv6_reply(struct data_string *reply, struct packet *packet) {
 	memset(reply, 0, sizeof(*reply));
 
@@ -6593,10 +6640,10 @@ build_dhcpv6_reply(struct data_string *reply, struct packet *packet) {
 			dhcpv6_discard(packet);
 			break;
 		default:
-			/* XXX: would be nice if we had "notice" level, 
+			/* XXX: would be nice if we had "notice" level,
 				as syslog, for this */
 			log_info("Discarding unknown DHCPv6 message type %d "
-				 "from %s", packet->dhcpv6_msg_type, 
+				 "from %s", packet->dhcpv6_msg_type,
 				 piaddr(packet->client_addr));
 	}
 }
@@ -6616,21 +6663,21 @@ log_packet_in(const struct packet *packet) {
 				     piaddr(packet->client_addr),
 				     ntohs(packet->client_port));
 	} else {
-		data_string_sprintfa(&s, 
+		data_string_sprintfa(&s,
 				     "Unknown message type %d from %s port %d",
 				     packet->dhcpv6_msg_type,
 				     piaddr(packet->client_addr),
 				     ntohs(packet->client_port));
 	}
-	if ((packet->dhcpv6_msg_type == DHCPV6_RELAY_FORW) || 
+	if ((packet->dhcpv6_msg_type == DHCPV6_RELAY_FORW) ||
 	    (packet->dhcpv6_msg_type == DHCPV6_RELAY_REPL)) {
 	    	addr = &packet->dhcpv6_link_address;
-	    	data_string_sprintfa(&s, ", link address %s", 
-				     inet_ntop(AF_INET6, addr, 
+	    	data_string_sprintfa(&s, ", link address %s",
+				     inet_ntop(AF_INET6, addr,
 					       tmp_addr, sizeof(tmp_addr)));
 	    	addr = &packet->dhcpv6_peer_address;
-	    	data_string_sprintfa(&s, ", peer address %s", 
-				     inet_ntop(AF_INET6, addr, 
+	    	data_string_sprintfa(&s, ", peer address %s",
+				     inet_ntop(AF_INET6, addr,
 					       tmp_addr, sizeof(tmp_addr)));
 	} else {
 		tid = 0;
@@ -6638,11 +6685,11 @@ log_packet_in(const struct packet *packet) {
 		data_string_sprintfa(&s, ", transaction ID 0x%06X", tid);
 
 /*
-		oc = lookup_option(&dhcpv6_universe, packet->options, 
+		oc = lookup_option(&dhcpv6_universe, packet->options,
 				   D6O_CLIENTID);
 		if (oc != NULL) {
 			memset(&tmp_ds, 0, sizeof(tmp_ds_));
-			if (!evaluate_option_cache(&tmp_ds, packet, NULL, NULL, 
+			if (!evaluate_option_cache(&tmp_ds, packet, NULL, NULL,
 						   packet->options, NULL,
 						   &global_scope, oc, MDL)) {
 				log_error("Error evaluating Client Identifier");
@@ -6660,16 +6707,16 @@ log_packet_in(const struct packet *packet) {
 	data_string_forget(&s, MDL);
 }
 
-void 
+void
 dhcpv6(struct packet *packet) {
 	struct data_string reply;
 	struct sockaddr_in6 to_addr;
 	int send_ret;
 
-	/* 
+	/*
 	 * Log a message that we received this packet.
 	 */
-	log_packet_in(packet); 
+	log_packet_in(packet);
 
 	/*
 	 * Build our reply packet.
@@ -6677,12 +6724,12 @@ dhcpv6(struct packet *packet) {
 	build_dhcpv6_reply(&reply, packet);
 
 	if (reply.data != NULL) {
-		/* 
+		/*
 		 * Send our reply, if we have one.
 		 */
 		memset(&to_addr, 0, sizeof(to_addr));
 		to_addr.sin6_family = AF_INET6;
-		if ((packet->dhcpv6_msg_type == DHCPV6_RELAY_FORW) || 
+		if ((packet->dhcpv6_msg_type == DHCPV6_RELAY_FORW) ||
 		    (packet->dhcpv6_msg_type == DHCPV6_RELAY_REPL)) {
 			to_addr.sin6_port = local_port;
 		} else {
@@ -6700,15 +6747,15 @@ dhcpv6(struct packet *packet) {
 		to_addr.sin6_port = packet->client_port;
 #endif
 
-		memcpy(&to_addr.sin6_addr, packet->client_addr.iabuf, 
+		memcpy(&to_addr.sin6_addr, packet->client_addr.iabuf,
 		       sizeof(to_addr.sin6_addr));
 
-		log_info("Sending %s to %s port %d", 
+		log_info("Sending %s to %s port %d",
 			 dhcpv6_type_names[reply.data[0]],
 			 piaddr(packet->client_addr),
 			 ntohs(to_addr.sin6_port));
 
-		send_ret = send_packet6(packet->interface, 
+		send_ret = send_packet6(packet->interface,
 					reply.data, reply.len, &to_addr);
 		if (send_ret != reply.len) {
 			log_error("dhcpv6: send_packet6() sent %d of %d bytes",
@@ -6833,7 +6880,7 @@ find_hosts_by_duid_chaddr(struct host_decl **host,
 		break;
 	}
 
-	if ((hlen == 0) || (hlen > HARDWARE_ADDR_LEN)) 
+	if ((hlen == 0) || (hlen > HARDWARE_ADDR_LEN))
 		return 0;
 
 	/*
@@ -6854,6 +6901,319 @@ find_hosts_by_duid_chaddr(struct host_decl **host,
 	}
 
 	return find_hosts_by_haddr(host, htype, chaddr, hlen, MDL);
+}
+
+
+/*!
+ *
+ * \brief Constructs a REPLY with status of UseMulticast to a given packet
+ *
+ * Per RFC 3315 Secs 18.2.1,3,6 & 7, when a server rejects a client's
+ * unicast-sent packet, the response must only contain the client id,
+ * server id, and a status code option of 5 (UseMulticast).  This function
+ * constructs such a packet and returns it as a data_string.
+ *
+ * \param reply_ret = data_string which will receive the newly constructed
+ * reply
+ * \param packet = client request which is being rejected
+ * \param client_id = data_string which contains the client id
+ * \param server_id = data_string which which contains the server id
+ *
+ */
+void
+unicast_reject(struct data_string *reply_ret,
+	     struct packet *packet,
+	     const struct data_string *client_id,
+	     const struct data_string *server_id)
+{
+	struct reply_state reply;
+	memset(&reply, 0x0, sizeof(struct reply_state));
+
+	/* Locate the client. */ 
+	if (shared_network_from_packet6(&reply.shared, packet)
+		!= ISC_R_SUCCESS) {
+		log_error("unicast_reject: could not locate client.");
+		return;
+	}
+
+	/* Initialize the reply. */
+	packet_reference(&reply.packet, packet, MDL);
+	data_string_copy(&reply.client_id, client_id, MDL);
+
+	if (start_reply(packet, client_id, server_id, &reply.opt_state,
+			 &reply.buf.reply)) {
+		/* Set the UseMulticast status code. */
+		if (!set_status_code(STATUS_UseMulticast,
+				     "Unicast not allowed by server.",
+				     reply.opt_state)) {
+			log_error("unicast_reject: Unable to set status code.");
+		} else {
+			/* Set write cursor to just past the reply header. */
+			reply.cursor = REPLY_OPTIONS_INDEX;
+			reply.cursor += store_options6(((char *)reply.buf.data
+							+ reply.cursor),
+						       (sizeof(reply.buf)
+						        - reply.cursor),
+						       reply.opt_state,
+						       reply.packet,
+						       unicast_reject_opts,
+						       NULL);
+
+			/* Return our reply to the caller. */
+			reply_ret->len = reply.cursor;
+			reply_ret->buffer = NULL;
+			if (!buffer_allocate(&reply_ret->buffer,
+					     reply.cursor, MDL)) {
+				log_fatal("unicast_reject:"
+					  "No memory to store Reply.");
+			}
+
+			memcpy(reply_ret->buffer->data, reply.buf.data,
+			       reply.cursor);
+			reply_ret->data = reply_ret->buffer->data;
+		}
+
+	}
+
+	/* Cleanup. */
+	if (reply.shared != NULL)
+		shared_network_dereference(&reply.shared, MDL);
+	if (reply.opt_state != NULL)
+		option_state_dereference(&reply.opt_state, MDL);
+	if (reply.packet != NULL)
+		packet_dereference(&reply.packet, MDL);
+	if (reply.client_id.data != NULL)
+		data_string_forget(&reply.client_id, MDL);
+}
+
+/*!
+ *
+ * \brief Checks if the dhcp6.unicast option has been defined
+ *
+ * Scans the option space for the presence of the dhcp6.unicast option. The
+ * function attempts to map the inbound packet to a shared network first
+ * by an ip address specified via an D6O_IA_XX option and if that fails then
+ * by the packet's source information (e.g. relay link, link, or interace).
+ * Once the packet is mapped to a shared network, the function executes all
+ * statements from the network's group outward into a local option cache.
+ * The option cache is then scanned for the presence of unicast option.  If
+ * the packet cannot be mapped to a shared network, the function returns
+ * ISC_FALSE.
+ * \param packet inbound packet from the client
+ *
+ * \return ISC_TRUE if the dhcp6.unicast option is defined, false otherwise.
+ *
+ */
+isc_boolean_t
+is_unicast_option_defined(struct packet *packet) {
+        isc_boolean_t is_defined = ISC_FALSE;
+	struct option_state *opt_state = NULL;
+	struct option_cache *oc = NULL;
+	struct shared_network *shared = NULL;
+
+	if (!option_state_allocate(&opt_state, MDL)) {
+		log_fatal("is_unicast_option_defined:"
+			  "No memory for option state.");
+	}
+
+	/* We try to map the packet to a network first by an IA_XX value.
+ 	 * If that fails, we try by packet source. */
+	if (((shared_network_from_requested_addr(&shared, packet)
+	     != ISC_R_SUCCESS) &&
+	    (shared_network_from_packet6(&shared, packet) != ISC_R_SUCCESS))
+	    || (shared == NULL)) {
+		/* @todo what would this really mean? I think wrong network
+		 * logic will catch it */
+		log_error("is_unicast_option_defined:"
+			  "cannot attribute packet to a network.");
+		return (ISC_FALSE);
+	}
+
+	/* Now that we've mapped it to a network, execute statments to that
+	 * scope, looking for the unicast option. We don't care about the
+	 * value of the option, only whether or not it is defined. */
+	execute_statements_in_scope(NULL, NULL, NULL, NULL, NULL, opt_state,
+				    &global_scope, shared->group, NULL, NULL);
+
+	oc = lookup_option(&dhcpv6_universe, opt_state, D6O_UNICAST);
+	is_defined = (oc != NULL ? ISC_TRUE : ISC_FALSE);
+	log_debug("is_unicast_option_defined: option found : %d", is_defined);
+
+	if (shared != NULL) {
+		shared_network_dereference(&shared, MDL);
+	}
+
+	if (opt_state != NULL) {
+		option_state_dereference(&opt_state, MDL);
+	}
+
+	return (is_defined);
+}
+
+/*!
+ *
+ * \brief Maps a packet to a shared network based on the requested IP address
+ *
+ * The function attempts to find a subnet that matches the first requested IP
+ * address contained within the given packet.  Note that it looks first for
+ * D6O_IA_NAs, then D6O_IA_PDs and lastly D6O_IA_TAs.  If a matching network is
+ * found, a reference to it is returned in the parameter, shared.
+ *
+ * \param shared shared_network pointer which will receive the matching network
+ * \param packet inbound packet from the client
+ *
+ * \return ISC_R_SUCCESS if the packet can be mapped to a shared_network.
+ *
+ */
+static isc_result_t
+shared_network_from_requested_addr (struct shared_network **shared,
+				    struct packet* packet) {
+	struct iaddr iaddr;
+	struct subnet* subnet = NULL;
+	isc_result_t status = ISC_R_FAILURE;
+
+	/* Try to match first IA_ address or prefix we find to a subnet. In
+ 	 * theory all  IA_ values in a given request are supposed to be in the
+ 	 * same subnet so we only need to try one right? */
+	if ((get_first_ia_addr_val(packet, D6O_IA_NA, &iaddr) != ISC_R_SUCCESS)
+	     && (get_first_ia_addr_val(packet, D6O_IA_PD, &iaddr)
+		 != ISC_R_SUCCESS)
+	     && (get_first_ia_addr_val(packet, D6O_IA_TA, &iaddr)
+		 != ISC_R_SUCCESS))  {
+		/* we found nothing to match against */
+		log_debug("share_network_from_request_addr: nothing to match");
+		return (ISC_R_FAILURE);
+	}
+
+	if (!find_subnet(&subnet, iaddr, MDL)) {
+		log_debug("shared_network_from_requested_addr:"
+			  "No subnet found for addr %s.", piaddr(iaddr));
+	} else {
+		status = shared_network_reference(shared,
+                                                  subnet->shared_network, MDL);
+		subnet_dereference(&subnet, MDL);
+		log_debug("shared_network_from_requested_addr:"
+			  " found shared network %s for address %s.",
+			  ((*shared)->name ? (*shared)->name : "unnamed"),
+			  piaddr(iaddr));
+		return (status);
+	}
+
+	return (ISC_R_FAILURE);
+}
+
+/*!
+ *
+ * \brief Retrieves the first IP address from a given packet of a given type
+ *
+ * Search a packet for options of a given type (D6O_IA_AN, D6O_IA_PD, or
+ * D6O_IA_TA) for the first non-blank IA_XX value and return its IP address
+ * component.
+ *
+ * \param packet packet received from the client
+ * \param addr_type the address option type (D6O_IA_NA , D6O_IA_PD, or
+ * D6O_IP_TA) to look for within the packet.
+ * \param iaddr pointer to the iaddr structure which will receive the extracted
+ * address.
+ *
+ * \return ISC_R_SUCCESS if an address was succesfully extracted, ISC_R_FALURE
+ * otherwise.
+ *
+ */
+static isc_result_t
+get_first_ia_addr_val (struct packet* packet, int addr_type,
+		       struct iaddr* iaddr)  {
+        struct option_cache *ia;
+        struct option_cache *oc = NULL;
+        struct data_string cli_enc_opt_data;
+        struct option_state *cli_enc_opt_state;
+	int addr_opt_offset;
+	int addr_opt;
+	int addr_opt_data_len;
+	int ip_addr_offset;
+
+	isc_result_t status = ISC_R_FAILURE;
+	memset(iaddr, 0, sizeof(struct iaddr));
+
+	/* Set up address type specifics */
+	switch (addr_type) {
+	case D6O_IA_NA:
+		addr_opt_offset = IA_NA_OFFSET;
+		addr_opt = D6O_IAADDR;
+		addr_opt_data_len = 24;
+		ip_addr_offset = 0;
+		break;
+	case D6O_IA_TA:
+		addr_opt_offset = IA_TA_OFFSET;
+		addr_opt = D6O_IAADDR;
+		addr_opt_data_len = 24;
+		ip_addr_offset = 0;
+		break;
+	case D6O_IA_PD:
+		addr_opt_offset = IA_PD_OFFSET;
+		addr_opt = D6O_IAPREFIX;
+		addr_opt_data_len = 25;
+		ip_addr_offset = 9;
+		break;
+	default:
+		/* shouldn't be here */
+		log_error ("get_first_ia_addr_val: invalid opt type %d",
+			   addr_type);
+		return (ISC_R_FAILURE);
+	}
+
+	/* Find the first, non-blank IA_XX value within an D6O_IA_XX option. */
+	for (ia = lookup_option(&dhcpv6_universe, packet->options, addr_type);
+             ia != NULL && oc == NULL; ia = ia->next) {
+		u_int32_t iaid;
+
+                if (!get_encapsulated_IA_state(&cli_enc_opt_state,
+                                               &cli_enc_opt_data,
+                                               packet, ia, addr_opt_offset)) {
+			log_debug ("get_first_ia_addr_val:"
+				   " couldn't unroll enclosing option");
+                        return (ISC_R_FAILURE);
+                }
+
+                iaid = getULong(cli_enc_opt_data.data);
+                oc = lookup_option(&dhcpv6_universe, cli_enc_opt_state,
+                                   addr_opt);
+                if (oc == NULL) {
+			/* no address given for this IA, ignore */
+                	option_state_dereference(&cli_enc_opt_state, MDL);
+                	data_string_forget(&cli_enc_opt_data, MDL);
+		}
+	}
+
+	/* If we found a non-blank IA_XX then extract its ip address. */
+	if (oc != NULL) {
+		struct data_string iaddr_str;
+
+		memset(&iaddr_str, 0, sizeof(iaddr_str));
+		if (!evaluate_option_cache(&iaddr_str, packet, NULL, NULL,
+				   	  packet->options, NULL, &global_scope,
+				    	  oc, MDL)) {
+			log_error("get_first_ia_addr_val: "
+			  	  "error evaluating IA_XX option.");
+		} else {
+			if (iaddr_str.len != addr_opt_data_len) {
+				log_error("shared_network_from_requested_addr:"
+                                  	  " invalid length %d, expected %d",
+				  	  iaddr_str.len, addr_opt_data_len);
+			} else {
+				iaddr->len = 16;
+				memcpy (iaddr->iabuf,
+					iaddr_str.data + ip_addr_offset, 16);
+				status = ISC_R_SUCCESS;
+			}
+			data_string_forget(&iaddr_str, MDL);
+		}
+
+		option_state_dereference(&cli_enc_opt_state, MDL);
+		data_string_forget(&cli_enc_opt_data, MDL);
+	}
+
+	return (status);
 }
 
 #endif /* DHCPv6 */
