@@ -3,7 +3,7 @@
    Server-specific in-memory database support. */
 
 /*
- * Copyright (c) 2011-2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2011-2015 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
@@ -708,6 +708,7 @@ void new_address_range (cfile, low, high, subnet, pool, lpchain)
 {
 #if defined(COMPACT_LEASES)
 	struct lease *address_range;
+	unsigned n, s;
 #endif
 	unsigned min, max, i;
 	char lowbuf [16], highbuf [16], netbuf [16];
@@ -767,7 +768,20 @@ void new_address_range (cfile, low, high, subnet, pool, lpchain)
 
 	/* Get a lease structure for each address in the range. */
 #if defined (COMPACT_LEASES)
-	address_range = new_leases (max - min + 1, MDL);
+	n = max - min + 1;
+	s = (n + 1) * sizeof (struct lease);
+	/* Check unsigned overflow in new_leases().
+	   With 304 byte lease structure (x64_86), this happens at
+	   range 10.0.0.0 10.215.148.52; */
+	if (((s % sizeof (struct lease)) != 0) ||
+	    ((s / sizeof (struct lease)) != (n + 1))) {
+		strcpy (lowbuf, piaddr (low));
+		strcpy (highbuf, piaddr (high));
+		parse_warn (cfile, "%s-%s is a far too large address range.",
+			   lowbuf, highbuf);
+		log_fatal ("Memory overflow.");
+	}
+	address_range = new_leases (n, MDL);
 	if (!address_range) {
 		strcpy (lowbuf, piaddr (low));
 		strcpy (highbuf, piaddr (high));

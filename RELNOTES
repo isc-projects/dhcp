@@ -60,6 +60,14 @@ by Eric Young (eay@cryptsoft.com).
 
 			Changes since 4.1-ESV-R11
 
+- The server now does a better check to see if it can allocate the memory
+  for large blocks of v4 leases and should provide a slightly better error
+  message.  Note well: the server pre-allocates v4 addresses, if you use
+  a large range, such as a /8, the server will attempt to use a large
+  amount of memory and may not start if there either isn't enough memory
+  or the size exceeds what the code supports.
+  [ISC-Bugs #38637]
+
 - The server will now reject unicast Request, Renew, Decline, and Release
   messages from a client unless the server would have sent that client the
   dhcp6.unicast option.  This behavior is in compliance with paragraph 1 in
