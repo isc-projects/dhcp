@@ -32,6 +32,10 @@ if test "$GCC" = "yes"; then
 	fi
 fi
 
+# We can have some flags to pass to bind configure
+BINDCONFIG=
+AC_SUBST(BINDCONFIG)
+
 # POSIX doesn't include the IPv6 Advanced Socket API and glibc hides
 # parts of the IPv6 Advanced Socket API as a result.  This is stupid
 # as it breaks how the two halves (Basic and Advanced) of the IPv6
@@ -187,9 +191,20 @@ fi
 
 atf_path="no"
 AC_ARG_WITH([atf],
-    AS_HELP_STRING([--with-atf=PATH],[specify location where atf was installed]),
+    AS_HELP_STRING([--with-atf=PATH],[specify location where atf was installed (or "bind")]),
     [atf_path="$withval"])
-if test "$atf_path" != "no" ; then
+AM_CONDITIONAL(BIND_ATF, test "$atf_path" = "bind")
+if test "$atf_path" = "bind" ; then
+    atf_pcp="bind"
+    atf_path="\${top_srcdir}/bind/atf"
+    ATF_CFLAGS="-I$atf_path/include -DUNIT_TEST"
+    ATF_LDFLAGS="-L$atf_path/lib -latf-c"
+    ATF_BIN=`pwd`/bind/atf/bin
+    AC_SUBST(ATF_CFLAGS)
+    AC_SUBST(ATF_LDFLAGS)
+    AC_SUBST(ATF_BIN)
+    BINDCONFIG="$BINDCONFIG --with-atf"
+elif test "$atf_path" != "no" ; then
     # Config path for pkg-config
     atf_pcp=""
     if test "$atf_path" != "yes" ; then
@@ -264,7 +279,7 @@ AC_ARG_WITH(srv-lease-file,
 	AC_DEFINE_UNQUOTED([_PATH_DHCPD_DB], ["$withval"],
 			   [File for dhcpd leases.]))
 
-echo -n "checking for dhcpd.leases location..."
+AC_MSG_CHECKING([for dhcpd.leases location])
 if [[ "x$with_srv_lease_file" = "x" ]] ; then
 	if [[ -d "${localstatedir}/db" ]] ; then
 		with_srv_lease_file="${localstatedir}/db/dhcpd.leases"
@@ -286,7 +301,7 @@ if [[ "x$with_srv_lease_file" = "x" ]] ; then
 		with_srv_lease_file="/etc/dhcpd.leases"
 	fi
 fi
-echo "$with_srv_lease_file"
+AC_MSG_RESULT($with_srv_lease_file)
 
 AC_ARG_WITH(srv6-lease-file,
 	AS_HELP_STRING([--with-srv6-lease-file=PATH],[File for dhcpd6 leases 
@@ -294,7 +309,7 @@ AC_ARG_WITH(srv6-lease-file,
 	AC_DEFINE_UNQUOTED([_PATH_DHCPD6_DB], ["$withval"],
 			   [File for dhcpd6 leases.]))
 
-echo -n "checking for dhcpd6.leases location..."
+AC_MSG_CHECKING([for dhcpd6.leases location])
 if [[ "x$with_srv6_lease_file" = "x" ]] ; then
 	if [[ -d "${localstatedir}/db" ]] ; then
 		with_srv6_lease_file="${localstatedir}/db/dhcpd6.leases"
@@ -316,7 +331,7 @@ if [[ "x$with_srv6_lease_file" = "x" ]] ; then
 		with_srv6_lease_file="/etc/dhcpd6.leases"
 	fi
 fi
-echo "$with_srv6_lease_file"
+AC_MSG_RESULT($with_srv6_lease_file)
 
 AC_ARG_WITH(cli-lease-file,
 	AS_HELP_STRING([--with-cli-lease-file=PATH],[File for dhclient leases 
@@ -324,7 +339,7 @@ AC_ARG_WITH(cli-lease-file,
 	AC_DEFINE_UNQUOTED([_PATH_DHCLIENT_DB], ["$withval"],
 			   [File for dhclient leases.]))
 
-echo -n "checking for dhclient.leases location..."
+AC_MSG_CHECKING([for dhclient.leases location])
 if [[ "x$with_cli_lease_file" = "x" ]] ; then
 	if [[ -d "${localstatedir}/db" ]] ; then
 		with_cli_lease_file="${localstatedir}/db/dhclient.leases"
@@ -346,7 +361,7 @@ if [[ "x$with_cli_lease_file" = "x" ]] ; then
 		with_cli_lease_file="/etc/dhclient.leases"
 	fi
 fi
-echo "$with_cli_lease_file"
+AC_MSG_RESULT($with_cli_lease_file)
 
 AC_ARG_WITH(cli6-lease-file,
 	AS_HELP_STRING([--with-cli6-lease-file=PATH],[File for dhclient6 leases 
@@ -354,7 +369,7 @@ AC_ARG_WITH(cli6-lease-file,
 	AC_DEFINE_UNQUOTED([_PATH_DHCLIENT6_DB], ["$withval"],
 			   [File for dhclient6 leases.]))
 
-echo -n "checking for dhclient6.leases location..."
+AC_MSG_CHECKING([for dhclient6.leases location])
 if [[ "x$with_cli6_lease_file" = "x" ]] ; then
 	if [[ -d "${localstatedir}/db" ]] ; then
 		with_cli6_lease_file="${localstatedir}/db/dhclient6.leases"
@@ -376,7 +391,7 @@ if [[ "x$with_cli6_lease_file" = "x" ]] ; then
 		with_cli6_lease_file="/etc/dhclient6.leases"
 	fi
 fi
-echo "$with_cli6_lease_file"
+AC_MSG_RESULT($with_cli6_lease_file)
 
 AC_ARG_WITH(srv-pid-file,
 	AS_HELP_STRING([--with-srv-pid-file=PATH],[File for dhcpd process information
@@ -594,6 +609,9 @@ no)
 	;;
 *)
 	libbind="$use_libbind"
+	if test ! -d "bind"; then
+		AC_MSG_WARN(empty bind directory)
+	fi	
 	;;
 esac
 
@@ -641,6 +659,7 @@ AC_C_FLEXIBLE_ARRAY_MEMBER
 
 AC_CONFIG_FILES([
   Makefile
+  bind/Makefile
   client/Makefile
   client/tests/Makefile
   common/Makefile

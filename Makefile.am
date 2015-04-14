@@ -22,7 +22,7 @@ EXTRA_DIST = RELNOTES LICENSE \
 	     doc/devel/arch.dox doc/devel/atf.dox doc/devel/contrib.dox \
 	     doc/devel/debug.dox doc/devel/isc-logo.jpg doc/devel/mainpage.dox \
 	     doc/devel/omapi.dox doc/devel/qa.dox util/bindvar.sh \
-	     bind/Makefile bind/bind.tar.gz bind/version.tmp \
+	     bind/Makefile.in bind/bind.tar.gz bind/version.tmp \
 	     common/tests/Atffile server/tests/Atffile
 
 SUBDIRS = bind includes tests common dst omapip client dhcpctl relay server

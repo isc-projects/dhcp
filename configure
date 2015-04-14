@@ -632,11 +632,14 @@ HAVE_ATF_TRUE
 ATF_BIN
 ATF_LDFLAGS
 ATF_CFLAGS
+BIND_ATF_FALSE
+BIND_ATF_TRUE
 byte_order
 RANLIB
 EGREP
 GREP
 CPP
+BINDCONFIG
 am__fastdepCC_FALSE
 am__fastdepCC_TRUE
 CCDEPMODE
@@ -1421,7 +1424,7 @@ Optional Features:
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
-  --with-atf=PATH         specify location where atf was installed
+  --with-atf=PATH         specify location where atf was installed (or "bind")
   --with-srv-lease-file=PATH
                           File for dhcpd leases (default is
                           LOCALSTATEDIR/db/dhcpd.leases)
@@ -4444,6 +4447,10 @@ if test "$GCC" = "yes"; then
 	fi
 fi
 
+# We can have some flags to pass to bind configure
+BINDCONFIG=
+
+
 # POSIX doesn't include the IPv6 Advanced Socket API and glibc hides
 # parts of the IPv6 Advanced Socket API as a result.  This is stupid
 # as it breaks how the two halves (Basic and Advanced) of the IPv6
@@ -5428,7 +5435,25 @@ if test "${with_atf+set}" = set; then :
   withval=$with_atf; atf_path="$withval"
 fi
 
-if test "$atf_path" != "no" ; then
+ if test "$atf_path" = "bind"; then
+  BIND_ATF_TRUE=
+  BIND_ATF_FALSE='#'
+else
+  BIND_ATF_TRUE='#'
+  BIND_ATF_FALSE=
+fi
+
+if test "$atf_path" = "bind" ; then
+    atf_pcp="bind"
+    atf_path="\${top_srcdir}/bind/atf"
+    ATF_CFLAGS="-I$atf_path/include -DUNIT_TEST"
+    ATF_LDFLAGS="-L$atf_path/lib -latf-c"
+    ATF_BIN=`pwd`/bind/atf/bin
+
+
+
+    BINDCONFIG="$BINDCONFIG --with-atf"
+elif test "$atf_path" != "no" ; then
     # Config path for pkg-config
     atf_pcp=""
     if test "$atf_path" != "yes" ; then
@@ -5611,7 +5636,8 @@ _ACEOF
 fi
 
 
-echo -n "checking for dhcpd.leases location..."
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for dhcpd.leases location" >&5
+$as_echo_n "checking for dhcpd.leases location... " >&6; }
 if [ "x$with_srv_lease_file" = "x" ] ; then
 	if [ -d "${localstatedir}/db" ] ; then
 		with_srv_lease_file="${localstatedir}/db/dhcpd.leases"
@@ -5633,7 +5659,8 @@ if [ "x$with_srv_lease_file" = "x" ] ; then
 		with_srv_lease_file="/etc/dhcpd.leases"
 	fi
 fi
-echo "$with_srv_lease_file"
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $with_srv_lease_file" >&5
+$as_echo "$with_srv_lease_file" >&6; }
 
 
 # Check whether --with-srv6-lease-file was given.
@@ -5646,7 +5673,8 @@ _ACEOF
 fi
 
 
-echo -n "checking for dhcpd6.leases location..."
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for dhcpd6.leases location" >&5
+$as_echo_n "checking for dhcpd6.leases location... " >&6; }
 if [ "x$with_srv6_lease_file" = "x" ] ; then
 	if [ -d "${localstatedir}/db" ] ; then
 		with_srv6_lease_file="${localstatedir}/db/dhcpd6.leases"
@@ -5668,7 +5696,8 @@ if [ "x$with_srv6_lease_file" = "x" ] ; then
 		with_srv6_lease_file="/etc/dhcpd6.leases"
 	fi
 fi
-echo "$with_srv6_lease_file"
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $with_srv6_lease_file" >&5
+$as_echo "$with_srv6_lease_file" >&6; }
 
 
 # Check whether --with-cli-lease-file was given.
@@ -5681,7 +5710,8 @@ _ACEOF
 fi
 
 
-echo -n "checking for dhclient.leases location..."
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for dhclient.leases location" >&5
+$as_echo_n "checking for dhclient.leases location... " >&6; }
 if [ "x$with_cli_lease_file" = "x" ] ; then
 	if [ -d "${localstatedir}/db" ] ; then
 		with_cli_lease_file="${localstatedir}/db/dhclient.leases"
@@ -5703,7 +5733,8 @@ if [ "x$with_cli_lease_file" = "x" ] ; then
 		with_cli_lease_file="/etc/dhclient.leases"
 	fi
 fi
-echo "$with_cli_lease_file"
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $with_cli_lease_file" >&5
+$as_echo "$with_cli_lease_file" >&6; }
 
 
 # Check whether --with-cli6-lease-file was given.
@@ -5716,7 +5747,8 @@ _ACEOF
 fi
 
 
-echo -n "checking for dhclient6.leases location..."
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for dhclient6.leases location" >&5
+$as_echo_n "checking for dhclient6.leases location... " >&6; }
 if [ "x$with_cli6_lease_file" = "x" ] ; then
 	if [ -d "${localstatedir}/db" ] ; then
 		with_cli6_lease_file="${localstatedir}/db/dhclient6.leases"
@@ -5738,7 +5770,8 @@ if [ "x$with_cli6_lease_file" = "x" ] ; then
 		with_cli6_lease_file="/etc/dhclient6.leases"
 	fi
 fi
-echo "$with_cli6_lease_file"
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $with_cli6_lease_file" >&5
+$as_echo "$with_cli6_lease_file" >&6; }
 
 
 # Check whether --with-srv-pid-file was given.
@@ -6598,6 +6631,10 @@ no)
 	;;
 *)
 	libbind="$use_libbind"
+	if test ! -d "bind"; then
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: empty bind directory" >&5
+$as_echo "$as_me: WARNING: empty bind directory" >&2;}
+	fi
 	;;
 esac
 
@@ -6812,7 +6849,7 @@ $as_echo "#define FLEXIBLE_ARRAY_MEMBER /**/" >>confdefs.h
   fi
 
 
-ac_config_files="$ac_config_files Makefile client/Makefile client/tests/Makefile common/Makefile common/tests/Makefile dhcpctl/Makefile dst/Makefile includes/Makefile omapip/Makefile relay/Makefile server/Makefile tests/Makefile tests/unittest.sh server/tests/Makefile doc/devel/doxyfile"
+ac_config_files="$ac_config_files Makefile bind/Makefile client/Makefile client/tests/Makefile common/Makefile common/tests/Makefile dhcpctl/Makefile dst/Makefile includes/Makefile omapip/Makefile relay/Makefile server/Makefile tests/Makefile tests/unittest.sh server/tests/Makefile doc/devel/doxyfile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -6952,6 +6989,10 @@ if test -z "${am__fastdepCC_TRUE}" && test -z "${am__fastdepCC_FALSE}"; then
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 
+if test -z "${BIND_ATF_TRUE}" && test -z "${BIND_ATF_FALSE}"; then
+  as_fn_error $? "conditional \"BIND_ATF\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
 if test -z "${HAVE_ATF_TRUE}" && test -z "${HAVE_ATF_FALSE}"; then
   as_fn_error $? "conditional \"HAVE_ATF\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
@@ -7551,6 +7592,7 @@ do
     "depfiles") CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
     "includes/config.h") CONFIG_HEADERS="$CONFIG_HEADERS includes/config.h" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
+    "bind/Makefile") CONFIG_FILES="$CONFIG_FILES bind/Makefile" ;;
     "client/Makefile") CONFIG_FILES="$CONFIG_FILES client/Makefile" ;;
     "client/tests/Makefile") CONFIG_FILES="$CONFIG_FILES client/tests/Makefile" ;;
     "common/Makefile") CONFIG_FILES="$CONFIG_FILES common/Makefile" ;;

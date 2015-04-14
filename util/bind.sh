@@ -99,7 +99,7 @@ rm -rf bind
 
 # Make and move to our directory for all things bind
 mkdir $binddir
-cp util/Makefile.bind bind/Makefile
+cp util/Makefile.bind.in bind/Makefile.in
 cd $binddir
 
 # Get the bind version file and move it to version.tmp
