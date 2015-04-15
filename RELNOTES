@@ -88,6 +88,12 @@ by Eric Young (eay@cryptsoft.com).
   a proper length for it.
   [ISC-Bugs #39209]
 
+- Remove the dst directory.  This was replaced in 4.2.0 with the dst
+  code from the Bind libraries but we continued to include it for
+  backwards compatibility.  As we have now released 4.3.x it seems
+  reasonable to remove it.
+  [ISC-Buts #39019]
+
 			Changes since 4.3.2rc2
 - None
 

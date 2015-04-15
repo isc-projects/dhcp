@@ -4,7 +4,7 @@
 
 /*
  * 
- * Copyright (c) 2009-2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2015 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2000-2003 by Internet Software Consortium
  *
@@ -35,7 +35,6 @@
  */
 
 #include "dhcpd.h"
-#include "dst/md5.h"
 #include <dns/result.h>
 
 char *ddns_standard_tag = "ddns-dhcid";

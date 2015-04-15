@@ -665,7 +665,6 @@ AC_CONFIG_FILES([
   common/Makefile
   common/tests/Makefile
   dhcpctl/Makefile
-  dst/Makefile
   includes/Makefile
   omapip/Makefile
   relay/Makefile
