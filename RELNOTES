@@ -82,6 +82,12 @@ by Eric Young (eay@cryptsoft.com).
   The new configuration option is "./configure --with-atf=bind".
   [ISC-Bugs #38754]
 
+- Corrected a compilation error introduced by the fix for ISC-Bugs #22806.
+  On older linuxes that do not include the tpacket_auxdata structure don't
+  bother allocating the cmsgbuf as it isn't necessary and we don't have
+  a proper length for it.
+  [ISC-Bugs #39209]
+
 			Changes since 4.3.2rc2
 - None
 

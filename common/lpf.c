@@ -368,17 +368,30 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 	unsigned char ibuf [1536];
 	unsigned bufix = 0;
 	unsigned paylen;
-	unsigned char cmsgbuf[CMSG_LEN(sizeof(struct tpacket_auxdata))];
 	struct iovec iov = {
 		.iov_base = ibuf,
 		.iov_len = sizeof ibuf,
 	};
+#ifdef PACKET_AUXDATA
+	/*
+	 * We only need cmsgbuf if we are getting the aux data and we
+	 * only get the auxdata if it is actually defined
+	 */
+	unsigned char cmsgbuf[CMSG_LEN(sizeof(struct tpacket_auxdata))];
 	struct msghdr msg = {
 		.msg_iov = &iov,
 		.msg_iovlen = 1,
 		.msg_control = cmsgbuf,
 		.msg_controllen = sizeof(cmsgbuf),
 	};
+#else
+	struct msghdr msg = {
+		.msg_iov = &iov,
+		.msg_iovlen = 1,
+		.msg_control = NULL,
+		.msg_controllen = 0,
+	};
+#endif /* PACKET_AUXDATA */
 
 	length = recvmsg (interface->rfdesc, &msg, 0);
 	if (length <= 0)
@@ -422,7 +435,7 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 	}
 
 	}
-#endif
+#endif /* PACKET_AUXDATA */
 
 	bufix = 0;
 	/* Decode the physical header... */
