@@ -54,11 +54,6 @@ by Eric Young (eay@cryptsoft.com).
 
 			Changes since 4.3.2
 
-- The ATF (Automated Testing Framework) tools used for optional unit tests
-  can now be built from its embedded sources in bind, solving the
-  atf-run / atf-report issue with recent (>= 0.20) versions of ATF.
-  The new configuration option is "./configure --with-atf=bind".
-
 - The server now does a better check to see if it can allocate the memory
   for large blocks of v4 leases and should provide a slightly better error
   message.  Note well: the server pre-allocates v4 addresses, if you use
@@ -80,6 +75,12 @@ by Eric Young (eay@cryptsoft.com).
   Thanks to Jiri Popelka at Red Hat for this issue and his patch which
   inspired the fix.
   [ISC-Bugs #21235]
+
+- The ATF (Automated Testing Framework) tools used for optional unit tests
+  can now be built from its embedded sources in bind, solving the
+  atf-run / atf-report issue with recent (>= 0.20) versions of ATF.
+  The new configuration option is "./configure --with-atf=bind".
+  [ISC-Bugs #38754]
 
 			Changes since 4.3.2rc2
 - None
