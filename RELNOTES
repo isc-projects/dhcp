@@ -95,6 +95,10 @@ by Eric Young (eay@cryptsoft.com).
   table 3.
   [ISC-Bugs #38769]
 
+- Some compilers don't like the use of abs in minires/ns_verify.c,
+  change it to labs to make them happy.
+  [ISC-Bugs #39301]
+
 			Changes since 4.1-ESV-R11rc2
 
 - None

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2013-2015 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004,2007,2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
@@ -301,7 +301,7 @@ ns_verify(u_char *msg, unsigned *msglen, void *k,
 	hp->arcount = htons(ntohs(hp->arcount) + 1);
 
 	/* Verify the time. */
-	if (abs((*timesigned) - time(NULL)) > fudge)
+	if (labs((*timesigned) - time(NULL)) > fudge)
 		return ISC_R_BADTIME;
 
 	if (nostrip == 0) {
@@ -469,7 +469,7 @@ ns_verify_tcp(u_char *msg, unsigned *msglen, ns_tcp_tsig_state *state,
 	state->siglen = sigfieldlen;
 
 	/* Verify the time. */
-	if (abs(timesigned - time(NULL)) > fudge)
+	if (labs(timesigned - time(NULL)) > fudge)
 		return ISC_R_BADTIME;
 
 	*msglen = recstart - msg;
