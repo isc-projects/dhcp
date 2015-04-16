@@ -3,7 +3,7 @@
    Common parser code for dhcpd and dhclient. */
 
 /*
- * Copyright (c) 2004-2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2015 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -1107,6 +1107,13 @@ parse_date_core(cfile)
 			   "Time zone offset or semicolon expected.");
 		return((TIME)0);
 	}
+
+	/* If the year is 2038 or greater return the max time to avoid
+	 * overflow issues.  We could try and be more precise but there
+	 * doesn't seem to be a good reason to worry about it and waste
+	 * the cpu looking at the rest of the date. */
+	if (year >= 138)
+		return(MAX_TIME);
 
 	/* Guess the time value... */
 	guess = ((((((365 * (year - 70) +	/* Days in years since '70 */

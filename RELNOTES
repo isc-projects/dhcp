@@ -85,6 +85,12 @@ by Eric Young (eay@cryptsoft.com).
   DHCPv4 it would not be written to the new lease file.
   [ISC-Bugs #37791]
 
+- When parsing dates for leases convert dates past 2038 to "never".
+  This avoids problems with integer overflows in the date and time
+  handling code for people that decide to use very large lease times
+  or add a lease entry with a date far in the future.
+  [ISC-Bugs #33056]
+
 			Changes since 4.1-ESV-R11rc2
 
 - None
