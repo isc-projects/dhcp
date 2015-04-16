@@ -3,7 +3,7 @@
    DHCP Protocol engine. */
 
 /*
- * Copyright (c) 2004-2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2015 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -1432,8 +1432,6 @@ void nak_lease (packet, cip)
 	option_state_dereference (&options, MDL);
 
 /*	memset (&raw.ciaddr, 0, sizeof raw.ciaddr);*/
-	if (packet->interface->address_count)
-		raw.siaddr = packet->interface->addresses[0];
 	raw.giaddr = packet -> raw -> giaddr;
 	memcpy (raw.chaddr, packet -> raw -> chaddr, sizeof raw.chaddr);
 	raw.hlen = packet -> raw -> hlen;

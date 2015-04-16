@@ -91,6 +91,10 @@ by Eric Young (eay@cryptsoft.com).
   or add a lease entry with a date far in the future.
   [ISC-Bugs #33056]
 
+- Leave the siaddr field clear when sending a NACK as per RFC 2131
+  table 3.
+  [ISC-Bugs #38769]
+
 			Changes since 4.1-ESV-R11rc2
 
 - None
