@@ -34,7 +34,11 @@ fi
 
 # We can have some flags to pass to bind configure
 BINDCONFIG=
+if test "$cross_compiling" = "yes"; then
+	BINDCONFIG="--host=$host"
+fi
 AC_SUBST(BINDCONFIG)
+AM_CONDITIONAL(CROSS_COMPILING, test "$cross_compiling" = "yes")
 
 # POSIX doesn't include the IPv6 Advanced Socket API and glibc hides
 # parts of the IPv6 Advanced Socket API as a result.  This is stupid

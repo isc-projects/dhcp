@@ -78,13 +78,35 @@ atf:
 		 cp -rp atf ${binddir}) ;			      \
 	fi
 
-bind2:
+@CROSS_COMPILING_FALSE@bind2: bind2-noguest
+@CROSS_COMPILING_TRUE@bind2: bind2-hostgen
+
+bind2-noguest:
 # Build and install the export libraries
 # No need to do anything if we already have something installed.
 	@if test -d ${binddir}/lib ; then                                    \
 		echo Bind export libraries already installed ;               \
 	else                                                                 \
 		echo Building BIND Export libraries - this takes some time. ;\
+		(cd ${bindsrcdir}/lib/export ;                               \
+		  echo building in `pwd` ;                                   \
+		  MAKE=${GMAKE} ${GMAKE} >> ${binddir}/build.log) ;          \
+                                                                             \
+		echo Installing BIND Export libraries to ${binddir}. ;       \
+		(cd ${bindsrcdir}/lib/export ;                               \
+		  MAKE=${GMAKE} ${GMAKE} install > ${binddir}/install.log) ; \
+	fi
+
+bind2-hostgen:
+# Build and install the export libraries
+# No need to do anything if we already have something installed.
+	@if test -d ${binddir}/lib ; then                                    \
+		echo Bind export libraries already installed ;               \
+	else                                                                 \
+		echo Building BIND Export libraries - this takes some time. ;\
+		(cd ${bindsrcdir}/lib/export/dns ; \
+		 echo building gen using ${BUILD_CC} in `pwd` ; \
+		 MAKE=${GMAKE} ${GMAKE} CC=${BUILD_CC} CFLAGS=${BUILD_CFLAGS} CPPFLAGS=${BUILD_CPPFLAGS} LDFLAGS=${BUILD_LDFLAGS} LIBS=${BUILD_LIBS} gen >> ${binddir}/build.log) ; \
 		(cd ${bindsrcdir}/lib/export ;                               \
 		  echo building in `pwd` ;                                   \
 		  MAKE=${GMAKE} ${GMAKE} >> ${binddir}/build.log) ;          \

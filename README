@@ -199,6 +199,10 @@ If you get errors on a system not mentioned above, you will need
 to do some programming or debugging on your own to get the DHCP
 Distribution working.
 
+If you cross compile you have to follow the instructions from
+the BIND README, in particular you must set the BUILD_CC
+environment variable.
+
 		   INSTALLING THE DHCP DISTRIBUTION
 
 Once you have successfully gotten the DHCP Distribution to build, you
