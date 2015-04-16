@@ -2728,6 +2728,10 @@ Otherwise the server will generate a DUID of the specified type.
 If you choose EN, you must include the enterprise number and the
 enterprise-identifier.
 .PP
+If there is a server-duid statement in the lease file it will take precedence
+over the server-duid statement from the config file and a
+dhcp6.server-id option in the config file will override both.
+.PP
 The default server-duid type is LLT.
 .RE
 .PP

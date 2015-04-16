@@ -80,6 +80,11 @@ by Eric Young (eay@cryptsoft.com).
   and look for the presence of the unicast option there and then globally.
   [ISC-Bugs #21235]
 
+- Write out the DUID server id on startup in all cases, previously if it
+  was read in from server-duid option in the config or lease files for 
+  DHCPv4 it would not be written to the new lease file.
+  [ISC-Bugs #37791]
+
 			Changes since 4.1-ESV-R11rc2
 
 - None
