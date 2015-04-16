@@ -705,19 +705,21 @@ main(int argc, char **argv) {
 
 #ifdef DHCPv6
 	/*
-	 * Set server DHCPv6 identifier.
+	 * Set server DHCPv6 identifier - we go in order:
+	 * dhcp6.server-id in the config file
+	 * server-duid from the lease file
+	 * server-duid from the config file (the config file is read first
+	 * and the lease file overwrites the config file information)
+	 * genrate a new one
+	 * In all cases we write it out to the lease file.
 	 * See dhcpv6.c for discussion of setting DUID.
 	 */
-	if (set_server_duid_from_option() == ISC_R_SUCCESS) {
-		write_server_duid();
-	} else {
-		if (!server_duid_isset()) {
-			if (generate_new_server_duid() != ISC_R_SUCCESS) {
-				log_fatal("Unable to set server identifier.");
-			}
-			write_server_duid();
-		}
+	if ((set_server_duid_from_option() != ISC_R_SUCCESS) &&
+	    (!server_duid_isset()) &&
+	    (generate_new_server_duid() != ISC_R_SUCCESS)) {
+		log_fatal("Unable to set server identifier.");
 	}
+	write_server_duid();
 #endif /* DHCPv6 */
 
 #ifndef DEBUG
