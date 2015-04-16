@@ -26,17 +26,20 @@ include ./bindvar.tmp
 
 bindsrcdir=bind-${version}
 
-bindconfig = --disable-kqueue --disable-epoll --disable-devpoll
-bindconfig += --without-openssl --without-libxml2 --enable-exportlib
-bindconfig += --enable-threads=no --with-export-includedir=${binddir}/include
-bindconfig += --with-export-libdir=${binddir}/lib --with-gssapi=no
-bindconfig += @BINDCONFIG@
+bindconfig = --disable-kqueue --disable-epoll --disable-devpoll \
+	--without-openssl --without-libxml2 --enable-exportlib \
+	--with-gssapi=no --enable-threads=no @BINDCONFIG@ \
+	--with-export-includedir=${binddir}/include \
+	--with-export-libdir=${binddir}/lib
 
-cleandirs = ./lib ./include
-@BIND_ATF_TRUE@cleandirs += ./atf
+@BIND_ATF_FALSE@cleandirs = ./lib ./include
+@BIND_ATF_TRUE@cleandirs = ./lib ./include ./atf
 cleanfiles = ./configure.log ./build.log ./install.log
 
-all:
+@BIND_ATF_FALSE@all: bind1 bind2
+@BIND_ATF_TRUE@all: bind1 atf bind2
+
+bind1:
 # Extract the source from the tarball, if it hasn't been already.
 	@if test -d ${bindsrcdir} ; then                    \
 		echo ${bindsrcdir} already unpacked... ;    \
@@ -64,16 +67,18 @@ all:
                  ./configure ${bindconfig} > ${binddir}/configure.log); \
 	fi
 
+atf:
 # Build and copy the ATF support if not yet installed.
-@BIND_ATF_TRUE@	@if test -d ./atf ; then				      \
-@BIND_ATF_TRUE@		echo ATF support already installed ;		      \
-@BIND_ATF_TRUE@	else							      \
-@BIND_ATF_TRUE@		echo Building ATF support ;			      \
-@BIND_ATF_TRUE@		(cd ${bindsrcdir}/unit;				      \
-@BIND_ATF_TRUE@		 MAKE=${GMAKE} ${GMAKE} atf > ${binddir}/build.log ;  \
-@BIND_ATF_TRUE@		 cp -rp atf ${binddir}) ;			      \
-@BIND_ATF_TRUE@	fi
+	@if test -d ./atf ; then				      \
+		echo ATF support already installed ;		      \
+	else							      \
+		echo Building ATF support ;			      \
+		(cd ${bindsrcdir}/unit;				      \
+		 MAKE=${GMAKE} ${GMAKE} atf > ${binddir}/build.log ;  \
+		 cp -rp atf ${binddir}) ;			      \
+	fi
 
+bind2:
 # Build and install the export libraries
 # No need to do anything if we already have something installed.
 	@if test -d ${binddir}/lib ; then                                    \

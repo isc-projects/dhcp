@@ -80,7 +80,7 @@ by Eric Young (eay@cryptsoft.com).
   can now be built from its embedded sources in bind, solving the
   atf-run / atf-report issue with recent (>= 0.20) versions of ATF.
   The new configuration option is "./configure --with-atf=bind".
-  [ISC-Bugs #38754]
+  [ISC-Bugs #38754, #39300]
 
 - Corrected a compilation error introduced by the fix for ISC-Bugs #22806.
   On older linuxes that do not include the tpacket_auxdata structure don't
