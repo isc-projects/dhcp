@@ -596,6 +596,7 @@ AC_CHECK_MEMBER(struct tpacket_auxdata.tp_vlan_tci,
     ,, [#include <linux/if_packet.h>])
 
 BINDDIR=
+BINDSRCDIR=
 AC_ARG_WITH(libbind,
 	AS_HELP_STRING([--with-libbind=PATH],[bind includes and libraries are in PATH 
 		        (default is ./bind)]),
@@ -603,24 +604,23 @@ AC_ARG_WITH(libbind,
 case "$use_libbind" in 
 yes)
 	BINDDIR="\${top_srcdir}/bind"
+	BINDSRCDIR="\${top_srcdir}/bind"
 	;;
 no)
 	BINDDIR="\${top_srcdir}/bind"
+	BINDSRCDIR="\${top_srcdir}/bind"
 	;;
 *)
 	BINDDIR="$use_libbind"
-	if test ! -d "bind"; then
+	if test ! -d "$srcdir/bind"; then
 		# no bind directory, create it with a fake Makefile.in
-		mkdir bind
-		cat > bind/Makefile.in << EOF
-# placeholder
-all check clean distclean distdir install uninstall:
-
-EOF
+		mkdir $srcdir/bind
+		echo "# placeholder" > $srcdir/bind/Makefile.in
 	fi
 	;;
 esac
 AC_SUBST(BINDDIR)
+AC_SUBST(BINDSRCDIR)
 
 # OpenLDAP support.
 AC_ARG_WITH(ldap,
@@ -654,8 +654,8 @@ fi
 # AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[]])],[],[]) & etc).
 CFLAGS="$CFLAGS $STD_CWARNINGS"
 
-# Try to add the bind include directory
-CFLAGS="$CFLAGS -I$BINDDIR/include"
+# Try to add the bind and dhcp include directories
+CFLAGS="$CFLAGS -I\$(top_srcdir)/includes -I$BINDDIR/include"
 
 case "$host" in
 *-darwin*)
@@ -666,7 +666,7 @@ AC_C_FLEXIBLE_ARRAY_MEMBER
 
 AC_CONFIG_FILES([
   Makefile
-  bind/Makefile
+  $srcdir/bind/Makefile
   client/Makefile
   client/tests/Makefile
   common/Makefile
@@ -683,7 +683,7 @@ AC_CONFIG_FILES([
 ])
 AC_OUTPUT
 
-sh util/bindvar.sh
+(cd $srcdir; sh util/bindvar.sh)
 
 cat > config.report << END
 
