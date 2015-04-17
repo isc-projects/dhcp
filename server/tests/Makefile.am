@@ -48,7 +48,7 @@ load_bal_unittests_SOURCES = $(DHCPSRC) load_bal_unittest.c
 load_bal_unittests_LDADD = $(DHCPLIBS) $(ATF_LDFLAGS)
 
 check: $(ATF_TESTS)
-	cp -n $(top_srcdir)/server/tests/Atffile Atffile
+	-cp -n $(top_srcdir)/server/tests/Atffile Atffile
 	sh ${top_builddir}/tests/unittest.sh
 
 endif
