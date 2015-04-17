@@ -595,25 +595,32 @@ AC_CHECK_MEMBER(struct tpacket_auxdata.tp_vlan_tci,
     [AC_DEFINE([VLAN_TCI_PRESENT], [1], [tpacket_auxdata.tp_vlan_tci present])]
     ,, [#include <linux/if_packet.h>])
 
-libbind=
+BINDDIR=
 AC_ARG_WITH(libbind,
 	AS_HELP_STRING([--with-libbind=PATH],[bind includes and libraries are in PATH 
 		        (default is ./bind)]),
 	use_libbind="$withval", use_libbind="no")
 case "$use_libbind" in 
 yes)
-	libbind="\${top_srcdir}/bind"
+	BINDDIR="\${top_srcdir}/bind"
 	;;
 no)
-	libbind="\${top_srcdir}/bind"
+	BINDDIR="\${top_srcdir}/bind"
 	;;
 *)
-	libbind="$use_libbind"
+	BINDDIR="$use_libbind"
 	if test ! -d "bind"; then
-		AC_MSG_WARN(empty bind directory)
-	fi	
+		# no bind directory, create it with a fake Makefile.in
+		mkdir bind
+		cat > bind/Makefile.in << EOF
+# placeholder
+all check clean distclean distdir install uninstall:
+
+EOF
+	fi
 	;;
 esac
+AC_SUBST(BINDDIR)
 
 # OpenLDAP support.
 AC_ARG_WITH(ldap,
@@ -648,7 +655,7 @@ fi
 CFLAGS="$CFLAGS $STD_CWARNINGS"
 
 # Try to add the bind include directory
-CFLAGS="$CFLAGS -I$libbind/include"
+CFLAGS="$CFLAGS -I$BINDDIR/include"
 
 case "$host" in
 *-darwin*)
