@@ -137,13 +137,15 @@ PROGRAMS = $(bin_PROGRAMS) $(noinst_PROGRAMS)
 am_cltest_OBJECTS = cltest.$(OBJEXT)
 cltest_OBJECTS = $(am_cltest_OBJECTS)
 cltest_DEPENDENCIES = libdhcpctl.a ../common/libdhcp.a \
-	../omapip/libomapi.a ../bind/lib/libirs.a ../bind/lib/libdns.a \
-	../bind/lib/libisccfg.a ../bind/lib/libisc.a
+	../omapip/libomapi.a $(BINDLIBDIR)/libirs.a \
+	$(BINDLIBDIR)/libdns.a $(BINDLIBDIR)/libisccfg.a \
+	$(BINDLIBDIR)/libisc.a
 am_omshell_OBJECTS = omshell.$(OBJEXT)
 omshell_OBJECTS = $(am_omshell_OBJECTS)
 omshell_DEPENDENCIES = libdhcpctl.a ../common/libdhcp.a \
-	../omapip/libomapi.a ../bind/lib/libirs.a ../bind/lib/libdns.a \
-	../bind/lib/libisccfg.a ../bind/lib/libisc.a
+	../omapip/libomapi.a $(BINDLIBDIR)/libirs.a \
+	$(BINDLIBDIR)/libdns.a $(BINDLIBDIR)/libisccfg.a \
+	$(BINDLIBDIR)/libisc.a
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -215,6 +217,7 @@ AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
 BINDCONFIG = @BINDCONFIG@
+BINDDIR = @BINDDIR@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
@@ -308,19 +311,20 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
+BINDLIBDIR = @BINDDIR@/lib
 lib_LIBRARIES = libdhcpctl.a
 man_MANS = omshell.1 dhcpctl.3
 EXTRA_DIST = $(man_MANS)
 omshell_SOURCES = omshell.c
 omshell_LDADD = libdhcpctl.a ../common/libdhcp.a ../omapip/libomapi.a \
-	        ../bind/lib/libirs.a ../bind/lib/libdns.a \
-	        ../bind/lib/libisccfg.a ../bind/lib/libisc.a
+	        $(BINDLIBDIR)/libirs.a $(BINDLIBDIR)/libdns.a \
+	        $(BINDLIBDIR)/libisccfg.a $(BINDLIBDIR)/libisc.a
 
 libdhcpctl_a_SOURCES = dhcpctl.c callback.c remote.c
 cltest_SOURCES = cltest.c
 cltest_LDADD = libdhcpctl.a ../common/libdhcp.a ../omapip/libomapi.a \
-	       ../bind/lib/libirs.a ../bind/lib/libdns.a \
-               ../bind/lib/libisccfg.a ../bind/lib/libisc.a
+	       $(BINDLIBDIR)/libirs.a $(BINDLIBDIR)/libdns.a \
+               $(BINDLIBDIR)/libisccfg.a $(BINDLIBDIR)/libisc.a
 
 all: all-am
 

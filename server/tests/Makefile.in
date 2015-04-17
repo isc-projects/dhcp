@@ -260,6 +260,7 @@ AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
 BINDCONFIG = @BINDCONFIG@
+BINDDIR = @BINDDIR@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
@@ -354,6 +355,7 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 SUBDIRS = .
+BINDLIBDIR = @BINDDIR@/lib
 AM_CPPFLAGS = $(ATF_CFLAGS) -DUNIT_TEST -I$(top_srcdir)/includes \
 	-I$(top_srcdir)/bind/include -I$(top_srcdir) \
 	-DLOCALSTATEDIR='"."'
@@ -363,10 +365,10 @@ DHCPSRC = ../dhcp.c ../bootp.c ../confpars.c ../db.c ../class.c      \
           ../ddns.c ../dhcpleasequery.c ../dhcpv6.c ../mdb6.c        \
           ../ldap.c ../ldap_casa.c ../dhcpd.c
 
-DHCPLIBS = $(top_builddir)/common/libdhcp.a $(top_builddir)/omapip/libomapi.a    \
-          $(top_builddir)/dhcpctl/libdhcpctl.a $(top_builddir)/bind/lib/libirs.a \
-	  $(top_builddir)/bind/lib/libdns.a $(top_builddir)/bind/lib/libisccfg.a \
-	  $(top_builddir)/bind/lib/libisc.a
+DHCPLIBS = $(top_builddir)/common/libdhcp.a $(top_builddir)/omapip/libomapi.a \
+          $(top_builddir)/dhcpctl/libdhcpctl.a $(BINDLIBDIR)/libirs.a \
+	  $(BINDLIBDIR)/libdns.a $(BINDLIBDIR)/libisccfg.a \
+	  $(BINDLIBDIR)/libisc.a
 
 ATF_TESTS = $(am__append_1)
 @HAVE_ATF_TRUE@dhcpd_unittests_SOURCES = $(DHCPSRC) simple_unittest.c
