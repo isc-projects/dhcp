@@ -29,3 +29,8 @@ SUBDIRS = @BINDSRCDIR@ includes tests common omapip client dhcpctl relay server
 
 nobase_include_HEADERS = dhcpctl/dhcpctl.h
 
+distcheck-hook:
+	chmod u+w $(distdir)/bind
+
+distclean-local:
+	rm -f config.report
