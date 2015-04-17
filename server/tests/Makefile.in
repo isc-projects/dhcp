@@ -261,6 +261,7 @@ AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
 BINDCONFIG = @BINDCONFIG@
 BINDDIR = @BINDDIR@
+BINDSRCDIR = @BINDSRCDIR@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
@@ -996,7 +997,8 @@ info:
 	@echo "ATF_LIBS=$(ATF_LIBS)"
 
 @HAVE_ATF_TRUE@check: $(ATF_TESTS)
-@HAVE_ATF_TRUE@	sh ${top_srcdir}/tests/unittest.sh
+@HAVE_ATF_TRUE@	-cp -n $(top_srcdir)/server/tests/Atffile Atffile
+@HAVE_ATF_TRUE@	sh ${top_builddir}/tests/unittest.sh
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

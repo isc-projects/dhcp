@@ -241,6 +241,7 @@ AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
 BINDCONFIG = @BINDCONFIG@
 BINDDIR = @BINDDIR@
+BINDSRCDIR = @BINDSRCDIR@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
@@ -341,6 +342,9 @@ top_srcdir = @top_srcdir@
 # production code. Sadly, we are not there yet.
 SUBDIRS = . tests
 BINDLIBDIR = @BINDDIR@/lib
+AM_CPPFLAGS = -DCLIENT_PATH='"PATH=$(sbindir):/sbin:/bin:/usr/sbin:/usr/bin"' \
+	      -DLOCALSTATEDIR='"$(localstatedir)"'
+
 dist_sysconf_DATA = dhclient.conf.example
 dhclient_SOURCES = clparse.c dhclient.c dhc6.c \
 		   scripts/bsdos scripts/freebsd scripts/linux scripts/macos \
@@ -846,14 +850,6 @@ uninstall-man: uninstall-man5 uninstall-man8
 	uninstall-am uninstall-dist_sysconfDATA uninstall-man \
 	uninstall-man5 uninstall-man8 uninstall-sbinPROGRAMS
 
-
-dhclient.o: dhclient.c
-	$(COMPILE) -DCLIENT_PATH='"PATH=$(sbindir):/sbin:/bin:/usr/sbin:/usr/bin"' \
-		   -DLOCALSTATEDIR='"$(localstatedir)"' -c dhclient.c
-
-dhc6.o: dhc6.c
-	$(COMPILE) -DCLIENT_PATH='"PATH=$(sbindir):/sbin:/bin:/usr/sbin:/usr/bin"' \
-		   -DLOCALSTATEDIR='"$(localstatedir)"' -c dhc6.c
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

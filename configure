@@ -626,6 +626,7 @@ am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
 LDAP_CFLAGS
+BINDSRCDIR
 BINDDIR
 ac_prefix_program
 HAVE_ATF_FALSE
@@ -5449,7 +5450,7 @@ if test "$atf_path" = "bind" ; then
     atf_path="\${top_srcdir}/bind/atf"
     ATF_CFLAGS="-I$atf_path/include -DUNIT_TEST"
     ATF_LDFLAGS="-L$atf_path/lib -latf-c"
-    ATF_BIN=`pwd`/bind/atf/bin
+    ATF_BIN=`cd $srcdir; pwd`/bind/atf/bin
 
 
 
@@ -6615,6 +6616,7 @@ fi
 
 
 BINDDIR=
+BINDSRCDIR=
 
 # Check whether --with-libbind was given.
 if test "${with_libbind+set}" = set; then :
@@ -6626,23 +6628,22 @@ fi
 case "$use_libbind" in
 yes)
 	BINDDIR="\${top_srcdir}/bind"
+	BINDSRCDIR="\${top_srcdir}/bind"
 	;;
 no)
 	BINDDIR="\${top_srcdir}/bind"
+	BINDSRCDIR="\${top_srcdir}/bind"
 	;;
 *)
 	BINDDIR="$use_libbind"
-	if test ! -d "bind"; then
+	if test ! -d "$srcdir/bind"; then
 		# no bind directory, create it with a fake Makefile.in
-		mkdir bind
-		cat > bind/Makefile.in << EOF
-# placeholder
-all check clean distclean distdir install uninstall:
-
-EOF
+		mkdir $srcdir/bind
+		echo "# placeholder" > $srcdir/bind/Makefile.in
 	fi
 	;;
 esac
+
 
 
 # OpenLDAP support.
@@ -6805,8 +6806,8 @@ fi
 # AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[]])],[],[]) & etc).
 CFLAGS="$CFLAGS $STD_CWARNINGS"
 
-# Try to add the bind include directory
-CFLAGS="$CFLAGS -I$BINDDIR/include"
+# Try to add the bind and dhcp include directories
+CFLAGS="$CFLAGS -I\$(top_srcdir)/includes -I$BINDDIR/include"
 
 case "$host" in
 *-darwin*)
@@ -6856,7 +6857,7 @@ $as_echo "#define FLEXIBLE_ARRAY_MEMBER /**/" >>confdefs.h
   fi
 
 
-ac_config_files="$ac_config_files Makefile bind/Makefile client/Makefile client/tests/Makefile common/Makefile common/tests/Makefile dhcpctl/Makefile includes/Makefile omapip/Makefile relay/Makefile server/Makefile tests/Makefile tests/unittest.sh server/tests/Makefile doc/devel/doxyfile"
+ac_config_files="$ac_config_files Makefile $srcdir/bind/Makefile client/Makefile client/tests/Makefile common/Makefile common/tests/Makefile dhcpctl/Makefile includes/Makefile omapip/Makefile relay/Makefile server/Makefile tests/Makefile tests/unittest.sh server/tests/Makefile doc/devel/doxyfile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -7599,7 +7600,7 @@ do
     "depfiles") CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
     "includes/config.h") CONFIG_HEADERS="$CONFIG_HEADERS includes/config.h" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
-    "bind/Makefile") CONFIG_FILES="$CONFIG_FILES bind/Makefile" ;;
+    "$srcdir/bind/Makefile") CONFIG_FILES="$CONFIG_FILES $srcdir/bind/Makefile" ;;
     "client/Makefile") CONFIG_FILES="$CONFIG_FILES client/Makefile" ;;
     "client/tests/Makefile") CONFIG_FILES="$CONFIG_FILES client/tests/Makefile" ;;
     "common/Makefile") CONFIG_FILES="$CONFIG_FILES common/Makefile" ;;
@@ -8301,7 +8302,7 @@ $as_echo "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
 fi
 
 
-sh util/bindvar.sh
+(cd $srcdir; sh util/bindvar.sh)
 
 cat > config.report << END
 
