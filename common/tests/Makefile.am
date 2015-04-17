@@ -37,7 +37,8 @@ ns_name_unittest_LDADD += ../libdhcp.a  \
 	$(BINDLIBDIR)/libdns.a $(BINDLIBDIR)/libisccfg.a  $(BINDLIBDIR)/libisc.a
 
 check: $(ATF_TESTS)
-	sh ${top_srcdir}/tests/unittest.sh
+	cp -n $(top_srcdir)/common/tests/Atffile Atffile
+	sh ${top_builddir}/tests/unittest.sh
 
 endif
 

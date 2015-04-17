@@ -34,7 +34,8 @@ duid_unittests_LDADD = $(ATF_LDFLAGS)
 duid_unittests_LDADD += $(DHCPLIBS)
 
 check: $(ATF_TESTS)
-	sh ${top_srcdir}/tests/unittest.sh
+	cp -n $(top_srcdir)/client/tests/Atffile Atffile
+	sh ${top_builddir}/tests/unittest.sh
 
 endif
 

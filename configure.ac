@@ -199,7 +199,7 @@ if test "$atf_path" = "bind" ; then
     atf_path="\${top_srcdir}/bind/atf"
     ATF_CFLAGS="-I$atf_path/include -DUNIT_TEST"
     ATF_LDFLAGS="-L$atf_path/lib -latf-c"
-    ATF_BIN=`pwd`/bind/atf/bin
+    ATF_BIN=`cd $srcdir; pwd`/bind/atf/bin
     AC_SUBST(ATF_CFLAGS)
     AC_SUBST(ATF_LDFLAGS)
     AC_SUBST(ATF_BIN)
