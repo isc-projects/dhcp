@@ -623,6 +623,7 @@ distclean-generic:
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
+@HAVE_ATF_FALSE@distclean-local:
 clean: clean-recursive
 
 clean-am: clean-checkPROGRAMS clean-generic mostlyclean-am
@@ -631,7 +632,7 @@ distclean: distclean-recursive
 	-rm -rf ./$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
-	distclean-tags
+	distclean-local distclean-tags
 
 dvi: dvi-recursive
 
@@ -695,15 +696,16 @@ uninstall-am:
 .PHONY: $(am__recursive_targets) CTAGS GTAGS TAGS all all-am check \
 	check-am clean clean-checkPROGRAMS clean-generic cscopelist-am \
 	ctags ctags-am distclean distclean-compile distclean-generic \
-	distclean-tags distdir dvi dvi-am html html-am info info-am \
-	install install-am install-data install-data-am install-dvi \
-	install-dvi-am install-exec install-exec-am install-html \
-	install-html-am install-info install-info-am install-man \
-	install-pdf install-pdf-am install-ps install-ps-am \
-	install-strip installcheck installcheck-am installdirs \
-	installdirs-am maintainer-clean maintainer-clean-generic \
-	mostlyclean mostlyclean-compile mostlyclean-generic pdf pdf-am \
-	ps ps-am tags tags-am uninstall uninstall-am
+	distclean-local distclean-tags distdir dvi dvi-am html html-am \
+	info info-am install install-am install-data install-data-am \
+	install-dvi install-dvi-am install-exec install-exec-am \
+	install-html install-html-am install-info install-info-am \
+	install-man install-pdf install-pdf-am install-ps \
+	install-ps-am install-strip installcheck installcheck-am \
+	installdirs installdirs-am maintainer-clean \
+	maintainer-clean-generic mostlyclean mostlyclean-compile \
+	mostlyclean-generic pdf pdf-am ps ps-am tags tags-am uninstall \
+	uninstall-am
 
 
 # for autotools debugging only
@@ -719,6 +721,12 @@ info:
 @HAVE_ATF_TRUE@	-cp -n $(top_srcdir)/client/tests/duid2_test.txt duid2_test.txt
 @HAVE_ATF_TRUE@	-cp -n $(top_srcdir)/client/tests/duid3_test.txt duid3_test.txt
 @HAVE_ATF_TRUE@	sh ${top_builddir}/tests/unittest.sh
+
+@HAVE_ATF_TRUE@distclean-local:
+@HAVE_ATF_TRUE@	@if test $(top_srcdir) != ${top_builddir}; then \
+@HAVE_ATF_TRUE@		rm -f Atffile duid0_test.txt duid1_test.txt; \
+@HAVE_ATF_TRUE@		rm -f duid2_test.txt duid3_test.txt; \
+@HAVE_ATF_TRUE@	fi
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
