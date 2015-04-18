@@ -51,6 +51,11 @@ check: $(ATF_TESTS)
 	-cp -n $(top_srcdir)/server/tests/Atffile Atffile
 	sh ${top_builddir}/tests/unittest.sh
 
+distclean-local:
+	@if test $(top_srcdir) != ${top_builddir}; then \
+		rm -f Atffile; \
+	fi
+
 endif
 
 check_PROGRAMS = $(ATF_TESTS)

@@ -41,6 +41,12 @@ check: $(ATF_TESTS)
 	-cp -n $(top_srcdir)/client/tests/duid3_test.txt duid3_test.txt
 	sh ${top_builddir}/tests/unittest.sh
 
+distclean-local:
+	@if test $(top_srcdir) != ${top_builddir}; then \
+		rm -f Atffile duid0_test.txt duid1_test.txt; \
+		rm -f duid2_test.txt duid3_test.txt; \
+	fi
+
 endif
 
 check_PROGRAMS = $(ATF_TESTS)
