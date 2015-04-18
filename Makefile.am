@@ -29,6 +29,12 @@ SUBDIRS = @BINDSRCDIR@ includes tests common omapip client dhcpctl relay server
 
 nobase_include_HEADERS = dhcpctl/dhcpctl.h
 
+#
+# distcheck tuning
+#
+
+DISTCHECK_CONFIGURE_FLAGS = @DISTCHECK_ATF_CONFIGURE_FLAG@
+
 distcheck-hook:
 	chmod u+w $(distdir)/bind
 

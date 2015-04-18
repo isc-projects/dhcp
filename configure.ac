@@ -189,12 +189,14 @@ fi
 
 # Testing section
 
+DISTCHECK_ATF_CONFIGURE_FLAG=
 atf_path="no"
 AC_ARG_WITH([atf],
     AS_HELP_STRING([--with-atf=PATH],[specify location where atf was installed (or "bind")]),
     [atf_path="$withval"])
 AM_CONDITIONAL(BIND_ATF, test "$atf_path" = "bind")
 if test "$atf_path" = "bind" ; then
+    DISTCHECK_ATF_CONFIGURE_FLAG="--with-atf=bind"
     atf_pcp="bind"
     atf_path="\${top_srcdir}/bind/atf"
     ATF_CFLAGS="-I$atf_path/include -DUNIT_TEST"
@@ -205,6 +207,7 @@ if test "$atf_path" = "bind" ; then
     AC_SUBST(ATF_BIN)
     BINDCONFIG="$BINDCONFIG --with-atf"
 elif test "$atf_path" != "no" ; then
+    DISTCHECK_ATF_CONFIGURE_FLAG="--with-atf=$atf_path"
     # Config path for pkg-config
     atf_pcp=""
     if test "$atf_path" != "yes" ; then
@@ -252,6 +255,7 @@ fi
 
 AM_CONDITIONAL(HAVE_ATF, test "$atf_pcp" != "")
 AM_COND_IF([HAVE_ATF], [AC_DEFINE([HAVE_ATF], [1], [ATF framework specified?])])
+AC_SUBST(DISTCHECK_ATF_CONFIGURE_FLAG)
 
 ###
 ### Path fun.  Older versions of DHCP were installed in /usr/sbin, so we
@@ -558,10 +562,13 @@ AC_CHECK_MEMBER(struct sockaddr.sa_len,
 	[#include <sys/socket.h>])
 
 # figure out pointer size
+SAVE_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -I$srcdir"
 AC_CHECK_SIZEOF(struct iaddr *, , [
 #include "includes/inet.h"
 #include <stdio.h>
 ])
+CFLAGS="$SAVE_CFLAGS"
 
 # Solaris does not have the msg_control or msg_controlen members 
 # in the msghdr structure unless you define:
