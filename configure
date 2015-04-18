@@ -629,6 +629,7 @@ LDAP_CFLAGS
 BINDSRCDIR
 BINDDIR
 ac_prefix_program
+DISTCHECK_ATF_CONFIGURE_FLAG
 HAVE_ATF_FALSE
 HAVE_ATF_TRUE
 ATF_BIN
@@ -5430,6 +5431,7 @@ fi
 
 # Testing section
 
+DISTCHECK_ATF_CONFIGURE_FLAG=
 atf_path="no"
 
 # Check whether --with-atf was given.
@@ -5446,6 +5448,7 @@ else
 fi
 
 if test "$atf_path" = "bind" ; then
+    DISTCHECK_ATF_CONFIGURE_FLAG="--with-atf=bind"
     atf_pcp="bind"
     atf_path="\${top_srcdir}/bind/atf"
     ATF_CFLAGS="-I$atf_path/include -DUNIT_TEST"
@@ -5456,6 +5459,7 @@ if test "$atf_path" = "bind" ; then
 
     BINDCONFIG="$BINDCONFIG --with-atf"
 elif test "$atf_path" != "no" ; then
+    DISTCHECK_ATF_CONFIGURE_FLAG="--with-atf=$atf_path"
     # Config path for pkg-config
     atf_pcp=""
     if test "$atf_path" != "yes" ; then
@@ -5515,6 +5519,7 @@ if test -z "$HAVE_ATF_TRUE"; then :
 $as_echo "#define HAVE_ATF 1" >>confdefs.h
 
 fi
+
 
 ###
 ### Path fun.  Older versions of DHCP were installed in /usr/sbin, so we
@@ -6529,6 +6534,8 @@ fi
 
 
 # figure out pointer size
+SAVE_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -I$srcdir"
 # The cast to long int works around a bug in the HP C Compiler
 # version HP92453-01 B.11.11.23709.GP, which incorrectly rejects
 # declarations like `int a3[[(sizeof (unsigned char)) >= 0]];'.
@@ -6566,6 +6573,7 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
 
+CFLAGS="$SAVE_CFLAGS"
 
 # Solaris does not have the msg_control or msg_controlen members
 # in the msghdr structure unless you define:
