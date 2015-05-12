@@ -109,6 +109,11 @@ by Eric Young (eay@cryptsoft.com).
   table 3.
   [ISC-Bugs #38769]
 
+- In the client don't send expired addresses to the script as part of
+  the binding process.  Thanks to Sven Trenkel at Google for reporting
+  the issue and suggesting the patch.
+  [ISC-Bugs #38631]
+
 			Changes since 4.3.2rc2
 - None
 
