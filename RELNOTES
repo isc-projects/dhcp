@@ -104,6 +104,10 @@ by Eric Young (eay@cryptsoft.com).
   the issue and suggesting the patch.
   [ISC-Bugs #38631]
 
+- While parsing IPv6 addresses treat "add" as part of the address instead
+  of as a token.
+  [ISC-Bugs #39529]
+
 			Changes since 4.1-ESV-R11rc2
 
 - None
