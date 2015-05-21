@@ -384,10 +384,11 @@ parse_ip6_addr(struct parse *cfile, struct iaddr *addr) {
 	 */
 	v6_len = 0;
 	for (;;) {
-		if ((((token == NAME) || (token == NUMBER_OR_NAME)) && 
+		if ((((token == NAME) || (token == NUMBER_OR_NAME)) &&
 		     is_hex_string(val)) ||
-		    (token == NUMBER) || 
-		    (token == DOT) || 
+		    (token == NUMBER) ||
+		    (token == TOKEN_ADD) ||
+		    (token == DOT) ||
 		    (token == COLON)) {
 
 			next_raw_token(&val, NULL, cfile);
