@@ -3,7 +3,7 @@
    Failover protocol support code... */
 
 /*
- * Copyright (c) 2004-2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2015 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -1939,18 +1939,33 @@ isc_result_t dhcp_failover_set_state (dhcp_failover_state_t *state,
 
 	  case partner_down:
 	    /* For every expired lease, set a timeout for it to become free. */
-	    for (s = shared_networks; s; s = s -> next) {
-		for (p = s -> pools; p; p = p -> next) {
-		    if (p -> failover_peer == state) {
-			for (l = p->expired ; l ; l = l->next) {
+	    for (s = shared_networks; s; s = s->next) {
+		for (p = s->pools; p; p = p->next) {
+#if defined (BINARY_LEASES)
+		    long int tiebreaker = 0;
+#endif
+		    if (p->failover_peer == state) {
+			for (l = LEASE_GET_FIRST(p->expired);
+			     l != NULL;
+			     l = LEASE_GET_NEXT(p->expired, l)) {
 			    l->tsfp = state->me.stos + state->mclt;
 			    l->sort_time = (l->tsfp > l->ends) ?
 					   l->tsfp : l->ends;
-			}
-			if (p->expired &&
-			    (p->expired->sort_time < p->next_event_time)) {
+#if defined (BINARY_LEASES)
+			    /* If necessary fix up the tiebreaker so the leases
+			     * maintain proper sort order.
+			     */
+			    l->sort_tiebreaker = tiebreaker;
+			    if (tiebreaker != LONG_MAX)
+			        tiebreaker++;
+#endif
 
-			    p->next_event_time = p->expired->sort_time;
+			}
+
+			l = LEASE_GET_FIRST(p->expired);
+			if (l && (l->sort_time < p->next_event_time)) {
+
+			    p->next_event_time = l->sort_time;
 #if defined (DEBUG_FAILOVER_TIMING)
 			    log_info ("add_timeout +%d %s",
 				      (int)(cur_time - p->next_event_time),
@@ -1966,7 +1981,6 @@ isc_result_t dhcp_failover_set_state (dhcp_failover_state_t *state,
 		}
 	    }
 	    break;
-
 
 	  default:
 	    break;
@@ -2470,14 +2484,15 @@ dhcp_failover_pool_dobalance(dhcp_failover_state_t *state,
 {
 	int lts, total, thresh, hold, panic, pass;
 	int leases_queued = 0;
-	struct lease *lp = (struct lease *)0;
-	struct lease *next = (struct lease *)0;
+	struct lease *lp = NULL;
+	struct lease *next = NULL;
+	struct lease *ltemp = NULL;
 	struct shared_network *s;
 	struct pool *p;
 	binding_state_t peer_lease_state;
 	/* binding_state_t my_lease_state; */
         /* XXX Why is this my_lease_state never used? */
-	struct lease **lq;
+	LEASE_STRUCT_PTR lq;
 	int (*log_func)(const char *, ...);
 	const char *result, *reqlog;
 
@@ -2559,13 +2574,14 @@ dhcp_failover_pool_dobalance(dhcp_failover_state_t *state,
 		 * worth it.
 		 */
 		pass = 0;
-		lease_reference(&lp, *lq, MDL);
+		lease_reference(&lp, LEASE_GET_FIRSTP(lq), MDL);
 
 		while (lp) {
 			if (next)
 			    lease_dereference(&next, MDL);
-			if (lp->next)
-			    lease_reference(&next, lp->next, MDL);
+			ltemp = LEASE_GET_NEXTP(lq, lp);
+			if (ltemp != NULL)
+			    lease_reference(&next, ltemp, MDL);
 
 			/*
 			 * Stop if the pool is 'balanced enough.'
@@ -2613,7 +2629,7 @@ dhcp_failover_pool_dobalance(dhcp_failover_state_t *state,
 				lease_reference(&lp, next, MDL);
 			else if (!pass) {
 				pass = 1;
-				lease_reference(&lp, *lq, MDL);
+				lease_reference(&lp, LEASE_GET_FIRSTP(lq), MDL);
 			}
 		}
 
@@ -2657,6 +2673,7 @@ dhcp_failover_pool_check(struct pool *pool)
 	dhcp_failover_state_t *peer;
 	TIME est1, est2;
 	struct timeval tv;
+	struct lease *ltemp;
 
 	peer = pool->failover_peer;
 
@@ -2673,13 +2690,15 @@ dhcp_failover_pool_check(struct pool *pool)
 	 * lease is a virgin (ends = 0), we wind up sending this against
 	 * the max_balance bounds check.
 	 */
-	if(pool->free && pool->free->ends < cur_time)
-		est1 = cur_time - pool->free->ends;
+	ltemp = LEASE_GET_FIRST(pool->free);
+	if(ltemp && ltemp->ends < cur_time)
+		est1 = cur_time - ltemp->ends;
 	else
 		est1 = 0;
 
-	if(pool->backup && pool->backup->ends < cur_time)
-		est2 = cur_time - pool->backup->ends;
+	ltemp = LEASE_GET_FIRST(pool->backup);
+	if(ltemp && ltemp->ends < cur_time)
+		est2 = cur_time - ltemp->ends;
 	else
 		est2 = 0;
 
@@ -5651,7 +5670,7 @@ isc_result_t dhcp_failover_generate_update_queue (dhcp_failover_state_t *state,
 #define ABANDONED_LEASES 3
 #define BACKUP_LEASES 4
 #define RESERVED_LEASES 5
-	struct lease **lptr[RESERVED_LEASES+1];
+	LEASE_STRUCT_PTR lptr[RESERVED_LEASES+1];
 
 	/* Loop through each pool in each shared network and call the
 	   expiry routine on the pool. */
@@ -5668,7 +5687,9 @@ isc_result_t dhcp_failover_generate_update_queue (dhcp_failover_state_t *state,
 		lptr[RESERVED_LEASES] = &p->reserved;
 
 		for (i = FREE_LEASES; i <= RESERVED_LEASES; i++) {
-		    for (l = *(lptr [i]); l; l = l -> next) {
+		    for (l = LEASE_GET_FIRSTP(lptr[i]);
+			 l != NULL;
+			 l = LEASE_GET_NEXTP(lptr[i], l)) {
 			if ((l->flags & ON_QUEUE) == 0 &&
 			    (everythingp ||
 			     (l->tstp > l->atsfp) ||

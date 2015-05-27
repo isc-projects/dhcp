@@ -230,6 +230,42 @@ typedef time_t TIME;
 	 (((x) >> OPTION_HASH_EXP) & \
 	  (OPTION_HASH_PTWO - 1))) % OPTION_HASH_SIZE;
 
+/* Lease queue information.  We have two ways of storing leases.
+ * The original is a linear linked list which is slower but uses
+ * less memory while the other adds a binary array on top of that
+ * list to make insertions faster.  We define several macros
+ * based on which is in use to allow the code to be cleaner by
+ * avoiding #ifdefs.
+ *
+ * POOL_DESTROYP is used for debugging purposes
+ */
+
+#if !defined (BINARY_LEASES)
+#define LEASE_STRUCT struct lease *
+#define LEASE_STRUCT_PTR struct lease **
+#define LEASE_GET_FIRST(LQ) LQ
+#define LEASE_GET_FIRSTP(LQ) *(LQ)
+#define LEASE_GET_NEXT(LQ, LEASE) LEASE->next
+#define LEASE_GET_NEXTP(LQ, LEASE) LEASE->next
+#define LEASE_INSERTP(LQ, LEASE) lease_insert(LQ, LEASE)
+#define LEASE_REMOVEP(LQ, LEASE) lease_remove(LQ, LEASE)
+#define LEASE_NOT_EMPTY(LQ) LQ
+#define LEASE_NOT_EMPTYP(LQ) *LQ
+#define POOL_DESTROYP(LQ) lease_remove_all(LQ)
+#else
+#define LEASE_STRUCT struct leasechain
+#define LEASE_STRUCT_PTR struct leasechain *
+#define LEASE_GET_FIRST(LQ) lc_get_first_lease(&LQ)
+#define LEASE_GET_FIRSTP(LQ) lc_get_first_lease(LQ)
+#define LEASE_GET_NEXT(LQ, LEASE) lc_get_next(&LQ, LEASE)
+#define LEASE_GET_NEXTP(LQ, LEASE) lc_get_next(LQ, LEASE)
+#define LEASE_INSERTP(LQ, LEASE) lc_add_sorted_lease(LQ, LEASE)
+#define LEASE_REMOVEP(LQ, LEASE) lc_unlink_lease(LQ, LEASE)
+#define LEASE_NOT_EMPTY(LQ) lc_not_empty(&LQ)
+#define LEASE_NOT_EMPTYP(LQ) lc_not_empty(LQ)
+#define POOL_DESTROYP(LQ) lc_delete_all(LQ)
+#endif
+
 enum dhcp_shutdown_state {
 	shutdown_listeners,
 	shutdown_omapi_connections,
@@ -511,10 +547,17 @@ struct on_star {
 struct lease {
 	OMAPI_OBJECT_PREAMBLE;
 	struct lease *next;
+#if defined (BINARY_LEASES)
+	struct lease *prev;
+	struct leasechain *lc;
+#endif
 	struct lease *n_uid, *n_hw;
 
 	struct iaddr ip_addr;
 	TIME starts, ends, sort_time;
+#if defined (BINARY_LEASES)
+	long int sort_tiebreaker;
+#endif
 	char *client_hostname;
 	struct binding_scope *scope;
 	struct host_decl *host;
@@ -919,6 +962,18 @@ struct permit {
 	TIME after;	/* date after which this clause applies */
 };
 
+#if defined (BINARY_LEASES)
+struct leasechain {
+	struct lease **list; /* lease list */
+	size_t total;	     /* max number of elements in this list,
+			      * including free pointers at the end if any */
+	size_t nelem;	     /* the number of elements, also the next index to use */
+	size_t growth;	     /* the growth factor to use when increase an array
+			      * this is set after parsing the pools and before
+			      * creatin an array.  */
+};
+#endif
+
 struct pool {
 	OMAPI_OBJECT_PREAMBLE;
 	struct pool *next;
@@ -926,12 +981,12 @@ struct pool {
 	struct shared_network *shared_network;
 	struct permit *permit_list;
 	struct permit *prohibit_list;
-	struct lease *active;
-	struct lease *expired;
-	struct lease *free;
-	struct lease *backup;
-	struct lease *abandoned;
-	struct lease *reserved;
+	LEASE_STRUCT active;
+	LEASE_STRUCT expired;
+	LEASE_STRUCT free;
+	LEASE_STRUCT backup;
+	LEASE_STRUCT abandoned;
+	LEASE_STRUCT reserved;
 	TIME next_event_time;
 	int lease_count;
 	int free_leases;
@@ -3393,6 +3448,14 @@ void hw_hash_add (struct lease *);
 void hw_hash_delete (struct lease *);
 int write_leases (void);
 int write_leases6(void);
+#if !defined(BINARY_LEASES)
+void lease_insert(struct lease **, struct lease *);
+void lease_remove(struct lease **, struct lease *);
+#if defined (DEBUG_MEMORY_LEAKAGE) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
+void lease_remove_all(struct lease **);
+#endif
+#endif
 int lease_enqueue (struct lease *);
 isc_result_t lease_instantiate(const void *, unsigned, void *);
 void expire_all_pools (void);
@@ -3669,6 +3732,20 @@ void mark_hosts_unavailable(void);
 void mark_phosts_unavailable(void);
 void mark_interfaces_unavailable(void);
 void report_jumbo_ranges();
+
+#if defined (BINARY_LEASES)
+/* leasechain.c */
+int lc_not_empty(struct leasechain *lc);
+void lc_add_sorted_lease(struct leasechain *lc, struct lease *lp);
+void lc_unlink_lease(struct leasechain *lc, struct lease *lp);
+struct lease *lc_get_first_lease(struct leasechain *lc);
+struct lease *lc_get_next(struct leasechain *lc, struct lease *lp);
+void lc_init_growth(struct leasechain *lc, size_t growth);
+#if defined (DEBUG_MEMORY_LEAKAGE) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
+void lc_delete_all(struct leasechain *lc);
+#endif
+#endif /* BINARY_LEASES */
 
 #define MAX_ADDRESS_STRING_LEN \
    (sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255"))

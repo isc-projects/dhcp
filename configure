@@ -751,6 +751,7 @@ enable_ipv4_pktinfo
 enable_use_sockets
 enable_secs_byteorder
 enable_log_pid
+enable_binary_leases
 with_atf
 with_srv_lease_file
 with_srv6_lease_file
@@ -1420,6 +1421,8 @@ Optional Features:
   --enable-secs-byteorder Correct bad byteorders in the secs field (default is
                           no).
   --enable-log-pid        Include PIDs in syslog messages (default is no).
+  --enable-binary-leases  enable support for binary insertion of leases
+                          (default is no)
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -5426,6 +5429,19 @@ $as_echo "#define USE_LOG_PID 1" >>confdefs.h
 
 fi
 
+# Allow for binary search when inserting v4 leases into queues
+# Check whether --enable-binary_leases was given.
+if test "${enable_binary_leases+set}" = set; then :
+  enableval=$enable_binary_leases;
+fi
+
+# binary_leases is off by default.
+if test "$enable_binary_leases" = "yes"; then
+
+$as_echo "#define BINARY_LEASES 1" >>confdefs.h
+
+fi
+
 # Testing section
 
 atf_path="no"
@@ -8315,6 +8331,7 @@ Features:
   debug:         $enable_debug
   failover:      $enable_failover
   execute:       $enable_execute
+  binary-leases: $enable_binary_leases
 
 Developer:
   ATF unittests : $atf_path

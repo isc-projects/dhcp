@@ -1117,6 +1117,12 @@ void postconf_initialization (int quiet)
 		data_string_forget(&db, MDL);
 	}
 
+#if defined (BINARY_LEASES)
+	if (local_family == AF_INET) {
+		log_info("Source compiled to use binary-leases");
+	}
+#endif
+
 	/* Don't need the options anymore. */
 	option_state_dereference(&options, MDL);
 }

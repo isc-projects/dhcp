@@ -118,6 +118,14 @@ by Eric Young (eay@cryptsoft.com).
   of as a token.
   [ISC-Bugs #39529]
 
+- Add support for accessing the v4 lease queues (active, free etc) in a
+  binary fashion instead of needing to walk through a linear list to
+  insert, find or remove an entry from the queues.  In addition add a
+  compile time option "--enable-binary-leases" to enable the new code
+  or to continue using the old code.  The old code is the default.
+  Thanks to Fernando Soto from BlueCat Networks for the patch.
+  [ISC-Bugs #39078]
+
 			Changes since 4.3.2rc2
 - None
 

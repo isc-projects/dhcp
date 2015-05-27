@@ -111,6 +111,9 @@
 /* Define this if you want to debug the host part of the inform processing */
 /* #define DEBUG_INFORM_HOST */
 
+/* Define this if you want to debug the binary leases (lease_chain) code */
+/* #define DEBUG_BINARY_LEASES */
+
 /* Define this if you want DHCP failover protocol support in the DHCP
    server. */
 

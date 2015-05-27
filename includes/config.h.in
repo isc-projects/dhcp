@@ -3,6 +3,9 @@
 /* Define if building universal (internal helper macro) */
 #undef AC_APPLE_UNIVERSAL_BUILD
 
+/* Define to support binary insertion of leases into queues. */
+#undef BINARY_LEASES
+
 /* Define to compile debug-only DHCP software. */
 #undef DEBUG
 

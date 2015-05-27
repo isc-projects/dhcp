@@ -187,6 +187,15 @@ if test "$enable_log_pid" = "yes" ; then
 		[Define to include PIDs in syslog messages.])
 fi
 
+# Allow for binary search when inserting v4 leases into queues
+AC_ARG_ENABLE(binary_leases,
+	AS_HELP_STRING([--enable-binary-leases],[enable support for binary insertion of leases (default is no)]))
+# binary_leases is off by default.
+if test "$enable_binary_leases" = "yes"; then
+	AC_DEFINE([BINARY_LEASES], [1],
+		  [Define to support binary insertion of leases into queues.])
+fi
+
 # Testing section
 
 atf_path="no"
@@ -697,6 +706,7 @@ Features:
   debug:         $enable_debug
   failover:      $enable_failover
   execute:       $enable_execute
+  binary-leases: $enable_binary_leases
 
 Developer:
   ATF unittests : $atf_path

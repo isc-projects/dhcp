@@ -3,7 +3,7 @@
    OMAPI object interfaces for the DHCP server. */
 
 /*
- * Copyright (c) 2012-2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2012-2015 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
@@ -457,10 +457,13 @@ isc_result_t dhcp_lease_destroy (omapi_object_t *h, const char *file, int line)
 
 #if defined (DEBUG_MEMORY_LEAKAGE) || \
 		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
-	/* XXX we should never be destroying a lease with a next
-	   XXX pointer except on exit... */
+	/* We no longer check for a next pointer as that should
+	 * be cleared when we destroy the pool and as before we
+	 * should only ever be doing that on exit.
 	if (lease->next)
 		lease_dereference (&lease->next, file, line);
+	 */
+
 	if (lease->n_hw)
 		lease_dereference (&lease->n_hw, file, line);
 	if (lease->n_uid)
@@ -1596,16 +1599,14 @@ isc_result_t dhcp_pool_destroy (omapi_object_t *h, const char *file, int line)
 		group_dereference (&pool -> group, file, line);
 	if (pool -> shared_network)
 	    shared_network_dereference (&pool -> shared_network, file, line);
-	if (pool -> active)
-		lease_dereference (&pool -> active, file, line);
-	if (pool -> expired)
-		lease_dereference (&pool -> expired, file, line);
-	if (pool -> free)
-		lease_dereference (&pool -> free, file, line);
-	if (pool -> backup)
-		lease_dereference (&pool -> backup, file, line);
-	if (pool -> abandoned)
-		lease_dereference (&pool -> abandoned, file, line);
+
+	POOL_DESTROYP(&pool->active);
+	POOL_DESTROYP(&pool->expired);
+	POOL_DESTROYP(&pool->free);
+	POOL_DESTROYP(&pool->backup);
+	POOL_DESTROYP(&pool->abandoned);
+	POOL_DESTROYP(&pool->reserved);
+
 #if defined (FAILOVER_PROTOCOL)
 	if (pool -> failover_peer)
 		dhcp_failover_state_dereference (&pool -> failover_peer,

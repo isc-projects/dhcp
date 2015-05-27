@@ -4548,8 +4548,9 @@ int mockup_lease (struct lease **lp, struct packet *packet,
 int allocate_lease (struct lease **lp, struct packet *packet,
 		    struct pool *pool, int *peer_has_leases)
 {
-	struct lease *lease = (struct lease *)0;
-	struct lease *candl = (struct lease *)0;
+	struct lease *lease = NULL;
+	struct lease *candl = NULL;
+	struct lease *peerl = NULL;
 
 	for (; pool ; pool = pool -> next) {
 		if ((pool -> prohibit_list &&
@@ -4575,7 +4576,7 @@ int allocate_lease (struct lease **lp, struct packet *packet,
 		 * owned by a failover peer. */
 		if (pool->failover_peer != NULL) {
 			if (pool->failover_peer->i_am == primary) {
-				candl = pool->free;
+				candl = LEASE_GET_FIRST(pool->free);
 
 				/*
 				 * In normal operation, we never want to touch
@@ -4583,27 +4584,25 @@ int allocate_lease (struct lease **lp, struct packet *packet,
 				 * operation, we need to be able to pick up
 				 * the peer's leases after STOS+MCLT.
 				 */
-				if (pool->backup != NULL) {
+				peerl = LEASE_GET_FIRST(pool->backup);
+				if (peerl != NULL) {
 					if (((candl == NULL) ||
-					     (candl->ends >
-					      pool->backup->ends)) &&
-					    lease_mine_to_reallocate(
-							    pool->backup)) {
-						candl = pool->backup;
+					     (candl->ends > peerl->ends)) &&
+					    lease_mine_to_reallocate(peerl)) {
+						candl = peerl;
 					} else {
 						*peer_has_leases = 1;
 					}
 				}
 			} else {
-				candl = pool->backup;
+				candl = LEASE_GET_FIRST(pool->backup);
 
-				if (pool->free != NULL) {
+				peerl = LEASE_GET_FIRST(pool->free);
+				if (peerl != NULL) {
 					if (((candl == NULL) ||
-					     (candl->ends >
-					      pool->free->ends)) &&
-					    lease_mine_to_reallocate(
-							    pool->free)) {
-						candl = pool->free;
+					     (candl->ends > peerl->ends)) &&
+					    lease_mine_to_reallocate(peerl)) {
+						candl = peerl;
 					} else {
 						*peer_has_leases = 1;
 					}
@@ -4611,17 +4610,17 @@ int allocate_lease (struct lease **lp, struct packet *packet,
 			}
 
 			/* Try abandoned leases as a last resort. */
-			if ((candl == NULL) &&
-			    (pool->abandoned != NULL) &&
-			    lease_mine_to_reallocate(pool->abandoned))
-				candl = pool->abandoned;
+			peerl = LEASE_GET_FIRST(pool->abandoned);
+			if ((candl == NULL) && (peerl != NULL) &&
+			    lease_mine_to_reallocate(peerl))
+				candl = peerl;
 		} else
 #endif
 		{
-			if (pool -> free)
-				candl = pool -> free;
+			if (LEASE_NOT_EMPTY(pool->free))
+				candl = LEASE_GET_FIRST(pool->free);
 			else
-				candl = pool -> abandoned;
+				candl = LEASE_GET_FIRST(pool->abandoned);
 		}
 
 		/*

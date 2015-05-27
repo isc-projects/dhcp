@@ -15,7 +15,7 @@ info:
 DHCPSRC = ../dhcp.c ../bootp.c ../confpars.c ../db.c ../class.c      \
           ../failover.c ../omapi.c ../mdb.c ../stables.c ../salloc.c \
           ../ddns.c ../dhcpleasequery.c ../dhcpv6.c ../mdb6.c        \
-          ../ldap.c ../ldap_casa.c ../dhcpd.c
+          ../ldap.c ../ldap_casa.c ../dhcpd.c ../leasechain.c
 
 DHCPLIBS = $(top_builddir)/common/libdhcp.a $(top_builddir)/omapip/libomapi.a    \
           $(top_builddir)/dhcpctl/libdhcpctl.a $(top_builddir)/bind/lib/libirs.a \
@@ -25,7 +25,7 @@ DHCPLIBS = $(top_builddir)/common/libdhcp.a $(top_builddir)/omapip/libomapi.a   
 ATF_TESTS =
 if HAVE_ATF
 
-ATF_TESTS += dhcpd_unittests legacy_unittests hash_unittests load_bal_unittests
+ATF_TESTS += dhcpd_unittests legacy_unittests hash_unittests load_bal_unittests leaseq_unittests
 
 dhcpd_unittests_SOURCES = $(DHCPSRC)
 dhcpd_unittests_SOURCES += simple_unittest.c
@@ -44,6 +44,9 @@ legacy_unittests_LDADD = $(DHCPLIBS) $(ATF_LDFLAGS)
 
 load_bal_unittests_SOURCES = $(DHCPSRC) load_bal_unittest.c
 load_bal_unittests_LDADD = $(DHCPLIBS) $(ATF_LDFLAGS)
+
+leaseq_unittests_SOURCES = $(DHCPSRC) leaseq_unittest.c
+leaseq_unittests_LDADD = $(DHCPLIBS) $(ATF_LDFLAGS)
 
 check: $(ATF_TESTS)
 	sh ${top_srcdir}/tests/unittest.sh

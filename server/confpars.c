@@ -1759,6 +1759,14 @@ void parse_pool_statement (cfile, group, type)
 			pool_dereference(&lp->pool, MDL);
 			pool_reference(&lp->pool, pp, MDL);
 		}
+
+#if defined (BINARY_LEASES)
+		/* If we are doing binary leases we also need to add the
+		 * addresses in for leasechain allocation.
+		 */
+		pp->lease_count += pool->lease_count;
+#endif
+
 		break;
 	}
 
