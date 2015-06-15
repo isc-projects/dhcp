@@ -3,7 +3,7 @@
    Persistent database management routines for DHCPD... */
 
 /*
- * Copyright (c) 2012-2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2012-2015 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2010 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
@@ -1016,9 +1016,6 @@ int commit_leases ()
 		log_info ("commit_leases: unable to commit, fsync(): %m");
 		return (0);
 	}
-
-	/* send out all deferred ACKs now */
-	flush_ackqueue(NULL);
 
 	/* If we haven't rewritten the lease database in over an
 	   hour, rewrite it now.  (The length of time should probably

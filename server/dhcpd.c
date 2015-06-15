@@ -1059,7 +1059,8 @@ void postconf_initialization (int quiet)
 			data_string_forget(&db, MDL);
 		}
 	}
-	
+
+#if defined(DELAYED_ACK)
 	oc = lookup_option(&server_universe, options, SV_DELAYED_ACK);
 	if (oc &&
 	    evaluate_option_cache(&db, NULL, NULL, NULL, options, NULL,
@@ -1087,6 +1088,7 @@ void postconf_initialization (int quiet)
 
 		data_string_forget(&db, MDL);
 	}
+#endif
 
 	oc = lookup_option(&server_universe, options, SV_DONT_USE_FSYNC);
 	if ((oc != NULL) &&

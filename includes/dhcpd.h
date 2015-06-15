@@ -2313,9 +2313,7 @@ void ack_lease (struct packet *, struct lease *,
 		unsigned int, TIME, char *, int, struct host_decl *);
 void echo_client_id(struct packet*, struct lease*, struct option_state*,
 		    struct option_state*);
-void delayed_ack_enqueue(struct lease *);
-void commit_leases_readerdry(void *);
-void flush_ackqueue(void *);
+
 void dhcp_reply (struct lease *);
 int find_lease (struct lease **, struct packet *,
 		struct shared_network *, int *, int *, struct lease *,
@@ -2953,7 +2951,6 @@ isc_result_t write_named_billing_class(const void *, unsigned, void *);
 void write_billing_classes (void);
 int write_billing_class (struct class *);
 void commit_leases_timeout (void *);
-void commit_leases_readerdry(void *);
 int commit_leases (void);
 int commit_leases_timed (void);
 void db_startup (int);
