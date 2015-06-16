@@ -31,17 +31,22 @@
 #include <limits.h>
 #include <sys/time.h>
 
-static void commit_leases_ackout(void *foo);
-
 int outstanding_pings;
+
+#if defined(DELAYED_ACK)
+void delayed_acks_timer(void *);
+static void delayed_ack_enqueue(struct lease *);
+
 
 struct leasequeue *ackqueue_head, *ackqueue_tail;
 static struct leasequeue *free_ackqueue;
-static struct timeval next_fsync;
-int outstanding_acks;
+static struct timeval max_fsync;
+int outstanding_acks = 0;
 int max_outstanding_acks = DEFAULT_DELAYED_ACK;
 int max_ack_delay_secs = DEFAULT_ACK_DELAY_SECS;
 int max_ack_delay_usecs = DEFAULT_ACK_DELAY_USECS;
+int min_ack_delay_usecs = DEFAULT_MIN_ACK_DELAY_USECS;
+#endif
 
 static char dhcp_message [256];
 static int site_code_min;
@@ -2912,14 +2917,17 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 	}
 }
 
-/* CC: queue single ACK:
-   - write the lease (but do not fsync it yet)
-   - add to double linked list
-   - commit if more than xx ACKs pending
-   - Not yet: schedule a fsync at the next interval (1 second?)
+#if defined(DELAYED_ACK)
+/*
+ * CC: queue single ACK:
+ * - write the lease (but do not fsync it yet)
+ * - add to double linked list
+ * - commit if more than xx ACKs pending
+ * - if necessary set the max timer and bump the next timer
+ *   but only up to the max timer value.
  */
 
-void
+static void
 delayed_ack_enqueue(struct lease *lease)
 {
 	struct leasequeue *q;
@@ -2946,69 +2954,102 @@ delayed_ack_enqueue(struct lease *lease)
 		q->next->prev = q;
 
 	outstanding_acks++;
-	if (outstanding_acks > max_outstanding_acks) 
-		commit_leases();
+	if (outstanding_acks > max_outstanding_acks) {
+		/* Cancel any pending timeout and call handler directly */
+		cancel_timeout(delayed_acks_timer, NULL);
+		delayed_acks_timer(NULL);
+	} else {
+		struct timeval next_fsync;
 
-	/* If next_fsync is not set, schedule an fsync. */
-	if (next_fsync.tv_sec == 0 && next_fsync.tv_usec == 0) {
-		next_fsync.tv_sec = cur_tv.tv_sec + max_ack_delay_secs;
-		next_fsync.tv_usec = cur_tv.tv_usec + max_ack_delay_usecs;
+		if (max_fsync.tv_sec == 0 && max_fsync.tv_usec == 0) {
+			/* set the maximum time we'll wait */
+			max_fsync.tv_sec = cur_tv.tv_sec + max_ack_delay_secs;
+			max_fsync.tv_usec = cur_tv.tv_usec +
+				max_ack_delay_usecs;
 
-		if (next_fsync.tv_usec >= 1000000) {
-			next_fsync.tv_sec++;
-			next_fsync.tv_usec -= 1000000;
+			if (max_fsync.tv_usec >= 1000000) {
+				max_fsync.tv_sec++;
+				max_fsync.tv_usec -= 1000000;
+			}
 		}
 
-		add_timeout(&next_fsync, commit_leases_ackout, NULL,
+                /* Set the timeout */
+                next_fsync.tv_sec = cur_tv.tv_sec;
+                next_fsync.tv_usec = cur_tv.tv_usec + min_ack_delay_usecs;
+                if (next_fsync.tv_usec >= 1000000) {
+                        next_fsync.tv_sec++;
+                        next_fsync.tv_usec -= 1000000;
+                }
+                /* but not more than the max */
+                if ((next_fsync.tv_sec > max_fsync.tv_sec) ||
+                    ((next_fsync.tv_sec == max_fsync.tv_sec) &&
+                     (next_fsync.tv_usec > max_fsync.tv_usec))) {
+                        next_fsync.tv_sec = max_fsync.tv_sec;
+                        next_fsync.tv_usec = max_fsync.tv_usec;
+                }
+
+		add_timeout(&next_fsync, delayed_acks_timer, NULL,
 			    (tvref_t) NULL, (tvunref_t) NULL);
 	}
 }
 
-void
-commit_leases_readerdry(void *foo) 
-{
-	if (outstanding_acks) {
-		commit_leases();
-
-		/* Reset next_fsync and cancel any pending timeout. */
-		memset(&next_fsync, 0, sizeof(next_fsync));
-		cancel_timeout(commit_leases_ackout, NULL);
-	}
-}
-
-static void
-commit_leases_ackout(void *foo)
-{
-	if (outstanding_acks) {
-		commit_leases();
-
-		memset(&next_fsync, 0, sizeof(next_fsync));
-	}
-}
-
-/* CC: process the delayed ACK responses:
-   - send out the ACK packets
-   - move the queue slots to the free list
+/* Processes any delayed acks:
+ * Commits the leases and then for each delayed ack:
+ *  - Update the failover peer if we're in failover
+ *  - Send the REPLY to the client
  */
 void
-flush_ackqueue(void *foo) 
+delayed_acks_timer(void *foo)
 {
 	struct leasequeue *ack, *p;
+
+	/* Reset max fsync */
+	memset(&max_fsync, 0, sizeof(max_fsync));
+
+	if (!outstanding_acks) {
+		/* Nothing to do, so punt, shouldn't happen? */
+		return;
+	}
+
+	/* Commit the leases first */
+	commit_leases();
+
+	/* Now process the delayed ACKs
+	 - update failover peer
+	 - send out the ACK packets
+	 - move the queue slots to the free list
+	*/
+
 	/*  process from bottom to retain packet order */
 	for (ack = ackqueue_tail ; ack ; ack = p) { 
 		p = ack->prev;
+
+#if defined(FAILOVER_PROTOCOL)
+		/* If we're in failover we need to send any deferred
+		* bind updates as well as the replies */
+		if (ack->lease->pool) {
+			dhcp_failover_state_t *fpeer;
+
+			fpeer = ack->lease->pool->failover_peer;
+			if (fpeer && fpeer->link_to_peer) {
+				dhcp_failover_send_updates(fpeer);
+			}
+		}
+#endif
 
 		/* dhcp_reply() requires that the reply state still be valid */
 		if (ack->lease->state == NULL)
 			log_error("delayed ack for %s has gone stale",
 				  piaddr(ack->lease->ip_addr));
-		else
+		else {
 			dhcp_reply(ack->lease);
+		}
 
 		lease_dereference(&ack->lease, MDL);
 		ack->next = free_ackqueue;
 		free_ackqueue = ack;
 	}
+
 	ackqueue_head = NULL;
 	ackqueue_tail = NULL;
 	outstanding_acks = 0;
@@ -3030,6 +3071,8 @@ relinquish_ackqueue(void)
 	}
 }
 #endif
+
+#endif /* defined(DELAYED_ACK) */
 
 void dhcp_reply (lease)
 	struct lease *lease;

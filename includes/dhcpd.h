@@ -638,6 +638,10 @@ struct lease_state {
 # define DEFAULT_ACK_DELAY_USECS 250000 /* 1/4 of a second */
 #endif
 
+#if !defined (DEFAULT_MIN_ACK_DELAY_USECS)
+# define DEFAULT_MIN_ACK_DELAY_USECS 10000 /* 1/100 second */
+#endif
+
 #if !defined (DEFAULT_DEFAULT_LEASE_TIME)
 # define DEFAULT_DEFAULT_LEASE_TIME 43200
 #endif
@@ -1969,9 +1973,7 @@ void dhcpinform (struct packet *, int);
 void nak_lease (struct packet *, struct iaddr *cip);
 void ack_lease (struct packet *, struct lease *,
 		unsigned int, TIME, char *, int, struct host_decl *);
-void delayed_ack_enqueue(struct lease *);
-void commit_leases_readerdry(void *);
-void flush_ackqueue(void *);
+
 void dhcp_reply (struct lease *);
 int find_lease (struct lease **, struct packet *,
 		struct shared_network *, int *, int *, struct lease *,
@@ -1996,6 +1998,9 @@ void get_server_source_address(struct in_addr *from,
 void setup_server_source_address(struct in_addr *from,
 				 struct option_state *options,
 				 struct packet *packet);
+#if defined(DELAYED_ACK)
+void delayed_acks_timer(void *);
+#endif
 
 /* dhcpleasequery.c */
 void dhcpleasequery (struct packet *, int);
@@ -2604,7 +2609,6 @@ isc_result_t write_named_billing_class(const void *, unsigned, void *);
 void write_billing_classes (void);
 int write_billing_class (struct class *);
 void commit_leases_timeout (void *);
-void commit_leases_readerdry(void *);
 int commit_leases (void);
 int commit_leases_timed (void);
 void db_startup (int);

@@ -60,6 +60,11 @@ by Eric Young (eay@cryptsoft.com).
 
 			Changes since 4.1-ESV-R11
 
+- Delayed-ack now works properly with Failover. Prior to this, bind updates
+  post startup were being queued but never delivered. Among other things, this
+  was causing leases to not transition from expired or released to free.
+  [ISC-Bugs #31474]
+
 - The server now does a better check to see if it can allocate the memory
   for large blocks of v4 leases and should provide a slightly better error
   message.  Note well: the server pre-allocates v4 addresses, if you use
