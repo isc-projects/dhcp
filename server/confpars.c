@@ -4257,6 +4257,15 @@ parse_ia_na_declaration(struct parse *cfile) {
 			if (token == RBRACE) break;
 
 			switch(token) {
+			     case END_OF_FILE:
+			        /* We hit the end of file and don't know
+				 * what parts of the lease we may be missing
+				 * don't try to salvage the lease
+			         */
+				parse_warn(cfile, "corrupt lease file; "
+					   "unexpected end of file");
+				return;
+
 				/* Lease binding state. */
 			     case BINDING:
 				token = next_token(&val, NULL, cfile);
@@ -4638,6 +4647,15 @@ parse_ia_ta_declaration(struct parse *cfile) {
 			if (token == RBRACE) break;
 
 			switch(token) {
+			     case END_OF_FILE:
+			        /* We hit the end of file and don't know
+				 * what parts of the lease we may be missing
+				 * don't try to salvage the lease
+			         */
+				parse_warn(cfile, "corrupt lease file; "
+					   "unexpected end of file");
+				return;
+
 				/* Lease binding state. */
 			     case BINDING:
 				token = next_token(&val, NULL, cfile);
@@ -5020,6 +5038,15 @@ parse_ia_pd_declaration(struct parse *cfile) {
 			if (token == RBRACE) break;
 
 			switch(token) {
+			     case END_OF_FILE:
+			        /* We hit the end of file and don't know
+				 * what parts of the lease we may be missing
+				 * don't try to salvage the lease
+			         */
+				parse_warn(cfile, "corrupt lease file; "
+					   "unexpected end of file");
+				return;
+
 				/* Prefix binding state. */
 			     case BINDING:
 				token = next_token(&val, NULL, cfile);
