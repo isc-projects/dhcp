@@ -101,6 +101,9 @@ static int check_domain_name_list(const char *ptr, size_t len, int dots);
 static int check_option_values(struct universe *universe, unsigned int opt,
 			       const char *ptr, size_t len);
 
+static void dhclient_ddns_cb_free(dhcp_ddns_cb_t *ddns_cb,
+                                   char* file, int line);
+
 #ifndef UNIT_TEST
 int
 main(int argc, char **argv) {
@@ -1241,7 +1244,7 @@ void bind_lease (client)
 
 	/* Run the client script with the new parameters. */
 	script_init(client, (client->state == S_REQUESTING ? "BOUND" :
-			     (client->state == S_RENEWING ? "RENEW" : 
+			     (client->state == S_RENEWING ? "RENEW" :
 			      (client->state == S_REBOOTING ? "REBOOT" :
 			       "REBIND"))),
 		    client->new->medium);
@@ -1694,7 +1697,7 @@ struct client_lease *packet_to_lease (packet, client)
 	lease->next_srv_addr.len = sizeof(packet->raw->siaddr);
 	memcpy(lease->next_srv_addr.iabuf, &packet->raw->siaddr,
 	       lease->next_srv_addr.len);
-	
+
 	memset(&data, 0, sizeof(data));
 
 	if (client -> config -> vendor_space_name) {
@@ -2448,7 +2451,7 @@ make_client_options(struct client_state *client, struct client_lease *lease,
 
 		/* Client-identifier type : 1 byte */
 		*client_identifier.buffer->data = 255;
-		
+
 		/* IAID : 4 bytes
 		 * we use the low 4 bytes from the interface address
 		 */
@@ -2462,7 +2465,7 @@ make_client_options(struct client_state *client, struct client_lease *lease,
 		memcpy(&client_identifier.buffer->data + 5 - hw_len,
 		       client->interface->hw_address.hbuf + hw_idx,
 		       hw_len);
-	
+
 		/* Add the default duid */
 		memcpy(&client_identifier.buffer->data+(1+4),
 		       default_duid.data, default_duid.len);
@@ -3965,7 +3968,7 @@ client_dns_remove_action(dhcp_ddns_cb_t *ddns_cb,
 	}
 
 	/* If we are done or have an error clean up */
-	ddns_cb_free(ddns_cb, MDL);
+	dhclient_ddns_cb_free(ddns_cb, MDL);
 	return;
 }
 
@@ -3981,7 +3984,7 @@ client_dns_remove(struct client_state *client,
 		ddns_cancel(client->ddns_cb, MDL);
 		client->ddns_cb = NULL;
 	}
-	
+
 	ddns_cb = ddns_cb_alloc(MDL);
 	if (ddns_cb != NULL) {
 		ddns_cb->address = *addr;
@@ -3994,7 +3997,7 @@ client_dns_remove(struct client_state *client,
 		result = client_dns_update(client, ddns_cb);
 
 		if (result != ISC_R_TIMEDOUT) {
-			ddns_cb_free(ddns_cb, MDL);
+			dhclient_ddns_cb_free(ddns_cb, MDL);
 		}
 	}
 }
@@ -4091,10 +4094,7 @@ client_dns_update_timeout (void *cp)
 	 * the control block and should free it.
 	 */
 	if (status != ISC_R_TIMEDOUT) {
-		if (client != NULL) {
-			client->ddns_cb = NULL;
-		}
-		ddns_cb_free(ddns_cb, MDL);
+		dhclient_ddns_cb_free(ddns_cb, MDL);
 	}
 }
 
@@ -4183,7 +4183,7 @@ client_dns_update_action(dhcp_ddns_cb_t *ddns_cb,
 		return;
 	}
 
-	ddns_cb_free(ddns_cb, MDL);
+	dhclient_ddns_cb_free(ddns_cb, MDL);
 	return;
 }
 
@@ -4263,7 +4263,7 @@ client_dns_update(struct client_state *client, dhcp_ddns_cb_t *ddns_cb)
 	}
 	if (client->active_lease != NULL) {
 		/* V6 request, get the client identifier, then
-		 * construct the dhcid for either standard 
+		 * construct the dhcid for either standard
 		 * or interim */
 		if (((oc = lookup_option(&dhcpv6_universe,
 					 client->sent_options,
@@ -4380,7 +4380,6 @@ dhclient_schedule_updates(struct client_state *client,
 		ddns_cb->flags = DDNS_UPDATE_ADDR | DDNS_INCLUDE_RRSET;
 
 		client->ddns_cb = ddns_cb;
-
 		tv.tv_sec = cur_tv.tv_sec + offset;
 		tv.tv_usec = cur_tv.tv_usec;
 		add_timeout(&tv, client_dns_update_timeout,
@@ -4560,7 +4559,7 @@ static int check_option_values(struct universe *universe,
 static void
 add_reject(struct packet *packet) {
 	struct iaddrmatchlist *list;
-	
+
 	list = dmalloc(sizeof(struct iaddrmatchlist), MDL);
 	if (!list)
 		log_fatal ("no memory for reject list!");
@@ -4585,3 +4584,16 @@ add_reject(struct packet *packet) {
 	log_info("Server added to list of rejected servers.");
 }
 
+/* Wrapper function around common ddns_cb_free function that ensures
+ * we set the client_state pointer to the control block to NULL. */
+static void
+dhclient_ddns_cb_free(dhcp_ddns_cb_t *ddns_cb, char* file, int line) {
+    if (ddns_cb) {
+        struct client_state *client = (struct client_state *)ddns_cb->lease;
+        if (client != NULL) {
+            client->ddns_cb = NULL;
+        }
+
+        ddns_cb_free(ddns_cb, file, line);
+    }
+}

@@ -54,11 +54,6 @@ by Eric Young (eay@cryptsoft.com).
 
 			Changes since 4.3.2
 
-- Delayed-ack now works properly with Failover. Prior to this, bind updates
-  post startup were being queued but never delivered. Among other things, this
-  was causing leases to not transition from expired or released to free.
-  [ISC-Bugs #31474]
-
 - The server now does a better check to see if it can allocate the memory
   for large blocks of v4 leases and should provide a slightly better error
   message.  Note well: the server pre-allocates v4 addresses, if you use
@@ -131,9 +126,18 @@ by Eric Young (eay@cryptsoft.com).
   Thanks to Fernando Soto from BlueCat Networks for the patch.
   [ISC-Bugs #39078]
 
+- Delayed-ack now works properly with Failover. Prior to this, bind updates
+  post startup were being queued but never delivered. Among other things, this
+  was causing leases to not transition from expired or released to free.
+  [ISC-Bugs #31474]
+
 - Clean up parsing of v6 lease files a bit to avoid infinite loops if the
   lease file is corrupt in certain ways.
   [ISC-Bugs #39760]
+
+- Corrected a crash in dhclient that occurs during lease renewal if the
+  client is performing its own DNS updates.
+  [ISC-Bugs #38639]
 
 			Changes since 4.3.2rc2
 - None
