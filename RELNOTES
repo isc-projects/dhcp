@@ -136,7 +136,8 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Bugs #39760]
 
 - Corrected a crash in dhclient that occurs during lease renewal if the
-  client is performing its own DNS updates.
+  client is performing its own DNS updates.  Thanks to Jiri Popelka at Red Hat
+  for the bug report.
   [ISC-Bugs #38639]
 
 			Changes since 4.3.2rc2
