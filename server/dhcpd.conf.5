@@ -1588,17 +1588,24 @@ This statement is currently global but it should have a shared-network scope.
 .PP
 The
 .B host
-declaration provides a scope in which to provide configuration information about
-a specific client, and also provides a way to assign a client a fixed address.
-The host declaration provides a way for the DHCP server to identify a DHCP or
-BOOTP client, and also a way to assign the client a static IP address.
+declaration provides a way for the DHCP server to identify a DHCP or
+BOOTP client.  This allows the server to provide configuration
+information including fixed addresses or, in DHCPv6, fixed prefixes
+for a specific client.
 .PP
 If it is desirable to be able to boot a DHCP or BOOTP client on more than one
-subnet with fixed addresses, more than one address may be specified in the
+subnet with fixed v4 addresses, more than one address may be specified in the
 .I fixed-address
 declaration, or more than one
 .B host
 statement may be specified matching the same client.
+.PP
+The
+.I fixed-address6
+delcaration is used for v6 addresses.  At this time it only works with a single
+address.  For multiple addresses specify multiple
+.B host
+statements.
 .PP
 If client-specific boot parameters must change based on the network
 to which the client is attached, then multiple 
@@ -2243,6 +2250,26 @@ declaration
 The \fIfixed-address6\fR declaration is used to assign a fixed
 IPv6 addresses to a client.  It should only appear in a \fIhost\fR
 declaration.
+.RE
+.PP
+The
+.I fixed-prefix6
+declaration
+.RS 0.25i
+.PP
+.B fixed-prefix6\fR \fIlow-address\fR \fB/\fR \fIbits\fR\fB;\fR
+.PP
+The \fIfixed-prefix6\fR declaration is used to assign a fixed
+IPv6 prefix to a client.  It should only appear in a \fIhost\fR
+declaration, but multiple \fIfixed-prefix6\fR statements may appear
+in a single \fIhost\fR declaration.
+.PP
+The \fIlow-address\fR specifies the start of the prefix and the \fIbits\fR
+specifies the size of the prefix in bits.
+.PP
+If there are multiple prefixes for a given host entry the server will
+choose one that matches the requested prefix size or, if none match,
+the first one.
 .RE
 .PP
 The
