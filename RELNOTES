@@ -117,8 +117,15 @@ by Eric Young (eay@cryptsoft.com).
   lease file is corrupt in certain ways.
   [ISC-Bugs #39760]
 
-			Changes since 4.1-ESV-R11rc2
+- Corrected an issue in v6 lease file parsing. Prior to this, when encountering
+  a lease with an address for which no configured pool exists, the server was
+  declaring the lease file corrupt and incorrectly skipping over the subsequent
+  entry in the file.  The server will now emit a log message indicating that
+  no pool was found for the address (or prefix) and correctly resume parsing
+  with the next entry in the lease file.
+  [ISC-Bugs #39314]
 
+			Changes since 4.1-ESV-R11rc2
 - None
 
 			Changes since 4.1-ESV-R11rc1

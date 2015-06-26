@@ -4495,9 +4495,10 @@ parse_ia_na_declaration(struct parse *cfile) {
 				   &iaaddr->addr) != ISC_R_SUCCESS) {
 			inet_ntop(AF_INET6, &iaaddr->addr,
 				  addr_buf, sizeof(addr_buf));
-			parse_warn(cfile, "no pool found for address %s",
-				   addr_buf);
-			return;
+			log_error("No pool found for IA_NA address %s",
+				  addr_buf);
+			iasubopt_dereference(&iaaddr, MDL);
+			continue;
 		}
 
 		/* remove old information */
@@ -4885,9 +4886,10 @@ parse_ia_ta_declaration(struct parse *cfile) {
 				   &iaaddr->addr) != ISC_R_SUCCESS) {
 			inet_ntop(AF_INET6, &iaaddr->addr,
 				  addr_buf, sizeof(addr_buf));
-			parse_warn(cfile, "no pool found for address %s",
-				   addr_buf);
-			return;
+			log_error("No pool found for IA_TA address %s",
+				  addr_buf);
+			iasubopt_dereference(&iaaddr, MDL);
+			continue;
 		}
 
 		/* remove old information */
@@ -5276,9 +5278,9 @@ parse_ia_pd_declaration(struct parse *cfile) {
 				   &iapref->addr) != ISC_R_SUCCESS) {
 			inet_ntop(AF_INET6, &iapref->addr,
 				  addr_buf, sizeof(addr_buf));
-			parse_warn(cfile, "no pool found for address %s",
-				   addr_buf);
-			return;
+			log_error("No pool found for prefix %s", addr_buf);
+			iasubopt_dereference(&iapref, MDL);
+			continue;
 		}
 
 		/* remove old information */
