@@ -131,6 +131,7 @@ static struct iasubopt *lease_compare(struct iasubopt *alpha,
 				      struct iasubopt *beta);
 static isc_result_t reply_process_ia_pd(struct reply_state *reply,
 					struct option_cache *ia_pd);
+static struct group *find_group_by_prefix(struct reply_state *reply);
 static isc_result_t reply_process_prefix(struct reply_state *reply,
 					 struct option_cache *pref);
 static isc_boolean_t prefix_is_owned(struct reply_state *reply,
@@ -4079,6 +4080,66 @@ reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia) {
 	return((status == ISC_R_CANCELED) ? ISC_R_SUCCESS : status);
 }
 
+/*!
+ *
+ * \brief Find the proper scoping group for use with a v6 static prefix.
+ *
+ * We start by trying to find a subnet based on the given prefix and
+ * the shared network.  If we don't find one then the prefix has been
+ * declared outside of any subnets.  If there is a static address
+ * associated with the host we use it to try and find a subnet (this
+ * should succeed).  If there isn't a static address we fall back
+ * to the shared subnet itself.
+ * Once we have a subnet we extract the group from it and return it.
+ *
+ * \param reply - the reply structure we use to collect information
+ *                we will use the fields shared, fixed_pref and host
+ *                from the structure
+ *
+ * \return a pointer to the group structure to use for scoping
+ */
+
+static struct group *
+find_group_by_prefix(struct reply_state *reply) {
+	/* default group if we don't find anything better */
+	struct group *group = reply->shared->group;
+	struct subnet *subnet = NULL;
+	struct iaddr tmp_addr;
+	struct data_string fixed_addr;
+
+	/* Try with the prefix first */
+	if (find_grouped_subnet(&subnet, reply->shared,
+				reply->fixed_pref.lo_addr, MDL) != 0) {
+		group = subnet->group;
+		subnet_dereference(&subnet, MDL);
+		return (group);
+	}
+
+	/* Didn't find a subnet via prefix, what about fixed address */
+	/* The caller has already tested reply->host != NULL */
+
+	memset(&fixed_addr, 0, sizeof(fixed_addr));
+
+	if ((reply->host->fixed_addr != NULL) &&
+	    (evaluate_option_cache(&fixed_addr, NULL, NULL, NULL,
+				   NULL, NULL, &global_scope,
+				   reply->host->fixed_addr, MDL))) {
+		if (fixed_addr.len >= 16) {
+			tmp_addr.len = 16;
+			memcpy(tmp_addr.iabuf, fixed_addr.data, 16);
+			if (find_grouped_subnet(&subnet, reply->shared,
+						tmp_addr, MDL) != 0) {
+				group = subnet->group;
+				subnet_dereference(&subnet, MDL);
+			}
+		}
+		data_string_forget(&fixed_addr, MDL);
+	}
+
+	/* return whatever we got */
+	return (group);
+}
+
 /*
  * Process an IAPREFIX within a given IA_PD, storing any IAPREFIX reply
  * contents into the reply's current ia_pd-scoped option cache.  Returns
@@ -4236,15 +4297,11 @@ reply_process_prefix(struct reply_state *reply, struct option_cache *pref) {
 
 		scope = &global_scope;
 
-		/* Find the static prefixe's subnet. */
-		if (find_grouped_subnet(&reply->subnet, reply->shared,
-					tmp_pref.lo_addr, MDL) == 0)
-			log_fatal("Impossible condition at %s:%d.", MDL);
-		group = reply->subnet->group;
-		subnet_dereference(&reply->subnet, MDL);
-
-		/* Copy the static prefix for logging purposes */
+		/* Copy the static prefix for logging and finding the group */
 		memcpy(&reply->fixed_pref, &tmp_pref, sizeof(tmp_pref));
+
+		/* Try to find a group for the static prefix */
+		group = find_group_by_prefix(reply);
 	} else {
 		if (reply->lease == NULL)
 			log_fatal("Impossible condition at %s:%d.", MDL);
@@ -4485,15 +4542,11 @@ find_client_prefix(struct reply_state *reply) {
 
 		scope = &global_scope;
 
-		/* Find the static prefixe's subnet. */
-		if (find_grouped_subnet(&reply->subnet, reply->shared,
-					send_pref.lo_addr, MDL) == 0)
-			log_fatal("Impossible condition at %s:%d.", MDL);
-		group = reply->subnet->group;
-		subnet_dereference(&reply->subnet, MDL);
-
 		/* Copy the prefix for logging purposes */
 		memcpy(&reply->fixed_pref, &l->cidrnet, sizeof(send_pref));
+
+		/* Try to find a group for the static prefix */
+		group = find_group_by_prefix(reply);
 
 		goto send_pref;
 	}

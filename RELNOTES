@@ -148,6 +148,15 @@ by Eric Young (eay@cryptsoft.com).
   with the next entry in the lease file.
   [ISC-Bugs #39314]
 
+- Be more liberal in finding a subnet group associated with a static
+  prefix.  When we added the class matching code for v6 we also added
+  a requirement that the static prefix must be within a subnet the
+  client was in, in order to find the proper statements.  We now
+  look for a subnet based on the prefix, failing that on the static
+  address for the client and failing that on the shared network
+  itself.
+  [ISC-Bugs #38329]
+
 			Changes since 4.3.2rc2
 - None
 
