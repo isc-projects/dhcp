@@ -1518,7 +1518,7 @@ void dhcpinform (packet, ms_nulltp)
 #endif
 	memset (to.sin_zero, 0, sizeof to.sin_zero);
 
-	/* RFC2131 states the server SHOULD unciast to ciaddr.
+	/* RFC2131 states the server SHOULD unicast to ciaddr.
 	 * There are two wrinkles - relays, and when ciaddr is zero.
 	 * There's actually no mention of relays at all in rfc2131 in
 	 * regard to DHCPINFORM, except to say we might get packets from
