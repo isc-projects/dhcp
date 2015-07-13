@@ -3,7 +3,7 @@
    Support for executable statements. */
 
 /*
- * Copyright (c) 2009,2013,2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009,2013-2015 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1998-2003 by Internet Software Consortium
  *
@@ -531,6 +531,14 @@ int execute_statements (result, packet, lease, client_state,
 
 			break;
 
+		      case vendor_opt_statement:
+		        /* If possible parse any options in a vendor option
+			 * encapsulation, this may add options to the in_options
+			 * option state */
+			parse_vendor_option(packet, lease, client_state,
+					    in_options, out_options, scope);
+			break;
+
 		      default:
 			log_error ("bogus statement type %d", r -> op);
 			break;
@@ -1000,6 +1008,11 @@ void write_statements (file, statements, indent)
 #endif /* ENABLE_EXECUTE */
                         break;
 			
+		      case vendor_opt_statement:
+			indent_spaces (file, indent);
+			fprintf (file, "parse-vendor-option;");
+			break;
+
 		      default:
 			log_fatal ("bogus statement type %d\n", r -> op);
 		}
@@ -1161,7 +1174,8 @@ int executable_statement_foreach (struct executable_statement *stmt,
 		break;
 	      case log_statement:
 	      case return_statement:
-              case execute_statement:
+	      case execute_statement:
+	      case vendor_opt_statement:
 		break;
 	    }
 	}

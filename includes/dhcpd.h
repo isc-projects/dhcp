@@ -2016,6 +2016,13 @@ int add_option(struct option_state *options,
 	       void *data,
 	       unsigned int data_len);
 
+void parse_vendor_option(struct packet *packet,
+			 struct lease *lease,
+			 struct client_state *client_state,
+			 struct option_state *in_options,
+			 struct option_state *out_options,
+			 struct binding_scope **scope);
+
 /* dhcpd.c */
 extern struct timeval cur_tv;
 #define cur_time cur_tv.tv_sec

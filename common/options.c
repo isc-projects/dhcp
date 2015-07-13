@@ -3,7 +3,7 @@
    DHCP options parsing and reassembly. */
 
 /*
- * Copyright (c) 2004-2012,2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2012,2014-2015 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -4284,4 +4284,97 @@ int validate_packet(struct packet *packet)
 	/* @todo: Add checks for other received options */
 
 	return (1);
+}
+/*!
+ *
+ * \brief Parse a vendor option (option 43)
+ *
+ * After the server has parsed most of the options and presented the result
+ * to the user the user can set the proper vendor option space using
+ * vendor-option-space in the config file and then cause this routine to be
+ * called via parse-vendor-option in the config file.  This routine will
+ * then try and find the proper universe for the vendor-option-space and
+ * parse the vendor option string based on that universe.
+ *
+ * If the information isn't available (no vendor space, no universe for the
+ * vendor space, no vendor option in the options) or the decode fails we
+ * simply ignore the option and continue processing.
+ *
+ * \param packet      - structure to hold information about the packet being
+ *                      processed
+ * \param lease       - lease structure
+ * \param client_state
+ * \param in_options  - The incoming options, we expect to find the
+ *                      vendor-option (option 43, containing the string
+ *                      to parse) there.  We shall attach decoded options
+ *                      there.
+ * \param out_options - The options we have added as we process the packet.
+ *                      We expect to find the vendor-option-space there and
+ *                      use that to find the name of the vendor universe to use
+ * \param scope
+ *
+ * \return - void as there isn't much we can do about failures.
+ */
+void parse_vendor_option(packet, lease, client_state, in_options,
+			 out_options, scope)
+	struct packet *packet;
+	struct lease *lease;
+	struct client_state *client_state;
+	struct option_state *in_options;
+	struct option_state *out_options;
+	struct binding_scope **scope;
+{
+	struct option_cache *oc = NULL;
+	struct data_string name;
+	struct option *option = NULL;
+	unsigned int code = DHO_VENDOR_ENCAPSULATED_OPTIONS;
+
+	/* check if we are processing a packet, if not we can return */
+	if ((packet == NULL) || (in_options == NULL) || (out_options == NULL))
+		return;
+
+	/* Do we have any vendor option spaces? */
+	if (vendor_cfg_option == NULL)
+		return;
+
+	/* See if the admin has set a vendor option space name */
+	oc = lookup_option(vendor_cfg_option->universe,
+			   out_options, vendor_cfg_option->code);
+	if (oc == NULL)
+		return;
+
+	memset(&name, 0, sizeof(name));
+	evaluate_option_cache(&name, packet, lease, client_state,
+			      in_options, out_options, scope, oc, MDL);
+
+	/* No name, all done */
+	if (name.len == 0)
+		return;
+
+	/* Get any vendor option information from the request */
+	oc = lookup_option(&dhcp_universe, in_options, code);
+
+	/* No vendor option, all done */
+	if ((oc == NULL) || (oc->data.len == 0)) {
+		data_string_forget(&name, MDL);
+		return;
+	}
+
+	/* Get the proper option to pass to the parse routine */
+	option_code_hash_lookup(&option, dhcp_universe.code_hash,
+				&code, 0, MDL);
+
+	/* Now that we have the data from the vendor option and a vendor
+	 * option space try to parse things.  On success the parsed options
+	 * will be added to the in_options list for future use.  A return
+	 * return of 1 indicates success, but not much we can do on error */
+	(void) parse_encapsulated_suboptions(in_options, option,
+					     oc->data.data, oc->data.len,
+					     &dhcp_universe,
+					     (const char *)name.data);
+
+	/* Lastly clean up any left overs */
+	data_string_forget(&name, MDL);
+	option_dereference(&option, MDL);
+	return;
 }

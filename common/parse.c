@@ -2640,6 +2640,22 @@ int parse_executable_statement (result, cfile, lose, case_context)
 		}
 		break;
 
+	      case PARSE_VENDOR_OPT:
+		/* The parse-vendor-option; The statement has no arguments.
+		 * We simply set up the statement and when it gets executed it
+		 * will find all information it needs in the packet and options.
+		 */
+		skip_token(&val, NULL, cfile);
+		if (!parse_semi(cfile)) {
+			*lose = 1;
+			return (0);
+		}
+
+		if (!executable_statement_allocate(result, MDL))
+			log_fatal("no memory for execute statement.");
+		(*result)->op = vendor_opt_statement;
+		break;
+
 		/* Not really a statement, but we parse it here anyway
 		   because it's appropriate for all DHCP agents with
 		   parsers. */

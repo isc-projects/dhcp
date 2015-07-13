@@ -157,6 +157,11 @@ by Eric Young (eay@cryptsoft.com).
   itself.
   [ISC-Bugs #38329]
 
+- Add a new action expression "parse_vendor_options", which can be used
+  to parse a vendor-encapsualted-option received by the server based on
+  the encoding specified by the vendor-option-space statement.
+  [ISC-Bugs #36449]
+
 			Changes since 4.3.2rc2
 - None
 
