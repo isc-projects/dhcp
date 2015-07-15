@@ -2040,6 +2040,11 @@ extern const char *path_dhcpd_pid;
 extern int dhcp_max_agent_option_packet_length;
 extern struct eventqueue *rw_queue_empty;
 
+#if defined (PARANOIA)
+extern uid_t set_uid;
+extern gid_t set_gid;
+#endif
+
 int main(int, char **);
 void postconf_initialization(int);
 void postdb_startup(void);

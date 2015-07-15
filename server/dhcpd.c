@@ -50,6 +50,10 @@ static const char url [] =
 #  define group real_group 
 #    include <grp.h>
 #  undef group
+
+/* global values so db.c can look at them */
+uid_t set_uid = 0;
+gid_t set_gid = 0;
 #endif /* PARANOIA */
 
 #ifndef UNIT_TEST
@@ -126,6 +130,12 @@ static void omapi_listener_start (void *foo)
 	omapi_object_dereference (&listener, MDL);
 }
 
+#ifndef UNIT_TEST
+
+/* Note: If we add unit tests to test setup_chroot it will
+ * need to be moved to be outside the ifndef UNIT_TEST block.
+ */
+
 #if defined (PARANOIA)
 /* to be used in one of two possible scenarios */
 static void setup_chroot (char *chroot_dir) {
@@ -142,7 +152,6 @@ static void setup_chroot (char *chroot_dir) {
 }
 #endif /* PARANOIA */
 
-#ifndef UNIT_TEST
 int 
 main(int argc, char **argv) {
 	int fd;
@@ -180,9 +189,6 @@ main(int argc, char **argv) {
 	char *set_user   = 0;
 	char *set_group  = 0;
 	char *set_chroot = 0;
-
-	uid_t set_uid = 0;
-	gid_t set_gid = 0;
 #endif /* PARANOIA */
 
         /* Make sure that file descriptors 0 (stdin), 1, (stdout), and
