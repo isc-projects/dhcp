@@ -125,7 +125,13 @@ by Eric Young (eay@cryptsoft.com).
   with the next entry in the lease file.
   [ISC-Bugs #39314]
 
+- Enhance the PARANOIA patch to include fchown() the lease file to
+  allow it to be manipulated after the server does a chown().
+  Thanks to Jiri Popelka at Red Hat for the patch.
+  [ISC-Bugs #36978]
+
 			Changes since 4.1-ESV-R11rc2
+
 - None
 
 			Changes since 4.1-ESV-R11rc1

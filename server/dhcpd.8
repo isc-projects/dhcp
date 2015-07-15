@@ -78,6 +78,18 @@ dhcpd - Dynamic Host Configuration Protocol Server
 .B --no-pid
 ]
 [
+.B -user
+.I user
+]
+[
+.B -group
+.I group
+]
+[
+.B -chroot
+.I dir
+]
+[
 .B -tf
 .I trace-output-file
 ]
@@ -248,6 +260,28 @@ Test the lease file.  The server tests the lease file
 for correct syntax, but will not attempt to perform any network
 operations.  This can be used to test a new lease file
 automatically before installing it.
+.TP
+.BI \-user \ user
+Setuid to user after completing privileged operations,
+such as creating sockets that listen on privileged ports.
+This also causes the lease file to be owned by user.
+This option is only available if the code was compiled
+with the PARANOIA patch (./configure --enable-paranoia).
+.TP
+.BI \-group \ group
+Setgid to group after completing privileged operations,
+such as creating sockets that listen on privileged ports.
+This also causes the lease file to use group.
+This option is only available if the code was compiled
+with the PARANOIA patch (./configure --enable-paranoia).
+.TP
+.BI \-chroot \ dir
+Chroot to directory.  This may occur before or after
+reading the configuration files depending on whether
+the code was compiled with the EARLY_CHROOT option
+enabled (./configure --enable-early-chroot).
+This option is only available if the code was compiled
+with the PARANOIA patch (./configure --enable-paranoia).
 .TP
 .BI \-tf \ tracefile
 Specify a file into which the entire startup state of the server and
