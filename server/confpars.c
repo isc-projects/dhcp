@@ -4169,6 +4169,12 @@ parse_prefix6(struct parse *cfile,
 		return;
 	}
 
+#if 0
+	/* Prefixes are not required to be within the subnet, but I'm not
+	 * entirely sure that we won't want to revive this code as a warning
+	 * in the future so I'm ifdeffing it
+	 */
+
 	/* Make sure starting prefix is within the subnet */
 	if (!addr_eq(group->subnet->net,
 		     subnet_number(lo, group->subnet->netmask))) {
@@ -4177,10 +4183,17 @@ parse_prefix6(struct parse *cfile,
 			      skip_to_semi(cfile);
 		return;
 	}
+#endif
 
 	if (!parse_ip6_addr(cfile, &hi)) {
 		return;
 	}
+
+#if 0
+	/* Prefixes are not required to be within the subnet, but I'm not
+	 * entirely sure that we won't want to revive this code as a warning
+	 * in the future so I'm ifdeffing it
+	 */
 
 	/* Make sure ending prefix is within the subnet */
 	if (!addr_eq(group->subnet->net,
@@ -4190,6 +4203,7 @@ parse_prefix6(struct parse *cfile,
 			      skip_to_semi(cfile);
 		return;
 	}
+#endif
 
 	/*
 	 * Next is '/' number ';'.
@@ -4213,11 +4227,20 @@ parse_prefix6(struct parse *cfile,
 		parse_warn(cfile, "networks have 0 to 128 bits (exclusive)");
 		return;
 	}
+
+#if 0
+	/* Prefixes are not required to be within the subnet, but I'm not
+	 * entirely sure that we won't want to revive this code as a warning
+	 * in the future so I'm ifdeffing it
+	 */
+
 	if (bits < group->subnet->prefix_len) {
 		parse_warn(cfile, "network mask smaller than subnet mask");
 		skip_to_semi(cfile);
 		return;
 	}
+#endif
+
 	if (!is_cidr_mask_valid(&lo, bits) ||
 	    !is_cidr_mask_valid(&hi, bits)) {
 		parse_warn(cfile, "network mask too short");
