@@ -2318,6 +2318,8 @@ ldap_read_config (void)
 
   if (x_parser_length(cfile) > 0)
     {
+      ldap_write_debug(cfile->inbuf, cfile->buflen);
+
       res = conf_file_subparse (cfile, root_group, ROOT_GROUP);
       if (res != ISC_R_SUCCESS)
         {

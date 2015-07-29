@@ -183,7 +183,11 @@ by Eric Young (eay@cryptsoft.com).
   been applied to the contributed code which supplies LDAP support.
   In addition, two larger submissions have also been included.  The
   first adds support for IPv6 configuration and the second provides
-  GSSAPI authentication.
+  GSSAPI authentication. We would like to thank the following for their
+  contributions (alphabetically):
+    Alex Novak at SUSE
+    Jiri Popelka at Red Hat
+    Marius Tomaschewski at SUSE
   [ISC-Bugs #39056]
   [ISC-Bugs #22742]
   [ISC-Bugs #24449]
