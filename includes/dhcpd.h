@@ -3127,7 +3127,7 @@ void classify (struct packet *, struct class *);
 isc_result_t unlink_class (struct class **class);
 isc_result_t find_class (struct class **, const char *,
 			 const char *, int);
-int unbill_class (struct lease *, struct class *);
+void unbill_class (struct lease *);
 int bill_class (struct lease *, struct class *);
 
 /* execute.c */

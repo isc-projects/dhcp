@@ -2321,7 +2321,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 				    lease -> billing_class)
 					break;
 			if (i == packet -> class_count) {
-				unbill_class (lease, lease -> billing_class);
+				unbill_class(lease);
 				/* Active lease billing change negates reuse */
 				if (lease->binding_state == FTS_ACTIVE) {
 					lease->cannot_reuse = 1;
@@ -2373,7 +2373,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 			if (offer == DHCPOFFER &&
 			    lease->billing_class != NULL &&
 			    lease->binding_state != FTS_ACTIVE)
-				unbill_class(lease, lease->billing_class);
+				unbill_class(lease);
 
 			/* Lease billing change negates reuse */
 			if (lease->billing_class != NULL) {
