@@ -2858,6 +2858,12 @@ init_handler(struct packet *packet, struct client_state *client)
 
 	lease = dhc6_leaseify(packet);
 
+	/* Out of memory or corrupt packet condition...hopefully a temporary
+	 * problem.  Returning now makes us try to retransmit later.
+	 */
+	if (lease == NULL)
+		return;
+
 	if (dhc6_check_advertise(lease) != ISC_R_SUCCESS) {
 		log_debug("PRC: Lease failed to satisfy.");
 		dhc6_lease_destroy(&lease, MDL);
@@ -2975,7 +2981,7 @@ rapid_commit_handler(struct packet *packet, struct client_state *client)
 
 	lease = dhc6_leaseify(packet);
 
-	/* This is an out of memory condition...hopefully a temporary
+	/* Out of memory or corrupt packet condition...hopefully a temporary
 	 * problem.  Returning now makes us try to retransmit later.
 	 */
 	if (lease == NULL)
@@ -3789,7 +3795,7 @@ reply_handler(struct packet *packet, struct client_state *client)
 
 	lease = dhc6_leaseify(packet);
 
-	/* This is an out of memory condition...hopefully a temporary
+	/* Out of memory or corrupt packet condition...hopefully a temporary
 	 * problem.  Returning now makes us try to retransmit later.
 	 */
 	if (lease == NULL)
