@@ -181,9 +181,9 @@ by Eric Young (eay@cryptsoft.com).
 
 - LDAP Patches - Numerous small patches submitted by contributors have
   been applied to the contributed code which supplies LDAP support.
-  In addition, two larger submissions have also been included.  The 
-  first adds support for IPv6 configuration adn the second provides 
-  GSSAPI authentication.  
+  In addition, two larger submissions have also been included.  The
+  first adds support for IPv6 configuration and the second provides
+  GSSAPI authentication.
   [ISC-Bugs #39056]
   [ISC-Bugs #22742]
   [ISC-Bugs #24449]
@@ -198,6 +198,9 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Bugs #36409]
   [ISC-Bugs #36774]
   [ISC-Bugs #37876]
+
+- Handle an out of memory condition in the client a bit better.
+  [ISC-Bugs #39279
 
 			Changes since 4.3.2rc2
 - None
