@@ -820,11 +820,9 @@ void classify (packet, class)
 {
 }
 
-int unbill_class (lease, class)
+void unbill_class (lease)
 	struct lease *lease;
-	struct class *class;
 {
-	return 0;
 }
 
 int find_subnet (struct subnet **sp,

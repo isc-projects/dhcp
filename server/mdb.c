@@ -1124,8 +1124,8 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate, from_pool)
 
 	/* If the lease has been billed to a class, remove the billing. */
 	if (comp -> billing_class != lease -> billing_class) {
-		if (comp -> billing_class)
-			unbill_class (comp, comp -> billing_class);
+		if (comp->billing_class)
+			unbill_class(comp);
 		if (lease -> billing_class)
 			bill_class (comp, lease -> billing_class);
 	}
@@ -1442,8 +1442,8 @@ void make_binding_state_transition (struct lease *lease)
 							  MDL);
 		/* Get rid of client-specific bindings that are only
 		   correct when the lease is active. */
-		if (lease -> billing_class)
-			unbill_class (lease, lease -> billing_class);
+		if (lease->billing_class)
+			unbill_class(lease);
 		if (lease -> agent_options)
 			option_chain_head_dereference (&lease -> agent_options,
 						       MDL);
@@ -1508,8 +1508,8 @@ void make_binding_state_transition (struct lease *lease)
 
 		/* Get rid of client-specific bindings that are only
 		   correct when the lease is active. */
-		if (lease -> billing_class)
-			unbill_class (lease, lease -> billing_class);
+		if (lease->billing_class)
+			unbill_class(lease);
 		if (lease -> agent_options)
 			option_chain_head_dereference (&lease -> agent_options,
 						       MDL);

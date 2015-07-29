@@ -1919,8 +1919,9 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 				if (packet -> classes [i] ==
 				    lease -> billing_class)
 					break;
+
 			if (i == packet -> class_count)
-				unbill_class (lease, lease -> billing_class);
+				unbill_class (lease);
 		}
 
 		/* If we don't have an active billing, see if we need
@@ -1956,7 +1957,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 			if (offer == DHCPOFFER &&
 			    lease->billing_class != NULL &&
 			    lease->binding_state != FTS_ACTIVE)
-				unbill_class(lease, lease->billing_class);
+				unbill_class(lease);
 		}
 	}
 
