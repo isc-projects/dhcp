@@ -186,6 +186,7 @@ by Eric Young (eay@cryptsoft.com).
   GSSAPI authentication. We would like to thank the following for their
   contributions (alphabetically):
     Alex Novak at SUSE
+    Bill Parker (wp02855 at gmail dot com)
     Jiri Popelka at Red Hat
     Marius Tomaschewski at SUSE
   [ISC-Bugs #39056]
