@@ -636,20 +636,63 @@ AC_ARG_WITH(ldapcrypto,
     [ldapcrypto=$withval],
     [ldapcrypto=no])
 
+# Gssapi to allow LDAP to authenticate with a keytab
+AC_ARG_WITH(ldap-gssapi,
+    AC_HELP_STRING([--with-ldap-gssapi],
+                   [enable krb5/gssapi authentication for OpenLDAP in dhcpd (default is no)]),
+    [ldap_gssapi=$withval],
+    [ldap_gssapi=no])
+
+
+# LDAP CASA auth support.
+AC_ARG_WITH(ldapcasa,
+    AC_HELP_STRING([--with-ldapcasa],
+                   [enable LDAP CASA auth support in dhcpd (default is no)]),
+    [ldapcasa=$withval],
+    [ldapcasa=no])
+
 # OpenLDAP support is disabled by default, if enabled then SSL support is an
 # extra optional that is also disabled by default.  Enabling LDAP SSL support
-# implies enabling LDAP support.
-if test x$ldap = xyes || test x$ldapcrypto = xyes ; then
+# implies enabling LDAP support. Similarly, KRB5 support implies LDAP support,
+# but doesn't include SSL. The two are not dependant.
+if test x$ldap = xyes || test x$ldapcrypto = xyes || test x$ldap_gssapi = xyes; then
+    saved_LIBS="$LIBS"
+    LIBS=""
     AC_SEARCH_LIBS(ldap_initialize, [ldap], ,
 		   AC_MSG_FAILURE([*** Cannot find ldap_initialize with -lldap - do you need to install an OpenLDAP2 Devel package?]))
     AC_SEARCH_LIBS(ber_pvt_opt_on, [lber], ,
 		   AC_MSG_FAILURE([*** Cannot find ber_pvt_opt_on with -llber - do you need to install an OpenLDAP2 Devel package?]))
+    if test x$ldap_gssapi = xyes ; then
+    AC_SEARCH_LIBS(krb5_init_context, [krb5], ,
+          AC_MSG_FAILURE([*** Cannot find krb5_init_context with -lkrb5 - do you need to install a Kerberos Devel package?]))
+    fi
+
+    # Create LDAP_LIBS which we specify them explicitly rather than lumping them in with LIBS
+    AC_SUBST(LDAP_LIBS, [$LIBS])
+    LIBS="$saved_LIBS"
+
+
+    AC_CHECK_HEADERS([ldap.h])
+    AC_CHECK_FUNCS([inet_pton inet_ntop])
+
+
+    LDAP_CFLAGS="-DLDAP_CONFIGURATION"
+
+    if test x$ldapcasa = xyes ; then
+    AC_CHECK_HEADERS([micasa_mgmd.h],[
+           LDAP_CFLAGS="$LDAP_CFLAGS -DLDAP_CASA_AUTH"
+    ], AC_MSG_FAILURE([*** Cannot find micasa_mgmd.h for ldap casa auth support]))
+    fi
 
     if test x$ldapcrypto = xyes ; then
-	AC_SUBST(LDAP_CFLAGS, ["-DLDAP_CONFIGURATION -DLDAP_USE_SSL"])
-    else
-	AC_SUBST(LDAP_CFLAGS, ["-DLDAP_CONFIGURATION"])
+    LDAP_CFLAGS="$LDAP_CFLAGS -DLDAP_USE_SSL"
     fi
+
+    if test x$ldap_gssapi = xyes; then
+    LDAP_CFLAGS="$LDAP_CFLAGS -DLDAP_USE_GSSAPI"
+    fi
+
+    AC_SUBST(LDAP_CFLAGS, [$LDAP_CFLAGS])
 fi
 
 # Append selected warning levels to CFLAGS before substitution (but after

@@ -626,6 +626,7 @@ am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
 LDAP_CFLAGS
+LDAP_LIBS
 ac_prefix_program
 HAVE_ATF_FALSE
 HAVE_ATF_TRUE
@@ -766,6 +767,8 @@ with_relay6_pid_file
 with_libbind
 with_ldap
 with_ldapcrypto
+with_ldap_gssapi
+with_ldapcasa
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1462,6 +1465,10 @@ Optional Packages:
                           ./bind)
   --with-ldap             enable OpenLDAP support in dhcpd (default is no)
   --with-ldapcrypto       enable OpenLDAP crypto support in dhcpd (default is
+                          no)
+  --with-ldap-gssapi      enable krb5/gssapi authentication for OpenLDAP in
+                          dhcpd (default is no)
+  --with-ldapcasa         enable LDAP CASA auth support in dhcpd (default is
                           no)
 
 Some influential environment variables:
@@ -6674,10 +6681,34 @@ else
 fi
 
 
+# Gssapi to allow LDAP to authenticate with a keytab
+
+# Check whether --with-ldap-gssapi was given.
+if test "${with_ldap_gssapi+set}" = set; then :
+  withval=$with_ldap_gssapi; ldap_gssapi=$withval
+else
+  ldap_gssapi=no
+fi
+
+
+
+# LDAP CASA auth support.
+
+# Check whether --with-ldapcasa was given.
+if test "${with_ldapcasa+set}" = set; then :
+  withval=$with_ldapcasa; ldapcasa=$withval
+else
+  ldapcasa=no
+fi
+
+
 # OpenLDAP support is disabled by default, if enabled then SSL support is an
 # extra optional that is also disabled by default.  Enabling LDAP SSL support
-# implies enabling LDAP support.
-if test x$ldap = xyes || test x$ldapcrypto = xyes ; then
+# implies enabling LDAP support. Similarly, KRB5 support implies LDAP support,
+# but doesn't include SSL. The two are not dependant.
+if test x$ldap = xyes || test x$ldapcrypto = xyes || test x$ldap_gssapi = xyes; then
+    saved_LIBS="$LIBS"
+    LIBS=""
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing ldap_initialize" >&5
 $as_echo_n "checking for library containing ldap_initialize... " >&6; }
 if ${ac_cv_search_ldap_initialize+:} false; then :
@@ -6800,14 +6831,136 @@ as_fn_error $? "*** Cannot find ber_pvt_opt_on with -llber - do you need to inst
 See \`config.log' for more details" "$LINENO" 5; }
 fi
 
+    if test x$ldap_gssapi = xyes ; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing krb5_init_context" >&5
+$as_echo_n "checking for library containing krb5_init_context... " >&6; }
+if ${ac_cv_search_krb5_init_context+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
 
-    if test x$ldapcrypto = xyes ; then
-	LDAP_CFLAGS="-DLDAP_CONFIGURATION -DLDAP_USE_SSL"
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char krb5_init_context ();
+int
+main ()
+{
+return krb5_init_context ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' krb5; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_krb5_init_context=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if ${ac_cv_search_krb5_init_context+:} false; then :
+  break
+fi
+done
+if ${ac_cv_search_krb5_init_context+:} false; then :
 
-    else
-	LDAP_CFLAGS="-DLDAP_CONFIGURATION"
+else
+  ac_cv_search_krb5_init_context=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_krb5_init_context" >&5
+$as_echo "$ac_cv_search_krb5_init_context" >&6; }
+ac_res=$ac_cv_search_krb5_init_context
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+
+else
+  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "*** Cannot find krb5_init_context with -lkrb5 - do you need to install a Kerberos Devel package?
+See \`config.log' for more details" "$LINENO" 5; }
+fi
 
     fi
+
+    # Create LDAP_LIBS which we specify them explicitly rather than lumping them in with LIBS
+    LDAP_LIBS=$LIBS
+
+    LIBS="$saved_LIBS"
+
+
+    for ac_header in ldap.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "ldap.h" "ac_cv_header_ldap_h" "$ac_includes_default"
+if test "x$ac_cv_header_ldap_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LDAP_H 1
+_ACEOF
+
+fi
+
+done
+
+    for ac_func in inet_pton inet_ntop
+do :
+  as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
+ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
+if eval test \"x\$"$as_ac_var"\" = x"yes"; then :
+  cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_$ac_func" | $as_tr_cpp` 1
+_ACEOF
+
+fi
+done
+
+
+
+    LDAP_CFLAGS="-DLDAP_CONFIGURATION"
+
+    if test x$ldapcasa = xyes ; then
+    for ac_header in micasa_mgmd.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "micasa_mgmd.h" "ac_cv_header_micasa_mgmd_h" "$ac_includes_default"
+if test "x$ac_cv_header_micasa_mgmd_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_MICASA_MGMD_H 1
+_ACEOF
+
+           LDAP_CFLAGS="$LDAP_CFLAGS -DLDAP_CASA_AUTH"
+
+else
+  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "*** Cannot find micasa_mgmd.h for ldap casa auth support
+See \`config.log' for more details" "$LINENO" 5; }
+fi
+
+done
+
+    fi
+
+    if test x$ldapcrypto = xyes ; then
+    LDAP_CFLAGS="$LDAP_CFLAGS -DLDAP_USE_SSL"
+    fi
+
+    if test x$ldap_gssapi = xyes; then
+    LDAP_CFLAGS="$LDAP_CFLAGS -DLDAP_USE_GSSAPI"
+    fi
+
+    LDAP_CFLAGS=$LDAP_CFLAGS
+
 fi
 
 # Append selected warning levels to CFLAGS before substitution (but after

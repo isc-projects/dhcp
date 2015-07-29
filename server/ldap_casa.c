@@ -55,8 +55,10 @@
  */
 
 #if defined(LDAP_CASA_AUTH)
-#include "ldap_casa.h"
 #include "dhcpd.h"
+#include "ldap_casa.h"
+#include <dlfcn.h>
+#include <string.h>
 
 int
 load_casa (void)

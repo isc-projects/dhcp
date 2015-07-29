@@ -645,6 +645,11 @@ find_hosts_by_option(struct host_decl **hp,
 	int found;
 	struct packet *relay_packet;
 	struct option_state *relay_state;
+
+#if defined(LDAP_CONFIGURATION)
+	if ((found = find_client_in_ldap (hp, packet, opt_state, file, line)))
+		return found;
+#endif
 	
 	for (p = host_id_info; p != NULL; p = p->next) {
 		relay_packet = packet;	

@@ -179,6 +179,26 @@ by Eric Young (eay@cryptsoft.com).
   class has been deleted.
   [ISC-Bugs #39978]
 
+- LDAP Patches - Numerous small patches submitted by contributors have
+  been applied to the contributed code which supplies LDAP support.
+  In addition, two larger submissions have also been included.  The 
+  first adds support for IPv6 configuration adn the second provides 
+  GSSAPI authentication.  
+  [ISC-Bugs #39056]
+  [ISC-Bugs #22742]
+  [ISC-Bugs #24449]
+  [ISC-Bugs #28545]
+  [ISC-Bugs #29873]
+  [ISC-Bugs #30183]
+  [ISC-Bugs #30402]
+  [ISC-Bugs #32217]
+  [ISC-Bugs #32240]
+  [ISC-Bugs #33176]
+  [ISC-Bugs #33178]
+  [ISC-Bugs #36409]
+  [ISC-Bugs #36774]
+  [ISC-Bugs #37876]
+
 			Changes since 4.3.2rc2
 - None
 

@@ -774,6 +774,11 @@ struct lease_state {
 # define SV_LDAP_TLS_CIPHERS            76
 # define SV_LDAP_TLS_RANDFILE           77
 #endif
+# define SV_LDAP_INIT_RETRY            178
+#if defined (LDAP_USE_GSSAPI)
+# define SV_LDAP_GSSAPI_KEYTAB         179
+# define SV_LDAP_GSSAPI_PRINCIPAL      180
+#endif
 #endif
 #define SV_CACHE_THRESHOLD		78
 #define SV_DONT_USE_FSYNC		79
@@ -3648,6 +3653,8 @@ int find_haddr_in_ldap (struct host_decl **, int, unsigned,
 			const unsigned char *, const char *, int);
 int find_subclass_in_ldap (struct class *, struct class **,
 			   struct data_string *);
+int find_client_in_ldap (struct host_decl **, struct packet*,
+               struct option_state *, const char *, int);
 #endif
 
 /* mdb6.c */

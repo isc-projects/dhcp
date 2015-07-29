@@ -59,8 +59,6 @@
 #define __LDAP_CASA_H__
 
 #include <micasa_mgmd.h>
-#include <dlfcn.h>
-#include <string.h>
 
 #define MICASA_LIB     "libmicasa.so.1"
 

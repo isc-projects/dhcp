@@ -258,7 +258,12 @@ static struct option server_options[] = {
 	{ "ldap-tls-crlcheck", "Nldap-tls-crlcheck.",	&server_universe,  75, 1 },
 	{ "ldap-tls-ciphers", "t",		&server_universe,  76, 1 },
 	{ "ldap-tls-randfile", "t",		&server_universe,  77, 1 },
+	{ "ldap-init-retry", "d",       	&server_universe,  SV_LDAP_INIT_RETRY, 1 },
 #endif /* LDAP_USE_SSL */
+#if defined(LDAP_USE_GSSAPI)
+	{ "ldap-gssapi-keytab", "t",        &server_universe,  SV_LDAP_GSSAPI_KEYTAB, 1},
+	{ "ldap-gssapi-principal", "t",     &server_universe,  SV_LDAP_GSSAPI_PRINCIPAL, 1},
+#endif /* LDAP_USE_GSSAPI */
 #endif /* LDAP_CONFIGURATION */
 	{ "dhcp-cache-threshold", "B",		&server_universe,  78, 1 },
 	{ "dont-use-fsync", "f",		&server_universe,  79, 1 },
