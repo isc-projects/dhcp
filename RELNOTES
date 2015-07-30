@@ -206,6 +206,8 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Bugs #37876]
 
 - Handle an out of memory condition in the client a bit better.
+  Thanks to Frédéric Perrin from Brocade for finding the issue
+  and suggesting a patch.
   [ISC-Bugs #39279
 
 			Changes since 4.3.2rc2
