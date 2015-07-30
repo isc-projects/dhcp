@@ -137,7 +137,9 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Bugs #39978]
 
 - Handle an out of memory condition in the client a bit better.
-  [ISC-Bugs #39279
+  Thanks to Frédéric Perrin from Brocade for finding the issue
+  and suggesting a patch.
+  [ISC-Bugs #39279]
 
 			Changes since 4.1-ESV-R11rc2
 
