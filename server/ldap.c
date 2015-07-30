@@ -38,15 +38,16 @@
  */
 
 #include "dhcpd.h"
+#if defined(LDAP_CONFIGURATION)
 #include <signal.h>
 #include <errno.h>
 #include <ctype.h>
 #include <netdb.h>
 #include <net/if.h>
+#if defined(HAVE_IFADDRS_H)
 #include <ifaddrs.h>
+#endif
 #include <string.h>
-
-#if defined(LDAP_CONFIGURATION)
 
 #if defined(LDAP_CASA_AUTH)
 #include "ldap_casa.h"
@@ -283,6 +284,7 @@ get_host_entry(char *fqdnname, size_t fqdnname_size,
   return 0;
 }
 
+#if defined(HAVE_IFADDRS_H)
 static int
 is_iface_address(struct ifaddrs *addrs, struct in_addr *addr)
 {
@@ -375,6 +377,7 @@ get_host_address(const char *hostname, char *hostaddr, size_t hostaddr_size, str
     }
   return -1;
 }
+#endif /* HAVE_IFADDRS_H */
 
 static void
 ldap_parse_class (struct ldap_config_stack *item, struct parse *cfile)
@@ -828,7 +831,7 @@ ldap_parse_zone (struct ldap_config_stack *item, struct parse *cfile)
   item->close_brace = 1;
 }
 
-
+#if defined(HAVE_IFADDRS_H)
 static void
 ldap_parse_failover (struct ldap_config_stack *item, struct parse *cfile)
 {
@@ -1049,6 +1052,7 @@ ldap_parse_failover (struct ldap_config_stack *item, struct parse *cfile)
 
   item->close_brace = 1;
 }
+#endif /* HAVE_IFADDRS_H */
 
 static void
 add_to_config_stack (LDAPMessage * res, LDAPMessage * ent)
@@ -1966,8 +1970,10 @@ ldap_generate_config_string (struct parse *cfile)
         ldap_parse_key (entry, cfile);
       else if (strcasecmp (objectClass[i]->bv_val, "dhcpDnsZone") == 0)
         ldap_parse_zone (entry, cfile);
+#if defined(HAVE_IFADDRS_H)
       else if (strcasecmp (objectClass[i]->bv_val, "dhcpFailOverPeer") == 0)
         ldap_parse_failover (entry, cfile);
+#endif
       else if (strcasecmp (objectClass[i]->bv_val, "dhcpHost") == 0)
         {
           if (ldap_method == LDAP_METHOD_STATIC)
