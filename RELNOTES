@@ -176,7 +176,8 @@ by Eric Young (eay@cryptsoft.com).
 
 - Fixed a server crash that could occur when the server attempts to remove
   the billing class from the last lease billed to a dynamic class after said
-  class has been deleted.
+  class has been deleted.  Our thanks to Lasse Pesonen for reporting the
+  issue.
   [ISC-Bugs #39978]
 
 - LDAP Patches - Numerous small patches submitted by contributors have
