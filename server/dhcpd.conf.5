@@ -1772,15 +1772,20 @@ a DHCPDECLINE for a particular address, it normally abandons that
 address, assuming that some unauthorized system is using it.
 Unfortunately, a malicious or buggy client can, using DHCPDECLINE
 messages, completely exhaust the DHCP server's allocation pool.  The
-server will reclaim these leases, but while the client is running
-through the pool, it may cause serious thrashing in the DNS, and it
-will also cause the DHCP server to forget old DHCP client address
+server will eventually reclaim these leases, but not while the client
+is running through the pool. This may cause serious thrashing in the DNS,
+and it will also cause the DHCP server to forget old DHCP client address
 allocations.
 .PP
 The \fBdeclines\fR flag tells the DHCP server whether or not to honor
 DHCPDECLINE messages.  If it is set to \fBdeny\fR or \fBignore\fR in
 a particular scope, the DHCP server will not respond to DHCPDECLINE
 messages.
+.PP
+The \fBdeclines\fR flag is only supported by DHCPv4 servers.  Given the large
+IPv6 address space and the internal limits imposed by the server's
+address generation mechanism we don't think it is necessary for DHCPv6
+servers at this time.
 .PP
 .B The
 .I client-updates
