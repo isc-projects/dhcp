@@ -427,8 +427,33 @@ Path to the network configuration script invoked by
 when it gets a lease.  If unspecified, the default
 .B CLIENTBINDIR/dhclient-script
 is used.  See \fBdhclient-script(8)\fR for a description of this file.
+.PP
+.SH PORTS
+During operations the client may use multiple UDP ports
+to provide different functions.  Which ports are opened depends
+on both the way you compiled your code and the configuration you
+supply.  The following should provide you an idea of what
+ports may be in use.
 
+Normally a DHCPv4 client will open a raw UDP socket to receive
+and send most DHCPv4 packets.  It also opens a fallback UDP socket
+for use in sending unicast packets.  Normally these will both
+use the well known port number for BOOTPC.
 
+For DHCPv6 the client opens a UDP socket on the well known
+client port and a fallback UDP socket on a random port for
+use in sending unicast messages.  Unlike DHCPv4 the well
+known socket doesn't need to be opened in raw mode.
+
+If you have included an omapi port statement in your configuration
+file then the client will open a TCP socket on that port to
+listen for OMPAI connections.  When something connects another
+port will be used for the established connection.
+
+When DDNS is enabled at compile time (see includes/site.h)
+the client will open both a v4 and a v6 UDP socket on
+random ports.  These ports are opened even if DDNS is disabled
+in the configuration file.
 .PP
 .SH CONFIGURATION
 The syntax of the \fBdhclient.conf(5)\fR file is discussed separately.
