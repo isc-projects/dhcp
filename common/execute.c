@@ -429,11 +429,11 @@ int execute_statements (result, packet, lease, client_state,
 		      next_let:
 			if (ns) {
 				binding = dmalloc(sizeof(*binding), MDL);
-				memset(binding, 0, sizeof(*binding));
 				if (!binding) {
 				   blb:
 				    binding_scope_dereference(&ns, MDL);
 				} else {
+				    memset(binding, 0, sizeof(*binding));
 				    binding->name =
 					    dmalloc(strlen
 						    (e->data.let.name + 1),
