@@ -62,7 +62,7 @@ by Eric Young (eay@cryptsoft.com).
   logs. This should help differentiate syslog entires for DHCPv4 and
   DHCPv6 servers. You can define OLD_LOG_NAME in includes/site.h to
   keep the previous behavior.
-  [ISC-BUGS #38692]
+  [ISC-Bugs #38692]
 
 			Changes since 4.3.3b1
 - None
