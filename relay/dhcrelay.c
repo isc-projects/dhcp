@@ -30,6 +30,7 @@
 #include <syslog.h>
 #include <signal.h>
 #include <sys/time.h>
+#include <isc/file.h>
 
 TIME default_lease_time = 43200; /* 12 hours... */
 TIME max_lease_time = 86400; /* 24 hours... */
@@ -140,15 +141,17 @@ static const char message[] =
 static const char url[] =
 "For info, please visit https://www.isc.org/software/dhcp/";
 
+char *progname;
+
 #ifdef DHCPv6
 #define DHCRELAY_USAGE \
-"Usage: dhcrelay [-4] [-d] [-q] [-a] [-D]\n"\
+"Usage: %s [-4] [-d] [-q] [-a] [-D]\n"\
 "                     [-A <length>] [-c <hops>] [-p <port>]\n" \
 "                     [-pf <pid-file>] [--no-pid]\n"\
 "                     [-m append|replace|forward|discard]\n" \
 "                     [-i interface0 [ ... -i interfaceN]\n" \
 "                     server0 [ ... serverN]\n\n" \
-"       dhcrelay -6   [-d] [-q] [-I] [-c <hops>] [-p <port>]\n" \
+"       %s -6   [-d] [-q] [-I] [-c <hops>] [-p <port>]\n" \
 "                     [-pf <pid-file>] [--no-pid]\n" \
 "                     [-s <subscriber-id>]\n" \
 "                     -l lower0 [ ... -l lowerN]\n" \
@@ -157,7 +160,7 @@ static const char url[] =
 "       upper (server link): [address%%]interface"
 #else
 #define DHCRELAY_USAGE \
-"Usage: dhcrelay [-d] [-q] [-a] [-D] [-A <length>] [-c <hops>] [-p <port>]\n" \
+"Usage: %s [-d] [-q] [-a] [-D] [-A <length>] [-c <hops>] [-p <port>]\n" \
 "                [-pf <pid-file>] [--no-pid]\n" \
 "                [-m append|replace|forward|discard]\n" \
 "                [-i interface0 [ ... -i interfaceN]\n" \
@@ -165,7 +168,11 @@ static const char url[] =
 #endif
 
 static void usage() {
-	log_fatal(DHCRELAY_USAGE);
+	log_fatal(DHCRELAY_USAGE,
+#ifdef DHCPv6
+		  isc_file_basename(progname),
+#endif
+		  isc_file_basename(progname));
 }
 
 int 
@@ -184,6 +191,12 @@ main(int argc, char **argv) {
 	int local_family_set = 0;
 #endif
 
+#ifdef OLD_LOG_NAME
+	progname = "dhcrelay";
+#else
+	progname = argv[0];
+#endif
+
 	/* Make sure that file descriptors 0(stdin), 1,(stdout), and
 	   2(stderr) are open. To do this, we assume that when we
 	   open a file the lowest available file descriptor is used. */
@@ -197,7 +210,7 @@ main(int argc, char **argv) {
 	else if (fd != -1)
 		close(fd);
 
-	openlog("dhcrelay", DHCP_LOG_OPTIONS, LOG_DAEMON);
+	openlog(isc_file_basename(progname), DHCP_LOG_OPTIONS, LOG_DAEMON);
 
 #if !defined(DEBUG)
 	setlogmask(LOG_UPTO(LOG_INFO));
@@ -388,7 +401,11 @@ main(int argc, char **argv) {
 			exit(0);
 		} else if (!strcmp(argv[i], "--help") ||
 			   !strcmp(argv[i], "-h")) {
-			log_info(DHCRELAY_USAGE);
+			log_info(DHCRELAY_USAGE,
+#ifdef DHCPv6
+				 isc_file_basename(progname),
+#endif
+				 isc_file_basename(progname));
 			exit(0);
  		} else if (argv[i][0] == '-') {
 			usage();

@@ -57,6 +57,13 @@ by Eric Young (eay@cryptsoft.com).
 - Corrected a static analyzer warning in common/execute.c
   [ISC-Bugs #40374]
 
+- ISC DHCP now follows the common convention to use the base name a
+  program is invoked with (aka argv[0], vs. a builtin name) for
+  logs. This should help differentiate syslog entires for DHCPv4 and
+  DHCPv6 servers. You can define OLD_LOG_NAME in includes/site.h to
+  keep the previous behavior.
+  [ISC-BUGS #38692]
+
 			Changes since 4.3.3b1
 - None
 
