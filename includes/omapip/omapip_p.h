@@ -3,7 +3,8 @@
    Private master include file for the OMAPI library. */
 
 /*
- * Copyright (c) 2009-2010,2014 by Internet Systems Consortium, Inc. ("ISC") 
+ * Copyright (c) 2014-2015 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
@@ -286,6 +287,8 @@ void do_percentm (char *obuf, const char *ibuf);
 
 isc_result_t uerr2isc (int);
 isc_result_t ns_rcode_to_isc (int);
+
+const char *isc_file_basename(const char *filename);
 
 extern omapi_message_object_t *omapi_registered_messages;
 

@@ -4,7 +4,8 @@
 
 /*
  * Copyright (c) 1995 RadioMail Corporation.
- * Copyright (c) 2004,2007,2009,2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2014-2015 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004,2007,2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -35,6 +36,7 @@
 
 #include <omapip/omapip_p.h>
 #include <errno.h>
+#include <string.h>
 #include <syslog.h>
 
 #ifdef DEBUG
@@ -361,3 +363,25 @@ char *pWSAError ()
   return "Unknown WinSock error";
 }
 #endif /* _WIN32 */
+
+/* From bind9 libisc */
+
+#ifndef _WIN32
+#define ISC_PATH_SEPARATOR '/'
+#else
+#defineISC_PATH_SEPARATOR '\\'
+#endif
+
+const char *
+isc_file_basename(const char *filename) {
+  char *s;
+
+  if (filename == NULL)
+    return (filename);
+
+  s = strrchr(filename, ISC_PATH_SEPARATOR);
+  if (s == NULL)
+    return (filename);
+
+  return (s + 1);
+}
