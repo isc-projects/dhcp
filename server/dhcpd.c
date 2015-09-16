@@ -172,9 +172,7 @@ int omapi_port;
 trace_type_t *trace_srandom;
 #endif
 
-#ifndef UNIT_TEST
 char *progname;
-#endif
 
 static isc_result_t verify_addr (omapi_object_t *l, omapi_addr_t *addr) {
 	return ISC_R_SUCCESS;
