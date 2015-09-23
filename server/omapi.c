@@ -2108,6 +2108,8 @@ static isc_result_t class_lookup (omapi_object_t **lp,
 	status = omapi_get_value_str(ref, id, "name", &nv);
 	if (status == ISC_R_SUCCESS) {
 		char *name = dmalloc(nv->value->u.buffer.len + 1, MDL);
+		if (name == NULL)
+			return (ISC_R_NOMEMORY);
 		memcpy (name,
 			nv->value->u.buffer.value,
 			nv->value->u.buffer.len);

@@ -1061,6 +1061,10 @@ add_to_config_stack (LDAPMessage * res, LDAPMessage * ent)
   struct ldap_config_stack *ns;
 
   ns = dmalloc (sizeof (*ns), MDL);
+  if (!ns) {
+    log_fatal ("no memory for add_to_config_stack()");
+  }
+
   ns->res = res;
   ns->ldent = ent;
   ns->close_brace = 0;

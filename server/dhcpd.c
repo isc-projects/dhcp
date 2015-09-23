@@ -1279,6 +1279,8 @@ int dhcpd_interface_setup_hook (struct interface_info *ip, struct iaddr *ia)
 			log_fatal ("No memory for shared subnet: %s",
 				   isc_result_totext (status));
 		ip -> shared_network -> name = dmalloc (strlen (fnn) + 1, MDL);
+		if (!ip -> shared_network -> name)
+			log_fatal("no memory for shared network");
 		strcpy (ip -> shared_network -> name, fnn);
 		return 1;
 	}

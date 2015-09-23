@@ -469,6 +469,10 @@ dhc6_dup_ia(struct dhc6_ia *ia, const char *file, int line)
 	struct dhc6_addr **insert_addr, *addr;
 
 	copy = dmalloc(sizeof(*ia), file, line);
+	if (copy == NULL) {
+		log_error("Out of memory for v6 duplicate IA structure.");
+		return NULL;
+	}
 
 	memcpy(copy->iaid, ia->iaid, sizeof(copy->iaid));
 
