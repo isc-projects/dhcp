@@ -422,10 +422,10 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 		if (cmsg->cmsg_level == SOL_PACKET &&
 		    cmsg->cmsg_type == PACKET_AUXDATA) {
 			struct tpacket_auxdata *aux = (void *)CMSG_DATA(cmsg);
-			/* Discard packets with stripped vlan id */
-
 #ifdef VLAN_TCI_PRESENT
-			if (aux->tp_vlan_tci != 0)
+			/* Discard packets with stripped vlan id */
+			/* VLAN ID is only bottom 12-bits of TCI */
+			if (aux->tp_vlan_tci & 0x0fff)
 				return 0;
 #endif
 

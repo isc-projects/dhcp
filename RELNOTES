@@ -54,6 +54,13 @@ by Eric Young (eay@cryptsoft.com).
 
 			Changes since 4.3.3
 
+- The linux packet fitler code now correctly treats only least significant
+  12 bits an inbound packet's TCI value as the VLAN id (per IEEE 802.1Q).
+  Prior to this it was using the entire 16 bit value as the VLAN id and
+  incorrectly discarding packets.  Thanks to Jiri Popelka at Red Hat for
+  reporting this issue and supplying its patch.
+  [ISC-Bugs #40591]
+
 - Corrected a static analyzer warning in common/execute.c
   [ISC-Bugs #40374]
 
