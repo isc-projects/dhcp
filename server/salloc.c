@@ -3,7 +3,7 @@
    Memory allocation for the DHCP server... */
 
 /*
- * Copyright (c) 2009,2012,2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2015 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
@@ -79,6 +79,7 @@ void relinquish_lease_hunks ()
 		dfree(c, MDL);
 	}
 }
+
 #endif
 
 struct lease *new_leases (n, file, line)
@@ -89,11 +90,13 @@ struct lease *new_leases (n, file, line)
 	struct lease *rval;
 #if defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 	rval = dmalloc ((n + 1) * sizeof (struct lease), file, line);
-	memset (rval, 0, sizeof (struct lease));
-	rval -> starts = n;
-	rval -> next = lease_hunks;
-	lease_hunks = rval;
-	rval++;
+	if (rval != NULL) {
+		memset (rval, 0, sizeof (struct lease));
+		rval -> starts = n;
+		rval -> next = lease_hunks;
+		lease_hunks = rval;
+		rval++;
+	}
 #else
 	rval = dmalloc (n * sizeof (struct lease), file, line);
 #endif

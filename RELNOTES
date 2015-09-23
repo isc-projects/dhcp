@@ -60,6 +60,11 @@ by Eric Young (eay@cryptsoft.com).
 
 			Changes since 4.1-ESV-R12
 
+- Fixed several potential null references.  Thanks to Bill Parker
+  (wp02855 at gmail dot com) who identified these issues and supplied
+  patches to address them.
+  [ISC-Bugs #40754]
+
 - The linux packet fitler code now correctly treats only least significant
   12 bits an inbound packet's TCI value as the VLAN id (per IEEE 802.1Q).
   Prior to this it was using the entire 16 bit value as the VLAN id and

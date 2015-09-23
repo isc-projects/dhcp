@@ -3,7 +3,7 @@
    Subroutines that support dhcp tracing... */
 
 /*
- * Copyright (c) 2004,2007,2009,2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2015 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2001-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -84,6 +84,13 @@ void trace_interface_input (trace_type_t *ttype, unsigned len, char *buf)
 	 */
 	ip->address_count = ip->address_max = 1;
 	ip->addresses = dmalloc(sizeof(*ip->addresses), MDL);
+	if (!ip->addresses) {
+		dfree(ip->ifp, MDL); 
+		ip->ifp = NULL;
+		interface_dereference (&ip, MDL);
+		status = ISC_R_NOMEMORY;
+		goto foo;
+	}
 	memcpy(ip->addresses, &tipkt->primary_address, sizeof(*ip->addresses));
 	memcpy (ip -> name, tipkt -> name, sizeof ip -> name);
 	ip -> index = ntohl (tipkt -> index);
