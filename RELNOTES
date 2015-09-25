@@ -54,8 +54,12 @@ by Eric Young (eay@cryptsoft.com).
 
 			Changes since 4.3.3
 
+- Added the lease address to the end of the debug level log message
+  emitted when an existing lease is renewed within the dhcp-cache-threshold.
+  [ISC-Bugs #40598]
+
 - Corrected compilation errors that prohibited building the server
-  and its ATF unit tests when failover disabled.
+  and its ATF unit tests when failover is disabled.
   [ISC-Bugs #40372]
 
 - Fixed several potential null references.  Thanks to Bill Parker
