@@ -56,6 +56,7 @@ by Eric Young (eay@cryptsoft.com).
 
 - Added the lease address to the end of the debug level log message
   emitted when an existing lease is renewed within the dhcp-cache-threshold.
+  Thanks to Nathan Neulinger at Missouri S&T for suggesting the change.
   [ISC-Bugs #40598]
 
 - Corrected compilation errors that prohibited building the server
