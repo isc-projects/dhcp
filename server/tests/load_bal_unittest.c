@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2012-2015 Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -52,6 +52,7 @@ ATF_TC_HEAD(load_balance, tc)
 
 ATF_TC_BODY(load_balance, tc)
 {
+#if defined(FAILOVER_PROTOCOL) 
 	struct packet packet;
 	struct dhcp_packet raw;
 	dhcp_failover_state_t pstate, sstate;
@@ -117,7 +118,9 @@ ATF_TC_BODY(load_balance, tc)
 	if (load_balance_mine(&packet, &sstate) != 1) {
 		atf_tc_fail("ERROR: secondary not accepted %s:%d", MDL);
 	}
-	
+#else
+    atf_tc_skip("failover is disabled");
+#endif
 }
 
 ATF_TC(load_balance_swap);
@@ -130,6 +133,7 @@ ATF_TC_HEAD(load_balance_swap, tc)
 
 ATF_TC_BODY(load_balance_swap, tc)
 {
+#if defined(FAILOVER_PROTOCOL) 
 #if defined(SECS_BYTEORDER)
 	struct packet packet;
 	struct dhcp_packet raw;
@@ -178,6 +182,9 @@ ATF_TC_BODY(load_balance_swap, tc)
 	
 #else
 	atf_tc_skip("SECS_BYTEORDER not defined");
+#endif
+#else
+	atf_tc_skip("failover is disabled");
 #endif
 }
 

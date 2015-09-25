@@ -4581,7 +4581,6 @@ int allocate_lease (struct lease **lp, struct packet *packet,
 {
 	struct lease *lease = NULL;
 	struct lease *candl = NULL;
-	struct lease *peerl = NULL;
 
 	for (; pool ; pool = pool -> next) {
 		if ((pool -> prohibit_list &&
@@ -4606,6 +4605,7 @@ int allocate_lease (struct lease **lp, struct packet *packet,
 		/* Skip to the most expired lease in the pool that is not
 		 * owned by a failover peer. */
 		if (pool->failover_peer != NULL) {
+			struct lease *peerl = NULL;
 			if (pool->failover_peer->i_am == primary) {
 				candl = LEASE_GET_FIRST(pool->free);
 

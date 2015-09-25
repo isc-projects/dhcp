@@ -54,6 +54,10 @@ by Eric Young (eay@cryptsoft.com).
 
 			Changes since 4.3.3
 
+- Corrected compilation errors that prohibited building the server
+  and its ATF unit tests when failover disabled.
+  [ISC-Bugs #40372]
+
 - Fixed several potential null references.  Thanks to Bill Parker
   (wp02855 at gmail dot com) who identified these issues and supplied
   patches to address them.
