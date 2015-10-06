@@ -91,6 +91,7 @@ AC_ARG_ENABLE(failover,
 	AS_HELP_STRING([--enable-failover],[enable support for failover (default is yes)]))
 # Failover is on by default, so define if it is not explicitly disabled.
 if test "$enable_failover" != "no"; then
+    enable_failover="yes"
 	AC_DEFINE([FAILOVER_PROTOCOL], [1],
 		  [Define to include Failover Protocol support.])
 fi
@@ -100,6 +101,7 @@ AC_ARG_ENABLE(execute,
 	AS_HELP_STRING([--enable-execute],[enable support for execute() in config (default is yes)]))
 # execute() is on by default, so define if it is not explicitly disabled.
 if test "$enable_execute" != "no" ; then
+    enable_execute="yes"
 	AC_DEFINE([ENABLE_EXECUTE], [1],
 		  [Define to include execute() config language support.])
 fi
@@ -119,13 +121,16 @@ AC_ARG_ENABLE(delayed_ack,
 if test "$enable_delayed_ack" = "yes"; then
 	AC_DEFINE([DELAYED_ACK], [1],
 		  [Define to queue multiple DHCPACK replies per fsync.])
+else
+    enable_delayed_ack="no"
 fi
 
 # DHCPv6 optional compile-time feature.
 AC_ARG_ENABLE(dhcpv6,
-	AS_HELP_STRING([--enable-dhcpv6],[enable support for DHCPv6 (default is yes)]))
+	AS_HELP_STRING([--enable-dhcpv6],[enable support for DHCPv6 (default is yes)])),
 # DHCPv6 is on by default, so define if it is not explicitly disabled.
 if test "$enable_dhcpv6" != "no"; then
+    enable_dhcpv6="yes"
 	AC_DEFINE([DHCPv6], [1], 
 		  [Define to 1 to include DHCPv6 support.])
 fi
@@ -194,6 +199,8 @@ AC_ARG_ENABLE(binary_leases,
 if test "$enable_binary_leases" = "yes"; then
 	AC_DEFINE([BINARY_LEASES], [1],
 		  [Define to support binary insertion of leases into queues.])
+else
+    enable_binary_leases="no"
 fi
 
 # Testing section
@@ -750,6 +757,8 @@ Features:
   failover:      $enable_failover
   execute:       $enable_execute
   binary-leases: $enable_binary_leases
+  dhcpv6:        $enable_dhcpv6
+  delayed-ack:   $enable_delayed_ack
 
 Developer:
   ATF unittests : $atf_path

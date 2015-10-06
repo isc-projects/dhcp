@@ -54,6 +54,13 @@ by Eric Young (eay@cryptsoft.com).
 
 			Changes since 4.3.3
 
+- Added dhcpv6 and delayed-ack to settings listed in the "Features:"
+  section of the configure script output.  Additionally, all of the
+  features reported on will now always show either a "yes" or "no"
+  value.  Prior to this features left to their default setting would
+  not show a value.
+  [ISC-Bugs #40381]
+
 - Added the lease address to the end of the debug level log message
   emitted when an existing lease is renewed within the dhcp-cache-threshold.
   Thanks to Nathan Neulinger at Missouri S&T for suggesting the change.

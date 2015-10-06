@@ -5300,6 +5300,7 @@ fi
 
 # Failover is on by default, so define if it is not explicitly disabled.
 if test "$enable_failover" != "no"; then
+    enable_failover="yes"
 
 $as_echo "#define FAILOVER_PROTOCOL 1" >>confdefs.h
 
@@ -5313,6 +5314,7 @@ fi
 
 # execute() is on by default, so define if it is not explicitly disabled.
 if test "$enable_execute" != "no" ; then
+    enable_execute="yes"
 
 $as_echo "#define ENABLE_EXECUTE 1" >>confdefs.h
 
@@ -5341,6 +5343,8 @@ if test "$enable_delayed_ack" = "yes"; then
 
 $as_echo "#define DELAYED_ACK 1" >>confdefs.h
 
+else
+    enable_delayed_ack="no"
 fi
 
 # DHCPv6 optional compile-time feature.
@@ -5348,9 +5352,10 @@ fi
 if test "${enable_dhcpv6+set}" = set; then :
   enableval=$enable_dhcpv6;
 fi
-
+,
 # DHCPv6 is on by default, so define if it is not explicitly disabled.
 if test "$enable_dhcpv6" != "no"; then
+    enable_dhcpv6="yes"
 
 $as_echo "#define DHCPv6 1" >>confdefs.h
 
@@ -5448,6 +5453,8 @@ if test "$enable_binary_leases" = "yes"; then
 
 $as_echo "#define BINARY_LEASES 1" >>confdefs.h
 
+else
+    enable_binary_leases="no"
 fi
 
 # Testing section
@@ -8486,6 +8493,8 @@ Features:
   failover:      $enable_failover
   execute:       $enable_execute
   binary-leases: $enable_binary_leases
+  dhcpv6:        $enable_dhcpv6
+  delayed-ack:   $enable_delayed_ack
 
 Developer:
   ATF unittests : $atf_path
