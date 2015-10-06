@@ -60,6 +60,13 @@ by Eric Young (eay@cryptsoft.com).
 
 			Changes since 4.1-ESV-R12
 
+- Added dhcpv6 and delayed-ack to settings listed in the "Features:"
+  section of the configure script output.  Additionally, all of the
+  features reported on will now always show either a "yes" or "no"
+  value.  Prior to this features left to their default setting would
+  not show a value.
+  [ISC-Bugs #40381]
+
 - Corrected compilation errors that prohibited building the server's 
   ATF unit tests when failover is disabled.
   [ISC-Bugs #40372]
