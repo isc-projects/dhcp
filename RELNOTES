@@ -70,10 +70,12 @@ by Eric Young (eay@cryptsoft.com).
   and its ATF unit tests when failover is disabled.
   [ISC-Bugs #40372]
 
-- Fixed several potential null references.  Thanks to Bill Parker
-  (wp02855 at gmail dot com) who identified these issues and supplied
-  patches to address them.
+- Fixed several issues static analysis issues such as potential null
+  references, unchecked strdup returns.  Thanks to Bill Parker (wp02855 at
+  gmail dot com) who identified these issues and supplied patches to
+  address them.
   [ISC-Bugs #40754]
+  [ISC-Bugs #40823]
 
 - The linux packet filter code now correctly treats only least significant
   12 bits an inbound packet's TCI value as the VLAN id (per IEEE 802.1Q).
