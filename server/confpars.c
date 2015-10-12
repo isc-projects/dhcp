@@ -2605,7 +2605,13 @@ void parse_subnet_declaration (cfile, share)
 	if (host_addr (subnet -> net, subnet -> netmask)) {
 		char *maskstr;
 
+		/* dup it, since piaddr is re-entrant */
 		maskstr = strdup (piaddr (subnet -> netmask));
+		if (maskstr == NULL) {
+			log_fatal("Allocation of subnet maskstr failed: %s",
+			    piaddr (subnet -> net));
+		}
+
 		parse_warn (cfile,
 		   "subnet %s netmask %s: bad subnet number/mask combination.",
 			    piaddr (subnet -> net), maskstr);
