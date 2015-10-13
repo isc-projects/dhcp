@@ -1681,6 +1681,7 @@ extern struct timeval cur_tv;
 #define cur_time cur_tv.tv_sec
 
 extern int ddns_update_style;
+extern int authoring_byte_order;
 
 extern const char *path_dhcpd_conf;
 extern const char *path_dhcpd_db;
@@ -1775,6 +1776,7 @@ void parse_ia_ta_declaration(struct parse *);
 void parse_ia_pd_declaration(struct parse *);
 void parse_server_duid(struct parse *cfile);
 void parse_server_duid_conf(struct parse *cfile);
+uint32_t parse_byte_order_uint32(const void *source);
 
 /* ddns.c */
 int ddns_updates(struct packet *, struct lease *, struct lease *,

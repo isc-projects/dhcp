@@ -1012,6 +1012,10 @@ void db_startup (testp)
 #if defined (TRACING)
 	if (!trace_playback ()) {
 #endif
+		/* Unset authoring_byte_order so we'll know if it was specified
+		   in the lease file or not. */
+		authoring_byte_order = 0;
+
 		/* Read in the existing lease file... */
 		status = read_conf_file (path_dhcpd_db,
 					 (struct group *)0, 0, 1);
@@ -1116,6 +1120,7 @@ int new_lease_file ()
 	errno = 0;
 	fprintf (db_file, "# The format of this file is documented in the %s",
 		 "dhcpd.leases(5) manual page.\n");
+
 	if (errno)
 		goto fail;
 
@@ -1123,6 +1128,18 @@ int new_lease_file ()
 		 PACKAGE_VERSION);
 	if (errno)
 		goto fail;
+
+	fprintf (db_file, "# authoring-byte-order entry is generated,"
+                          " DO NOT DELETE\n");
+	if (errno)
+		goto fail;
+
+	fprintf (db_file, "authoring-byte-order %s;\n\n",
+		 (DHCP_BYTE_ORDER == LITTLE_ENDIAN ?
+		  "little-endian" : "big-endian"));
+	if (errno)
+		goto fail;
+
 
 	/* At this point we have a new lease file that, so far, could not
 	 * be described as either corrupt nor valid.

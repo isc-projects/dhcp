@@ -60,6 +60,13 @@ by Eric Young (eay@cryptsoft.com).
 
 			Changes since 4.1-ESV-R12
 
+- Added a parameter, authoring-byte-order, to the lease file. This value
+  is automatically added to the top of new lease files by the server and
+  indicates the internal byte order (big endian or little endian) of the
+  server.  This permits lease files generated on a server with one form of
+  byte order to be used on a server with the opposite form.
+  [ISC-Bugs #38396]
+
 - Added dhcpv6 and delayed-ack to settings listed in the "Features:"
   section of the configure script output.  Additionally, all of the
   features reported on will now always show either a "yes" or "no"

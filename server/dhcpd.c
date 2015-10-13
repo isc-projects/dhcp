@@ -157,6 +157,8 @@ on commit {								    \n\
 int ddns_update_style;
 #endif /* NSUPDATE */
 
+int authoring_byte_order = 0; /* 0 = not set */
+
 const char *path_dhcpd_conf = _PATH_DHCPD_CONF;
 const char *path_dhcpd_db = _PATH_DHCPD_DB;
 const char *path_dhcpd_pid = _PATH_DHCPD_PID;

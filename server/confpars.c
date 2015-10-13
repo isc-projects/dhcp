@@ -34,6 +34,8 @@ static unsigned char dhcpv6_class_once = 1;
 static int parse_binding_value(struct parse *cfile,
 				struct binding_value *value);
 
+static void parse_authoring_byte_order (struct parse *cfile);
+
 #if defined (TRACING)
 trace_type_t *trace_readconf_type;
 trace_type_t *trace_readleases_type;
@@ -291,6 +293,8 @@ isc_result_t lease_file_subparse (struct parse *cfile)
 		} else if (token == SERVER_DUID) {
 			parse_server_duid(cfile);
 #endif /* DHCPv6 */
+		} else if (token == AUTHORING_BYTE_ORDER) {
+			parse_authoring_byte_order(cfile);
 		} else {
 			log_error ("Corrupt lease file - possible data loss!");
 			skip_to_semi (cfile);
@@ -1393,6 +1397,70 @@ void parse_failover_state (cfile, state, stos)
 	*state = state_in;
 }
 #endif /* defined (FAILOVER_PROTOCOL) */
+
+/*!
+ * \brief Parses an authoring-byte-order statement
+ *
+ * A valid statement looks like this:
+ *
+ *	authoring-byte-order :==
+ *		AUTHORING_BYTE_ORDER TOKEN_LITTLE_ENDIAN | TOKEN_BIG_ENDIAN ;
+ *
+ * If the global, authoring_byte_order is not zero, then either the statement
+ * has already been parsed or the function, parse_byte_order_uint32, has
+ * been called which set it to the default.  In either case, this is invalid
+ * so we'll log it and bail.
+ *
+ * If the value is different from the current server's byte order, then we'll
+ * log that fact and set authoring_byte_order to given value. This causes all
+ * invocations of the function, parse_byte_order_uint32, to perform byte-order
+ * conversion before returning the value.
+ *
+ * \param cfile the current parse file
+ *
+*/
+void parse_authoring_byte_order (struct parse *cfile)
+{
+	enum dhcp_token token;
+	const char *val;
+	unsigned int len;
+
+	/* Either we've seen it already or it's after the first lease */
+	if (authoring_byte_order != 0) {
+		parse_warn (cfile,
+			    "authoring-byte-order specified too late.\n"
+			    "It must occur before the first lease in file\n");
+		skip_to_semi (cfile);
+		return;
+	}
+
+	token = next_token(&val, (unsigned *)0, cfile);
+	switch(token) {
+	case TOKEN_LITTLE_ENDIAN:
+		authoring_byte_order =  LITTLE_ENDIAN;
+		break;
+	case TOKEN_BIG_ENDIAN:
+		authoring_byte_order =  BIG_ENDIAN;
+		break;
+	default:
+		parse_warn(cfile, "authoring-byte-order is invalid: "
+                                   " it must be big-endian or little-endian.");
+		skip_to_semi(cfile);
+		return;
+	}
+
+	if (authoring_byte_order != DHCP_BYTE_ORDER)  {
+		log_error ("WARNING: Lease file authored using different"
+                           " byte order, will attempt to convert");
+	}
+
+        token = next_token(&val, &len, cfile);
+        if (token != SEMI) {
+                parse_warn(cfile, "corrupt lease file; expecting a semicolon");
+                skip_to_semi(cfile);
+                return;
+        }
+}
 
 /* Permit_list_match returns 1 if every element of the permit list in lhs
    also appears in rhs.   Note that this doesn't by itself mean that the
@@ -4210,7 +4278,8 @@ parse_ia_na_declaration(struct parse *cfile) {
 		return;
 	}
 
-	memcpy(&iaid, val, 4);
+	iaid = parse_byte_order_uint32(val);
+
 	ia = NULL;
 	if (ia_allocate(&ia, iaid, val+4, len-4, MDL) != ISC_R_SUCCESS) {
 		log_fatal("Out of memory.");
@@ -4601,7 +4670,8 @@ parse_ia_ta_declaration(struct parse *cfile) {
 		return;
 	}
 
-	memcpy(&iaid, val, 4);
+	iaid = parse_byte_order_uint32(val);
+
 	ia = NULL;
 	if (ia_allocate(&ia, iaid, val+4, len-4, MDL) != ISC_R_SUCCESS) {
 		log_fatal("Out of memory.");
@@ -4993,7 +5063,8 @@ parse_ia_pd_declaration(struct parse *cfile) {
 		return;
 	}
 
-	memcpy(&iaid, val, 4);
+	iaid = parse_byte_order_uint32(val);
+
 	ia = NULL;
 	if (ia_allocate(&ia, iaid, val+4, len-4, MDL) != ISC_R_SUCCESS) {
 		log_fatal("Out of memory.");
@@ -5626,6 +5697,43 @@ parse_server_duid_conf(struct parse *cfile) {
 		parse_warn(cfile, "semicolon expected");
 		skip_to_semi(cfile);
 	}
+}
+
+/*!
+ * \brief Creates a byte-order corrected uint32 from a buffer
+ *
+ * This function creates an integer value from a buffer, converting from
+ * the byte order specified by authoring-byte-order to the current server's
+ * byte order if they are different. The conversion works in either direction.
+ *
+ * If the parameter, authoring-byte-order hasn't yet been encountered we will
+ * emit a warning and then default the byte order to match the current server's
+ * byte order (i.e. no conversion will done).
+ *
+ * \param source buffer containing the "raw" four byte data
+ * \return uint32_t containing the corrected value
+*/
+uint32_t parse_byte_order_uint32(const void *source) {
+	uint32_t value;
+
+	/* use memcpy to avoid any alignment monkey business */
+	memcpy(&value, source, 4);
+
+	if (authoring_byte_order == 0) {
+		log_error ("WARNING: "
+                            "authoring-byte-order not in the lease file.\n"
+                            "Assuming file byte order matches this server.\n");
+		authoring_byte_order = DHCP_BYTE_ORDER;
+	}
+
+	if (authoring_byte_order != DHCP_BYTE_ORDER) {
+		value = (((value >> 24) & 0xff) | // move byte 3 to byte 0
+                    ((value << 8) & 0xff0000) | // move byte 1 to byte 2
+                    ((value >> 8) & 0xff00) | // move byte 2 to byte 1
+                    ((value << 24) & 0xff000000)); // byte 0 to byte 3
+	}
+
+	return (value);
 }
 
 #endif /* DHCPv6 */
