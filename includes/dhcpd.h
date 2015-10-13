@@ -2037,6 +2037,7 @@ extern int dont_use_fsync;
 extern int server_id_check;
 
 extern int prefix_length_mode;
+extern int authoring_byte_order;
 
 extern const char *path_dhcpd_conf;
 extern const char *path_dhcpd_db;
@@ -2134,6 +2135,7 @@ void parse_ia_pd_declaration(struct parse *);
 void parse_server_duid(struct parse *cfile);
 void parse_server_duid_conf(struct parse *cfile);
 void parse_pool6_statement (struct parse *, struct group *, int);
+uint32_t parse_byte_order_uint32(const void *source);
 
 /* ddns.c */
 int ddns_updates(struct packet *, struct lease *, struct lease *,

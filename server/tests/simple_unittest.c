@@ -15,6 +15,7 @@
  */
 
 #include <config.h>
+#include <dhcpd.h>
 #include <atf-c.h>
 
 /* That is an example ATF test case, tailored to ISC DHCP sources.
@@ -66,12 +67,58 @@ ATF_TC_BODY(simple_test_case, tc)
 
 }
 
+
+ATF_TC(parse_byte_order);
+
+ATF_TC_HEAD(parse_byte_order, tc)
+{
+    atf_tc_set_md_var(tc, "descr", "Tests byte-order conversion.");
+}
+
+ATF_TC_BODY(parse_byte_order, tc)
+{
+    uint32_t ret_value = 0;
+    uint32_t source_value = 0xaabbccdd;
+
+    /* With order set to 0, function should default to no conversion */
+    authoring_byte_order = 0;
+    ret_value = parse_byte_order_uint32(&source_value);
+    if (ret_value != source_value) {
+        atf_tc_fail("default/non-conversion failed!");
+    }
+
+    /* With matching byte order, function should not do the conversion */
+    authoring_byte_order = DHCP_BYTE_ORDER;
+    ret_value = parse_byte_order_uint32(&source_value);
+    if (ret_value != source_value) {
+        atf_tc_fail("matching/non-conversion failed!");
+    }
+
+    /* With opposite byte order, function should do the conversion */
+    authoring_byte_order = (DHCP_BYTE_ORDER == LITTLE_ENDIAN ?
+                            BIG_ENDIAN : LITTLE_ENDIAN);
+    ret_value = parse_byte_order_uint32(&source_value);
+    if (ret_value != 0xddccbbaa) {
+        atf_tc_fail("conversion failed!");
+    }
+
+    /* Converting the converted value should give us the original value */
+    ret_value = parse_byte_order_uint32(&ret_value);
+    if (ret_value != source_value) {
+        atf_tc_fail("round trip conversion failed!");
+    }
+
+    atf_tc_pass();
+}
+
+
 /* This macro defines main() method that will call specified
    test cases. tp and simple_test_case names can be whatever you want
    as long as it is a valid variable identifier. */
 ATF_TP_ADD_TCS(tp)
 {
     ATF_TP_ADD_TC(tp, simple_test_case);
+    ATF_TP_ADD_TC(tp, parse_byte_order);
 
     return (atf_no_error());
 }

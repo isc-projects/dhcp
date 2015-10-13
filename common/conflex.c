@@ -783,6 +783,8 @@ intern(char *atom, enum dhcp_token dfv) {
 				return ATSFP;
 			break;
 		}
+		if (!strcasecmp(atom + 1, "uthoring-byte-order"))
+			return AUTHORING_BYTE_ORDER;
 		if (!strncasecmp(atom + 1, "ut", 2)) {
 			if (isascii(atom[3]) &&
 			    (tolower((unsigned char)atom[3]) == 'h')) {
@@ -827,6 +829,9 @@ intern(char *atom, enum dhcp_token dfv) {
 			return BALANCE;
 		if (!strcasecmp (atom + 1, "ound"))
 			return BOUND;
+		if (!strcasecmp(atom+1, "ig-endian")) {
+			return TOKEN_BIG_ENDIAN;
+		}
 		break;
 	      case 'c':
 		if (!strcasecmp(atom + 1, "ase"))
@@ -1127,6 +1132,9 @@ intern(char *atom, enum dhcp_token dfv) {
 		}
 		if (!strcasecmp(atom+1, "l")) {
 			return LL;
+		}
+		if (!strcasecmp(atom+1, "ittle-endian")) {
+			return TOKEN_LITTLE_ENDIAN;
 		}
 		break;
 	      case 'm':
