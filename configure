@@ -5352,7 +5352,7 @@ fi
 if test "${enable_dhcpv6+set}" = set; then :
   enableval=$enable_dhcpv6;
 fi
-,
+
 # DHCPv6 is on by default, so define if it is not explicitly disabled.
 if test "$enable_dhcpv6" != "no"; then
     enable_dhcpv6="yes"

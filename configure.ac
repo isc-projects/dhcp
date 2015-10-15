@@ -127,7 +127,7 @@ fi
 
 # DHCPv6 optional compile-time feature.
 AC_ARG_ENABLE(dhcpv6,
-	AS_HELP_STRING([--enable-dhcpv6],[enable support for DHCPv6 (default is yes)])),
+	AS_HELP_STRING([--enable-dhcpv6],[enable support for DHCPv6 (default is yes)]))
 # DHCPv6 is on by default, so define if it is not explicitly disabled.
 if test "$enable_dhcpv6" != "no"; then
     enable_dhcpv6="yes"
