@@ -58,7 +58,9 @@ by Eric Young (eay@cryptsoft.com).
   is automatically added to the top of new lease files by the server and
   indicates the internal byte order (big endian or little endian) of the
   server.  This permits lease files generated on a server with one form of
-  byte order to be used on a server with the opposite form.
+  byte order to be used on a server with the opposite form. Our thanks to
+  Timothe Litt for calling this to our attention and for the suggestions
+  he provided.
   [ISC-Bugs #38396]
 
 - Added dhcpv6 and delayed-ack to settings listed in the "Features:"
