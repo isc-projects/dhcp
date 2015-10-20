@@ -54,45 +54,6 @@ by Eric Young (eay@cryptsoft.com).
 
 			Changes since 4.3.3
 
-- Added a parameter, authoring-byte-order, to the lease file. This value
-  is automatically added to the top of new lease files by the server and
-  indicates the internal byte order (big endian or little endian) of the
-  server.  This permits lease files generated on a server with one form of
-  byte order to be used on a server with the opposite form. Our thanks to
-  Timothe Litt for calling this to our attention and for the suggestions
-  he provided.
-  [ISC-Bugs #38396]
-
-- Added dhcpv6 and delayed-ack to settings listed in the "Features:"
-  section of the configure script output.  Additionally, all of the
-  features reported on will now always show either a "yes" or "no"
-  value.  Prior to this features left to their default setting would
-  not show a value.
-  [ISC-Bugs #40381]
-
-- Added the lease address to the end of the debug level log message
-  emitted when an existing lease is renewed within the dhcp-cache-threshold.
-  Thanks to Nathan Neulinger at Missouri S&T for suggesting the change.
-  [ISC-Bugs #40598]
-
-- Corrected compilation errors that prohibited building the server
-  and its ATF unit tests when failover is disabled.
-  [ISC-Bugs #40372]
-
-- Fixed several issues static analysis issues such as potential null
-  references, unchecked strdup returns.  Thanks to Bill Parker (wp02855 at
-  gmail dot com) who identified these issues and supplied patches to
-  address them.
-  [ISC-Bugs #40754]
-  [ISC-Bugs #40823]
-
-- The linux packet filter code now correctly treats only least significant
-  12 bits an inbound packet's TCI value as the VLAN id (per IEEE 802.1Q).
-  Prior to this it was using the entire 16 bit value as the VLAN id and
-  incorrectly discarding packets.  Thanks to Jiri Popelka at Red Hat for
-  reporting this issue and supplying its patch.
-  [ISC-Bugs #40591]
-
 - Corrected a static analyzer warning in common/execute.c
   [ISC-Bugs #40374]
 
@@ -102,6 +63,45 @@ by Eric Young (eay@cryptsoft.com).
   DHCPv6 servers. You can define OLD_LOG_NAME in includes/site.h to
   keep the previous behavior.
   [ISC-Bugs #38692]
+
+- The linux packet filter code now correctly treats only least significant
+  12 bits an inbound packet's TCI value as the VLAN id (per IEEE 802.1Q).
+  Prior to this it was using the entire 16 bit value as the VLAN id and
+  incorrectly discarding packets.  Thanks to Jiri Popelka at Red Hat for
+  reporting this issue and supplying its patch.
+  [ISC-Bugs #40591]
+
+- Fixed several issues static analysis issues such as potential null
+  references, unchecked strdup returns.  Thanks to Bill Parker (wp02855 at
+  gmail dot com) who identified these issues and supplied patches to
+  address them.
+  [ISC-Bugs #40754]
+  [ISC-Bugs #40823]
+
+- Corrected compilation errors that prohibited building the server
+  and its ATF unit tests when failover is disabled.
+  [ISC-Bugs #40372]
+
+- Added the lease address to the end of the debug level log message
+  emitted when an existing lease is renewed within the dhcp-cache-threshold.
+  Thanks to Nathan Neulinger at Missouri S&T for suggesting the change.
+  [ISC-Bugs #40598]
+
+- Added dhcpv6 and delayed-ack to settings listed in the "Features:"
+  section of the configure script output.  Additionally, all of the
+  features reported on will now always show either a "yes" or "no"
+  value.  Prior to this features left to their default setting would
+  not show a value.
+  [ISC-Bugs #40381]
+
+- Added a parameter, authoring-byte-order, to the lease file. This value
+  is automatically added to the top of new lease files by the server and
+  indicates the internal byte order (big endian or little endian) of the
+  server.  This permits lease files generated on a server with one form of
+  byte order to be used on a server with the opposite form. Our thanks to
+  Timothe Litt for calling this to our attention and for the suggestions
+  he provided.
+  [ISC-Bugs #38396]
 
 			Changes since 4.3.3b1
 - None
