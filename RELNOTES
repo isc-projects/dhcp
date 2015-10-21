@@ -102,7 +102,12 @@ by Eric Young (eay@cryptsoft.com).
   byte order to be used on a server with the opposite form.
   [ISC-Bugs #38396]
 
+- Fix a small memory leak in the DHCPv6 version of the client code.
+  This is unlikely to cause significant issues in actual use.
+  [ISC-Bugs #40990]
+
 			Changes since 4.1-ESV-R12b1
+
 - None
 
 			Changes since 4.1-ESV-R11
