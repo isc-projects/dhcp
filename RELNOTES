@@ -103,6 +103,10 @@ by Eric Young (eay@cryptsoft.com).
   he provided.
   [ISC-Bugs #38396]
 
+- Fix a small memory leak in the DHCPv6 version of the client code.
+  This is unlikely to cause significant issues in actual use.
+  [ISC-Bugs #40990]
+
 			Changes since 4.3.3b1
 - None
 

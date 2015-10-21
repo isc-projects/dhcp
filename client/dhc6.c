@@ -418,6 +418,12 @@ valid_reply(struct packet *packet, struct client_state *client)
 		rval = ISC_FALSE;
 	}
 
+	/* clean up pointers to the strings */
+	if (sid.data != NULL)
+		data_string_forget(&sid, MDL);
+	if (cid.data != NULL)
+		data_string_forget(&cid, MDL);
+
 	return rval;
 }
 
