@@ -3,7 +3,8 @@
    Routines for manipulating hash tables... */
 
 /*
- * Copyright (c) 2009-2010,2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2014-2015 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
@@ -108,7 +109,7 @@ void free_hash_table (tp, file, line)
 	int i;
 	struct hash_bucket *hbc, *hbn = (struct hash_bucket *)0;
 
-	for (i = 0; i < ptr -> hash_count; i++) {
+	for (i = 0; ptr != NULL && i < ptr -> hash_count; i++) {
 	    for (hbc = ptr -> buckets [i]; hbc; hbc = hbn) {
 		hbn = hbc -> next;
 		if (ptr -> dereferencer && hbc -> value)

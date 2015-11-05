@@ -455,19 +455,19 @@ isc_result_t dhcp_lease_destroy (omapi_object_t *h, const char *file, int line)
 		class_dereference
 			(&lease -> billing_class, file, line);
 
-#if defined (DEBUG_MEMORY_LEAKAGE) || \
-		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
-	/* XXX we should never be destroying a lease with a next
-	   XXX pointer except on exit... */
-	if (lease -> next)
-		lease_dereference (&lease -> next, file, line);
-	if (lease -> n_hw)
-		lease_dereference (&lease -> n_hw, file, line);
-	if (lease -> n_uid)
-		lease_dereference (&lease -> n_uid, file, line);
-	if (lease -> next_pending)
-		lease_dereference (&lease -> next_pending, file, line);
-#endif
+	/* We no longer check for a next pointer as that should
+	 * be cleared when we destroy the pool and as before we
+	 * should only ever be doing that on exit.
+	if (lease->next)
+		lease_dereference (&lease->next, file, line);
+	 */
+
+	if (lease->n_hw)
+		lease_dereference (&lease->n_hw, file, line);
+	if (lease->n_uid)
+		lease_dereference (&lease->n_uid, file, line);
+	if (lease->next_pending)
+		lease_dereference (&lease->next_pending, file, line);
 
 	return ISC_R_SUCCESS;
 }
@@ -1173,8 +1173,6 @@ isc_result_t dhcp_host_destroy (omapi_object_t *h, const char *file, int line)
 	if (h -> type != dhcp_type_host)
 		return ISC_R_INVALIDARG;
 
-#if defined (DEBUG_MEMORY_LEAKAGE) || \
-		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 	struct host_decl *host = (struct host_decl *)h;
 	if (host -> n_ipaddr)
 		host_dereference (&host -> n_ipaddr, file, line);
@@ -1193,7 +1191,6 @@ isc_result_t dhcp_host_destroy (omapi_object_t *h, const char *file, int line)
 		omapi_object_dereference ((omapi_object_t **)
 					  &host -> named_group, file, line);
 	data_string_forget (&host -> auth_key_id, file, line);
-#endif
 
 	return ISC_R_SUCCESS;
 }
@@ -1247,8 +1244,8 @@ isc_result_t dhcp_host_signal_handler (omapi_object_t *h,
 }
 
 isc_result_t dhcp_host_stuff_values (omapi_object_t *c,
-				      omapi_object_t *id,
-				      omapi_object_t *h)
+				     omapi_object_t *id,
+				     omapi_object_t *h)
 {
 	struct host_decl *host;
 	isc_result_t status;
@@ -1269,16 +1266,27 @@ isc_result_t dhcp_host_stuff_values (omapi_object_t *c,
 				   (struct option_state *)0,
 				   &global_scope,
 				   host -> fixed_addr, MDL)) {
+
 		status = omapi_connection_put_name (c, "ip-address");
-		if (status != ISC_R_SUCCESS)
+		if (status != ISC_R_SUCCESS) {
+			data_string_forget (&ip_addrs, MDL);
 			return status;
+		}
+
 		status = omapi_connection_put_uint32 (c, ip_addrs.len);
-		if (status != ISC_R_SUCCESS)
+		if (status != ISC_R_SUCCESS) {
+			data_string_forget (&ip_addrs, MDL);
 			return status;
+		}
+
 		status = omapi_connection_copyin (c,
 						  ip_addrs.data, ip_addrs.len);
-		if (status != ISC_R_SUCCESS)
+		if (status != ISC_R_SUCCESS) { 
+			data_string_forget (&ip_addrs, MDL);
 			return status;
+		}
+
+		data_string_forget (&ip_addrs, MDL);
 	}
 
 	if (host -> client_identifier.len) {
@@ -1631,16 +1639,11 @@ isc_result_t dhcp_pool_get_value (omapi_object_t *h, omapi_object_t *id,
 
 isc_result_t dhcp_pool_destroy (omapi_object_t *h, const char *file, int line)
 {
-#if defined (DEBUG_MEMORY_LEAKAGE) || \
-		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 	struct permit *pc, *pn;
-#endif
 
 	if (h -> type != dhcp_type_pool)
 		return ISC_R_INVALIDARG;
 
-#if defined (DEBUG_MEMORY_LEAKAGE) || \
-		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 	struct pool *pool = (struct pool *)h;
 	if (pool -> next)
 		pool_dereference (&pool -> next, file, line);
@@ -1663,6 +1666,7 @@ isc_result_t dhcp_pool_destroy (omapi_object_t *h, const char *file, int line)
 		dhcp_failover_state_dereference (&pool -> failover_peer,
 						 file, line);
 #endif
+
 	for (pc = pool -> permit_list; pc; pc = pn) {
 		pn = pc -> next;
 		free_permit (pc, file, line);
@@ -1674,7 +1678,6 @@ isc_result_t dhcp_pool_destroy (omapi_object_t *h, const char *file, int line)
 		free_permit (pc, file, line);
 	}
 	pool -> prohibit_list = (struct permit *)0;
-#endif
 
 	return ISC_R_SUCCESS;
 }

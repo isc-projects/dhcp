@@ -2913,7 +2913,9 @@ void free_everything(void)
 
 	cancel_all_timeouts ();
 	relinquish_timeouts ();
+#if defined(DELAYED_ACK)
 	relinquish_ackqueue();
+#endif
 	trace_free_all ();
 	group_dereference (&root_group, MDL);
 	executable_statement_dereference (&default_classification_rules, MDL);

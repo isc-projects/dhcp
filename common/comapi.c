@@ -3,7 +3,7 @@
    OMAPI object interfaces for the DHCP server. */
 
 /*
- * Copyright (c) 2012,2014 Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2012,2014-2015 Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2007,2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
@@ -650,14 +650,12 @@ isc_result_t dhcp_subnet_get_value (omapi_object_t *h, omapi_object_t *id,
 
 isc_result_t dhcp_subnet_destroy (omapi_object_t *h, const char *file, int line)
 {
+	struct subnet *subnet;
 
 	if (h -> type != dhcp_type_subnet)
 		return ISC_R_INVALIDARG;
 
-#if defined (DEBUG_MEMORY_LEAKAGE) || \
-		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
-	struct subnet *subnet = (struct subnet *)h;
-
+	subnet = (struct subnet *)h;
 	if (subnet -> next_subnet)
 		subnet_dereference (&subnet -> next_subnet, file, line);
 	if (subnet -> next_sibling)
@@ -669,7 +667,6 @@ isc_result_t dhcp_subnet_destroy (omapi_object_t *h, const char *file, int line)
 		interface_dereference (&subnet -> interface, file, line);
 	if (subnet -> group)
 		group_dereference (&subnet -> group, file, line);
-#endif
 
 	return ISC_R_SUCCESS;
 }
@@ -797,12 +794,12 @@ isc_result_t dhcp_shared_network_destroy (omapi_object_t *h,
 {
 	/* In this function h should be a (struct shared_network *) */
 
+	struct shared_network *shared_network;
+
 	if (h -> type != dhcp_type_shared_network)
 		return ISC_R_INVALIDARG;
 
-#if defined (DEBUG_MEMORY_LEAKAGE) || \
-		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
-	struct shared_network *shared_network = (struct shared_network *)h;
+	shared_network = (struct shared_network *)h;
 	if (shared_network -> next)
 		shared_network_dereference (&shared_network -> next,
 					    file, line);
@@ -826,7 +823,6 @@ isc_result_t dhcp_shared_network_destroy (omapi_object_t *h,
 				      &shared_network -> failover_peer,
 				      file, line);
 #endif
-#endif /* DEBUG_MEMORY_LEAKAGE */
 
 	return ISC_R_SUCCESS;
 }

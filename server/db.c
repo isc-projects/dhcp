@@ -387,10 +387,14 @@ int write_host (host)
 					++errors;
 			}
 
+			/* We're done with ip_addrs so pitch it */
+			data_string_forget (&ip_addrs, MDL);
+
 			errno = 0;
 			fputc (';', db_file);
 			if (errno)
 				++errors;
+
 		}
 
 		if (host -> named_group) {
