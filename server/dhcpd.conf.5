@@ -1217,7 +1217,7 @@ updated the next time the client renews.
 .PP
 The interim DNS update scheme was written before the RFCs were finalized
 and does not quite follow them.  The RFCs call for a new DHCID RRtype
-while he interim DNS update scheme uses a TXT record.  In addition
+while the interim DNS update scheme uses a TXT record.  In addition
 the ddns-resolution draft called for the DHCP server to put a DHCID RR
 on the PTR record, but the \fIinterim\fR update method does not do this.
 In the final RFC this requirement was relaxed such that a server may
@@ -1779,10 +1779,8 @@ condition:
  \fBdeny client-updates;\fR
 .PP
 The \fBclient-updates\fR flag tells the DHCP server whether or not to
-honor the client's intention to do its own update of its A record.
-This is only relevant when doing \fIinterim\fR DNS updates.  See the
-documentation under the heading THE INTERIM DNS UPDATE SCHEME for
-details.
+honor the client's intention to do its own update of its A record.  See
+the documentation under the heading THE DNS UPDATE SCHEME for details.
 .PP
 .B The
 .I leasequery
@@ -3093,9 +3091,8 @@ client renews its lease, rather than only attempting an update when it
 appears to be necessary.  This will allow the DNS to heal from
 database inconsistencies more easily, but the cost is that the DHCP
 server must do many more DNS updates.  We recommend leaving this option
-enabled, which is the default.  This option only affects the behavior of
-the interim DNS update scheme, and has no effect on the ad-hoc DNS update
-scheme.  If this parameter is not specified, or is true, the DHCP server
+enabled, which is the default. If this parameter is not specified,
+or is true, the DHCP server
 will only update when the client information changes, the client gets a
 different lease, or the client's lease expires.
 .RE
@@ -3110,8 +3107,7 @@ statement
 The \fIupdate-static-leases\fR flag, if enabled, causes the DHCP
 server to do DNS updates for clients even if those clients are being
 assigned their IP address using a \fIfixed-address\fR statement - that
-is, the client is being given a static assignment.  This can only
-work with the \fIinterim\fR DNS update scheme.  It is not
+is, the client is being given a static assignment.  It is not
 recommended because the DHCP server has no way to tell that the update
 has been done, and therefore will not delete the record when it is not
 in use.  Also, the server must attempt the update each time the
