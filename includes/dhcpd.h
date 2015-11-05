@@ -3467,10 +3467,7 @@ int write_leases6(void);
 #if !defined(BINARY_LEASES)
 void lease_insert(struct lease **, struct lease *);
 void lease_remove(struct lease **, struct lease *);
-#if defined (DEBUG_MEMORY_LEAKAGE) || \
-		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 void lease_remove_all(struct lease **);
-#endif
 #endif
 int lease_enqueue (struct lease *);
 isc_result_t lease_instantiate(const void *, unsigned, void *);

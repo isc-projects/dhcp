@@ -2489,10 +2489,7 @@ int write_leases ()
 }
 
 #if !defined (BINARY_LEASES)
-#if defined (DEBUG_MEMORY_LEAKAGE) || \
-		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
-/* Unlink all the leases in the queue.  This is only used for debugging
- */
+/* Unlink all the leases in the queue. */
 void lease_remove_all(struct lease **lq) {
 	struct lease *lp, *ln = NULL;
 
@@ -2525,7 +2522,6 @@ void lease_remove_all(struct lease **lq) {
 		ln = NULL;
 	} while (lp != NULL);
 }
-#endif /* DEBUG_MEMORY_LEAKAGE... */
 
 /*
  * This routine walks through a given lease queue (lq) looking
@@ -3175,7 +3171,9 @@ void free_everything(void)
 
 	cancel_all_timeouts ();
 	relinquish_timeouts ();
+#if defined(DELAYED_ACK)
 	relinquish_ackqueue();
+#endif
 	trace_free_all ();
 	group_dereference (&root_group, MDL);
 	executable_statement_dereference (&default_classification_rules, MDL);
