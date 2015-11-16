@@ -611,6 +611,8 @@ no)
 	BINDDIR="$use_libbind"
 	if test ! -d "bind"; then
 		# no bind directory, create it with a fake Makefile.in
+		# (AC_CONFIG_FILES and top Makefile refer to it so
+		# it must exits)
 		mkdir bind
 		cat > bind/Makefile.in << EOF
 # placeholder

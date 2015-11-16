@@ -3,7 +3,7 @@ SUBDIRS = .
 BINDLIBDIR = @BINDDIR@/lib
 
 AM_CPPFLAGS = $(ATF_CFLAGS) -DUNIT_TEST -I$(top_srcdir)/includes
-AM_CPPFLAGS += -I$(top_srcdir)/bind/include -I$(top_srcdir)
+AM_CPPFLAGS += -I@BINDDIR@/include -I$(top_srcdir)
 AM_CPPFLAGS += -DLOCALSTATEDIR='"."'
 AM_CPPFLAGS += -DCLIENT_PATH='"."'
 
