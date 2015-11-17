@@ -1,7 +1,9 @@
 SUBDIRS = .
 
+BINDLIBDIR = @BINDDIR@/lib
+
 AM_CPPFLAGS = $(ATF_CFLAGS) -DUNIT_TEST -I$(top_srcdir)/includes
-AM_CPPFLAGS += -I$(top_srcdir)/bind/include -I$(top_srcdir)
+AM_CPPFLAGS += -I@BINDDIR@/include -I$(top_srcdir)
 AM_CPPFLAGS += -DLOCALSTATEDIR='"."'
 
 EXTRA_DIST = Atffile
@@ -17,10 +19,10 @@ DHCPSRC = ../dhcp.c ../bootp.c ../confpars.c ../db.c ../class.c      \
           ../ddns.c ../dhcpleasequery.c ../dhcpv6.c ../mdb6.c        \
           ../ldap.c ../ldap_casa.c ../dhcpd.c ../leasechain.c
 
-DHCPLIBS = $(top_builddir)/common/libdhcp.a $(top_builddir)/omapip/libomapi.a    \
-          $(top_builddir)/dhcpctl/libdhcpctl.a $(top_builddir)/bind/lib/libirs.a \
-	  $(top_builddir)/bind/lib/libdns.a $(top_builddir)/bind/lib/libisccfg.a \
-	  $(top_builddir)/bind/lib/libisc.a
+DHCPLIBS = $(top_builddir)/common/libdhcp.a $(top_builddir)/omapip/libomapi.a \
+          $(top_builddir)/dhcpctl/libdhcpctl.a $(BINDLIBDIR)/libirs.a \
+	  $(BINDLIBDIR)/libdns.a $(BINDLIBDIR)/libisccfg.a \
+	  $(BINDLIBDIR)/libisc.a
 
 ATF_TESTS =
 if HAVE_ATF

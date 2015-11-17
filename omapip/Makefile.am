@@ -1,3 +1,5 @@
+BINDLIBDIR = @BINDDIR@/lib
+
 lib_LIBRARIES = libomapi.a
 noinst_PROGRAMS = svtest
 
@@ -10,6 +12,6 @@ man_MANS = omapi.3
 EXTRA_DIST = $(man_MANS)
 
 svtest_SOURCES = test.c
-svtest_LDADD = libomapi.a ../bind/lib/libirs.a ../bind/lib/libdns.a \
-		../bind/lib/libisccfg.a ../bind/lib/libisc.a
+svtest_LDADD = libomapi.a $(BINDLIBDIR)/libirs.a $(BINDLIBDIR)/libdns.a \
+		$(BINDLIBDIR)/libisccfg.a $(BINDLIBDIR)/libisc.a
 

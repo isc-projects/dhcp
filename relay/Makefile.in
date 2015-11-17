@@ -104,8 +104,8 @@ PROGRAMS = $(sbin_PROGRAMS)
 am_dhcrelay_OBJECTS = dhcrelay.$(OBJEXT)
 dhcrelay_OBJECTS = $(am_dhcrelay_OBJECTS)
 dhcrelay_DEPENDENCIES = ../common/libdhcp.a ../omapip/libomapi.a \
-	../bind/lib/libirs.a ../bind/lib/libdns.a \
-	../bind/lib/libisccfg.a ../bind/lib/libisc.a
+	$(BINDLIBDIR)/libirs.a $(BINDLIBDIR)/libdns.a \
+	$(BINDLIBDIR)/libisccfg.a $(BINDLIBDIR)/libisc.a
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -203,6 +203,7 @@ AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
 BINDCONFIG = @BINDCONFIG@
+BINDDIR = @BINDDIR@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
@@ -297,11 +298,12 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
+BINDLIBDIR = @BINDDIR@/lib
 AM_CPPFLAGS = -DLOCALSTATEDIR='"@localstatedir@"'
 dhcrelay_SOURCES = dhcrelay.c
 dhcrelay_LDADD = ../common/libdhcp.a ../omapip/libomapi.a \
-		 ../bind/lib/libirs.a ../bind/lib/libdns.a \
-		 ../bind/lib/libisccfg.a ../bind/lib/libisc.a
+		 $(BINDLIBDIR)/libirs.a $(BINDLIBDIR)/libdns.a \
+		 $(BINDLIBDIR)/libisccfg.a $(BINDLIBDIR)/libisc.a
 
 man_MANS = dhcrelay.8
 EXTRA_DIST = $(man_MANS)

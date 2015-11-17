@@ -117,9 +117,9 @@ am_dhcpd_OBJECTS = dhcpd-dhcpd.$(OBJEXT) dhcpd-dhcp.$(OBJEXT) \
 dhcpd_OBJECTS = $(am_dhcpd_OBJECTS)
 am__DEPENDENCIES_1 =
 dhcpd_DEPENDENCIES = ../common/libdhcp.a ../omapip/libomapi.a \
-	../dhcpctl/libdhcpctl.a ../bind/lib/libirs.a \
-	../bind/lib/libdns.a ../bind/lib/libisccfg.a \
-	../bind/lib/libisc.a $(am__DEPENDENCIES_1)
+	../dhcpctl/libdhcpctl.a $(BINDLIBDIR)/libirs.a \
+	$(BINDLIBDIR)/libdns.a $(BINDLIBDIR)/libisccfg.a \
+	$(BINDLIBDIR)/libisc.a $(am__DEPENDENCIES_1)
 dhcpd_LINK = $(CCLD) $(dhcpd_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
@@ -267,6 +267,7 @@ AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
 BINDCONFIG = @BINDCONFIG@
+BINDDIR = @BINDDIR@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
@@ -367,6 +368,7 @@ top_srcdir = @top_srcdir@
 # directory. That eliminates any discrepancies between tested code and
 # production code. Sadly, we are not there yet.
 SUBDIRS = . tests
+BINDLIBDIR = @BINDDIR@/lib
 AM_CPPFLAGS = -I.. -DLOCALSTATEDIR='"@localstatedir@"'
 dist_sysconf_DATA = dhcpd.conf.example
 dhcpd_SOURCES = dhcpd.c dhcp.c bootp.c confpars.c db.c class.c failover.c \
@@ -375,9 +377,9 @@ dhcpd_SOURCES = dhcpd.c dhcp.c bootp.c confpars.c db.c class.c failover.c \
 
 dhcpd_CFLAGS = $(LDAP_CFLAGS)
 dhcpd_LDADD = ../common/libdhcp.a ../omapip/libomapi.a \
-	      ../dhcpctl/libdhcpctl.a ../bind/lib/libirs.a \
-	      ../bind/lib/libdns.a ../bind/lib/libisccfg.a ../bind/lib/libisc.a \
-	      $(LDAP_LIBS)		
+	      ../dhcpctl/libdhcpctl.a $(BINDLIBDIR)/libirs.a \
+	      $(BINDLIBDIR)/libdns.a $(BINDLIBDIR)/libisccfg.a \
+	      $(BINDLIBDIR)/libisc.a $(LDAP_LIBS)
 
 man_MANS = dhcpd.8 dhcpd.conf.5 dhcpd.leases.5
 EXTRA_DIST = $(man_MANS)

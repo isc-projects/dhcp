@@ -627,6 +627,7 @@ LTLIBOBJS
 LIBOBJS
 LDAP_CFLAGS
 LDAP_LIBS
+BINDDIR
 ac_prefix_program
 HAVE_ATF_FALSE
 HAVE_ATF_TRUE
@@ -6644,7 +6645,7 @@ $as_echo "#define VLAN_TCI_PRESENT 1" >>confdefs.h
 fi
 
 
-libbind=
+BINDDIR=
 
 # Check whether --with-libbind was given.
 if test "${with_libbind+set}" = set; then :
@@ -6655,19 +6656,27 @@ fi
 
 case "$use_libbind" in
 yes)
-	libbind="\${top_srcdir}/bind"
+	BINDDIR="\${top_srcdir}/bind"
 	;;
 no)
-	libbind="\${top_srcdir}/bind"
+	BINDDIR="\${top_srcdir}/bind"
 	;;
 *)
-	libbind="$use_libbind"
+	BINDDIR="$use_libbind"
 	if test ! -d "bind"; then
-		{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: empty bind directory" >&5
-$as_echo "$as_me: WARNING: empty bind directory" >&2;}
+		# no bind directory, create it with a fake Makefile.in
+		# (AC_CONFIG_FILES and top Makefile refer to it so
+		# it must exits)
+		mkdir bind
+		cat > bind/Makefile.in << EOF
+# placeholder
+all check clean distclean distdir install uninstall:
+
+EOF
 	fi
 	;;
 esac
+
 
 # OpenLDAP support.
 
@@ -6976,7 +6985,7 @@ fi
 CFLAGS="$CFLAGS $STD_CWARNINGS"
 
 # Try to add the bind include directory
-CFLAGS="$CFLAGS -I$libbind/include"
+CFLAGS="$CFLAGS -I$BINDDIR/include"
 
 case "$host" in
 *-darwin*)
