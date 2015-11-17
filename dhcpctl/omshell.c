@@ -3,7 +3,7 @@
    Examine and modify omapi objects. */
 
 /*
- * Copyright (c) 2009-2011,2013-2015 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2011,2013,2014 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2001-2003 by Internet Software Consortium
  *
@@ -39,7 +39,6 @@
 #include <syslog.h>
 #include "dhcpctl.h"
 #include "dhcpd.h"
-#include <isc/file.h>
 
 /* Fixups */
 isc_result_t find_class (struct class **c, const char *n, const char *f, int l)
@@ -64,7 +63,7 @@ int check_collection (struct packet *p, struct lease *l, struct collection *c)
 }
 void classify (struct packet *packet, struct class *class) { }
 
-static void usage (const char *s) {
+static void usage (char *s) {
 	fprintf (stderr, "Usage: %s\n", s);
 	exit (1);
 }
@@ -95,21 +94,13 @@ main(int argc, char **argv) {
 	char s1[1024];
 	int connected = 0;
 	char hex_buf[1025];
-	char *progname;
-
-#ifdef OLD_LOG_NAME
-	progname = "omshell";
-#else
-	progname = argv[0];
-#endif
 
 	for (i = 1; i < argc; i++) {
-		usage(isc_file_basename(progname));
+		usage(argv[0]);
 	}
 
 	/* Initially, log errors to stderr as well as to syslogd. */
-	openlog (isc_file_basename(progname),
-		 DHCP_LOG_OPTIONS, DHCPD_LOG_FACILITY);
+	openlog ("omshell", DHCP_LOG_OPTIONS, DHCPD_LOG_FACILITY);
 	status = dhcpctl_initialize ();
 	if (status != ISC_R_SUCCESS) {
 		fprintf (stderr, "dhcpctl_initialize: %s\n",
