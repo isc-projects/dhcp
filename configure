@@ -641,6 +641,8 @@ RANLIB
 EGREP
 GREP
 CPP
+CROSS_COMPILING_FALSE
+CROSS_COMPILING_TRUE
 BINDCONFIG
 am__fastdepCC_FALSE
 am__fastdepCC_TRUE
@@ -4461,6 +4463,17 @@ fi
 
 # We can have some flags to pass to bind configure
 BINDCONFIG=
+if test "$cross_compiling" = "yes"; then
+	BINDCONFIG="--host=$host"
+fi
+
+ if test "$cross_compiling" = "yes"; then
+  CROSS_COMPILING_TRUE=
+  CROSS_COMPILING_FALSE='#'
+else
+  CROSS_COMPILING_TRUE='#'
+  CROSS_COMPILING_FALSE=
+fi
 
 
 # POSIX doesn't include the IPv6 Advanced Socket API and glibc hides
@@ -7172,6 +7185,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${am__fastdepCC_TRUE}" && test -z "${am__fastdepCC_FALSE}"; then
   as_fn_error $? "conditional \"am__fastdepCC\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${CROSS_COMPILING_TRUE}" && test -z "${CROSS_COMPILING_FALSE}"; then
+  as_fn_error $? "conditional \"CROSS_COMPILING\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 
