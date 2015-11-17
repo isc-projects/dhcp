@@ -103,7 +103,7 @@ by Eric Young (eay@cryptsoft.com).
   he provided.
   [ISC-Bugs #38396]
 
-- Fix a small memory leak in the DHCPv6 version of the client code.
+- Fixed a small memory leak in the DHCPv6 version of the client code.
   This is unlikely to cause significant issues in actual use.
   [ISC-Bugs #40990]
 
@@ -111,6 +111,15 @@ by Eric Young (eay@cryptsoft.com).
   host objects. Thanks to Jiri Popelka at Red Hat for reporting
   the issue and supplying the patches.
   [ISC-Bugs #33990]
+
+- Cleaned up some of the Make infrastructure to make --with-libbind
+  work better.  Though it still only works with an absolute path.
+  [ISC-Bugs #39210]
+
+- Made the embedded bind libraries able to be cross compiled
+  (please refer to the bind9 documentation to learn how to cross
+   compile DHCP and its bind library dependency).
+  [ISC-Bugs #38836]
 
 			Changes since 4.3.3b1
 - None
