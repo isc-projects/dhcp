@@ -41,6 +41,7 @@ static const char url [] =
 #include <limits.h>
 #include <sys/types.h>
 #include <sys/time.h>
+#include <isc/file.h>
 
 #if defined (PARANOIA)
 #  include <sys/types.h>
@@ -95,6 +96,8 @@ int omapi_port;
 #if defined (TRACING)
 trace_type_t *trace_srandom;
 #endif
+
+char *progname;
 
 static isc_result_t verify_addr (omapi_object_t *l, omapi_addr_t *addr) {
 	return ISC_R_SUCCESS;
@@ -193,6 +196,12 @@ main(int argc, char **argv) {
 	char *set_chroot = 0;
 #endif /* PARANOIA */
 
+#ifdef OLD_LOG_NAME
+	progname = "dhcpd";
+#else
+	progname = argv[0];
+#endif
+
         /* Make sure that file descriptors 0 (stdin), 1, (stdout), and
            2 (stderr) are open. To do this, we assume that when we
            open a file the lowest available file descriptor is used. */
@@ -229,7 +238,8 @@ main(int argc, char **argv) {
 	dhcp_common_objects_setup ();
 
 	/* Initially, log errors to stderr as well as to syslogd. */
-	openlog ("dhcpd", DHCP_LOG_OPTIONS, DHCPD_LOG_FACILITY);
+	openlog (isc_file_basename(progname),
+		 DHCP_LOG_OPTIONS, DHCPD_LOG_FACILITY);
 
 	for (i = 1; i < argc; i++) {
 		if (!strcmp (argv [i], "-p")) {
@@ -1051,7 +1061,8 @@ void postconf_initialization (int quiet)
 					  &global_scope, oc, MDL)) {
 			if (db.len == 1) {
 				closelog ();
-				openlog("dhcpd", DHCP_LOG_OPTIONS, db.data[0]);
+				openlog(isc_file_basename(progname),
+					DHCP_LOG_OPTIONS, db.data[0]);
 				/* Log the startup banner into the new
 				   log file. */
 				/* Don't log to stderr twice. */
@@ -1163,7 +1174,7 @@ usage(void) {
 	log_info(copyright);
 	log_info(arr);
 
-	log_fatal("Usage: dhcpd [-p <UDP port #>] [-f] [-d] [-q] [-t|-T]\n"
+	log_fatal("Usage: %s [-p <UDP port #>] [-f] [-d] [-q] [-t|-T]\n"
 #ifdef DHCPv6
 		  "             [-4|-6] [-cf config-file] [-lf lease-file]\n"
 #else /* !DHCPv6 */
@@ -1178,7 +1189,8 @@ usage(void) {
 		  "             [-play trace-input-file]\n"
 #endif /* TRACING */
 		  "             [-pf pid-file] [--no-pid] [-s server]\n"
-		  "             [if0 [...ifN]]");
+		  "             [if0 [...ifN]]",
+		  isc_file_basename(progname));
 }
 #endif
 

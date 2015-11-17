@@ -190,6 +190,12 @@
 
 /* #define USE_RAW_SOCKETS */
 
+/* Define this to keep the old program name (e.g., "dhcpd" for
+   the DHCP server) in place of the (base) name the program was
+   invoked with. */
+
+/* #define OLD_LOG_NAME */
+
 /* Define this to change the logging facility used by dhcpd. */
 
 /* #define DHCPD_LOG_FACILITY LOG_DAEMON */

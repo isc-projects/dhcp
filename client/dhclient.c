@@ -37,6 +37,7 @@
 #include <sys/time.h>
 #include <sys/wait.h>
 #include <limits.h>
+#include <isc/file.h>
 #include <dns/result.h>
 
 TIME default_lease_time = 43200; /* 12 hours... */
@@ -89,6 +90,8 @@ int wanted_ia_ta = 0;
 int wanted_ia_pd = 0;
 char *mockup_relay = NULL;
 
+char *progname = NULL;
+
 void run_stateless(int exit_mode);
 
 static void usage(void);
@@ -129,6 +132,12 @@ main(int argc, char **argv) {
 #endif /* DHCPv6 */
 	char *s;
 
+#ifdef OLD_LOG_NAME
+	progname = "dhclient";
+#else
+	progname = argv[0];
+#endif
+
 	/* Initialize client globals. */
 	memset(&default_duid, 0, sizeof(default_duid));
 
@@ -145,7 +154,7 @@ main(int argc, char **argv) {
 	else if (fd != -1)
 		close(fd);
 
-	openlog("dhclient", DHCP_LOG_OPTIONS, LOG_DAEMON);
+	openlog(isc_file_basename(progname), DHCP_LOG_OPTIONS, LOG_DAEMON);
 
 #if !(defined(DEBUG) || defined(__CYGWIN32__))
 	setlogmask(LOG_UPTO(LOG_INFO));
@@ -750,7 +759,7 @@ static void usage()
 	log_info(url);
 
 
-	log_fatal("Usage: dhclient "
+	log_fatal("Usage: %s "
 #ifdef DHCPv6
 		  "[-4|-6] [-SNTPI1dvrxi] [-nw] [-p <port>] [-D LL|LLT] \n"
 #else /* DHCPv6 */
@@ -759,7 +768,8 @@ static void usage()
 		  "                [-s server-addr] [-cf config-file]\n"
 		  "                [-df duid-file] [-lf lease-file]\n"
 		  "                [-pf pid-file] [--no-pid] [-e VAR=val]\n"
-		  "                [-sf script-file] [interface]");
+		  "                [-sf script-file] [interface]",
+		  isc_file_basename(progname));
 }
 
 void run_stateless(int exit_mode)
