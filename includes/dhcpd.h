@@ -2863,6 +2863,7 @@ extern int nowait;
 extern int wanted_ia_na;
 extern int wanted_ia_ta;
 extern int wanted_ia_pd;
+extern int require_all_ias;
 
 extern const char *path_dhclient_conf;
 extern const char *path_dhclient_db;

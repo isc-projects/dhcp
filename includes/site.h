@@ -298,6 +298,13 @@
    this option will be removed at some time. */
 /* #define INCLUDE_OLD_DHCP_ISC_ERROR_CODES */
 
+/* Use the older factors for scoring a lease in the v6 client code.
+   The new factors cause the client to choose more bindings (IAs)
+   over more addresse within a binding.  Most uses will get a
+   single address in a single binding and only get an adverstise
+   from a single server and there won't be a difference. */
+/* #define USE_ORIGINAL_CLIENT_LEASE_WEIGHTS */
+
 /* Include definitions for various options.  In general these
    should be left as is, but if you have already defined one
    of these and prefer your definition you can comment the 

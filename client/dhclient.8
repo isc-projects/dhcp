@@ -55,6 +55,8 @@ dhclient - Dynamic Host Configuration Protocol Client
 .B -P...
 ]
 ]
+.B -R
+]
 [
 .B -i
 ]
@@ -364,7 +366,20 @@ See \fB\-N\fR to restore it.
 .BI \-P
 Enable IPv6 prefix delegation.  This implies \fB\-6\fR and also
 disables the normal address query.  See \fB\-N\fR to restore it.
+Multiple prefixes can be requested with multiple \fB\-P\fR flags.
 Note only one requested interface is allowed.
+.TP
+.BI \-R
+Require that responses include all of the items requested by any
+\fB\-N\fR, \fB\-T\fR, or \fB\-P\fR options.  Normally even if
+the command line includes a number of these the client will be willing
+to accept the best lease it can even if the lease doesn't include all
+of the requested items.  This option causes the client to only
+accept leases that include all of the requested items.
+
+Note well: enabling this may prevent the client from using any
+leases it receives if the servers aren't configured to supply
+all of the items.
 .TP
 .BI \-D \ LL\ or\ LLT
 Override the default when selecting the type of DUID to use.  By default,
@@ -381,6 +396,7 @@ overrides these default, with a value of either \fILL\fR or \fILLT\fR.
 .\" TODO: is this for telling an already running dhclient?
 Restore normal address query for IPv6. This implies \fB-6\fR.
 It is used to restore normal operation after using \fB-T\fR or \fB-P\fR.
+Multiple addresses can be requested with multiple \fB\-N\fR flags.
 .PP
 .I Modifying default file locations:
 The following options can be used to modify the locations a client uses
