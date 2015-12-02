@@ -111,6 +111,10 @@ by Eric Young (eay@cryptsoft.com).
   the issue and supplying the patches.
   [ISC-Bugs #33990]
 
+- Update the client code to better support getting IA_NAs and IA_PDs
+  in the same packet, see RFC7550 for some discussion.
+  [ISC-Bugs #40190]
+
 			Changes since 4.1-ESV-R12b1
 
 - None

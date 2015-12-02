@@ -84,6 +84,9 @@ int stateless = 0;
 int wanted_ia_na = -1;		/* the absolute value is the real one. */
 int wanted_ia_ta = 0;
 int wanted_ia_pd = 0;
+int require_all_ias = 0;	/* If the user requires all of the IAs to
+				   be available before accepting a lease
+				   0 = no, 1 = requries */
 char *mockup_relay = NULL;
 
 char *progname = NULL;
@@ -297,6 +300,13 @@ main(int argc, char **argv) {
 				wanted_ia_na = 0;
 			}
 			wanted_ia_pd++;
+		} else if (!strcmp(argv[i], "-R")) {
+			if (local_family_set && (local_family == AF_INET)) {
+				usage();
+			}
+			local_family_set = 1;
+			local_family = AF_INET6;
+			require_all_ias = 1;
 #endif /* DHCPv6 */
 		} else if (!strcmp(argv[i], "-v")) {
 			quiet = 0;
@@ -714,7 +724,7 @@ static void usage()
 
 	log_fatal("Usage: %s "
 #ifdef DHCPv6
-		  "[-4|-6] [-SNTP1dvrx] [-nw] [-p <port>]\n"
+		  "[-4|-6] [-SNTPR1dvrx] [-nw] [-p <port>]\n"
 #else /* DHCPv6 */
 		  "[-1dvrx] [-nw] [-p <port>]\n"
 #endif /* DHCPv6 */

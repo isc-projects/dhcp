@@ -287,3 +287,11 @@
    stuck in the backup state. */
 /* #define CONVERT_BACKUP_TO_FREE */
 
+/* Use the older factors for scoring a lease in the v6 client code.
+   The new factors cause the client to choose more bindings (IAs)
+   over more addresse within a binding.  Most uses will get a
+   single address in a single binding and only get an adverstise
+   from a single server and there won't be a difference. */
+/* #define USE_ORIGINAL_CLIENT_LEASE_WEIGHTS */
+
+

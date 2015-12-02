@@ -55,16 +55,15 @@ reasonable timing behaviour will be used by default - one which
 results in fairly timely updates without placing an inordinate load on
 the server.
 .PP
-The following statements can be used to adjust the timing behaviour of
-the DHCP client if required, however:
+If required the following statements can be used to adjust the timing
+behaviour of the DHCPv4 client.  The DHCPv6 protocol provides values
+to use and they are not currently configurable.
 .PP
 .I The
 .B timeout
 .I statement
 .PP
-.B timeout
-.I time
-.B ;
+ \fBtimeout \fItime\fR\fB;\fR
 .PP
 The
 .I timeout
@@ -176,6 +175,37 @@ client used to wait random time up to 5 seconds, but that was unwanted
 due to impact on startup time. As such, new versions have the default
 initial delay set to 0. To restore old behavior, please set initial-delay
 to 5.
+.SH DHCPv6 LEASE SELECTION
+In the DHCPv6 protocol the client will wait a small amount of time to
+allow ADVERTISE messages from multiple servers to arrive.  It will then
+need to choose from all of the messages that may have arrived before
+proceeding to making a request of the selected server.
+
+The first selection criteria is the set of options and addresses
+in the message.  Messages that don't include an option specified
+as required will be given a score of 0 and not used.  If the
+\fI-R\fR option is given on the command line then messages that
+don't include the correct number of bindings (IA-NA, IA-TA or
+IA-PD) will be discarded.
+
+The next criteria is the preference value from the message.  With
+the highest preference value being used even if leases with better
+addresses or options are available.
+
+Finally the lease is scored and the lease with the highest score
+is selected.  A lease's score is based on the number of bindings,
+number of addresses and number of options it contains:
+.nf
+	bindings * X + addresses * Y + options
+.fi
+By default X = 10000 and Y = 100, this will cause the client to
+select a lease with more bindings over a lease with less bindings
+but more addresses.  The weightings were changed as part of
+implementing RFC 7550.  Previously they were X = 50 and Y = 100
+meaning more addresses were preferred over more bindings.  If
+you wish to continue using the old style you may do so by editing
+the file includes/site.h and uncommenting the define for
+USE_ORIGINAL_CLIENT_LEASE_WEIGHTS.
 .SH LEASE REQUIREMENTS AND REQUESTS
 The DHCP protocol allows the client to request that the server send it
 specific information, and not send it other information that it is not

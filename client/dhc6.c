@@ -52,13 +52,16 @@ static struct dhc6_addr *dhc6_dup_addr(struct dhc6_addr *addr,
 static void dhc6_ia_destroy(struct dhc6_ia **src, const char *file, int line);
 static isc_result_t dhc6_parse_ia_na(struct dhc6_ia **pia,
 				     struct packet *packet,
-				     struct option_state *options);
+				     struct option_state *options,
+				     unsigned code);
 static isc_result_t dhc6_parse_ia_ta(struct dhc6_ia **pia,
 				     struct packet *packet,
-				     struct option_state *options);
+				     struct option_state *options,
+				     unsigned code);
 static isc_result_t dhc6_parse_ia_pd(struct dhc6_ia **pia,
 				     struct packet *packet,
-				     struct option_state *options);
+				     struct option_state *options,
+				     unsigned code);
 static isc_result_t dhc6_parse_addrs(struct dhc6_addr **paddr,
 				     struct packet *packet,
 				     struct option_state *options);
@@ -78,18 +81,34 @@ void do_init6(void *input);
 void do_info_request6(void *input);
 void do_confirm6(void *input);
 void reply_handler(struct packet *packet, struct client_state *client);
+static isc_result_t dhc6_create_iaid(struct client_state *client,
+				     struct data_string *ia,
+				     int idx,
+				     unsigned len);
+static int dhc6_count_ia(struct dhc6_lease *lease,
+			 u_int16_t ia_type);
+static isc_result_t dhc6_bare_ia_xx(struct client_state *client,
+				    struct data_string *packet,
+				    int wanted,
+				    u_int16_t ia_type);
 static isc_result_t dhc6_add_ia_na(struct client_state *client,
 				   struct data_string *packet,
 				   struct dhc6_lease *lease,
-				   u_int8_t message);
+				   u_int8_t message,
+				   int wanted,
+				   int *added);
 static isc_result_t dhc6_add_ia_ta(struct client_state *client,
 				   struct data_string *packet,
 				   struct dhc6_lease *lease,
-				   u_int8_t message);
+				   u_int8_t message,
+				   int wanted,
+				   int *added);
 static isc_result_t dhc6_add_ia_pd(struct client_state *client,
 				   struct data_string *packet,
 				   struct dhc6_lease *lease,
-				   u_int8_t message);
+				   u_int8_t message,
+				   int wanted,
+				   int *added);
 static isc_boolean_t stopping_finished(void);
 static void dhc6_merge_lease(struct dhc6_lease *src, struct dhc6_lease *dst);
 void do_select6(void *input);
@@ -112,9 +131,16 @@ static void script_write_params6(struct client_state *client,
 static void script_write_requested6(struct client_state *client);
 static isc_boolean_t active_prefix(struct client_state *client);
 
-static int check_timing6(struct client_state *client, u_int8_t msg_type, 
-		         char *msg_str, struct dhc6_lease *lease,
-		         struct data_string *ds);
+static int check_timing6(struct client_state *client, u_int8_t msg_type,
+			 char *msg_str, struct dhc6_lease *lease,
+			 struct data_string *ds);
+static isc_result_t dhc6_get_status_code(struct option_state *options,
+					 unsigned *code,
+					 struct data_string *msg);
+static isc_result_t dhc6_check_status(isc_result_t rval,
+				      struct option_state *options,
+				      const char *scope,
+				      unsigned *code);
 
 extern int onetry;
 extern int stateless;
@@ -422,7 +448,7 @@ dhc6_retrans_advance(struct client_state *client)
 	if (elapsed.tv_sec >= client->MRD) {
 		/*
 		 * The desired RT is the time that will be remaining in MRD
-		 * when the current timeout finishes.  We then have 
+		 * when the current timeout finishes.  We then have
 		 * desired RT = MRD - (elapsed time + previous RT); or
 		 * desired RT = MRD - elapsed_plut_rt;
 		 */
@@ -598,6 +624,12 @@ dhc6_dup_addr(struct dhc6_addr *addr, const char *file, int line)
  * Form a DHCPv6 lease structure based upon packet contents.  Creates and
  * populates IA's and any IAADDR/IAPREFIX's they contain.
  * Parsed options are deleted in order to not save them in the lease file.
+ *
+ * If we get a status code of NoAddrs or NoPrefix we toss the affected
+ * IAs.  If it as at the top level we toss all IAs of that type.  If it
+ * is in an IA we only toss that one.  According to the spec we shouldn't
+ * get a NoPrefix status at the top level but we will allow it.
+ *
  */
 static struct dhc6_lease *
 dhc6_leaseify(struct packet *packet)
@@ -605,6 +637,7 @@ dhc6_leaseify(struct packet *packet)
 	struct data_string ds;
 	struct dhc6_lease *lease;
 	struct option_cache *oc;
+	unsigned code;
 
 	lease = dmalloc(sizeof(*lease), MDL);
 	if (lease == NULL) {
@@ -638,12 +671,28 @@ dhc6_leaseify(struct packet *packet)
 	}
 	delete_option(&dhcpv6_universe, lease->options, D6O_PREFERENCE);
 
+	/* Get the top level status code.  If the code is NoAddrsAvail
+	 * or NoPrefixAvail strip it from the options as we don't
+	 * want it to show up in check_[advertise reply].  We
+	 * pass it along to the parse_ia_xx routines and they
+	 * will drop the affected IAs for NoAddrs or NoPrefix,
+	 * other status codes will be ignored and handled by
+	 * the check_[advertise reply] routines.
+	 */
+	code = STATUS_Success;
+	if ((dhc6_get_status_code(lease->options, &code, NULL) == ISC_R_SUCCESS)
+	    &&
+	    ((code == STATUS_NoAddrsAvail) || (code == STATUS_NoPrefixAvail))) {
+		delete_option(&dhcpv6_universe, lease->options,
+			      D6O_STATUS_CODE);
+	}
+
 	/*
 	 * Dig into recursive DHCPv6 pockets for IA_NA and contained IAADDR
 	 * options.
 	 */
 	if (dhc6_parse_ia_na(&lease->bindings, packet,
-			     lease->options) != ISC_R_SUCCESS) {
+			     lease->options, code) != ISC_R_SUCCESS) {
 		/* Error conditions are logged by the caller. */
 		dhc6_lease_destroy(&lease, MDL);
 		return NULL;
@@ -653,7 +702,7 @@ dhc6_leaseify(struct packet *packet)
 	 * options.
 	 */
 	if (dhc6_parse_ia_ta(&lease->bindings, packet,
-			     lease->options) != ISC_R_SUCCESS) {
+			     lease->options, code) != ISC_R_SUCCESS) {
 		/* Error conditions are logged by the caller. */
 		dhc6_lease_destroy(&lease, MDL);
 		return NULL;
@@ -663,7 +712,7 @@ dhc6_leaseify(struct packet *packet)
 	 * options.
 	 */
 	if (dhc6_parse_ia_pd(&lease->bindings, packet,
-			     lease->options) != ISC_R_SUCCESS) {
+			     lease->options, code) != ISC_R_SUCCESS) {
 		/* Error conditions are logged by the caller. */
 		dhc6_lease_destroy(&lease, MDL);
 		return NULL;
@@ -697,12 +746,13 @@ dhc6_leaseify(struct packet *packet)
 
 static isc_result_t
 dhc6_parse_ia_na(struct dhc6_ia **pia, struct packet *packet,
-		 struct option_state *options)
+		 struct option_state *options, unsigned code)
 {
 	struct data_string ds;
 	struct dhc6_ia *ia;
 	struct option_cache *oc;
 	isc_result_t result;
+	unsigned ia_code;
 
 	memset(&ds, 0, sizeof(ds));
 
@@ -786,6 +836,23 @@ dhc6_parse_ia_na(struct dhc6_ia **pia, struct packet *packet,
 				}
 			}
 
+			/* If we have no addresses or the top level status code
+			 * or the status code in this IA indicate no addresses
+			 * toss the IA.
+			 */
+			ia_code = STATUS_Success;
+			if ((ia->addrs == NULL) ||
+			    (code == STATUS_NoAddrsAvail) ||
+			    ((ia->options != NULL) &&
+			     (dhc6_get_status_code(ia->options, &ia_code, NULL)
+			      == ISC_R_SUCCESS) &&
+			     (ia_code == STATUS_NoAddrsAvail))) {
+				log_debug("RCV:  | !-- Status code of "
+					  "no addrs, IA_NA discarded.");
+				dhc6_ia_destroy(&ia, MDL);
+				continue;
+			}
+
 			while (*pia != NULL)
 				pia = &(*pia)->next;
 			*pia = ia;
@@ -805,12 +872,13 @@ dhc6_parse_ia_na(struct dhc6_ia **pia, struct packet *packet,
 
 static isc_result_t
 dhc6_parse_ia_ta(struct dhc6_ia **pia, struct packet *packet,
-		 struct option_state *options)
+		 struct option_state *options, unsigned code)
 {
 	struct data_string ds;
 	struct dhc6_ia *ia;
 	struct option_cache *oc;
 	isc_result_t result;
+	unsigned ia_code;
 
 	memset(&ds, 0, sizeof(ds));
 
@@ -871,6 +939,23 @@ dhc6_parse_ia_ta(struct dhc6_ia **pia, struct packet *packet,
 				}
 			}
 
+			/* If we have no addresses or the top level status code
+			 * or the status code in this IA indicate no addresses
+			 * toss the IA.
+			 */
+			ia_code = STATUS_Success;
+			if ((ia->addrs == NULL) ||
+			    (code == STATUS_NoAddrsAvail) ||
+			    ((ia->options != NULL) &&
+			     (dhc6_get_status_code(ia->options, &ia_code, NULL)
+			      == ISC_R_SUCCESS) &&
+			     (ia_code == STATUS_NoAddrsAvail))) {
+				log_debug("RCV:  | !-- Status code of "
+					  "no addrs, IA_TA discarded.");
+				dhc6_ia_destroy(&ia, MDL);
+				continue;
+			}
+
 			while (*pia != NULL)
 				pia = &(*pia)->next;
 			*pia = ia;
@@ -890,12 +975,13 @@ dhc6_parse_ia_ta(struct dhc6_ia **pia, struct packet *packet,
 
 static isc_result_t
 dhc6_parse_ia_pd(struct dhc6_ia **pia, struct packet *packet,
-		 struct option_state *options)
+		 struct option_state *options, unsigned code)
 {
 	struct data_string ds;
 	struct dhc6_ia *ia;
 	struct option_cache *oc;
 	isc_result_t result;
+	unsigned ia_code;
 
 	memset(&ds, 0, sizeof(ds));
 
@@ -976,6 +1062,23 @@ dhc6_parse_ia_pd(struct dhc6_ia **pia, struct packet *packet,
 				}
 			}
 
+			/* If we have no prefixes or the top level status code
+			 * or the status code in this IA indicate no prefixes
+			 * toss the IA.
+			 */
+			ia_code = STATUS_Success;
+			if ((ia->addrs == NULL) ||
+			    (code == STATUS_NoPrefixAvail) ||
+			    ((ia->options != NULL) &&
+			     (dhc6_get_status_code(ia->options, &ia_code, NULL)
+			      == ISC_R_SUCCESS) &&
+			     (ia_code == STATUS_NoPrefixAvail))) {
+				log_debug("RCV:  | !-- Status code of "
+					  "no prefix, IA_PD discarded.");
+				dhc6_ia_destroy(&ia, MDL);
+				continue;
+			}
+
 			while (*pia != NULL)
 				pia = &(*pia)->next;
 			*pia = ia;
@@ -1001,6 +1104,8 @@ dhc6_parse_addrs(struct dhc6_addr **paddr, struct packet *packet,
 	struct data_string ds;
 	struct option_cache *oc;
 	struct dhc6_addr *addr;
+	isc_result_t rval = ISC_R_SUCCESS;
+	unsigned code;
 
 	memset(&ds, 0, sizeof(ds));
 
@@ -1069,11 +1174,28 @@ dhc6_parse_addrs(struct dhc6_addr **paddr, struct packet *packet,
 				}
 			}
 
-			if (addr->options != NULL)
-				log_debug("RCV:  | | | X-- "
-					  "[Options]");
-
 			data_string_forget(&ds, MDL);
+
+			if (addr->options != NULL) {
+				log_debug("RCV:  | | | X-- [Options]");
+
+				/* Get the status code if the return value
+				 * indicates an error or the status code
+				 * indicates no address toss the address
+				 */
+				code = STATUS_Success;
+				rval = dhc6_check_status(ISC_R_SUCCESS,
+							 addr->options,
+							 "IAADDR", &code);
+				if (rval != ISC_R_SUCCESS) {
+					log_debug("RCV:  | | | X-- Status code"
+						  " issue, IAADDR discarded.");
+					option_state_dereference(&addr->options,
+								 MDL);
+					dfree(addr, MDL);
+					continue;
+				}
+			}
 
 			*paddr = addr;
 			paddr = &addr->next;
@@ -1097,6 +1219,8 @@ dhc6_parse_prefixes(struct dhc6_addr **ppfx, struct packet *packet,
 	struct data_string ds;
 	struct option_cache *oc;
 	struct dhc6_addr *pfx;
+	isc_result_t rval = ISC_R_SUCCESS;
+	unsigned code;
 
 	memset(&ds, 0, sizeof(ds));
 
@@ -1175,11 +1299,28 @@ dhc6_parse_prefixes(struct dhc6_addr **ppfx, struct packet *packet,
 				}
 			}
 
-			if (pfx->options != NULL)
-				log_debug("RCV:  | | | X-- "
-					  "[Options]");
-
 			data_string_forget(&ds, MDL);
+
+			if (pfx->options != NULL) {
+				log_debug("RCV:  | | | X-- [Options]");
+
+				/* Get the status code if the return value
+				 * indicates an error or the status code
+				 * indicates no prefix toss the prefix
+				 */
+				code = STATUS_Success;
+				rval = dhc6_check_status(ISC_R_SUCCESS,
+							 pfx->options,
+							 "IAPREFIX", &code);
+				if (rval != ISC_R_SUCCESS) {
+					log_debug("RCV:  | | | X-- Status code"
+						  " issue IAPREFIX discarded.");
+					option_state_dereference(&pfx->options,
+								 MDL);
+					dfree(pfx, MDL);
+					continue;
+				}
+			}
 
 			*ppfx = pfx;
 			ppfx = &pfx->next;
@@ -1280,9 +1421,40 @@ insert_lease(struct dhc6_lease **head, struct dhc6_lease *new)
 	return;
 }
 
-/*
- * Not really clear what to do here yet.
+/*!
+ *
+ * \brief Determine a score for a lease.  We use this to
+ * compare and choose leases if we receive multiple candidates.
+ *
+ * We originally started with scores of 50 for a binding and 100 for
+ * an address.  This would select multiple adresses over multiple
+ * bindings.  As part of the 7550 work I've changed this to be
+ * 10000 for a binding, 100 for an address and 1 for an option.
+ * This will cause us to choose a lease with more bindings over
+ * a lease with less bindings but more addresses which seems
+ * to be the best selection criteria to me.
+ * In theory we could end up with a lease with enough addresses
+ * or options being better but at 100 to 1 I don't think it's likely.
+ *
+ * \param client = the state of the entire client
+ * \param lease  = the lease to score.
+ *
+ * \retrun the score of the lease
  */
+
+/* The scores for individual items. */
+#ifdef USE_ORIGINAL_CLIENT_LEASE_WEIGHTS
+#define SCORE_BINDING  50
+#define SCORE_ADDRESS 100
+#else
+#define SCORE_BINDING 10000
+#define SCORE_ADDRESS   100
+#endif
+
+#define SCORE_OPTION      1
+/* We need a lease with at least 1 binding and 1 address */
+#define SCORE_MIN (SCORE_BINDING + SCORE_ADDRESS)
+
 static int
 dhc6_score_lease(struct client_state *client, struct dhc6_lease *lease)
 {
@@ -1294,7 +1466,7 @@ dhc6_score_lease(struct client_state *client, struct dhc6_lease *lease)
 	if (lease->score)
 		return lease->score;
 
-	lease->score = 1;
+	lease->score = SCORE_OPTION;
 
 	/* If this lease lacks a required option, dump it. */
 	/* XXX: we should be able to cache the failure... */
@@ -1315,15 +1487,15 @@ dhc6_score_lease(struct client_state *client, struct dhc6_lease *lease)
 		for (i = 0 ; req[i] != NULL ; i++) {
 			if (lookup_option(&dhcpv6_universe, lease->options,
 					  req[i]->code) != NULL)
-				lease->score++;
+				lease->score += SCORE_OPTION;
 		}
 	}
 
 	for (ia = lease->bindings ; ia != NULL ; ia = ia->next) {
-		lease->score += 50;
+		lease->score += SCORE_BINDING;
 
 		for (addr = ia->addrs ; addr != NULL ; addr = addr->next) {
-			lease->score += 100;
+			lease->score += SCORE_ADDRESS;
 		}
 	}
 
@@ -1473,7 +1645,18 @@ start_confirm6(struct client_state *client)
 		tv.tv_sec += 1;
 		tv.tv_usec -= 1000000;
 	}
-	if (wanted_ia_pd != 0) {
+
+	/* We do a rebind instead of a confirm if the user
+	 * is requesting PDs or previously requesed PDs or
+	 * increased the number of NAs or TAs they want
+	 * Confirms don't tell us if PDs are still on-link and
+	 * we won't add new IAs on a confirm.
+	 */
+
+	if ((wanted_ia_pd != 0) ||
+	    (dhc6_count_ia(client->active_lease, D6O_IA_PD) != 0) ||
+	    (dhc6_count_ia(client->active_lease, D6O_IA_NA) < wanted_ia_na) ||
+	    (dhc6_count_ia(client->active_lease, D6O_IA_TA) < wanted_ia_ta)) {
 		client->state = S_REBINDING;
 		client->refresh_type = DHCPV6_REBIND;
 		add_timeout(&tv, do_refresh6, client, NULL, NULL);
@@ -1491,7 +1674,7 @@ start_confirm6(struct client_state *client)
 #define CHK_TIM_ALLOC_FAILURE	3
 
 int
-check_timing6 (struct client_state *client, u_int8_t msg_type, 
+check_timing6 (struct client_state *client, u_int8_t msg_type,
 	       char *msg_str, struct dhc6_lease *lease,
 	       struct data_string *ds)
 {
@@ -1556,6 +1739,154 @@ check_timing6 (struct client_state *client, u_int8_t msg_type,
 	return(CHK_TIM_SUCCESS);
 }
 
+/*!
+ *
+ * \brief Create an iaid from information from the client.
+ *
+ * \param client = the state of the entire client
+ * \param ia     = the ia to fill in
+ * \param idx    = index of the ia in case we are doing multiples
+ * \param len    = length of the base IA (4 for TA, 12 for NA & PD)
+ *
+ * \return ISC_R_SUCCESS - all is well continue, any other return indicates
+ *                         an error and the packet should be tossed
+ */
+
+static isc_result_t
+dhc6_create_iaid(struct client_state *client,
+		 struct data_string *ia,
+		 int idx,
+		 unsigned len)
+{
+	int start_idx, copy_len;
+
+	memset(ia, 0, sizeof(*ia));
+	if (!buffer_allocate(&ia->buffer, 12, MDL)) {
+		return (ISC_R_NOMEMORY);
+	}
+	ia->data = ia->buffer->data;
+	ia->len = len;
+
+	/*
+	 * A simple IAID is the last 4 bytes
+	 * of the hardware address.
+	 */
+	if (client->interface->hw_address.hlen > 4) {
+		start_idx = client->interface->hw_address.hlen - 4;
+		copy_len = 4;
+	} else {
+		start_idx = 0;
+		copy_len = client->interface->hw_address.hlen;
+	}
+	memcpy(ia->buffer->data,
+	       client->interface->hw_address.hbuf + start_idx,
+	       copy_len);
+	if (idx)
+		ia->buffer->data[3] += idx;
+
+	return (ISC_R_SUCCESS);
+}
+
+/*!
+ *
+ * \brief Add bare IA_NAs, IA_TAs or IA_PDs to the packet we are building.
+ *
+ * Attempt to add the number of bare IAs indicated by wanted to
+ * the packet.  As we have already added a number of IAs based
+ * on what is in the current lease after we create an IAID we check
+ * it against the current lease and skip any that are already in use.
+ *
+ * \param client = the state of the entire client
+ * \param packet = the packet we are building and where we
+ *                 shall append the IA_NA, IA_TA  or IA_PDs we create
+ * \param wanted = the number of IA_NA, IA_TA or IA_PDs we want to create
+ * \param ia_type = the type of the IAs we want to create: NA, TA or PD.
+ *
+ * \return ISC_R_SUCCESS - all is well continue, any other return indicates
+ *                         an error and the packet should be tossed
+ */
+static isc_result_t
+dhc6_bare_ia_xx(struct client_state *client,
+		struct data_string *packet,
+		int wanted,
+		u_int16_t ia_type)
+{
+	struct dhc6_ia *old_ia;
+	struct data_string ia;
+	u_int32_t t1, t2;
+	int i, len;
+	isc_result_t rval;
+	char *type_string;
+	struct option *type_option;
+
+	/* figure out what type of option we are working with */
+	switch (ia_type) {
+	      case D6O_IA_NA:
+		type_string = "IA_NA";
+		type_option = ia_na_option;
+		len = 12;
+		break;
+	      case D6O_IA_TA:
+		type_string = "IA_TA";
+		type_option = ia_ta_option;
+		len = 4;
+		break;
+	      case D6O_IA_PD:
+		type_string = "IA_PD";
+		type_option = ia_pd_option;
+		len = 12;
+		break;
+	      default:
+		return (ISC_R_FAILURE);
+	}
+
+	for (i = 0; wanted != 0; i++) {
+		rval = dhc6_create_iaid(client, &ia, i, len);
+		if (rval != ISC_R_SUCCESS) {
+			log_error("Unable to allocate memory for %s.",
+				  type_string);
+			return (rval);
+		}
+
+		/* If we are already using this IAID, skip it and try again */
+		if ((client->active_lease != NULL) &&
+		    ((old_ia = find_ia(client->active_lease->bindings,
+				       ia_type,
+				       (char *)ia.buffer->data)) != NULL)) {
+			data_string_forget(&ia, MDL);
+			continue;
+		}
+
+		/* We have a good IAID, log it */
+		log_debug("XMT:  X-- %s %s",
+			  type_string, print_hex_1(4, ia.buffer->data, 55));
+
+		/* If we are requesting an NA or a PD we also want to add
+		 * the renew and rebind times we are requesting.
+		 */
+		if (len == 12) {
+			t1 = client->config->requested_lease / 2;
+			t2 = t1 + (t1 / 2);
+			putULong(ia.buffer->data + 4, t1);
+			putULong(ia.buffer->data + 8, t2);
+
+			log_debug("XMT:  | X-- Request renew in  +%u",
+				  (unsigned)t1);
+			log_debug("XMT:  | X-- Request rebind in +%u",
+				  (unsigned)t2);
+		}
+
+		/* and append it to the packet */
+		append_option(packet, &dhcpv6_universe, type_option, &ia);
+		data_string_forget(&ia, MDL);
+
+		/* decrement the number of IAs we want */
+		wanted--;
+	}
+
+	return (ISC_R_SUCCESS);
+}
+
 /*
  * do_init6() marshals and transmits a solicit.
  */
@@ -1570,7 +1901,7 @@ do_init6(void *input)
 	struct data_string addr;
 	struct timeval tv;
 	u_int32_t t1, t2;
-	int i, idx, len, send_ret;
+	int i, send_ret;
 
 	client = input;
 
@@ -1619,31 +1950,11 @@ do_init6(void *input)
 		 * cache.  They'd have to be pulled down as they also contain
 		 * different option caches in the same universe...
 		 */
-		memset(&ia, 0, sizeof(ia));
-		if (!buffer_allocate(&ia.buffer, 12, MDL)) {
+		if (dhc6_create_iaid(client, &ia, i, 12) != ISC_R_SUCCESS) {
 			log_error("Unable to allocate memory for IA_NA.");
 			data_string_forget(&ds, MDL);
 			return;
 		}
-		ia.data = ia.buffer->data;
-		ia.len = 12;
-
-		/*
-		 * A simple IAID is the last 4 bytes
-		 * of the hardware address.
-		 */
-		if (client->interface->hw_address.hlen > 4) {
-			idx = client->interface->hw_address.hlen - 4;
-			len = 4;
-		} else {
-			idx = 0;
-			len = client->interface->hw_address.hlen;
-		}
-		memcpy(ia.buffer->data,
-		       client->interface->hw_address.hbuf + idx,
-		       len);
-		if (i)
-			ia.buffer->data[3] += i;
 
 		t1 = client->config->requested_lease / 2;
 		t2 = t1 + (t1 / 2);
@@ -1722,31 +2033,11 @@ do_init6(void *input)
 		 * cache.  They'd have to be pulled down as they also contain
 		 * different option caches in the same universe...
 		 */
-		memset(&ia, 0, sizeof(ia));
-		if (!buffer_allocate(&ia.buffer, 4, MDL)) {
+		if (dhc6_create_iaid(client, &ia, i, 4) != ISC_R_SUCCESS) {
 			log_error("Unable to allocate memory for IA_TA.");
 			data_string_forget(&ds, MDL);
 			return;
 		}
-		ia.data = ia.buffer->data;
-		ia.len = 4;
-
-		/*
-		 * A simple IAID is the last 4 bytes
-		 * of the hardware address.
-		 */
-		if (client->interface->hw_address.hlen > 4) {
-			idx = client->interface->hw_address.hlen - 4;
-			len = 4;
-		} else {
-			idx = 0;
-			len = client->interface->hw_address.hlen;
-		}
-		memcpy(ia.buffer->data,
-		       client->interface->hw_address.hbuf + idx,
-		       len);
-		if (i)
-			ia.buffer->data[3] += i;
 
 		log_debug("XMT:  X-- IA_TA %s",
 			  print_hex_1(4, ia.buffer->data, 55));
@@ -1819,30 +2110,11 @@ do_init6(void *input)
 		 * different option caches in the same universe...
 		 */
 		memset(&ia, 0, sizeof(ia));
-		if (!buffer_allocate(&ia.buffer, 12, MDL)) {
+		if (dhc6_create_iaid(client, &ia, i, 12) != ISC_R_SUCCESS) {
 			log_error("Unable to allocate memory for IA_PD.");
 			data_string_forget(&ds, MDL);
 			return;
 		}
-		ia.data = ia.buffer->data;
-		ia.len = 12;
-
-		/*
-		 * A simple IAID is the last 4 bytes
-		 * of the hardware address.
-		 */
-		if (client->interface->hw_address.hlen > 4) {
-			idx = client->interface->hw_address.hlen - 4;
-			len = 4;
-		} else {
-			idx = 0;
-			len = client->interface->hw_address.hlen;
-		}
-		memcpy(ia.buffer->data,
-		       client->interface->hw_address.hbuf + idx,
-		       len);
-		if (i)
-			ia.buffer->data[3] += i;
 
 		t1 = client->config->requested_lease / 2;
 		t2 = t1 + (t1 / 2);
@@ -2005,7 +2277,7 @@ do_confirm6(void *input)
 {
 	struct client_state *client;
 	struct data_string ds;
-	int send_ret;
+	int send_ret, added;
 	struct timeval tv;
 
 	client = input;
@@ -2048,13 +2320,13 @@ do_confirm6(void *input)
 	/* Append IA's. */
 	if (wanted_ia_na &&
 	    dhc6_add_ia_na(client, &ds, client->active_lease,
-			   DHCPV6_CONFIRM) != ISC_R_SUCCESS) {
+			   DHCPV6_CONFIRM, 0, &added) != ISC_R_SUCCESS) {
 		data_string_forget(&ds, MDL);
 		return;
 	}
 	if (wanted_ia_ta &&
 	    dhc6_add_ia_ta(client, &ds, client->active_lease,
-			   DHCPV6_CONFIRM) != ISC_R_SUCCESS) {
+			   DHCPV6_CONFIRM, 0, &added) != ISC_R_SUCCESS) {
 		data_string_forget(&ds, MDL);
 		return;
 	}
@@ -2131,7 +2403,7 @@ do_release6(void *input)
 {
 	struct client_state *client;
 	struct data_string ds;
-	int send_ret;
+	int send_ret, added;
 	struct timeval tv;
 
 	client = input;
@@ -2139,7 +2411,7 @@ do_release6(void *input)
 	if ((client->active_lease == NULL) || !active_prefix(client))
 		return;
 
-	switch(check_timing6(client, DHCPV6_RELEASE, "Release", 
+	switch(check_timing6(client, DHCPV6_RELEASE, "Release",
 			     client->active_lease, &ds)) {
 	      case CHK_TIM_MRC_EXCEEDED:
 	      case CHK_TIM_ALLOC_FAILURE:
@@ -2161,13 +2433,13 @@ do_release6(void *input)
 	/* Append IA's (but don't release temporary addresses). */
 	if (wanted_ia_na &&
 	    dhc6_add_ia_na(client, &ds, client->active_lease,
-			   DHCPV6_RELEASE) != ISC_R_SUCCESS) {
+			   DHCPV6_RELEASE, 0, &added) != ISC_R_SUCCESS) {
 		data_string_forget(&ds, MDL);
 		goto release_done;
 	}
 	if (wanted_ia_pd &&
 	    dhc6_add_ia_pd(client, &ds, client->active_lease,
-			   DHCPV6_RELEASE) != ISC_R_SUCCESS) {
+			   DHCPV6_RELEASE, 0, &added) != ISC_R_SUCCESS) {
 		data_string_forget(&ds, MDL);
 		goto release_done;
 	}
@@ -2332,18 +2604,24 @@ dhc6_check_status(isc_result_t rval, struct option_state *options,
 	return rval;
 }
 
-/* Look in the packet, any IA's, and any IAADDR's within those IA's to find
- * status code options that are not SUCCESS.
+/* Determine if this packet could provide usable information.
+ * We check the status codes at the top level and at the IA level,
+ * IAADDRS have already been checked in the leaseify step and any with
+ * a bad format or status code that wasn't success have been dropped.
+ *
+ * leaseify has also already removed any IAs for which the top level status
+ * code or the IA status code indicated no addresses or prefixes were
+ * available.
  */
 static isc_result_t
 dhc6_check_advertise(struct dhc6_lease *lease)
 {
 	struct dhc6_ia *ia;
-	struct dhc6_addr *addr;
 	isc_result_t rval = ISC_R_SUCCESS;
 	int have_addrs = ISC_FALSE;
 	unsigned code;
 	const char *scope;
+	int got_na = 0, got_ta = 0, got_pd = 0;
 
 	rval = dhc6_check_status(rval, lease->options, "message", &code);
 
@@ -2351,31 +2629,45 @@ dhc6_check_advertise(struct dhc6_lease *lease)
 		switch (ia->ia_type) {
 			case D6O_IA_NA:
 				scope = "IA_NA";
+				got_na++;
 				break;
 			case D6O_IA_TA:
 				scope = "IA_TA";
+				got_ta++;
 				break;
 			case D6O_IA_PD:
 				scope = "IA_PD";
+				got_pd++;
 				break;
 			default:
 				log_error("dhc6_check_advertise: no type.");
 				return ISC_R_FAILURE;
 		}
+		/* Currently we toss packets if we have an error getting a
+		 * status code or if the status code isn't success, so
+		 * no need to loop through the addresses */
 		rval = dhc6_check_status(rval, ia->options, scope, &code);
+		if (rval != ISC_R_SUCCESS)
+			continue;
 
-		for (addr = ia->addrs ; addr != NULL ; addr = addr->next) {
-			if (ia->ia_type != D6O_IA_PD)
-				scope = "IAADDR";
-			else
-				scope = "IAPREFIX";
-			rval = dhc6_check_status(rval, addr->options,
-						 scope, &code);
+		/* We don't need to check status on IAADDRS here as we already
+		 * did it as part of the leaseify step and tossed bad IAADDRS.
+		 * We are just checking to see if we have any addrs.
+		 * Should we check the addr itself for usability?
+		 */
+		if (ia->addrs != NULL) {
 			have_addrs = ISC_TRUE;
 		}
 	}
 
-	if (have_addrs != ISC_TRUE)
+	/* If we didn't get some addrs or the user required us to
+	 * get all of the requested IAs and we didn't return an error
+	 */
+	if ((have_addrs != ISC_TRUE) ||
+	    ((require_all_ias != 0) &&
+	     ((got_na < wanted_ia_na) ||
+	      (got_ta < wanted_ia_ta) ||
+	      (got_pd < wanted_ia_pd))))
 		rval = ISC_R_ADDRNOTAVAIL;
 
 	return rval;
@@ -2705,11 +2997,12 @@ dhc6_check_reply(struct client_state *client, struct dhc6_lease *new)
 	isc_boolean_t (*action)(struct client_state *,
 				isc_result_t *, unsigned);
 	struct dhc6_ia *ia;
-	struct dhc6_addr *addr;
 	isc_result_t rval = ISC_R_SUCCESS;
 	unsigned code;
 	const char *scope;
 	int nscore, sscore;
+	int have_addrs = ISC_FALSE;
+	int got_na = 0, got_ta = 0, got_pd = 0;
 
 	if ((client == NULL) || (new == NULL))
 		return ISC_R_INVALIDARG;
@@ -2750,38 +3043,53 @@ dhc6_check_reply(struct client_state *client, struct dhc6_lease *new)
 		switch (ia->ia_type) {
 			case D6O_IA_NA:
 				scope = "IA_NA";
+				got_na++;
 				break;
 			case D6O_IA_TA:
 				scope = "IA_TA";
+				got_ta++;
 				break;
 			case D6O_IA_PD:
 				scope = "IA_PD";
+				got_pd++;
 				break;
 			default:
 				log_error("dhc6_check_reply: no type.");
 				return ISC_R_INVALIDARG;
 		}
-		rval = dhc6_check_status(rval, ia->options,
-					 scope, &code);
+		rval = dhc6_check_status(rval, ia->options, scope, &code);
+
 		if (action(client, &rval, code))
 			return ISC_R_CANCELED;
 
-		for (addr = ia->addrs ; addr != NULL ;
-		     addr = addr->next) {
-			if (ia->ia_type != D6O_IA_PD)
-				scope = "IAADDR";
-			else
-				scope = "IAPREFIX";
-			rval = dhc6_check_status(rval, addr->options,
-						 scope, &code);
-			if (action(client, &rval, code))
-				return ISC_R_CANCELED;
+		if (ia->addrs != NULL) {
+			have_addrs = ISC_TRUE;
 		}
 	}
 
 	/* A Confirm->Reply is unsuitable for comparison to the old lease. */
 	if (client->state == S_REBOOTING)
 		return rval;
+
+	/* We expect the lease to have at least one address and if
+	 * required all of the requested IAs if not flag it as
+	 * NoAddrs and call the action routine to try again.
+	 *
+	 * Currently we don't completely handle TAs in all cases
+	 * so we don't check them for requires.  I've left the
+	 * check in and commented it as I eventually do want
+	 * us to check for TAs as well.  SAR
+	 */
+	if ((have_addrs != ISC_TRUE) ||
+	    ((require_all_ias != 0) &&
+	     ((got_na < wanted_ia_na) ||
+	      /*(got_ta < wanted_ia_ta) ||*/
+	      (got_pd < wanted_ia_pd)))) {
+		rval = ISC_R_FAILURE;
+		if (action(client, &rval, STATUS_NoAddrsAvail) == ISC_TRUE) {
+			return ISC_R_CANCELED;
+		}
+	}
 
 	/* No old lease in rapid-commit. */
 	if (client->state == S_INIT)
@@ -2894,7 +3202,7 @@ init_handler(struct packet *packet, struct client_state *client)
 	 */
 	if ((client->txcount > 1) ||
 	    ((lease->pref == 255) &&
-	    (dhc6_score_lease(client, lease) > 150))) {
+	     (dhc6_score_lease(client, lease) > SCORE_MIN))) {
 		log_debug("RCV:  Advertisement immediately selected.");
 		cancel_timeout(do_init6, client);
 		start_selecting6(client);
@@ -2923,6 +3231,7 @@ info_request_handler(struct packet *packet, struct client_state *client)
 
 	check_status = dhc6_check_status(ISC_R_SUCCESS, packet->options,
 					 "message", &code);
+
 	if (check_status != ISC_R_SUCCESS) {
 		/* If no action was taken, but there is an error, then
 		 * we wait for a retransmission.
@@ -3096,8 +3405,8 @@ dhc6_best_lease(struct client_state *client, struct dhc6_lease **head)
 		 *
 		 * The third clause tells us to give up on leases that
 		 * have no bindings even if their preference is better.
-		 * So where our 'selected' lease's score is less than 150
-		 * (1 ia + 1 addr), choose any candidate >= 150.
+		 * So where our 'selected' lease's score is less than
+		 * SCORE_MIN (1 ia + 1 addr), choose any candidate >= SCORE_MIN.
 		 *
 		 * The first clause tells us to make preference the primary
 		 * deciding factor.  So if it's lower, reject, if it's
@@ -3114,7 +3423,7 @@ dhc6_best_lease(struct client_state *client, struct dhc6_lease **head)
 		 * Since server id's are unique in this list, there is
 		 * no further tie to break.
 		 */
-		if ((rscore < 150) && (cscore >= 150)) {
+		if ((rscore < SCORE_MIN) && (cscore >= SCORE_MIN)) {
 			log_debug("PRC:  | X-- Selected, has bindings.");
 		} else if (cand->pref < rval->pref) {
 			log_debug("PRC:  | X-- Rejected, lower preference.");
@@ -3201,7 +3510,7 @@ do_select6(void *input)
 	struct dhc6_lease *lease;
 	struct data_string ds;
 	struct timeval tv;
-	int send_ret;
+	int send_ret, added;
 
 	client = input;
 
@@ -3253,22 +3562,32 @@ do_select6(void *input)
 				    NULL, client->sent_options, &global_scope,
 				    &dhcpv6_universe);
 
-	/* Now append any IA's, and within them any IAADDR/IAPREFIXs. */
+	/* Now append any IA's, and within them any IAADDR/IAPREFIXs.
+	 * For each type of IA (na, ta, pd) we start with the ones for
+	 * which we already have addresses (dhc6_add_ia_xx) and then
+	 * if we still want more we add aditional IAs (dhc6_bare_ia_xx)
+	 */
 	if (wanted_ia_na &&
-	    dhc6_add_ia_na(client, &ds, lease,
-			   DHCPV6_REQUEST) != ISC_R_SUCCESS) {
+	    ((dhc6_add_ia_na(client, &ds, lease, DHCPV6_REQUEST,
+			     wanted_ia_na, &added) != ISC_R_SUCCESS) ||
+	     (dhc6_bare_ia_xx(client, &ds, wanted_ia_na - added,
+			      D6O_IA_NA) != ISC_R_SUCCESS))) {
 		data_string_forget(&ds, MDL);
 		return;
 	}
 	if (wanted_ia_ta &&
-	    dhc6_add_ia_ta(client, &ds, lease,
-			   DHCPV6_REQUEST) != ISC_R_SUCCESS) {
+	    ((dhc6_add_ia_ta(client, &ds, lease, DHCPV6_REQUEST,
+			     wanted_ia_ta, &added) != ISC_R_SUCCESS) ||
+	     (dhc6_bare_ia_xx(client, &ds, wanted_ia_ta - added,
+			      D6O_IA_TA) != ISC_R_SUCCESS))) {
 		data_string_forget(&ds, MDL);
 		return;
 	}
 	if (wanted_ia_pd &&
-	    dhc6_add_ia_pd(client, &ds, lease,
-			   DHCPV6_REQUEST) != ISC_R_SUCCESS) {
+	    ((dhc6_add_ia_pd(client, &ds, lease, DHCPV6_REQUEST,
+			     wanted_ia_pd, &added) != ISC_R_SUCCESS) ||
+	     (dhc6_bare_ia_xx(client, &ds, wanted_ia_pd - added,
+			      D6O_IA_PD) != ISC_R_SUCCESS))) {
 		data_string_forget(&ds, MDL);
 		return;
 	}
@@ -3298,12 +3617,59 @@ do_select6(void *input)
 	dhc6_retrans_advance(client);
 }
 
-/* For each IA_NA in the lease, for each address in the IA_NA,
- * append that information onto the packet-so-far.
+/*!
+ *
+ * \brief Count the number of IAs in the bindings
+ *
+ * \param lease  the lease to count
+ * \param ia_type the type of the IA we wish to count
+ *
+ * \return The number of IAs of the specified type we found
+ */
+static int
+dhc6_count_ia(struct dhc6_lease *lease, u_int16_t ia_type)
+{
+	struct dhc6_ia *ia;
+	int i = 0;
+
+	for (ia = lease->bindings; ia != NULL; ia = ia->next) {
+		if (ia->ia_type == ia_type)
+			/* bump the counter for the correct types */
+			i++;
+	}
+
+	return (i);
+}
+
+/*!
+ *
+ * \brief Add IA_NA information from the lease to the packet
+ * we are building.
+ *
+ * Walk through the lease and for each IA_NA in the lease
+ * and for each address in the IA_NA append that information
+ * onto the packet-so-far.  If wanted is 0 include all IA_NAs
+ * in the lease if wanted is non-zero include only that many
+ * IA_NAs (this may occur if sommebody restarts a client with
+ * arugments for a smaller number of NAs than before).
+ *
+ * \param client = the state of the entire client
+ * \param packet = the packet we are building and where we
+ *                 shall append the IA_NAs we create
+ * \param lease  = the current lease
+ * \param message = the type of the packet
+ * \param wanted  = the number of IA_NAs to include in the packet
+ *                  0 means include all
+ * \param added   = the number of IA_NAs that were added to the packet
+ *
+ * \return ISC_R_SUCCESS - all is well continue, any other return
+ *                         indicates an error (most likely memory issues)
+ *                         and the packet should be tossed.
  */
 static isc_result_t
 dhc6_add_ia_na(struct client_state *client, struct data_string *packet,
-	       struct dhc6_lease *lease, u_int8_t message)
+	       struct dhc6_lease *lease, u_int8_t message,
+	       int wanted, int *added)
 {
 	struct data_string iads;
 	struct data_string addrds;
@@ -3311,14 +3677,19 @@ dhc6_add_ia_na(struct client_state *client, struct data_string *packet,
 	struct dhc6_ia *ia;
 	isc_result_t rval = ISC_R_SUCCESS;
 	TIME t1, t2;
+	int i;
 
+	*added = 0;
 	memset(&iads, 0, sizeof(iads));
 	memset(&addrds, 0, sizeof(addrds));
-	for (ia = lease->bindings;
-	     ia != NULL && rval == ISC_R_SUCCESS;
+	for (ia = lease->bindings, i = 0;
+	     ia != NULL && rval == ISC_R_SUCCESS && (wanted == 0 || i < wanted);
 	     ia = ia->next) {
 		if (ia->ia_type != D6O_IA_NA)
 			continue;
+
+		/* Now that we know this is an NA bump the counter */
+		i++;
 
 		if (!buffer_allocate(&iads.buffer, 12, MDL)) {
 			log_error("Unable to allocate memory for IA_NA.");
@@ -3467,15 +3838,41 @@ dhc6_add_ia_na(struct client_state *client, struct data_string *packet,
 		data_string_forget(&iads, MDL);
 	}
 
-	return rval;
+	if (rval == ISC_R_SUCCESS)
+		*added = i;
+
+	return (rval);
 }
 
-/* For each IA_TA in the lease, for each address in the IA_TA,
- * append that information onto the packet-so-far.
+/*!
+ *
+ * \brief Add IA_TA information from the lease to the packet
+ * we are building.
+ *
+ * Walk through the lease and for each IA_TA in the lease
+ * and for each address in the IA_TA append that information
+ * onto the packet-so-far.  If wanted is 0 include all IA_TAs
+ * in the lease if wanted is non-zero include only that many
+ * IA_TAs (this may occur if sommebody restarts a client with
+ * arugments for a smaller number of TAs than before).
+ *
+ * \param client = the state of the entire client
+ * \param packet = the packet we are building and where we
+ *                 shall append the IA_TAs we create
+ * \param lease  = the current lease
+ * \param message = the type of the packet
+ * \param wanted  = the number of IA_TAs to include in the packet
+ *                  0 means include all
+ * \param added   = the number of IA_TAs that were added to the packet
+ *
+ * \return ISC_R_SUCCESS - all is well continue, any other return
+ *                         indicates an error (most likely memory issues)
+ *                         and the packet should be tossed.
  */
 static isc_result_t
 dhc6_add_ia_ta(struct client_state *client, struct data_string *packet,
-	       struct dhc6_lease *lease, u_int8_t message)
+	       struct dhc6_lease *lease, u_int8_t message,
+	       int wanted, int *added)
 {
 	struct data_string iads;
 	struct data_string addrds;
@@ -3483,14 +3880,19 @@ dhc6_add_ia_ta(struct client_state *client, struct data_string *packet,
 	struct dhc6_ia *ia;
 	isc_result_t rval = ISC_R_SUCCESS;
 	TIME t1, t2;
+	int i;
 
+	*added = 0;
 	memset(&iads, 0, sizeof(iads));
 	memset(&addrds, 0, sizeof(addrds));
-	for (ia = lease->bindings;
-	     ia != NULL && rval == ISC_R_SUCCESS;
+	for (ia = lease->bindings, i = 0;
+	     ia != NULL && rval == ISC_R_SUCCESS && (wanted == 0 || i < wanted);
 	     ia = ia->next) {
 		if (ia->ia_type != D6O_IA_TA)
 			continue;
+
+		/* Now that we know this is an TA bump the counter */
+		i++;
 
 		if (!buffer_allocate(&iads.buffer, 4, MDL)) {
 			log_error("Unable to allocate memory for IA_TA.");
@@ -3597,15 +3999,41 @@ dhc6_add_ia_ta(struct client_state *client, struct data_string *packet,
 		data_string_forget(&iads, MDL);
 	}
 
-	return rval;
+	if (rval == ISC_R_SUCCESS)
+		*added = i;
+
+	return (rval);
 }
 
-/* For each IA_PD in the lease, for each prefix in the IA_PD,
- * append that information onto the packet-so-far.
+/*!
+ *
+ * \brief Add IA_PD information from the lease to the packet
+ * we are building.
+ *
+ * Walk through the lease and for each IA_PD in the lease
+ * and for each address in the IA_PD append that information
+ * onto the packet-so-far.  If wanted is 0 include all IA_PDs
+ * in the lease if wanted is non-zero include only that many
+ * IA_PDs (this may occur if sommebody restarts a client with
+ * arugments for a smaller number of PDs than before).
+ *
+ * \param client = the state of the entire client
+ * \param packet = the packet we are building and where we
+ *                 shall append the IA_PDs we create
+ * \param lease  = the current lease
+ * \param message = the type of the packet
+ * \param wanted  = the number of IA_PDs to include in the packet
+ *                  0 means include all
+ * \param added   = the number of IA_PDs that were added to the packet
+ *
+ * \return ISC_R_SUCCESS - all is well continue, any other return
+ *                         indicates an error (most likely memory issues)
+ *                         and the packet should be tossed.
  */
 static isc_result_t
 dhc6_add_ia_pd(struct client_state *client, struct data_string *packet,
-	       struct dhc6_lease *lease, u_int8_t message)
+	       struct dhc6_lease *lease, u_int8_t message,
+	       int wanted, int *added)
 {
 	struct data_string iads;
 	struct data_string prefds;
@@ -3613,14 +4041,19 @@ dhc6_add_ia_pd(struct client_state *client, struct data_string *packet,
 	struct dhc6_ia *ia;
 	isc_result_t rval = ISC_R_SUCCESS;
 	TIME t1, t2;
+	int i;
 
+	*added = 0;
 	memset(&iads, 0, sizeof(iads));
 	memset(&prefds, 0, sizeof(prefds));
-	for (ia = lease->bindings;
-	     ia != NULL && rval == ISC_R_SUCCESS;
+	for (ia = lease->bindings, i = 0;
+	     ia != NULL && rval == ISC_R_SUCCESS && (wanted == 0 || i < wanted);
 	     ia = ia->next) {
 		if (ia->ia_type != D6O_IA_PD)
 			continue;
+
+		/* Now that we know this is an PD bump the counter */
+		i++;
 
 		if (!buffer_allocate(&iads.buffer, 12, MDL)) {
 			log_error("Unable to allocate memory for IA_PD.");
@@ -3761,7 +4194,10 @@ dhc6_add_ia_pd(struct client_state *client, struct data_string *packet,
 		data_string_forget(&iads, MDL);
 	}
 
-	return rval;
+	if (rval == ISC_R_SUCCESS)
+		*added = i;
+
+	return (rval);
 }
 
 /* stopping_finished() checks if there is a remaining work to do.
@@ -3965,7 +4401,7 @@ dhc6_check_times(struct client_state *client)
 	struct dhc6_ia *ia;
 	struct dhc6_addr *addr;
 	TIME renew=MAX_TIME, rebind=MAX_TIME, depref=MAX_TIME,
-	     lo_expire=MAX_TIME, hi_expire=0, tmp;
+	     lo_expire=MAX_TIME, hi_expire=0, max_ia_starts = 0, tmp;
 	int has_addrs = ISC_FALSE;
 	struct timeval tv;
 
@@ -4032,26 +4468,37 @@ dhc6_check_times(struct client_state *client)
 			use_expire /= 2;
 
 		/* Don't renew/rebind temporary addresses. */
+		/* For NA and PD we find the most recent IA and the smallest
+		 * values for the renew and rebind then base the timer on
+		 * the sum of the them.
+		 * Normally all the IAs will have the same time as they
+		 * are requested and served as a group but in some cases the
+		 * client isn't asking for all of the IAs (for example
+		 * restarted with a different set of arguments) or the server
+		 * isn't updating the client on all of them (probably a
+		 * broken server).
+		 */
 		if (ia->ia_type != D6O_IA_TA) {
+			if (ia->starts > max_ia_starts)
+				max_ia_starts = ia->starts;
 
 			if (ia->renew == 0) {
-				tmp = ia->starts + use_expire;
+				tmp = use_expire;
 			} else if (ia->renew == 0xffffffff)
 				tmp = MAX_TIME;
 			else
-				tmp = ia->starts + ia->renew;
+				tmp = ia->renew;
 
 			if (tmp < renew)
 				renew = tmp;
 
 			if (ia->rebind == 0) {
 				/* Set rebind to 3/4 expiration interval. */
-				tmp = ia->starts;
-				tmp += use_expire + (use_expire / 2);
+				tmp = use_expire + (use_expire / 2);
 			} else if (ia->rebind == 0xffffffff)
 				tmp = MAX_TIME;
 			else
-				tmp = ia->starts + ia->rebind;
+				tmp = ia->rebind;
 
 			if (tmp < rebind)
 				rebind = tmp;
@@ -4087,6 +4534,15 @@ dhc6_check_times(struct client_state *client)
 		start_init6(client);
 		return;
 	}
+
+	/* Second part of calculating the renew and rebind times.
+	 * We have the start time and the desired periods for renew
+	 * and rebind, just add them to get the desired end time.
+	 */
+	if (renew != MAX_TIME)
+		renew += max_ia_starts;
+	if (rebind != MAX_TIME)
+		rebind += max_ia_starts;
 
 	switch(client->state) {
 	      case S_BOUND:
@@ -4205,15 +4661,29 @@ find_pref(struct dhc6_addr *head, struct iaddr *prefix, u_int8_t plen)
 	return NULL;
 }
 
-/* Merge the bindings from the source lease into the destination lease
- * structure, where they are missing.  We have to copy the stateful
- * objects rather than move them over, because later code needs to be
- * able to compare new versus old if they contain any bindings.
+/*
+ *
+ * \brief  Merge the bindings from the source lease into the destination
+ * lease structure, where they are missing.
+ *
+ * This is used to merge any extra information we have in the current
+ * (older, src) lease into the lease we have just received.  For example
+ * the src lease might include a binding for an NA that is still usable
+ * but that we didn't request or that the server is no longer serving.
+ * We want to keep that information until we toss the binding (expire,
+ * release) so we move it to the new lease.
+ *
+ * We have to copy the stateful objects rather than move them over,
+ * because later code needs to be able to compare new versus old if
+ * they contain any bindings.
+ *
+ * \param src The older lease to copy the objects from
+ * \param dst The newer lease to copy the objects to
  */
 static void
 dhc6_merge_lease(struct dhc6_lease *src, struct dhc6_lease *dst)
 {
-	struct dhc6_ia *sia, *dia, *tia;
+	struct dhc6_ia *sia, *dia, *tia, **eia;
 	struct dhc6_addr *saddr, *daddr, *taddr;
 	int changes = 0;
 
@@ -4231,9 +4701,20 @@ dhc6_merge_lease(struct dhc6_lease *src, struct dhc6_lease *dst)
 					  "Unable to continue without losing "
 					  "state! (%s:%d)", MDL);
 
-			/* XXX: consider sorting? */
-			tia->next = dst->bindings;
-			dst->bindings = tia;
+			/* Put any bindings that aren't in the new lease at the
+			 * end of the list.  If the user or server reduces the
+			 * number of IAs the ones in use will be at the front
+			 * and will be used when building the next requests
+			 * We could be more efficient by finding the end
+			 * of the list once but we don't expect to do this
+			 * often.
+			 */
+			for (eia = &dst->bindings;
+			     *eia != NULL;
+			     eia = &(*eia)->next) {
+				; /* no work just find the end */
+			}
+			*eia = tia;
 			changes = 1;
 		} else {
 			for (saddr = sia->addrs ; saddr != NULL ;
@@ -4464,7 +4945,7 @@ do_refresh6(void *input)
 	struct client_state *client;
 	struct dhc6_lease *lease;
 	struct timeval elapsed, tv;
-	int send_ret;
+	int send_ret, added;
 
 	client = (struct client_state *)input;
 	memset(&ds, 0, sizeof(ds));
@@ -4571,16 +5052,24 @@ do_refresh6(void *input)
 				    client->sent_options, &global_scope,
 				    &dhcpv6_universe);
 
-	/* Append IA's */
+	/* Now append any IA's, and within them any IAADDR/IAPREFIXs.
+	 * For each type of IA (na, ta, pd) we start with the ones for
+	 * which we already have addresses (dhc6_add_ia_xx) and then
+	 * if we still want more we add aditional IAs (dhc6_bare_ia_xx)
+	 */
 	if (wanted_ia_na &&
-	    dhc6_add_ia_na(client, &ds, lease,
-			   client->refresh_type) != ISC_R_SUCCESS) {
+	    ((dhc6_add_ia_na(client, &ds, lease, client->refresh_type,
+			     wanted_ia_na, &added) != ISC_R_SUCCESS) ||
+	     (dhc6_bare_ia_xx(client, &ds, wanted_ia_na - added,
+			      D6O_IA_NA) != ISC_R_SUCCESS))) {
 		data_string_forget(&ds, MDL);
 		return;
 	}
 	if (wanted_ia_pd &&
-	    dhc6_add_ia_pd(client, &ds, lease,
-			   client->refresh_type) != ISC_R_SUCCESS) {
+	    ((dhc6_add_ia_pd(client, &ds, lease, client->refresh_type,
+			     wanted_ia_pd, &added) != ISC_R_SUCCESS) ||
+	     (dhc6_bare_ia_xx(client, &ds, wanted_ia_pd - added,
+			      D6O_IA_PD) != ISC_R_SUCCESS))) {
 		data_string_forget(&ds, MDL);
 		return;
 	}
@@ -4706,9 +5195,10 @@ do_expire(void *input)
 {
 	struct client_state *client;
 	struct dhc6_lease *lease;
-	struct dhc6_ia *ia;
+	struct dhc6_ia *ia, **tia;
 	struct dhc6_addr *addr;
 	int has_addrs = ISC_FALSE;
+	int ia_has_addrs = ISC_FALSE;
 
 	client = (struct client_state *)input;
 
@@ -4716,7 +5206,8 @@ do_expire(void *input)
 	if (lease == NULL)
 		return;
 
-	for (ia = lease->bindings ; ia != NULL ; ia = ia->next) {
+	for (ia = lease->bindings, tia = &lease->bindings; ia != NULL ; ) {
+		ia_has_addrs = ISC_FALSE;
 		for (addr = ia->addrs ; addr != NULL ; addr = addr->next) {
 			if (addr->flags & DHC6_ADDR_EXPIRED)
 				continue;
@@ -4751,8 +5242,25 @@ do_expire(void *input)
 				continue;
 			}
 
+			ia_has_addrs = ISC_TRUE;
 			has_addrs = ISC_TRUE;
 		}
+
+		/* Update to the next ia and git rid of this ia
+		 * if it doesn't have any leases.
+		 */
+		if (ia_has_addrs == ISC_TRUE) {
+			/* leases, just advance the list pointer */
+			tia = &(*tia)->next;
+		} else {
+			/* no leases, update the list pointer
+			 * and free the ia
+			 */
+			*tia = ia->next;
+			dhc6_ia_destroy(&ia, MDL);
+		}
+		/* lastly update the ia pointer to our new ia */
+		ia = *tia;
 	}
 
 	/* Clean up empty leases. */
