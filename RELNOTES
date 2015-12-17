@@ -125,6 +125,11 @@ by Eric Young (eay@cryptsoft.com).
   in the same packet, see RFC7550 for some discussion.
   [ISC-Bugs #40190]
 
+- Update the bounds checking when receiving a packet.
+  Thanks to Sebastian Poehn from Sophos for the bug report and a suggested
+  patch.
+  [ISC-Bugs #41267]
+
 			Changes since 4.3.3b1
 - None
 
