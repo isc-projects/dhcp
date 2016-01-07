@@ -115,10 +115,11 @@ by Eric Young (eay@cryptsoft.com).
   in the same packet, see RFC7550 for some discussion.
   [ISC-Bugs #40190]
 
-- Update the bounds checking when receiving a packet.
+! Update the bounds checking when receiving a packet.
   Thanks to Sebastian Poehn from Sophos for the bug report and a suggested
   patch.
   [ISC-Bugs #41267]
+  CVE: CVE-2015-8605
 
 - When handling an incorrect command line for dhcpd, dhclient or dhcrelay
   print out a specific error message about the first error in addition
