@@ -3,7 +3,7 @@
    DHCP/BOOTP Relay Agent. */
 
 /*
- * Copyright(c) 2004-2015 by Internet Systems Consortium, Inc.("ISC")
+ * Copyright(c) 2004-2016 by Internet Systems Consortium, Inc.("ISC")
  * Copyright(c) 1997-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -167,7 +167,35 @@ char *progname;
 "                server0 [ ... serverN]\n\n"
 #endif
 
-static void usage() {
+/*!
+ *
+ * \brief Print the generic usage message
+ *
+ * If the user has provided an incorrect command line print out
+ * the description of the command line.  The arguments provide
+ * a way for the caller to request more specific information about
+ * the error be printed as well.  Mostly this will be that some
+ * comamnd doesn't include its argument.
+ *
+ * \param sfmt - The basic string and format for the specific error
+ * \param sarg - Generally the offending argument from the comamnd line.
+ *
+ * \return Nothing
+ */
+static const char use_noarg[] = "No argument for command: %s";
+static const char use_badproto[] = "Protocol already set, %s inappropriate";
+static const char use_v4command[] = "Command not used for DHCPv6: %s";
+static const char use_v6command[] = "Command not used for DHCPv4: %s";
+
+static void
+usage(const char *sfmt, const char *sarg) {
+
+	/* If desired print out the specific error message */
+#ifdef PRINT_SPECIFIC_CL_ERRORS
+	if (sfmt != NULL)
+		log_error(sfmt, sarg);
+#endif
+
 	log_fatal(DHCRELAY_USAGE,
 #ifdef DHCPv6
 		  isc_file_basename(progname),
@@ -236,13 +264,13 @@ main(int argc, char **argv) {
 		if (!strcmp(argv[i], "-4")) {
 #ifdef DHCPv6
 			if (local_family_set && (local_family == AF_INET6)) {
-				usage();
+				usage(use_badproto, "-4");
 			}
 			local_family_set = 1;
 			local_family = AF_INET;
 		} else if (!strcmp(argv[i], "-6")) {
 			if (local_family_set && (local_family == AF_INET)) {
-				usage();
+				usage(use_badproto, "-6");
 			}
 			local_family_set = 1;
 			local_family = AF_INET6;
@@ -254,29 +282,29 @@ main(int argc, char **argv) {
 			quiet_interface_discovery = 1;
 		} else if (!strcmp(argv[i], "-p")) {
 			if (++i == argc)
-				usage();
+				usage(use_noarg, argv[i-1]);
 			local_port = validate_port(argv[i]);
 			log_debug("binding to user-specified port %d",
 				  ntohs(local_port));
 		} else if (!strcmp(argv[i], "-c")) {
 			int hcount;
 			if (++i == argc)
-				usage();
+				usage(use_noarg, argv[i-1]);
 			hcount = atoi(argv[i]);
 			if (hcount <= 255)
 				max_hop_count= hcount;
 			else
-				usage();
+				usage("Bad hop count to -c: %s", argv[i]);
  		} else if (!strcmp(argv[i], "-i")) {
 #ifdef DHCPv6
 			if (local_family_set && (local_family == AF_INET6)) {
-				usage();
+				usage(use_v4command, argv[i]);
 			}
 			local_family_set = 1;
 			local_family = AF_INET;
 #endif
 			if (++i == argc) {
-				usage();
+				usage(use_noarg, argv[i-1]);
 			}
 			if (strlen(argv[i]) >= sizeof(tmp->name)) {
 				log_fatal("%s: interface name too long "
@@ -295,7 +323,7 @@ main(int argc, char **argv) {
 		} else if (!strcmp(argv[i], "-a")) {
 #ifdef DHCPv6
 			if (local_family_set && (local_family == AF_INET6)) {
-				usage();
+				usage(use_v4command, argv[i]);
 			}
 			local_family_set = 1;
 			local_family = AF_INET;
@@ -304,13 +332,13 @@ main(int argc, char **argv) {
 		} else if (!strcmp(argv[i], "-A")) {
 #ifdef DHCPv6
 			if (local_family_set && (local_family == AF_INET6)) {
-				usage();
+				usage(use_v4command, argv[i]);
 			}
 			local_family_set = 1;
 			local_family = AF_INET;
 #endif
 			if (++i == argc)
-				usage();
+				usage(use_noarg, argv[i-1]);
 
 			dhcp_max_agent_option_packet_length = atoi(argv[i]);
 
@@ -321,13 +349,13 @@ main(int argc, char **argv) {
 		} else if (!strcmp(argv[i], "-m")) {
 #ifdef DHCPv6
 			if (local_family_set && (local_family == AF_INET6)) {
-				usage();
+				usage(use_v4command, argv[i]);
 			}
 			local_family_set = 1;
 			local_family = AF_INET;
 #endif
 			if (++i == argc)
-				usage();
+				usage(use_noarg, argv[i-1]);
 			if (!strcasecmp(argv[i], "append")) {
 				agent_relay_mode = forward_and_append;
 			} else if (!strcasecmp(argv[i], "replace")) {
@@ -337,11 +365,11 @@ main(int argc, char **argv) {
 			} else if (!strcasecmp(argv[i], "discard")) {
 				agent_relay_mode = discard;
 			} else
-				usage();
+				usage("Unknown argument to -m: %s", argv[i]);
 		} else if (!strcmp(argv[i], "-D")) {
 #ifdef DHCPv6
 			if (local_family_set && (local_family == AF_INET6)) {
-				usage();
+				usage(use_v4command, argv[i]);
 			}
 			local_family_set = 1;
 			local_family = AF_INET;
@@ -350,48 +378,48 @@ main(int argc, char **argv) {
 #ifdef DHCPv6
 		} else if (!strcmp(argv[i], "-I")) {
 			if (local_family_set && (local_family == AF_INET)) {
-				usage();
+				usage(use_v6command, argv[i]);
 			}
 			local_family_set = 1;
 			local_family = AF_INET6;
 			use_if_id = ISC_TRUE;
 		} else if (!strcmp(argv[i], "-l")) {
 			if (local_family_set && (local_family == AF_INET)) {
-				usage();
+				usage(use_v6command, argv[i]);
 			}
 			local_family_set = 1;
 			local_family = AF_INET6;
 			if (downstreams != NULL)
 				use_if_id = ISC_TRUE;
 			if (++i == argc)
-				usage();
+				usage(use_noarg, argv[i-1]);
 			sl = parse_downstream(argv[i]);
 			sl->next = downstreams;
 			downstreams = sl;
 		} else if (!strcmp(argv[i], "-u")) {
 			if (local_family_set && (local_family == AF_INET)) {
-				usage();
+				usage(use_v6command, argv[i]);
 			}
 			local_family_set = 1;
 			local_family = AF_INET6;
 			if (++i == argc)
-				usage();
+				usage(use_noarg, argv[i-1]);
 			sl = parse_upstream(argv[i]);
 			sl->next = upstreams;
 			upstreams = sl;
 		} else if (!strcmp(argv[i], "-s")) {
 			if (local_family_set && (local_family == AF_INET)) {
-				usage();
+				usage(use_v6command, argv[i]);
 			}
 			local_family_set = 1;
 			local_family = AF_INET6;
 			if (++i == argc)
-				usage();
+				usage(use_noarg, argv[i-1]);
 			dhcrelay_sub_id = argv[i];
 #endif
 		} else if (!strcmp(argv[i], "-pf")) {
 			if (++i == argc)
-				usage();
+				usage(use_noarg, argv[i-1]);
 			path_dhcrelay_pid = argv[i];
 			no_dhcrelay_pid = ISC_TRUE;
 		} else if (!strcmp(argv[i], "--no-pid")) {
@@ -408,14 +436,14 @@ main(int argc, char **argv) {
 				 isc_file_basename(progname));
 			exit(0);
  		} else if (argv[i][0] == '-') {
-			usage();
+			usage("Unknown command: %s", argv[i]);
  		} else {
 			struct hostent *he;
 			struct in_addr ia, *iap = NULL;
 
 #ifdef DHCPv6
 			if (local_family_set && (local_family == AF_INET6)) {
-				usage();
+				usage(use_v4command, argv[i]);
 			}
 			local_family_set = 1;
 			local_family = AF_INET;
@@ -527,7 +555,7 @@ main(int argc, char **argv) {
 		if (upstreams == NULL || downstreams == NULL) {
 			log_info("Must specify at least one lower "
 				 "and one upper interface.\n");
-			usage();
+			usage(NULL, NULL);
 		}
 
 		/* Set up the initial dhcp option universe. */
@@ -1195,8 +1223,7 @@ parse_downstream(char *arg) {
 		*iid++ = '\0';
 	}
 	if (strlen(ifname) >= sizeof(ifp->name)) {
-		log_error("Interface name '%s' too long", ifname);
-		usage();
+		usage("Interface name '%s' too long", ifname);
 	}
 
 	/* Don't declare twice. */

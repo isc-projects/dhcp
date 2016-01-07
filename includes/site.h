@@ -305,6 +305,13 @@
    from a single server and there won't be a difference. */
 /* #define USE_ORIGINAL_CLIENT_LEASE_WEIGHTS */
 
+/* Print out specific error messages for dhclient, dhcpd
+   or dhcrelay when processing an incorrect command line.  This
+   is included for those that might require the exact error
+   messages, as we don't expect that is necessary it is on by
+   default. */
+#define PRINT_SPECIFIC_CL_ERRORS
+
 /* Include definitions for various options.  In general these
    should be left as is, but if you have already defined one
    of these and prefer your definition you can comment the 

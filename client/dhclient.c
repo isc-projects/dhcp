@@ -3,7 +3,7 @@
    DHCP Client. */
 
 /*
- * Copyright (c) 2004-2015 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2016 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -97,8 +97,6 @@ char *progname = NULL;
 
 void run_stateless(int exit_mode);
 
-static void usage(void);
-
 static isc_result_t write_duid(struct data_string *duid);
 static void add_reject(struct packet *packet);
 
@@ -109,6 +107,57 @@ static int check_option_values(struct universe *universe, unsigned int opt,
 
 static void dhclient_ddns_cb_free(dhcp_ddns_cb_t *ddns_cb,
                                    char* file, int line);
+
+/*!
+ *
+ * \brief Print the generic usage message
+ *
+ * If the user has provided an incorrect command line print out
+ * the description of the command line.  The arguments provide
+ * a way for the caller to request more specific information about
+ * the error be printed as well.  Mostly this will be that some
+ * comamnd doesn't include its argument.
+ *
+ * \param sfmt - The basic string and format for the specific error
+ * \param sarg - Generally the offending argument from the comamnd line.
+ *
+ * \return Nothing
+ */
+
+#ifndef UNIT_TEST
+/* These are only used when we call usage() from the main routine
+ * which isn't compiled when building for unit tests
+ */
+static const char use_noarg[] = "No argument for command: %s";
+static const char use_v6command[] = "Command not used for DHCPv4: %s";
+#endif /* !UNIT_TEST */
+
+static void
+usage(const char *sfmt, const char *sarg)
+{
+	log_info("%s %s", message, PACKAGE_VERSION);
+	log_info(copyright);
+	log_info(arr);
+	log_info(url);
+
+	/* If desired print out the specific error message */
+#ifdef PRINT_SPECIFIC_CL_ERRORS
+	if (sfmt != NULL)
+		log_error(sfmt, sarg);
+#endif
+
+	log_fatal("Usage: %s "
+#ifdef DHCPv6
+		  "[-4|-6] [-SNTPRI1dvrxi] [-nw] [-p <port>] [-D LL|LLT] \n"
+#else /* DHCPv6 */
+		  "[-I1dvrxi] [-nw] [-p <port>] [-D LL|LLT] \n"
+#endif /* DHCPv6 */
+		  "                [-s server-addr] [-cf config-file]\n"
+		  "                [-df duid-file] [-lf lease-file]\n"
+		  "                [-pf pid-file] [--no-pid] [-e VAR=val]\n"
+		  "                [-sf script-file] [interface]",
+		  isc_file_basename(progname));
+}
 
 #ifndef UNIT_TEST
 int
@@ -208,7 +257,7 @@ main(int argc, char **argv) {
 			exit_mode = 1;
 		} else if (!strcmp(argv[i], "-p")) {
 			if (++i == argc)
-				usage();
+				usage(use_noarg, argv[i-1]);
 			local_port = validate_port(argv[i]);
 			log_debug("binding to user-specified port %d",
 				  ntohs(local_port));
@@ -217,28 +266,28 @@ main(int argc, char **argv) {
 			quiet = 0;
 		} else if (!strcmp(argv[i], "-pf")) {
 			if (++i == argc)
-				usage();
+				usage(use_noarg, argv[i-1]);
 			path_dhclient_pid = argv[i];
 			no_dhclient_pid = 1;
 		} else if (!strcmp(argv[i], "--no-pid")) {
 			no_pid_file = ISC_TRUE;
 		} else if (!strcmp(argv[i], "-cf")) {
 			if (++i == argc)
-				usage();
+				usage(use_noarg, argv[i-1]);
 			path_dhclient_conf = argv[i];
 			no_dhclient_conf = 1;
 		} else if (!strcmp(argv[i], "-df")) {
 			if (++i == argc)
-				usage();
+				usage(use_noarg, argv[i-1]);
 			path_dhclient_duid = argv[i];
 		} else if (!strcmp(argv[i], "-lf")) {
 			if (++i == argc)
-				usage();
+				usage(use_noarg, argv[i-1]);
 			path_dhclient_db = argv[i];
 			no_dhclient_db = 1;
 		} else if (!strcmp(argv[i], "-sf")) {
 			if (++i == argc)
-				usage();
+				usage(use_noarg, argv[i-1]);
 			path_dhclient_script = argv[i];
 			no_dhclient_script = 1;
 		} else if (!strcmp(argv[i], "-1")) {
@@ -247,11 +296,11 @@ main(int argc, char **argv) {
 			quiet = 1;
 		} else if (!strcmp(argv[i], "-s")) {
 			if (++i == argc)
-				usage();
+				usage(use_noarg, argv[i-1]);
 			server = argv[i];
 		} else if (!strcmp(argv[i], "-g")) {
 			if (++i == argc)
-				usage();
+				usage(use_noarg, argv[i-1]);
 			mockup_relay = argv[i];
 		} else if (!strcmp(argv[i], "-nw")) {
 			nowait = 1;
@@ -264,7 +313,7 @@ main(int argc, char **argv) {
 		} else if (!strcmp(argv[i], "-e")) {
 			struct string_list *tmp;
 			if (++i == argc)
-				usage();
+				usage(use_noarg, argv[i-1]);
 			tmp = dmalloc(strlen(argv[i]) + sizeof *tmp, MDL);
 			if (!tmp)
 				log_fatal("No memory for %s", argv[i]);
@@ -275,7 +324,7 @@ main(int argc, char **argv) {
 #ifdef DHCPv6
 		} else if (!strcmp(argv[i], "-S")) {
 			if (local_family_set && (local_family == AF_INET)) {
-				usage();
+				usage(use_v6command, argv[i]);
 			}
 			local_family_set = 1;
 			local_family = AF_INET6;
@@ -283,7 +332,7 @@ main(int argc, char **argv) {
 			stateless = 1;
 		} else if (!strcmp(argv[i], "-N")) {
 			if (local_family_set && (local_family == AF_INET)) {
-				usage();
+				usage(use_v6command, argv[i]);
 			}
 			local_family_set = 1;
 			local_family = AF_INET6;
@@ -293,7 +342,7 @@ main(int argc, char **argv) {
 			wanted_ia_na++;
 		} else if (!strcmp(argv[i], "-T")) {
 			if (local_family_set && (local_family == AF_INET)) {
-				usage();
+				usage(use_v6command, argv[i]);
 			}
 			local_family_set = 1;
 			local_family = AF_INET6;
@@ -303,7 +352,7 @@ main(int argc, char **argv) {
 			wanted_ia_ta++;
 		} else if (!strcmp(argv[i], "-P")) {
 			if (local_family_set && (local_family == AF_INET)) {
-				usage();
+				usage(use_v6command, argv[i]);
 			}
 			local_family_set = 1;
 			local_family = AF_INET6;
@@ -313,7 +362,7 @@ main(int argc, char **argv) {
 			wanted_ia_pd++;
 		} else if (!strcmp(argv[i], "-R")) {
 			if (local_family_set && (local_family == AF_INET)) {
-				usage();
+				usage(use_v6command, argv[i]);
 			}
 			local_family_set = 1;
 			local_family = AF_INET6;
@@ -322,13 +371,13 @@ main(int argc, char **argv) {
 		} else if (!strcmp(argv[i], "-D")) {
 			duid_v4 = 1;
 			if (++i == argc)
-				usage();
+				usage(use_noarg, argv[i-1]);
 			if (!strcasecmp(argv[i], "LL")) {
 				duid_type = DUID_LL;
 			} else if (!strcasecmp(argv[i], "LLT")) {
 				duid_type = DUID_LLT;
 			} else {
-				usage();
+				usage("Unknown argument to -D: %s", argv[i]);
 			}
 		} else if (!strcmp(argv[i], "-i")) {
 			/* enable DUID support for DHCPv4 clients */
@@ -348,9 +397,10 @@ main(int argc, char **argv) {
 			IGNORE_RET(write(STDERR_FILENO, "\n", 1));
 			exit(0);
 		} else if (argv[i][0] == '-') {
-		    usage();
+			usage("Unknown command: %s", argv[i]);
 		} else if (interfaces_requested < 0) {
-		    usage();
+			usage("No interfaces comamnd -n and "
+			      " requested interface %s", argv[i]);
 		} else {
 		    struct interface_info *tmp = NULL;
 
@@ -379,7 +429,7 @@ main(int argc, char **argv) {
 
 	/* Support only one (requested) interface for Prefix Delegation. */
 	if (wanted_ia_pd && (interfaces_requested != 1)) {
-		usage();
+		usage("PD %s only supports one requested interface", "-P");
 	}
 
 	if (!no_dhclient_conf && (s = getenv("PATH_DHCLIENT_CONF"))) {
@@ -517,7 +567,8 @@ main(int argc, char **argv) {
 		if (release_mode || (wanted_ia_na > 0) ||
 		    wanted_ia_ta || wanted_ia_pd ||
 		    (interfaces_requested != 1)) {
-			usage();
+			usage("Stateless commnad: %s incompatibile with "
+			      "other commands", "-S");
 		}
 		run_stateless(exit_mode);
 		return 0;
@@ -761,27 +812,6 @@ main(int argc, char **argv) {
 }
 #endif /* !UNIT_TEST */
 
-static void usage()
-{
-	log_info("%s %s", message, PACKAGE_VERSION);
-	log_info(copyright);
-	log_info(arr);
-	log_info(url);
-
-
-	log_fatal("Usage: %s "
-#ifdef DHCPv6
-		  "[-4|-6] [-SNTPRI1dvrxi] [-nw] [-p <port>] [-D LL|LLT] \n"
-#else /* DHCPv6 */
-		  "[-I1dvrxi] [-nw] [-p <port>] [-D LL|LLT] \n"
-#endif /* DHCPv6 */
-		  "                [-s server-addr] [-cf config-file]\n"
-		  "                [-df duid-file] [-lf lease-file]\n"
-		  "                [-pf pid-file] [--no-pid] [-e VAR=val]\n"
-		  "                [-sf script-file] [interface]",
-		  isc_file_basename(progname));
-}
-
 void run_stateless(int exit_mode)
 {
 #ifdef DHCPv6
@@ -793,7 +823,7 @@ void run_stateless(int exit_mode)
 	discover_interfaces(DISCOVER_REQUESTED);
 
 	if (!interfaces)
-		usage();
+		usage("No interfaces available for stateless command: %s", "-S");
 
 	/* Parse the dhclient.conf file. */
 	read_client_conf();
