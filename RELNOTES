@@ -120,6 +120,11 @@ by Eric Young (eay@cryptsoft.com).
   patch.
   [ISC-Bugs #41267]
 
+- When handling an incorrect command line for dhcpd, dhclient or dhcrelay
+  print out a specific error message about the first error in addition
+  to the usage string.  This may be disabled by editing includes/site.h.
+  [ISC-Bugs #40321]
+
 			Changes since 4.1-ESV-R12b1
 
 - None

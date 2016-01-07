@@ -3,7 +3,7 @@
    DHCP Server Daemon. */
 
 /*
- * Copyright (c) 2004-2015 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2016 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -55,10 +55,6 @@ static const char url [] =
 uid_t set_uid = 0;
 gid_t set_gid = 0;
 #endif /* PARANOIA */
-
-#ifndef UNIT_TEST
-static void usage(void);
-#endif
 
 struct iaddr server_identifier;
 int server_identifier_matched;
@@ -214,6 +210,54 @@ static void omapi_listener_start (void *foo)
 
 #ifndef UNIT_TEST
 
+/*!
+ *
+ * \brief Print the generic usage message
+ *
+ * If the user has provided an incorrect command line print out
+ * the description of the command line.  The arguments provide
+ * a way for the caller to request more specific information about
+ * the error be printed as well.  Mostly this will be that some
+ * comamnd doesn't include its argument.
+ *
+ * \param sfmt - The basic string and format for the specific error
+ * \param sarg - Generally the offending argument from the comamnd line.
+ *
+ * \return Nothing
+ */
+static char use_noarg[] = "No argument for command: %s ";
+
+static void
+usage(const char *sfmt, const char *sarg) {
+	log_info("%s %s", message, PACKAGE_VERSION);
+	log_info(copyright);
+	log_info(arr);
+
+	/* If desired print out the specific error message */
+#ifdef PRINT_SPECIFIC_CL_ERRORS
+	if (sfmt != NULL)
+		log_error(sfmt, sarg);
+#endif
+
+	log_fatal("Usage: %s [-p <UDP port #>] [-f] [-d] [-q] [-t|-T]\n"
+#ifdef DHCPv6
+		  "             [-4|-6] [-cf config-file] [-lf lease-file]\n"
+#else /* !DHCPv6 */
+		  "             [-cf config-file] [-lf lease-file]\n"
+#endif /* DHCPv6 */
+#if defined (PARANOIA)
+		   /* meld into the following string */
+		  "             [-user user] [-group group] [-chroot dir]\n"
+#endif /* PARANOIA */
+#if defined (TRACING)
+		  "             [-tf trace-output-file]\n"
+		  "             [-play trace-input-file]\n"
+#endif /* TRACING */
+		  "             [-pf pid-file] [--no-pid] [-s server]\n"
+		  "             [if0 [...ifN]]",
+		  isc_file_basename(progname));
+}
+
 /* Note: If we add unit tests to test setup_chroot it will
  * need to be moved to be outside the ifndef UNIT_TEST block.
  */
@@ -320,7 +364,7 @@ main(int argc, char **argv) {
 	for (i = 1; i < argc; i++) {
 		if (!strcmp (argv [i], "-p")) {
 			if (++i == argc)
-				usage ();
+				usage(use_noarg, argv[i-1]);
 			local_port = validate_port (argv [i]);
 			log_debug ("binding to user-specified port %d",
 			       ntohs (local_port));
@@ -335,35 +379,35 @@ main(int argc, char **argv) {
 			log_perror = -1;
 		} else if (!strcmp (argv [i], "-s")) {
 			if (++i == argc)
-				usage ();
+				usage(use_noarg, argv[i-1]);
 			server = argv [i];
 #if defined (PARANOIA)
 		} else if (!strcmp (argv [i], "-user")) {
 			if (++i == argc)
-				usage ();
+				usage(use_noarg, argv[i-1]);
 			set_user = argv [i];
 		} else if (!strcmp (argv [i], "-group")) {
 			if (++i == argc)
-				usage ();
+				usage(use_noarg, argv[i-1]);
 			set_group = argv [i];
 		} else if (!strcmp (argv [i], "-chroot")) {
 			if (++i == argc)
-				usage ();
+				usage(use_noarg, argv[i-1]);
 			set_chroot = argv [i];
 #endif /* PARANOIA */
 		} else if (!strcmp (argv [i], "-cf")) {
 			if (++i == argc)
-				usage ();
+				usage(use_noarg, argv[i-1]);
 			path_dhcpd_conf = argv [i];
 			no_dhcpd_conf = 1;
 		} else if (!strcmp (argv [i], "-lf")) {
 			if (++i == argc)
-				usage ();
+				usage(use_noarg, argv[i-1]);
 			path_dhcpd_db = argv [i];
 			no_dhcpd_db = 1;
 		} else if (!strcmp (argv [i], "-pf")) {
 			if (++i == argc)
-				usage ();
+				usage(use_noarg, argv[i-1]);
 			path_dhcpd_pid = argv [i];
 			no_dhcpd_pid = 1;
 		} else if (!strcmp(argv[i], "--no-pid")) {
@@ -408,16 +452,16 @@ main(int argc, char **argv) {
 #if defined (TRACING)
 		} else if (!strcmp (argv [i], "-tf")) {
 			if (++i == argc)
-				usage ();
+				usage(use_noarg, argv[i-1]);
 			traceoutfile = argv [i];
 		} else if (!strcmp (argv [i], "-play")) {
 			if (++i == argc)
-				usage ();
+				usage(use_noarg, argv[i-1]);
 			traceinfile = argv [i];
 			trace_replay_init ();
 #endif /* TRACING */
 		} else if (argv [i][0] == '-') {
-			usage ();
+			usage("Unknown command %s", argv[i]);
 		} else {
 			struct interface_info *tmp =
 				(struct interface_info *)0;
@@ -1207,34 +1251,6 @@ void postdb_startup (void)
 	 */
 	schedule_all_ipv6_lease_timeouts();
 }
-
-/* Print usage message. */
-#ifndef UNIT_TEST
-static void
-usage(void) {
-	log_info("%s %s", message, PACKAGE_VERSION);
-	log_info(copyright);
-	log_info(arr);
-
-	log_fatal("Usage: %s [-p <UDP port #>] [-f] [-d] [-q] [-t|-T]\n"
-#ifdef DHCPv6
-		  "             [-4|-6] [-cf config-file] [-lf lease-file]\n"
-#else /* !DHCPv6 */
-		  "             [-cf config-file] [-lf lease-file]\n"
-#endif /* DHCPv6 */
-#if defined (PARANOIA)
-		   /* meld into the following string */
-		  "             [-user user] [-group group] [-chroot dir]\n"
-#endif /* PARANOIA */
-#if defined (TRACING)
-		  "             [-tf trace-output-file]\n"
-		  "             [-play trace-input-file]\n"
-#endif /* TRACING */
-		  "             [-pf pid-file] [--no-pid] [-s server]\n"
-		  "             [if0 [...ifN]]",
-		  isc_file_basename(progname));
-}
-#endif
 
 void lease_pinged (from, packet, length)
 	struct iaddr from;
