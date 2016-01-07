@@ -136,6 +136,13 @@ by Eric Young (eay@cryptsoft.com).
   to the usage string.  This may be disabled by editing includes/site.h.
   [ISC-Bugs #40321]
 
+- The configure script will now exit with an error message if it cannot find
+  a GNU-style make tool (needed when building BIND libraries) or pkg-config
+  (needed to locate ATF used for building unit tests). Prior to this the
+  script would exit indicating success causing subsequent attempts to build
+  the software to fail.
+  [ISC-Bugs #40371]
+
 			Changes since 4.3.3b1
 - None
 
@@ -182,7 +189,7 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Buts #39019]
 
 - Write out the DUID server id on startup in all cases, previously if it
-  was read in from server-duid option in the config or lease files for 
+  was read in from server-duid option in the config or lease files for
   DHCPv4 it would not be written to the new lease file.
   [ISC-Bugs #37791]
 
@@ -232,7 +239,7 @@ by Eric Young (eay@cryptsoft.com).
   declaring the lease file corrupt and incorrectly skipping over the subsequent
   entry in the file.  The server will now emit a log message indicating that
   no pool was found for the address (or prefix) and correctly resume parsing
-  with the next entry in the lease file.  Our thanks to Michal Žejdl for 
+  with the next entry in the lease file.  Our thanks to Michal Žejdl for
   reporting the issue.
   [ISC-Bugs #39314]
 

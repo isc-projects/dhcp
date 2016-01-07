@@ -9,11 +9,11 @@ AM_INIT_AUTOMAKE([foreign])
 # change the timestamps on the code, like checking it into a cvs
 # tree, could trigger a rebuild of the infrastructure files which
 # might fail if they don't have the correct tools.
-AM_MAINTAINER_MODE 
+AM_MAINTAINER_MODE
 
 AC_CANONICAL_HOST
 
-# We want to turn on warnings if we are using gcc and the user did 
+# We want to turn on warnings if we are using gcc and the user did
 # not specify CFLAGS. The autoconf check for the C compiler sets the
 # CFLAGS if gcc is used, so we will save it before we run that check.
 SAVE_CFLAGS="$CFLAGS"
@@ -51,9 +51,9 @@ AC_PROG_RANLIB
 AC_CONFIG_HEADERS([includes/config.h])
 
 # we sometimes need to know byte order for building packets
-AC_C_BIGENDIAN(AC_SUBST(byte_order, BIG_ENDIAN), 
+AC_C_BIGENDIAN(AC_SUBST(byte_order, BIG_ENDIAN),
 	       AC_SUBST(byte_order, LITTLE_ENDIAN))
-AC_DEFINE_UNQUOTED([DHCP_BYTE_ORDER], [$byte_order], 
+AC_DEFINE_UNQUOTED([DHCP_BYTE_ORDER], [$byte_order],
 		   [Define to BIG_ENDIAN for MSB (Motorola or SPARC CPUs)
 		    or LITTLE_ENDIAN for LSB (Intel CPUs).])
 
@@ -135,7 +135,7 @@ AC_ARG_ENABLE(dhcpv6,
 # DHCPv6 is on by default, so define if it is not explicitly disabled.
 if test "$enable_dhcpv6" != "no"; then
     enable_dhcpv6="yes"
-	AC_DEFINE([DHCPv6], [1], 
+	AC_DEFINE([DHCPv6], [1],
 		  [Define to 1 to include DHCPv6 support.])
 fi
 
@@ -251,6 +251,10 @@ elif test "$atf_path" != "no" ; then
     if test "$atf_pcp" = "" ; then
         AC_MSG_ERROR([Unable to find atf files in location specified])
     else
+        AC_CHECK_PROG([pkgcfg_found],[pkg-config],[pkg-config],[])
+        if test "$pkgcfg_found" = ""; then
+            AC_MSG_ERROR([Could not locate ATF, pkg-config not installed])
+        fi
         ATF_CFLAGS="`PKG_CONFIG_PATH=$atf_pcp pkg-config --cflags atf-c` -DUNIT_TEST"
         ATF_LDFLAGS="`PKG_CONFIG_PATH=$atf_pcp pkg-config --libs atf-c`"
         if  test -f $atf_pcp/atf-sh.pc ; then
@@ -294,7 +298,7 @@ esac
 
 # Allow specification of alternate state files
 AC_ARG_WITH(srv-lease-file,
-	AS_HELP_STRING([--with-srv-lease-file=PATH],[File for dhcpd leases 
+	AS_HELP_STRING([--with-srv-lease-file=PATH],[File for dhcpd leases
 		        (default is LOCALSTATEDIR/db/dhcpd.leases)]),
 	AC_DEFINE_UNQUOTED([_PATH_DHCPD_DB], ["$withval"],
 			   [File for dhcpd leases.]))
@@ -324,7 +328,7 @@ fi
 AC_MSG_RESULT($with_srv_lease_file)
 
 AC_ARG_WITH(srv6-lease-file,
-	AS_HELP_STRING([--with-srv6-lease-file=PATH],[File for dhcpd6 leases 
+	AS_HELP_STRING([--with-srv6-lease-file=PATH],[File for dhcpd6 leases
 		        (default is LOCALSTATEDIR/db/dhcpd6.leases)]),
 	AC_DEFINE_UNQUOTED([_PATH_DHCPD6_DB], ["$withval"],
 			   [File for dhcpd6 leases.]))
@@ -354,7 +358,7 @@ fi
 AC_MSG_RESULT($with_srv6_lease_file)
 
 AC_ARG_WITH(cli-lease-file,
-	AS_HELP_STRING([--with-cli-lease-file=PATH],[File for dhclient leases 
+	AS_HELP_STRING([--with-cli-lease-file=PATH],[File for dhclient leases
 		        (default is LOCALSTATEDIR/db/dhclient.leases)]),
 	AC_DEFINE_UNQUOTED([_PATH_DHCLIENT_DB], ["$withval"],
 			   [File for dhclient leases.]))
@@ -384,7 +388,7 @@ fi
 AC_MSG_RESULT($with_cli_lease_file)
 
 AC_ARG_WITH(cli6-lease-file,
-	AS_HELP_STRING([--with-cli6-lease-file=PATH],[File for dhclient6 leases 
+	AS_HELP_STRING([--with-cli6-lease-file=PATH],[File for dhclient6 leases
 		        (default is LOCALSTATEDIR/db/dhclient6.leases)]),
 	AC_DEFINE_UNQUOTED([_PATH_DHCLIENT6_DB], ["$withval"],
 			   [File for dhclient6 leases.]))
@@ -486,20 +490,20 @@ AC_CHECK_HEADER(linux/filter.h, DO_LPF=1, ,
 ])
 if test -n "$DO_LPF"
 then
-	AC_DEFINE([HAVE_LPF], [1], 
+	AC_DEFINE([HAVE_LPF], [1],
 		  [Define to 1 to use the Linux Packet Filter interface code.])
 else
 	AC_CHECK_HEADER(sys/dlpi.h, DO_DLPI=1)
 	if test -n "$DO_DLPI"
 	then
-		AC_DEFINE([HAVE_DLPI], [1], 
+		AC_DEFINE([HAVE_DLPI], [1],
 			  [Define to 1 to use DLPI interface code.])
 	else
 		AC_CHECK_HEADER(net/bpf.h, DO_BPF=1)
 		if test -n "$DO_BPF"
 		then
 			AC_DEFINE([HAVE_BPF], [1],
-	  			  [Define to 1 to use the 
+				   [Define to 1 to use the
 				   Berkeley Packet Filter interface code.])
 		fi
 	fi
@@ -553,8 +557,8 @@ AC_CHECK_HEADERS(sys/socket.h net/if_dl.h net/if6.h regex.h)
 AC_SEARCH_LIBS(socket, [socket])
 AC_SEARCH_LIBS(inet_ntoa, [nsl])
 
-AC_SEARCH_LIBS(inet_aton, [socket nsl], , 
-	AC_DEFINE([NEED_INET_ATON], [1], 
+AC_SEARCH_LIBS(inet_aton, [socket nsl], ,
+	AC_DEFINE([NEED_INET_ATON], [1],
 		  [Define to 1 if the inet_aton() function is missing.]))
 
 # Check for a standalone regex library.
@@ -567,12 +571,12 @@ AC_SEARCH_LIBS(if_nametoindex, [ipv6])
 
 # check for /dev/random (declares HAVE_DEV_RANDOM)
 AC_CHECK_FILE(/dev/random,
-	AC_DEFINE([HAVE_DEV_RANDOM], [1], 
+	AC_DEFINE([HAVE_DEV_RANDOM], [1],
 		  [Define to 1 if you have the /dev/random file.]))
 
 # see if there is a "sa_len" field in our interface information structure
 AC_CHECK_MEMBER(struct sockaddr.sa_len,
-	AC_DEFINE([HAVE_SA_LEN], [], 
+	AC_DEFINE([HAVE_SA_LEN], [],
 		  [Define to 1 if the sockaddr structure has a length field.]),
 	,
 	[#include <sys/socket.h>])
@@ -583,13 +587,13 @@ AC_CHECK_SIZEOF(struct iaddr *, , [
 #include <stdio.h>
 ])
 
-# Solaris does not have the msg_control or msg_controlen members 
+# Solaris does not have the msg_control or msg_controlen members
 # in the msghdr structure unless you define:
 #
 #   _XOPEN_SOURCE, _XOPEN_SOURCE_EXTENDED, and __EXTENSIONS__
-# 
+#
 # See the "standards" man page for details.
-# 
+#
 # We check for the msg_control member, and if it is not found, we check
 # again with the appropriate defines added to the CFLAGS. (In order to
 # do this we have to remove the check from the cache, which is what the
@@ -599,7 +603,7 @@ AC_CHECK_MEMBER(struct msghdr.msg_control,,
 	 CFLAGS="$CFLAGS -D__EXTENSIONS__"
 	 unset ac_cv_member_struct_msghdr_msg_control
 	 AC_CHECK_MEMBER(struct msghdr.msg_control,,
-	 	[AC_MSG_ERROR([Missing msg_control member in 
+	 	[AC_MSG_ERROR([Missing msg_control member in
 			       msg_control structure.])],
 		[
 #include <sys/types.h>
@@ -617,10 +621,10 @@ AC_CHECK_MEMBER(struct tpacket_auxdata.tp_vlan_tci,
 
 BINDDIR=
 AC_ARG_WITH(libbind,
-	AS_HELP_STRING([--with-libbind=PATH],[bind includes and libraries are in PATH 
+	AS_HELP_STRING([--with-libbind=PATH],[bind includes and libraries are in PATH
 		        (default is ./bind)]),
 	use_libbind="$withval", use_libbind="no")
-case "$use_libbind" in 
+case "$use_libbind" in
 yes)
 	BINDDIR="\${top_srcdir}/bind"
 	;;
@@ -749,6 +753,9 @@ AC_CONFIG_FILES([
 AC_OUTPUT
 
 sh util/bindvar.sh
+if test $? -ne 0; then
+    AC_MSG_ERROR([*** util/bindvar.sh failed])
+fi
 
 cat > config.report << END
 

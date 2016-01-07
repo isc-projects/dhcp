@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Copyright (C) 2009  Internet Systems Consortium, Inc. ("ISC")
+# Copyright (C) 2009,2015  Internet Systems Consortium, Inc. ("ISC")
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -20,6 +20,9 @@
 # use by the bind/Makefile, we do this to minimize portability
 # concerns.
 
+# Bind requires a GNU style make to compile, if we can't find one
+# exit with a non-zero status, otherwise exit with success (i.e. 0)
+
 binddir=`pwd`
 gmake=
 for x in gmake gnumake make; do
@@ -29,7 +32,15 @@ for x in gmake gnumake make; do
 	fi
 done
 
+if [ -z $gmake ]
+then
+    echo "$0: Building Bind requires a GNU style make tool and none were found in your path. We tried gmake, gnumake, and make."
+    exit 1
+fi
+
 cat <<EOF > bind/bindvar.tmp
 binddir=$binddir/bind
 GMAKE=$gmake
 EOF
+
+exit 0
