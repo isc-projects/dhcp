@@ -111,6 +111,7 @@ by Eric Young (eay@cryptsoft.com).
   host objects. Thanks to Jiri Popelka at Red Hat for reporting
   the issue and supplying the patches.
   [ISC-Bugs #33990]
+  [ISC-Bugs #41325]
 
 - Cleaned up some of the Make infrastructure to make --with-libbind
   work better.  Though it still only works with an absolute path.

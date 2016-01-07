@@ -3,7 +3,7 @@
    Definitions for dhcpd... */
 
 /*
- * Copyright (c) 2004-2015 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2016 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -237,7 +237,7 @@ typedef time_t TIME;
  * based on which is in use to allow the code to be cleaner by
  * avoiding #ifdefs.
  *
- * POOL_DESTROYP is used for debugging purposes
+ * POOL_DESTROYP is used for cleanup
  */
 
 #if !defined (BINARY_LEASES)
@@ -3757,10 +3757,7 @@ void lc_unlink_lease(struct leasechain *lc, struct lease *lp);
 struct lease *lc_get_first_lease(struct leasechain *lc);
 struct lease *lc_get_next(struct leasechain *lc, struct lease *lp);
 void lc_init_growth(struct leasechain *lc, size_t growth);
-#if defined (DEBUG_MEMORY_LEAKAGE) || \
-		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 void lc_delete_all(struct leasechain *lc);
-#endif
 #endif /* BINARY_LEASES */
 
 #define MAX_ADDRESS_STRING_LEN \

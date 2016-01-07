@@ -3,7 +3,7 @@
    Additional support for in-memory database support */
 
 /*
- * Copyright (c) 2015 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2015-2016 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -647,8 +647,6 @@ lc_unlink_lease(struct leasechain *lc, struct lease *lp) {
 	lc_unlink_lease_pos(lc, pos);
 }
 
-#if defined (DEBUG_MEMORY_LEAKAGE) || \
-		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 /*!
  *
  * \brief Unlink all the leases in the lease chain and free the
@@ -677,7 +675,6 @@ lc_delete_all(struct leasechain *lc) {
 	lc->total = 0;
 	lc->nelem = 0;
 }
-#endif
 
 /*!
  *
