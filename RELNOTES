@@ -126,6 +126,12 @@ by Eric Young (eay@cryptsoft.com).
   to the usage string.  This may be disabled by editing includes/site.h.
   [ISC-Bugs #40321]
 
+- The configure script will now exit with an error message if it cannot find
+  pkg-config (needed to locate ATF used for building unit tests). Prior to
+  this the script would exit indicating success causing subsequent attempts
+  to build the software to fail.
+  [ISC-Bugs #40371]
+
 			Changes since 4.1-ESV-R12b1
 
 - None

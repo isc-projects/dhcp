@@ -232,6 +232,10 @@ if test "$atf_path" != "no" ; then
     if test "$atf_pcp" = "" ; then
         AC_MSG_ERROR([Unable to find atf files in location specified])
     else
+        AC_CHECK_PROG([pkgcfg_found],[pkg-config],[pkg-config],[])
+        if test "$pkgcfg_found" = ""; then
+            AC_MSG_ERROR([Could not locate ATF, pkg-config not installed])
+        fi
         ATF_CFLAGS="`PKG_CONFIG_PATH=$atf_pcp pkg-config --cflags atf-c` -DUNIT_TEST"
         ATF_LDFLAGS="`PKG_CONFIG_PATH=$atf_pcp pkg-config --libs atf-c`"
         if  test -f $atf_pcp/atf-sh.pc ; then
