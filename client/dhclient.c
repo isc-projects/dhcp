@@ -71,10 +71,12 @@ int std_dhcid = 0;
    assert (state_is == state_shouldbe). */
 #define ASSERT_STATE(state_is, state_shouldbe) {}
 
+#ifndef UNIT_TEST
 static const char copyright[] = "Copyright 2004-2015 Internet Systems Consortium.";
 static const char arr [] = "All rights reserved.";
 static const char message [] = "Internet Systems Consortium DHCP Client";
 static const char url [] = "For info, please visit https://www.isc.org/software/dhcp/";
+#endif /* UNIT_TEST */
 
 u_int16_t local_port = 0;
 u_int16_t remote_port = 0;
@@ -129,8 +131,9 @@ static void dhclient_ddns_cb_free(dhcp_ddns_cb_t *ddns_cb,
  * which isn't compiled when building for unit tests
  */
 static const char use_noarg[] = "No argument for command: %s";
+#ifdef DHCPv6
 static const char use_v6command[] = "Command not used for DHCPv4: %s";
-#endif /* !UNIT_TEST */
+#endif
 
 static void
 usage(const char *sfmt, const char *sarg)
@@ -159,7 +162,6 @@ usage(const char *sfmt, const char *sarg)
 		  isc_file_basename(progname));
 }
 
-#ifndef UNIT_TEST
 int
 main(int argc, char **argv) {
 	int fd;
@@ -810,7 +812,6 @@ main(int argc, char **argv) {
 	/* In fact dispatch() never returns. */
 	return 0;
 }
-#endif /* !UNIT_TEST */
 
 void run_stateless(int exit_mode)
 {
@@ -899,6 +900,7 @@ void run_stateless(int exit_mode)
 #endif /* DHCPv6 */
 	return;
 }
+#endif /* !UNIT_TEST */
 
 isc_result_t find_class (struct class **c,
 		const char *s, const char *file, int line)

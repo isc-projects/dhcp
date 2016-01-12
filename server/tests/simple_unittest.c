@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2012,2015-2016 Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -67,7 +67,7 @@ ATF_TC_BODY(simple_test_case, tc)
 
 }
 
-
+#ifdef DHCPv6
 ATF_TC(parse_byte_order);
 
 ATF_TC_HEAD(parse_byte_order, tc)
@@ -110,7 +110,7 @@ ATF_TC_BODY(parse_byte_order, tc)
 
     atf_tc_pass();
 }
-
+#endif /*  DHCPv6 */
 
 /* This macro defines main() method that will call specified
    test cases. tp and simple_test_case names can be whatever you want
@@ -118,7 +118,8 @@ ATF_TC_BODY(parse_byte_order, tc)
 ATF_TP_ADD_TCS(tp)
 {
     ATF_TP_ADD_TC(tp, simple_test_case);
+#ifdef DHCPv6
     ATF_TP_ADD_TC(tp, parse_byte_order);
-
+#endif
     return (atf_no_error());
 }
