@@ -118,7 +118,9 @@ static int check_option_values(struct universe *universe, unsigned int opt,
  */
 
 static const char use_noarg[] = "No argument for command: %s";
+#ifdef DHCPv6
 static const char use_v6command[] = "Command not used for DHCPv4: %s";
+#endif
 
 static void
 usage(const char *sfmt, const char *sarg)
