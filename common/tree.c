@@ -3,7 +3,7 @@
    Routines for manipulating parse trees... */
 
 /*
- * Copyright (c) 2011-2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2011-2014,2016 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2007,2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
@@ -804,6 +804,18 @@ int evaluate_boolean_expression (result, packet, lease, client_state,
 						 in_options, cfg_options,
 						 scope,
 						 expr->data.equal[0], MDL);
+
+		/* This is annoying, regexec requires the string being processed
+		 * to be NULL terminated, but left may not be, so pass it into
+		 * the termination function to ensure it's null terminated.
+		 */
+		if (bleft && (data_string_terminate(&left, MDL) == 0)) {
+			/* failed to make a null terminated version, couldn't
+			 * create a copy, probably a memory issue, an error
+			 * message has already been logged */
+			bleft = 0;
+		}
+
 		memset(&right, 0, sizeof right);
 		bright = evaluate_data_expression(&right, packet, lease,
 						  client_state,
@@ -815,7 +827,7 @@ int evaluate_boolean_expression (result, packet, lease, client_state,
 		memset(&re, 0, sizeof(re));
 		if (bleft && bright &&
 		    (left.data != NULL) && (right.data != NULL) &&
-        	    (regcomp(&re, (char *)right.data, regflags) == 0) &&
+		    (regcomp(&re, (char *)right.data, regflags) == 0) &&
 		    (regexec(&re, (char *)left.data, (size_t)0, NULL, 0) == 0))
 				*result = 1;
 
@@ -839,7 +851,7 @@ int evaluate_boolean_expression (result, packet, lease, client_state,
 		 * If we have bleft and bright then we have a good
 		 * syntax, otherwise not.
 		 *
-		 * XXX: we don't warn on invalid regular expression 
+		 * XXX: we don't warn on invalid regular expression
 		 *      syntax, should we?
 		 */
 		return bleft && bright;

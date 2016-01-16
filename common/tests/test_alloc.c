@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007,2009-2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2007,2009-2014,2016 by Internet Systems Consortium, Inc. ("ISC")
  *
  * We test the functions provided in alloc.c here. These are very
  * basic functions, and it is very important that they work correctly.
@@ -485,6 +485,59 @@ const char* checkString (struct data_string* string,
     return (NULL);
 }
 
+ATF_TC(data_string_terminate);
+
+ATF_TC_HEAD(data_string_terminate, tc) {
+    atf_tc_set_md_var(tc, "descr", "data_string_terminate test, "
+                      "exercises data_string_terminate function");
+}
+
+ATF_TC_BODY(data_string_terminate, tc) {
+    struct data_string new_string, copy_string;
+    const char *src = "Boring test string";
+
+    /* Case 1: Call with an already terminated string.  The
+     * original structure shouldn't be touched.
+     */
+    memset(&new_string, 0, sizeof(new_string));
+    memset(&copy_string, 0, sizeof(copy_string));
+    if (data_string_new(&new_string, src, strlen(src), MDL) == 0) {
+	atf_tc_fail("Case 1: unable to create new string");
+    }
+    memcpy(&copy_string, &new_string, sizeof(new_string));
+    if (data_string_terminate(&new_string, MDL) == 0) {
+	atf_tc_fail("Case 1: unable to terminate string");
+    }
+    if (memcmp(&copy_string, &new_string, sizeof(new_string)) != 0) {
+	atf_tc_fail("Case 1: structure modified");
+    }
+
+    /* Case 2: Call with an unterminated string.  The
+     * original structure should be modified with a pointer
+     * to new memory for the string.
+     */
+    /* clear the termination flag, and shrink the string */
+    new_string.terminated = 0;
+    new_string.len -= 2;
+    memcpy(&copy_string, &new_string, sizeof(new_string));
+
+    if (data_string_terminate(&new_string, MDL) == 0) {
+	atf_tc_fail("Case 2: unable to terminate string");
+    }
+
+    /* We expect the same string but in a differnet block of memory */
+    if ((new_string.terminated == 0) ||
+	(&new_string.buffer == &copy_string.buffer) ||
+	(new_string.len != copy_string.len) ||
+	memcmp(new_string.data, src, new_string.len) ||
+	new_string.data[new_string.len] != 0) {
+	atf_tc_fail("Case 2: structure not modified correctly");
+    }
+
+    /* get rid of the string, no need to get rid of copy as the
+     * string memory was freed during the terminate call */
+    data_string_forget(&new_string, MDL);
+}
 
 ATF_TP_ADD_TCS(tp)
 {
@@ -496,6 +549,7 @@ ATF_TP_ADD_TCS(tp)
     ATF_TP_ADD_TC(tp, data_string_copy);
     ATF_TP_ADD_TC(tp, data_string_copy_nobuf);
     ATF_TP_ADD_TC(tp, data_string_new);
+    ATF_TP_ADD_TC(tp, data_string_terminate);
 
     return (atf_no_error());
 }

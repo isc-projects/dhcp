@@ -2487,6 +2487,7 @@ void data_string_copy(struct data_string *, const struct data_string *,
 		      const char *, int);
 void data_string_forget (struct data_string *, const char *, int);
 void data_string_truncate (struct data_string *, int);
+int data_string_terminate (struct data_string *, const char *, int);
 int executable_statement_allocate (struct executable_statement **,
 				   const char *, int);
 int executable_statement_reference (struct executable_statement **,
