@@ -133,6 +133,11 @@ by Eric Young (eay@cryptsoft.com).
   to build the software to fail.
   [ISC-Bugs #40371]
 
+- Properly terminate strings before passing them to regex and fix
+  a boudnary error when creating certain new data strings.
+  Thanks to Andrey Jr. Melnikov for the bug report.
+  [ISC-Bugs #41217]
+
 			Changes since 4.1-ESV-R12b1
 
 - None
