@@ -161,7 +161,7 @@ by Eric Young (eay@cryptsoft.com).
   for instances in which a client declines a lease and only the secondary
   server receives it.  Prior to this the primary server would reject such an
   update as an "invalid state transition".
-  [ISC_BUGS #25180]
+  [ISC_BUGS #25189]
 
 			Changes since 4.3.3b1
 - None
