@@ -150,6 +150,12 @@ by Eric Young (eay@cryptsoft.com).
   Thanks to Andrey Jr. Melnikov for the bug report.
   [ISC-Bugs #41217]
 
+- Option expressions, such as prepend and append, are now supported when
+  running dhclient for IPv6.  Prior to this such statements in the
+  client configuration file would be parsed but have no affect.  Thanks
+  to Jiri Popelka at Red Hat for reporting the issue.
+  [ISC-Bugs #39952]
+
 			Changes since 4.3.3b1
 - None
 
