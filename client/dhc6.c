@@ -1,7 +1,7 @@
 /* dhc6.c - DHCPv6 client routines. */
 
 /*
- * Copyright (c) 2012-2015 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2012-2016 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2006-2010 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -632,7 +632,7 @@ dhc6_dup_addr(struct dhc6_addr *addr, const char *file, int line)
  *
  */
 static struct dhc6_lease *
-dhc6_leaseify(struct packet *packet)
+dhc6_leaseify(struct packet *packet, struct client_state* client)
 {
 	struct data_string ds;
 	struct dhc6_lease *lease;
@@ -740,6 +740,11 @@ dhc6_leaseify(struct packet *packet)
 			  print_hex_1(lease->server_id.len,
 				      lease->server_id.data, 52));
 	}
+
+	execute_statements_in_scope(NULL, (struct packet *)packet, NULL,
+				    client, lease->options, lease->options,
+				    &global_scope, client->config->on_receipt,
+				    NULL);
 
 	return lease;
 }
@@ -3174,7 +3179,7 @@ init_handler(struct packet *packet, struct client_state *client)
 		return;
 	}
 
-	lease = dhc6_leaseify(packet);
+	lease = dhc6_leaseify(packet, client);
 
 	/* Out of memory or corrupt packet condition...hopefully a temporary
 	 * problem.  Returning now makes us try to retransmit later.
@@ -3264,6 +3269,12 @@ info_request_handler(struct packet *packet, struct client_state *client)
 	option_state_reference(&client->active_lease->options,
 			       packet->options, MDL);
 
+	execute_statements_in_scope(NULL, (struct packet *)packet, NULL, client,
+				    client->active_lease->options,
+				    client->active_lease->options,
+				    &global_scope, client->config->on_receipt,
+				    NULL);
+
 	start_informed(client);
 }
 
@@ -3298,7 +3309,7 @@ rapid_commit_handler(struct packet *packet, struct client_state *client)
 		return;
 	}
 
-	lease = dhc6_leaseify(packet);
+	lease = dhc6_leaseify(packet, client);
 
 	/* Out of memory or corrupt packet condition...hopefully a temporary
 	 * problem.  Returning now makes us try to retransmit later.
@@ -4239,7 +4250,7 @@ reply_handler(struct packet *packet, struct client_state *client)
 		return;
 	}
 
-	lease = dhc6_leaseify(packet);
+	lease = dhc6_leaseify(packet, client);
 
 	/* Out of memory or corrupt packet condition...hopefully a temporary
 	 * problem.  Returning now makes us try to retransmit later.
