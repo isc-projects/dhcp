@@ -144,6 +144,13 @@ by Eric Young (eay@cryptsoft.com).
   to Jiri Popelka at Red Hat for reporting the issue.
   [ISC-Bugs #39952]
 
+- A failover primary server will now accept a binding status update from the
+  secondary which transitions a lease from ACTIVE to ABANDONED. This accounts
+  for instances in which a client declines a lease and only the secondary
+  server receives it.  Prior to this the primary server would reject such an
+  update as an "invalid state transition".
+  [ISC_BUGS #25189]
+
 			Changes since 4.1-ESV-R12b1
 
 - None
