@@ -25,6 +25,7 @@ server/dhcpd
 server/tests/dhcpd_unittests
 server/tests/hash_unittests
 server/tests/legacy_unittests
+server/tests/leaseq_unittests
 server/tests/load_bal_unittests
 server/tests/test-suite.log
 tests/libt_api.a
