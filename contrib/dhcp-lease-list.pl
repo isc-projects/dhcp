@@ -15,6 +15,9 @@
 #
 # 2013-04-22 - added option to choose lease file, made manufacture information
 #              optional, sar
+#
+# 2016-01-19 - updated to better trim the manu string and output the hostnames, sar
+
 use strict;
 use warnings;
 use POSIX qw(strftime);
@@ -41,7 +44,7 @@ sub get_manufactorer_for_mac($) {
     if (defined $oui) {
 	$manu = join('-', ($_[0] =~ /^(..):(..):(..):/));
 	$manu = `grep -i '$manu' $oui | cut -f3`;
-	chomp($manu);
+	$manu =~ s/^\s+|\s+$//g;
     }
 
     return $manu;
@@ -142,7 +145,7 @@ sub output_leases() {
     }
     foreach (@leases) {
        if ($opt_format eq 'human') {
-	   printf("%-19s%-16s%-15s%-20s%-20s\n",
+	   printf("%-19s%-16s%-14.14s %-20s%-20s\n",
 		  $_->{'mac'},       # MAC
 		  $_->{'ip'},        # IP address
 		  $_->{'hostname'},  # hostname

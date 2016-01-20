@@ -167,6 +167,10 @@ by Eric Young (eay@cryptsoft.com).
   Thanks to Bill Parker (wp02855 at gmail dot com) who identified this issue.
   [ISC-Bugs #41485]
 
+- Updated contrib/dhcp-lease-list.pl to handle garbage in the oui file better
+  and to print out the hostnames a bit better.
+  [ISC-Bugs #41288]
+
 			Changes since 4.3.3b1
 
 - None
