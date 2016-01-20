@@ -163,7 +163,12 @@ by Eric Young (eay@cryptsoft.com).
   update as an "invalid state transition".
   [ISC_BUGS #25189]
 
+- Properly allocate memory for a bpf filter.
+  Thanks to Bill Parker (wp02855 at gmail dot com) who identified this issue.
+  [ISC-Bugs #41485]
+
 			Changes since 4.3.3b1
+
 - None
 
 			Changes since 4.3.2
