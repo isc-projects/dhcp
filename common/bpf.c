@@ -3,7 +3,8 @@
    BPF socket interface code, originally contributed by Archie Cobbs. */
 
 /*
- * Copyright (c) 2004,2007,2009,2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009,2012-2014,2016 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -199,7 +200,7 @@ struct bpf_insn dhcp_bpf_filter [] = {
 };
 
 #if defined (DEC_FDDI)
-struct bpf_insn *bpf_fddi_filter;
+struct bpf_insn *bpf_fddi_filter = NULL;
 #endif
 
 int dhcp_bpf_filter_len = sizeof dhcp_bpf_filter / sizeof (struct bpf_insn);
@@ -284,7 +285,7 @@ void if_register_receive (info)
 	if (ioctl(info -> rfdesc, BIOCGDLT, &link_layer) >= 0 &&
 	    link_layer == DLT_FDDI) {
 		if (!bpf_fddi_filter) {
-			bpf_fddi_filter = dmalloc (sizeof bpf_fddi_filter,
+			bpf_fddi_filter = dmalloc (sizeof dhcp_bpf_filter,
 						    MDL);
 			if (!bpf_fddi_filter)
 				log_fatal ("No memory for FDDI filter.");
