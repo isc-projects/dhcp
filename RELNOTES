@@ -169,6 +169,7 @@ by Eric Young (eay@cryptsoft.com).
 
 - Updated contrib/dhcp-lease-list.pl to handle garbage in the oui file better
   and to print out the hostnames a bit better.
+  Thanks to Antoine Beaupré from Debian for the suggested patch.
   [ISC-Bugs #41288]
 
 			Changes since 4.3.3b1
