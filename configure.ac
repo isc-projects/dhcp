@@ -48,6 +48,10 @@ AM_CONDITIONAL(CROSS_COMPILING, test "$cross_compiling" = "yes")
 AC_USE_SYSTEM_EXTENSIONS
 
 AC_PROG_RANLIB
+
+AC_PATH_PROG(AR, ar)
+AC_SUBST(AR)
+
 AC_CONFIG_HEADERS([includes/config.h])
 
 # we sometimes need to know byte order for building packets
