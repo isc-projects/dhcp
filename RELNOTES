@@ -172,6 +172,11 @@ by Eric Young (eay@cryptsoft.com).
   Thanks to Antoine Beaupré from Debian for the suggested patch.
   [ISC-Bugs #41288]
 
+- The DHCPv6 server now handles long valid and preferred lease times better.
+  Values that would cause the internal end time of the lease to wrap are
+  modified to work as infinite.
+  [ISC-Bugs #40773]
+
 			Changes since 4.3.3b1
 
 - None
