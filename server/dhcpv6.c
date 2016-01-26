@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2015 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2006-2016 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -1892,7 +1892,7 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 			tmp = reply->ia->iasubopt[i];
 
 			log_info("%s NA: address %s to client with duid %s "
-				 "iaid = %d valid for %d seconds",
+				 "iaid = %d valid for %u seconds",
 				 dhcpv6_type_names[reply->buf.reply.msg_type],
 				 inet_ntop(AF_INET6, &tmp->addr,
 					   tmp_addr, sizeof(tmp_addr)),
@@ -2581,7 +2581,7 @@ reply_process_ia_ta(struct reply_state *reply, struct option_cache *ia) {
 			tmp = reply->ia->iasubopt[i];
 
 			log_info("%s TA: address %s to client with duid %s "
-				 "iaid = %d valid for %d seconds",
+				 "iaid = %d valid for %u seconds",
 				 dhcpv6_type_names[reply->buf.reply.msg_type],
 				 inet_ntop(AF_INET6, &tmp->addr,
 					   tmp_addr, sizeof(tmp_addr)),
@@ -2999,12 +2999,24 @@ reply_process_is_addressed(struct reply_state *reply,
 		data_string_forget(&data, MDL);
 	}
 
+	/* Check to see if the lease time would cause us to wrap
+	 * in which case we make it infinite.
+	 * The following doesn't work on at least some systems:
+	 * (cur_time + reply->send_valid < cur_time)
+	 */
+	if (reply->send_valid != 0xFFFFFFFF) {
+		time_t test_time = cur_time + reply->send_valid;
+		if (test_time < cur_time)
+			reply->send_valid = 0xFFFFFFFF;
+        }
+
 	if (reply->client_prefer == 0)
 		reply->send_prefer = reply->send_valid;
 	else
 		reply->send_prefer = reply->client_prefer;
 
-	if (reply->send_prefer >= reply->send_valid)
+	if ((reply->send_prefer >= reply->send_valid) &&
+	    (reply->send_valid != 0xFFFFFFFF))
 		reply->send_prefer = (reply->send_valid / 2) +
 				     (reply->send_valid / 8);
 
@@ -3054,10 +3066,17 @@ reply_process_is_addressed(struct reply_state *reply,
 		reply->lease->prefer = reply->send_prefer;
 		reply->lease->valid = reply->send_valid;
 
-		/* Advance (or rewind) the valid lifetime. */
+		/* Advance (or rewind) the valid lifetime.
+		 * In the protocol 0xFFFFFFFF is infinite
+		 * when connecting to the lease file MAX_TIME is
+		 */
 		if (reply->buf.reply.msg_type == DHCPV6_REPLY) {
-			reply->lease->soft_lifetime_end_time =
-				cur_time + reply->send_valid;
+			if (reply->send_valid == 0xFFFFFFFF) {
+				reply->lease->soft_lifetime_end_time = MAX_TIME;
+			} else {
+				reply->lease->soft_lifetime_end_time =
+				  cur_time + reply->send_valid;
+			}
 			/* Wait before renew! */
 		}
 
@@ -3503,7 +3522,7 @@ reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia) {
 			tmp = reply->ia->iasubopt[i];
 
 			log_info("%s PD: address %s/%d to client with duid %s"
-				 " iaid = %d valid for %d seconds",
+				 " iaid = %d valid for %u seconds",
 				 dhcpv6_type_names[reply->buf.reply.msg_type],
 				 inet_ntop(AF_INET6, &tmp->addr,
 					   tmp_addr, sizeof(tmp_addr)),
@@ -4061,12 +4080,24 @@ reply_process_is_prefixed(struct reply_state *reply,
 		data_string_forget(&data, MDL);
 	}
 
+	/* Check to see if the lease time would cause us to wrap
+	 * in which case we make it infinite.
+	 * The following doesn't work on at least some systems:
+	 * (cur_time + reply->send_valid < cur_time)
+	 */
+	if (reply->send_valid != 0xFFFFFFFF) {
+		time_t test_time = cur_time + reply->send_valid;
+		if (test_time < cur_time)
+			reply->send_valid = 0xFFFFFFFF;
+        }
+
 	if (reply->client_prefer == 0)
 		reply->send_prefer = reply->send_valid;
 	else
 		reply->send_prefer = reply->client_prefer;
 
-	if (reply->send_prefer >= reply->send_valid)
+	if ((reply->send_prefer >= reply->send_valid) &&
+	    (reply->send_valid != 0xFFFFFFFF))
 		reply->send_prefer = (reply->send_valid / 2) +
 				     (reply->send_valid / 8);
 
@@ -4101,10 +4132,17 @@ reply_process_is_prefixed(struct reply_state *reply,
 		reply->lease->prefer = reply->send_prefer;
 		reply->lease->valid = reply->send_valid;
 
-		/* Advance (or rewind) the valid lifetime. */
+		/* Advance (or rewind) the valid lifetime.
+		 * In the protocol 0xFFFFFFFF is infinite
+		 * when connecting to the lease file MAX_TIME is
+		 */
 		if (reply->buf.reply.msg_type == DHCPV6_REPLY) {
-			reply->lease->soft_lifetime_end_time =
-				cur_time + reply->send_valid;
+			if (reply->send_valid == 0xFFFFFFFF) {
+				reply->lease->soft_lifetime_end_time = MAX_TIME;
+			} else {
+				reply->lease->soft_lifetime_end_time =
+				  cur_time + reply->send_valid;
+			}
 			/* Wait before renew! */
 		}
 

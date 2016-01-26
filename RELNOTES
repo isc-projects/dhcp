@@ -155,6 +155,11 @@ by Eric Young (eay@cryptsoft.com).
   Thanks to Bill Parker (wp02855 at gmail dot com) who identified this issue.
   [ISC-Bugs #41485]
 
+- The DHCPv6 server now handles long valid and preferred lease times better.
+  Values that would cause the internal end time of the lease to wrap are
+  modified to work as infinite.
+  [ISC-Bugs #40773]
+
 			Changes since 4.1-ESV-R12b1
 
 - None
