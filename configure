@@ -5078,6 +5078,12 @@ fi
 
 
 
+if test "X$AR" = "X"; then
+	as_fn_error $? "
+ar program not found.  Please fix your PATH to include the directory in
+which ar resides, or set AR in the environment with the full path to ar." "$LINENO" 5
+fi
+
 ac_config_headers="$ac_config_headers includes/config.h"
 
 
