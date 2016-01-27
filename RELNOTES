@@ -172,6 +172,10 @@ by Eric Young (eay@cryptsoft.com).
   Thanks to Antoine Beaupré from Debian for the suggested patch.
   [ISC-Bugs #41288]
 
+- Updated support for cross compiling by allowing the library archiver
+  to be set at configure time via the environment variable 'AR'.
+  [ISC-Bugs #41536]
+
 			Changes since 4.3.3b1
 
 - None

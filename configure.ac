@@ -48,6 +48,16 @@ AM_CONDITIONAL(CROSS_COMPILING, test "$cross_compiling" = "yes")
 AC_USE_SYSTEM_EXTENSIONS
 
 AC_PROG_RANLIB
+
+AC_PATH_PROG(AR, ar)
+AC_SUBST(AR)
+
+if test "X$AR" = "X"; then
+	AC_MSG_ERROR([
+ar program not found.  Please fix your PATH to include the directory in
+which ar resides, or set AR in the environment with the full path to ar.])
+fi
+
 AC_CONFIG_HEADERS([includes/config.h])
 
 # we sometimes need to know byte order for building packets
