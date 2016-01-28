@@ -181,6 +181,12 @@ by Eric Young (eay@cryptsoft.com).
   to be set at configure time via the environment variable 'AR'.
   [ISC-Bugs #41536]
 
+- The server will now match DHCPv6 relayed clients to host declarations
+  which include the "hardware" statement, if the relay connected to the
+  client supplies the client's hardware address via client-linklayer-address
+  option as per RFC 6939.
+  [ISC-Bugs #40334]
+
 			Changes since 4.3.3b1
 
 - None

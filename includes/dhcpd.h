@@ -3429,6 +3429,7 @@ int find_hosts_by_option(struct host_decl **, struct packet *,
 			 struct option_state *, const char *, int);
 int find_host_for_network (struct subnet **, struct host_decl **,
 			   struct iaddr *, struct shared_network *);
+
 void new_address_range (struct parse *, struct iaddr, struct iaddr,
 			struct subnet *, struct pool *,
 			struct lease **);
@@ -3749,6 +3750,11 @@ void mark_hosts_unavailable(void);
 void mark_phosts_unavailable(void);
 void mark_interfaces_unavailable(void);
 void report_jumbo_ranges();
+
+#if defined(DHCPv6)
+int find_hosts6(struct host_decl** host, struct packet* packet,
+                const struct data_string* client_id, char* file, int line);
+#endif
 
 #if defined (BINARY_LEASES)
 /* leasechain.c */

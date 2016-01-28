@@ -3,7 +3,7 @@
    DHCPv6 Protocol structures... */
 
 /*
- * Copyright (c) 2013 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2013,2016 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2006-2009 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -76,6 +76,7 @@
 #define D6O_CLT_TIME				46 /* RFC5007 */
 #define D6O_LQ_RELAY_DATA			47 /* RFC5007 */
 #define D6O_LQ_CLIENT_LINK			48 /* RFC5007 */
+#define D6O_CLIENT_LINKLAYER_ADDR		79 /* RFC6939 */
 
 /* 
  * Status Codes, from RFC 3315 section 24.4, and RFC 3633, 5007.

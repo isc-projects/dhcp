@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2015 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2007-2016 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -2559,5 +2559,222 @@ report_jumbo_ranges() {
 		}
 	}
 }
+
+
+/*
+ * \brief Tests that 16-bit hardware type is less than 256
+ *
+ * XXX: DHCPv6 gives a 16-bit field for the htype.  DHCPv4 gives an
+ * 8-bit field.  To change the semantics of the generic 'hardware'
+ * structure, we would have to adjust many DHCPv4 sources (from
+ * interface to DHCPv4 lease code), and we would have to update the
+ * 'hardware' config directive (probably being reverse compatible and
+ * providing a new upgrade/replacement primitive).  This is a little
+ * too much to change for now.  Hopefully we will revisit this before
+ * hardware types exceeding 8 bits are assigned.
+ *
+ * Uses a static variable to limit log occurence to once per startup
+ *
+ * \param htype hardware type value to test
+ *
+ * \return returns 0 if the value is too large
+ *
+*/
+int htype_bounds_check(uint16_t htype) {
+	static int log_once = 0;
+
+	if (htype & 0xFF00) {
+		if (!log_once) {
+			log_error("Attention: At least one client advertises a "
+			  "hardware type of %d, which exceeds the software "
+			  "limitation of 255.", htype);
+			log_once = 1;
+		}
+
+		return(0);
+	}
+
+	return(1);
+}
+
+/*!
+ * \brief Look for hosts by MAC address if it's available
+ *
+ * Checks the inbound packet against host declarations which specified:
+ *
+ *      "hardware ethernet <MAC>;"
+ *
+ * For directly connected clients, the function will use the MAC address
+ * contained in packet:haddr if it's populated.  \TODO - While the logic is in
+ * place for this search, the socket layer does not yet populate packet:haddr,
+ * this is to be done under rt41523.
+ *
+ * For relayed clients, the function will use the MAC address from the
+ * client-linklayer-address option if it has been supplied by the relay
+ * directly connected to the client.
+ *
+ * \param hp[out] - pointer to storage for the host delcaration if found
+ * \param packet - received packet
+ * \param opt_state - option state to search
+ * \param file - source file
+ * \param line - line number
+ *
+ * \return non-zero if a matching host was found, zero otherwise
+*/
+int find_hosts_by_haddr6(struct host_decl **hp,
+			 struct packet *packet,
+			 struct option_state *opt_state,
+			 const char *file, int line) {
+	int found = 0;
+	int htype;
+	int hlen;
+
+	/* For directly connected clients, use packet:haddr if populated */
+	if (packet->dhcpv6_container_packet == NULL) {
+		if (packet->haddr) {
+			htype = packet->haddr->hbuf[0];
+			hlen = packet->haddr->hlen - 1,
+			log_debug("find_hosts_by_haddr6: using packet->haddr,"
+				  " type: %d, len: %d", htype, hlen);
+			found = find_hosts_by_haddr (hp, htype,
+						     &packet->haddr->hbuf[1],
+						     hlen, MDL);
+		}
+	} else {
+		/* The first container packet is the from the relay directly
+		 * connected to the client. Per RFC 6939, that is only relay
+		 * that may supply the client linklayer address option. */
+		struct packet *relay_packet = packet->dhcpv6_container_packet;
+		struct option_state *relay_state = relay_packet->options;
+		struct data_string rel_addr;
+		struct option_cache *oc;
+
+		/* Look for the option in the first relay packet */
+		oc = lookup_option(&dhcpv6_universe, relay_state,
+				   D6O_CLIENT_LINKLAYER_ADDR);
+		if (!oc) {
+			/* Not there, so bail */
+			return (0);
+		}
+
+		/* The option is present, fetch the address data */
+		memset(&rel_addr, 0, sizeof(rel_addr));
+		if (!evaluate_option_cache(&rel_addr, relay_packet, NULL, NULL,
+					   relay_state, NULL, &global_scope,
+					   oc, MDL)) {
+			log_error("find_hosts_by_add6:"
+				  "Error evaluating option cache");
+			return (0);
+		}
+
+		/* The relay address data should be:
+		 *   byte 0 - 1 = hardware type
+		 *   bytes 2 - hlen = hardware address
+                 * where  hlen ( hardware address len) is option data len - 2 */
+		hlen = rel_addr.len - 2;
+		if (hlen > 0 && hlen <= HARDWARE_ADDR_LEN) {
+			htype = getUShort(rel_addr.data);
+			if (htype_bounds_check(htype)) {
+				/* Looks valid, let's search with it */
+				log_debug("find_hosts_by_haddr6:"
+					  "using relayed haddr"
+					  " type: %d, len: %d", htype, hlen);
+				found = find_hosts_by_haddr (hp, htype,
+							     &rel_addr.data[2],
+							     hlen, MDL);
+			}
+		}
+
+		data_string_forget(&rel_addr, MDL);
+        }
+
+	return (found);
+}
+
+/*
+ * find_host_by_duid_chaddr() synthesizes a DHCPv4-like 'hardware'
+ * parameter from a DHCPv6 supplied DUID (client-identifier option),
+ * and may seek to use client or relay supplied hardware addresses.
+ */
+int
+find_hosts_by_duid_chaddr(struct host_decl **host,
+			  const struct data_string *client_id) {
+	int htype, hlen;
+	const unsigned char *chaddr;
+
+	/*
+	 * The DUID-LL and DUID-LLT must have a 2-byte DUID type and 2-byte
+	 * htype.
+	 */
+	if (client_id->len < 4)
+		return 0;
+
+	/*
+	 * The third and fourth octets of the DUID-LL and DUID-LLT
+	 * is the hardware type, but in 16 bits.
+	 */
+	htype = getUShort(client_id->data + 2);
+	hlen = 0;
+	chaddr = NULL;
+
+	/* The first two octets of the DUID identify the type. */
+	switch(getUShort(client_id->data)) {
+	      case DUID_LLT:
+		if (client_id->len > 8) {
+			hlen = client_id->len - 8;
+			chaddr = client_id->data + 8;
+		}
+		break;
+
+	      case DUID_LL:
+		/*
+		 * Note that client_id->len must be greater than or equal
+		 * to four to get to this point in the function.
+		 */
+		hlen = client_id->len - 4;
+		chaddr = client_id->data + 4;
+		break;
+
+	      default:
+		break;
+	}
+
+	if ((hlen == 0) || (hlen > HARDWARE_ADDR_LEN) ||
+	    !htype_bounds_check(htype)) {
+		return (0);
+	}
+
+	return find_hosts_by_haddr(host, htype, chaddr, hlen, MDL);
+}
+
+/*
+ * \brief Finds a host record that matches the packet, if any
+ *
+ * This function centralizes the logic for matching v6 client
+ * packets to host declarations.  We check in the following order
+ * for matches with:
+ *
+ * 1. client_id if specified
+ * 2. MAC address when explicitly available
+ * 3. packet option
+ * 4. synthesized hardware address - this is done last as some
+ * synthesis methods are not consided to be reliable
+ *
+ * \param[out] host - pointer to storage for the located host
+ * \param packet - inbound client packet
+ * \param client_id - client identifier (if one)
+ * \param file - source file
+ * \param line - source file line number
+ * \return non-zero if a host is found, zero otherwise
+*/
+int
+find_hosts6(struct host_decl** host, struct packet* packet,
+            const struct data_string* client_id, char* file, int line) {
+        return (find_hosts_by_uid(host, client_id->data, client_id->len, MDL)
+                || find_hosts_by_haddr6(host, packet, packet->options, MDL)
+                || find_hosts_by_option(host, packet, packet->options, MDL)
+                || find_hosts_by_duid_chaddr(host, client_id));
+}
+
 
 /* unittest moved to server/tests/mdb6_unittest.c */
