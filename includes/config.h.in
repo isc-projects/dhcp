@@ -43,7 +43,7 @@
 /* Define to 1 to use the Berkeley Packet Filter interface code. */
 #undef HAVE_BPF
 
-/* Define to 1 if you have the /dev/random file. */
+/* Define to 1 if you have the /dev/random or other configured file. */
 #undef HAVE_DEV_RANDOM
 
 /* Define to 1 to use DLPI interface code. */
