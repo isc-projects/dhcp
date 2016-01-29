@@ -209,6 +209,9 @@ static struct option dhcp_options[] = {
 	{ "netinfo-server-address", "Ia",	&dhcp_universe, 112, 1 },
 	{ "netinfo-server-tag", "t",		&dhcp_universe, 113, 1 },
 	{ "default-url", "t",			&dhcp_universe, 114, 1 },
+#if defined(RFC2563_OPTIONS)
+	{ "auto-config", "B",			&dhcp_universe, 116, 1 },
+#endif
 #if defined(RFC2937_OPTIONS)
 	{ "name-service-search", "Sa",		&dhcp_universe, 117, 1 },
 #endif
@@ -239,12 +242,24 @@ static struct option dhcp_options[] = {
 #if defined(RFC5417_OPTIONS)
 	{"capwap-ac-v4", "Ia",			&dhcp_universe, 138, 1 },
 #endif
+#if defined(RFC6011_OPTIONS)
+	{ "sip-ua-cs-domains", "Dc",		&dhcp_universe, 141, 1 },
+#endif
+#if defined(RFC6153_OPTIONS)
+	{ "ipv4-address-andsf", "IA",		&dhcp_universe, 142, 1 },
+#endif
 #if defined(RFC6731_OPTIONS)
         { "rdnss-selection", "BIID",		&dhcp_universe, 146, 1 },
 #endif
 #if 0
 	/* Not defined by RFC yet */
 	{ "tftp-server-address", "Ia",		&dhcp_universe, 150, 1 },
+#endif
+#if defined(RFC7618_OPTIONS)
+	{ "v4-portparams", "BBS",		&dhcp_universe, 159, 1 },
+#endif
+#if defined(RFC7710_OPTIONS)
+	{ "v4-captive-portal", "t",		&dhcp_universe, 160, 1 },
 #endif
 #if 0
 	/* PXELINUX options: defined by RFC 5071 */
@@ -542,6 +557,12 @@ static struct option dhcpv6_options[] = {
 #if defined(RFC7083_OPTIONS)
 	{ "solmax-rt", "L",			&dhcpv6_universe, 82, 1 },
 	{ "inf-max-rt", "L",			&dhcpv6_universe, 83, 1 },
+#endif
+#if defined(RFC7710_OPTIONS)
+	{ "v6-captive-portal", "t",		&dhcpv6_universe, 103, 1 },
+#endif
+#if defined(RFC6153_OPTIONS)
+	{ "ipv6-address-andsf", "6A",		&dhcpv6_universe, 143, 1 },
 #endif
 
 	{ NULL, NULL, NULL, 0, 0 }

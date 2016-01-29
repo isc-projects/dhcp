@@ -192,6 +192,9 @@ by Eric Young (eay@cryptsoft.com).
   for cross compilation.
   [ISC-Bugs #33835]
 
+- Add more option definitions.
+  [ISC-Bugs #40562]
+
 			Changes since 4.3.3b1
 
 - None
