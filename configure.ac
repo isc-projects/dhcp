@@ -580,9 +580,35 @@ AC_CHECK_FUNCS(strlcat)
 AC_SEARCH_LIBS(if_nametoindex, [ipv6])
 
 # check for /dev/random (declares HAVE_DEV_RANDOM)
-AC_CHECK_FILE(/dev/random,
-	AC_DEFINE([HAVE_DEV_RANDOM], [1],
-		  [Define to 1 if you have the /dev/random file.]))
+AC_MSG_CHECKING(for random device)
+AC_ARG_WITH(randomdev,
+	AS_HELP_STRING([--with-randomdev=PATH],[Path for random device
+		       (default is /dev/random)]),
+	use_randomdev="$withval", use_randomdev="unspec")
+if test "$use_randomdev" = "unspec"; then
+	if test "$cross_compiling" = "yes"; then
+		AC_MSG_RESULT(unspecified)
+		AC_MSG_ERROR([ need --with-randomdev=PATH or --with-randomdev=no])
+	fi
+	use_randomdev="/dev/random"
+elif test "$use_randomdev" = "yes"; then
+	use_randomdev="/dev/random"
+fi
+if test "$use_randomdev" = "no"; then
+	AC_MSG_RESULT(disabled)
+	BINDCONFIG="$BINDCONFIG --with-randomdev=no"
+else
+	if test "$cross_compiling" = "yes"; then
+		AC_MSG_RESULT($use_randomdev (unchecked))
+	else
+		AC_MSG_RESULT($use_randomdev)
+		AC_CHECK_FILE($use_randomdev,
+		    AC_DEFINE([HAVE_DEV_RANDOM], [1], 
+			[Define to 1 if you have the /dev/random or other configured file.]),
+		    AC_MSG_ERROR(cannot find $use_randomdev))
+	fi
+	BINDCONFIG="$BINDCONFIG --with-randomdev=$use_randomdev"
+fi
 
 # see if there is a "sa_len" field in our interface information structure
 AC_CHECK_MEMBER(struct sockaddr.sa_len,

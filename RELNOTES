@@ -126,7 +126,7 @@ by Eric Young (eay@cryptsoft.com).
   in the same packet, see RFC7550 for some discussion.
   [ISC-Bugs #40190]
 
-! Update the bounds checking when receiving a packet.
+- Update the bounds checking when receiving a packet.
   Thanks to Sebastian Poehn from Sophos for the bug report and a suggested
   patch.
   [ISC-Bugs #41267]
@@ -186,6 +186,11 @@ by Eric Young (eay@cryptsoft.com).
   client supplies the client's hardware address via client-linklayer-address
   option as per RFC 6939.
   [ISC-Bugs #40334]
+
+- Allow a filename to be specified instead of /dev/random during
+  configuration.  This is passed to the BIND configuration to allow
+  for cross compilation.
+  [ISC-Bugs #33835]
 
 			Changes since 4.3.3b1
 
