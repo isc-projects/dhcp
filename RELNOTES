@@ -160,6 +160,10 @@ by Eric Young (eay@cryptsoft.com).
   modified to work as infinite.
   [ISC-Bugs #40773]
 
+- Correct outputting of long lines in the lease file when writing
+  a lease that includes long strings in an execute statement.
+  [ISC-Bugs #40994]
+
 			Changes since 4.1-ESV-R12b1
 
 - None

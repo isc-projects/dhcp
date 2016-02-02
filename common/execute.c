@@ -3,7 +3,7 @@
    Support for executable statements. */
 
 /*
- * Copyright (c) 2009,2013,2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009,2013-2016 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1998-2003 by Internet Software Consortium
  *
@@ -970,18 +970,25 @@ void write_statements (file, statements, indent)
 			break;
 
                       case execute_statement:
+
 #ifdef ENABLE_EXECUTE
-                        indent_spaces (file, indent);
+			indent_spaces(file, indent);
 			col = token_print_indent(file, indent + 4, indent + 4,
 						 "", "", "execute");
 			col = token_print_indent(file, col, indent + 4, " ", "",
 						 "(");
-                        col = token_print_indent(file, col, indent + 4, "\"", "\"", r->data.execute.command);
-                        for (expr = r->data.execute.arglist; expr; expr = expr->data.arg.next) {
-                        	col = token_print_indent(file, col, indent + 4, "", " ", ",");
-                                col = write_expression (file, expr->data.arg.val, col, indent + 4, 0);
-                        }
-                        (void) token_print_indent(file, col, indent + 4, "", "", ");");
+			col = token_print_indent_concat(file, col, indent + 4,
+							"", "",  "\"",
+							r->data.execute.command,
+							"\"", (char *)0);
+			for (expr = r->data.execute.arglist; expr; expr = expr->data.arg.next) {
+				col = token_print_indent(file, col, indent + 4,
+							 "", " ", ",");
+				col = write_expression(file, expr->data.arg.val,
+						       col, indent + 4, 0);
+			}
+			(void) token_print_indent(file, col, indent + 4,
+						  "", "", ");");
 #else /* !ENABLE_EXECUTE */
 		        log_fatal("Impossible case at %s:%d (ENABLE_EXECUTE "
                                   "is not defined).", MDL);
