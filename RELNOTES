@@ -195,6 +195,10 @@ by Eric Young (eay@cryptsoft.com).
 - Add more option definitions.
   [ISC-Bugs #40562]
 
+- Correct outputting of long lines in the lease file when writing
+  a lease that includes long strings in an execute statement.
+  [ISC-Bugs #40994]
+
 			Changes since 4.3.3b1
 
 - None
