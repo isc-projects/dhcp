@@ -600,6 +600,13 @@ by Eric Young (eay@cryptsoft.com).
   (typically 1) in the outbound upstream packets.
   [ISC-Bugs #37426]
 
+- The server will now correctly treat a lease as reserved when the client
+  requests an infinite lease time (i.e. OxFFFFFFFF) and "infinite-is-reserved"
+  is enabled.  Prior to this the server would halt.  In addition, corrections
+  were made to the server to allow a lease's flags field to be set via omapi.
+  Prior to this, the server, depending on the host architecture,  would
+  incorrectly parse the new flags value from the omapi message.
+  [ISC-Bugs #31179]
 
 			Changes since 4.3.1b1
 
