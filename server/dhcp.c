@@ -3,7 +3,7 @@
    DHCP Protocol engine. */
 
 /*
- * Copyright (c) 2004-2015 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2016 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -2471,7 +2471,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 	memcpy (&lt -> hardware_addr.hbuf [1], packet -> raw -> chaddr,
 		sizeof packet -> raw -> chaddr);
 
-	lt -> flags = lease -> flags & ~PERSISTENT_FLAGS;
+	lt->flags |= lease->flags & ~PERSISTENT_FLAGS;
 
 	/* If there are statements to execute when the lease is
 	   committed, execute them. */

@@ -41,6 +41,9 @@ static isc_result_t class_lookup (omapi_object_t **,
 				  omapi_object_t *, omapi_object_t *,
 				  omapi_object_type_t *);
 
+static isc_result_t update_lease_flags(struct lease* lease,
+				       omapi_typed_data_t *value);
+
 omapi_object_type_t *dhcp_type_lease;
 omapi_object_type_t *dhcp_type_pool;
 omapi_object_type_t *dhcp_type_class;
@@ -269,22 +272,7 @@ isc_result_t dhcp_lease_set_value  (omapi_object_t *h,
 		      piaddr(lease->ip_addr), old_lease_end, lease_end);
 	    return ISC_R_IOERROR;
 	} else if (!omapi_ds_strcmp(name, "flags")) {
-	    u_int8_t oldflags;
-
-	    if (value->type != omapi_datatype_data)
-		return ISC_R_INVALIDARG;
-
-	    oldflags = lease->flags;
-	    lease->flags = (value->u.buffer.value[0] & EPHEMERAL_FLAGS) |
-			   (lease->flags & ~EPHEMERAL_FLAGS);
-	    if(oldflags == lease->flags)
-		return ISC_R_SUCCESS;
-	    if (!supersede_lease(lease, NULL, 1, 1, 1, 0)) {
-		log_error("Failed to update flags for lease %s.",
-			  piaddr(lease->ip_addr));
-		return ISC_R_IOERROR;
-	    }
-	    return ISC_R_SUCCESS;
+	    return (update_lease_flags(lease, value));
 	} else if (!omapi_ds_strcmp (name, "billing-class")) {
 	    return ISC_R_UNCHANGED;	/* XXX carefully allow change. */
 	} else if (!omapi_ds_strcmp (name, "hardware-address")) {
@@ -319,6 +307,85 @@ isc_result_t dhcp_lease_set_value  (omapi_object_t *h,
 	if (write_lease (lease) && commit_leases ())
 		return ISC_R_SUCCESS;
 	return ISC_R_IOERROR;
+}
+
+/*
+ * \brief Updates the lease's flags to a given value
+ *
+ * In order to update the lease's flags, we make a copy of the
+ * lease, and update the copy's flags with the new value.
+ * We then use the updated copy as the second parameter to a
+ * call to supersede_lease().  This ensures that the lease
+ * moves between queues correctly.   This is critical when
+ * the RESERVED_LEASE flag is being changed.
+ *
+ * Note that only the EPHEMERAL flags are permitted to be changed.
+ *
+ * \param lease - pointer to the lease to update
+ * \param value - omapi data value containing the new flags value
+ *
+ * \return ISC_R_SUCCESS if the lease was successfully updated,
+ *  ISC_R_UNCHANGED if new value would result in no change to the
+ *  lease's flags, or an appropriate status on other errors
+ */
+static isc_result_t update_lease_flags(struct lease* lease,
+				       omapi_typed_data_t *value)
+{
+	u_int8_t oldflags;
+	u_int8_t newflags;
+	struct lease* lupdate = NULL;
+	isc_result_t status;
+
+	/* Grab the requested flags value. We (the server) send flags
+	 * out as 1-byte, so we expect clients to do the same.  However
+	 * omshell, will send a network-ordered 4 byte integer if the
+	 * input is "set flags = <n>", so we'll accomdate that too. */
+	if (value->u.buffer.len == 1) {
+		newflags = value->u.buffer.value[0];
+	} else {
+		unsigned long tmp;
+
+		status = omapi_get_int_value (&tmp, value);
+		if (status != ISC_R_SUCCESS) {
+			return (status);
+		}
+
+		newflags = (u_int8_t)tmp;
+	}
+
+	/* Save off the current flags value. */
+	oldflags = lease->flags;
+
+	/* The new value must preserve all PERSISTANT_FLAGS */
+	newflags = ((lease->flags & ~EPHEMERAL_FLAGS) |
+		    (newflags & EPHEMERAL_FLAGS));
+
+	/* If there's no net change, we're done */
+	if (oldflags == newflags) {
+		return (ISC_R_UNCHANGED);
+	}
+
+	/* Make a copy of the lease. */
+	if (!lease_copy(&lupdate, lease, MDL)) {
+		return (ISC_R_FAILURE);
+	}
+
+	/* Set the copy's flags to the new value */
+	lupdate->flags = newflags;
+
+	/* Attempt to update the lease */
+	if (!supersede_lease(lease, lupdate, 1, 1, 1, 0)) {
+		log_error("Failed to update flags for lease %s.",
+			  piaddr(lease->ip_addr));
+		status = ISC_R_FAILURE;
+	} else {
+		log_debug ("lease flags changed from  %x to %x for lease %s.",
+			   oldflags, newflags, piaddr(lease->ip_addr));
+		status = ISC_R_SUCCESS;
+	}
+
+	lease_dereference(&lupdate, MDL);
+	return (status);
 }
 
 

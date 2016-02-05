@@ -3,7 +3,7 @@
    Server-specific in-memory database support. */
 
 /*
- * Copyright (c) 2011-2015 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2011-2016 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
@@ -1070,7 +1070,6 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate, from_pool)
 	if (pimmediate && !commit)
 		return 0;
 #endif
-
 	/* If there is no sample lease, just do the move. */
 	if (!lease)
 		goto just_move_it;
@@ -1157,8 +1156,6 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate, from_pool)
 		host_dereference (&comp -> host, MDL);
 	host_reference (&comp -> host, lease -> host, MDL);
 	comp -> hardware_addr = lease -> hardware_addr;
-	comp -> flags = ((lease -> flags & ~PERSISTENT_FLAGS) |
-			 (comp -> flags & ~EPHEMERAL_FLAGS));
 	if (comp -> scope)
 		binding_scope_dereference (&comp -> scope, MDL);
 	if (lease -> scope) {
@@ -1323,6 +1320,14 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate, from_pool)
 			lease_reference (lq, comp -> next, MDL);
 			lease_dereference (&comp -> next, MDL);
 		}
+	}
+
+	/* Now that we've done the flag-affected queue removal
+	 * we can update the new lease's flags, if there's an
+	 * existing lease */
+	if (lease) {
+		comp->flags = ((lease->flags & ~PERSISTENT_FLAGS) |
+				(comp->flags & ~EPHEMERAL_FLAGS));
 	}
 
 	/* Make the state transition. */
