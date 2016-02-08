@@ -199,6 +199,14 @@ by Eric Young (eay@cryptsoft.com).
   a lease that includes long strings in an execute statement.
   [ISC-Bugs #40994]
 
+- The server will now correctly treat a lease as reserved when the client
+  requests an infinite lease time (i.e. OxFFFFFFFF) and "infinite-is-reserved"
+  is enabled.  Prior to this the server would halt.  In addition, corrections
+  were made to the server to allow a lease's flags field to be set via omapi.
+  Prior to this, the server, depending on the host architecture,  would
+  incorrectly parse the new flags value from the omapi message.
+  [ISC-Bugs #31179]
+
 			Changes since 4.3.3b1
 
 - None
@@ -599,14 +607,6 @@ by Eric Young (eay@cryptsoft.com).
   skipped.  This caused the hop count limit to be set to the default value
   (typically 1) in the outbound upstream packets.
   [ISC-Bugs #37426]
-
-- The server will now correctly treat a lease as reserved when the client
-  requests an infinite lease time (i.e. OxFFFFFFFF) and "infinite-is-reserved"
-  is enabled.  Prior to this the server would halt.  In addition, corrections
-  were made to the server to allow a lease's flags field to be set via omapi.
-  Prior to this, the server, depending on the host architecture,  would
-  incorrectly parse the new flags value from the omapi message.
-  [ISC-Bugs #31179]
 
 			Changes since 4.3.1b1
 
