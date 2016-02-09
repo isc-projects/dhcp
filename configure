@@ -6823,8 +6823,8 @@ no)
 		# no bind directory, create it with a fake Makefile.in
 		# (AC_CONFIG_FILES and top Makefile refer to it so
 		# it must exits)
-		mkdir bind
-		cat > bind/Makefile.in << EOF
+		mkdir $srcdir/bind
+		cat > $srcdir/bind/Makefile.in << EOF
 # placeholder
 all check clean distclean distdir install uninstall:
 
@@ -8641,7 +8641,12 @@ $as_echo "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
 fi
 
 
-(cd $srcdir; sh util/bindvar.sh)
+(cd $srcdir
+    sh util/bindvar.sh
+    if test $? -ne 0; then
+        as_fn_error $? "*** util/bindvar.sh failed" "$LINENO" 5
+    fi
+)
 
 cat > config.report << END
 
