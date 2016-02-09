@@ -25,7 +25,18 @@ EXTRA_DIST = RELNOTES LICENSE \
 	     bind/Makefile.in bind/bind.tar.gz bind/version.tmp \
 	     common/tests/Atffile server/tests/Atffile
 
-SUBDIRS = bind includes tests common omapip client dhcpctl relay server
+SUBDIRS = @BINDSRCDIR@ includes tests common omapip client dhcpctl relay server
 
 nobase_include_HEADERS = dhcpctl/dhcpctl.h
 
+#
+# distcheck tuning
+#
+
+DISTCHECK_CONFIGURE_FLAGS = @DISTCHECK_ATF_CONFIGURE_FLAG@
+
+distcheck-hook:
+	chmod u+w $(distdir)/bind
+
+distclean-local:
+	rm -f config.report

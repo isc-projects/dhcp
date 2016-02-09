@@ -627,8 +627,10 @@ LTLIBOBJS
 LIBOBJS
 LDAP_CFLAGS
 LDAP_LIBS
+BINDSRCDIR
 BINDDIR
 ac_prefix_program
+DISTCHECK_ATF_CONFIGURE_FLAG
 HAVE_ATF_FALSE
 HAVE_ATF_TRUE
 pkgcfg_found
@@ -5526,6 +5528,7 @@ fi
 
 # Testing section
 
+DISTCHECK_ATF_CONFIGURE_FLAG=
 atf_path="no"
 
 # Check whether --with-atf was given.
@@ -5542,16 +5545,18 @@ else
 fi
 
 if test "$atf_path" = "bind" ; then
+    DISTCHECK_ATF_CONFIGURE_FLAG="--with-atf=bind"
     atf_pcp="bind"
     atf_path="\${top_srcdir}/bind/atf"
     ATF_CFLAGS="-I$atf_path/include -DUNIT_TEST"
     ATF_LDFLAGS="-L$atf_path/lib -latf-c"
-    ATF_BIN=`pwd`/bind/atf/bin
+    ATF_BIN=`cd $srcdir; pwd`/bind/atf/bin
 
 
 
     BINDCONFIG="$BINDCONFIG --with-atf"
 elif test "$atf_path" != "no" ; then
+    DISTCHECK_ATF_CONFIGURE_FLAG="--with-atf=$atf_path"
     # Config path for pkg-config
     atf_pcp=""
     if test "$atf_path" != "yes" ; then
@@ -5651,6 +5656,7 @@ if test -z "$HAVE_ATF_TRUE"; then :
 $as_echo "#define HAVE_ATF 1" >>confdefs.h
 
 fi
+
 
 ###
 ### Path fun.  Older versions of DHCP were installed in /usr/sbin, so we
@@ -6703,6 +6709,8 @@ fi
 
 
 # figure out pointer size
+SAVE_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -I$srcdir"
 # The cast to long int works around a bug in the HP C Compiler
 # version HP92453-01 B.11.11.23709.GP, which incorrectly rejects
 # declarations like `int a3[[(sizeof (unsigned char)) >= 0]];'.
@@ -6740,6 +6748,7 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
 
+CFLAGS="$SAVE_CFLAGS"
 
 # Solaris does not have the msg_control or msg_controlen members
 # in the msghdr structure unless you define:
@@ -6790,6 +6799,7 @@ fi
 
 
 BINDDIR=
+BINDSRCDIR=
 
 # Check whether --with-libbind was given.
 if test "${with_libbind+set}" = set; then :
@@ -6801,13 +6811,15 @@ fi
 case "$use_libbind" in
 yes)
 	BINDDIR="\${top_srcdir}/bind"
+	BINDSRCDIR="\${top_srcdir}/bind"
 	;;
 no)
 	BINDDIR="\${top_srcdir}/bind"
+	BINDSRCDIR="\${top_srcdir}/bind"
 	;;
 *)
 	BINDDIR="$use_libbind"
-	if test ! -d "bind"; then
+	if test ! -d "$srcdir/bind"; then
 		# no bind directory, create it with a fake Makefile.in
 		# (AC_CONFIG_FILES and top Makefile refer to it so
 		# it must exits)
@@ -6820,6 +6832,7 @@ EOF
 	fi
 	;;
 esac
+
 
 
 # OpenLDAP support.
@@ -7128,8 +7141,8 @@ fi
 # AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[]])],[],[]) & etc).
 CFLAGS="$CFLAGS $STD_CWARNINGS"
 
-# Try to add the bind include directory
-CFLAGS="$CFLAGS -I$BINDDIR/include"
+# Try to add the bind and dhcp include directories
+CFLAGS="$CFLAGS -I\$(top_srcdir)/includes -I$BINDDIR/include"
 
 case "$host" in
 *-darwin*)
@@ -7179,7 +7192,7 @@ $as_echo "#define FLEXIBLE_ARRAY_MEMBER /**/" >>confdefs.h
   fi
 
 
-ac_config_files="$ac_config_files Makefile bind/Makefile client/Makefile client/tests/Makefile common/Makefile common/tests/Makefile dhcpctl/Makefile includes/Makefile omapip/Makefile relay/Makefile server/Makefile tests/Makefile tests/unittest.sh server/tests/Makefile doc/devel/doxyfile"
+ac_config_files="$ac_config_files Makefile $srcdir/bind/Makefile client/Makefile client/tests/Makefile common/Makefile common/tests/Makefile dhcpctl/Makefile includes/Makefile omapip/Makefile relay/Makefile server/Makefile tests/Makefile tests/unittest.sh server/tests/Makefile doc/devel/doxyfile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -7926,7 +7939,7 @@ do
     "depfiles") CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
     "includes/config.h") CONFIG_HEADERS="$CONFIG_HEADERS includes/config.h" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
-    "bind/Makefile") CONFIG_FILES="$CONFIG_FILES bind/Makefile" ;;
+    "$srcdir/bind/Makefile") CONFIG_FILES="$CONFIG_FILES $srcdir/bind/Makefile" ;;
     "client/Makefile") CONFIG_FILES="$CONFIG_FILES client/Makefile" ;;
     "client/tests/Makefile") CONFIG_FILES="$CONFIG_FILES client/tests/Makefile" ;;
     "common/Makefile") CONFIG_FILES="$CONFIG_FILES common/Makefile" ;;
@@ -8628,10 +8641,7 @@ $as_echo "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
 fi
 
 
-sh util/bindvar.sh
-if test $? -ne 0; then
-    as_fn_error $? "*** util/bindvar.sh failed" "$LINENO" 5
-fi
+(cd $srcdir; sh util/bindvar.sh)
 
 cat > config.report << END
 

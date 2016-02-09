@@ -6,6 +6,9 @@ SUBDIRS = . tests
 
 BINDLIBDIR = @BINDDIR@/lib
 
+AM_CPPFLAGS = -DCLIENT_PATH='"PATH=$(sbindir):/sbin:/bin:/usr/sbin:/usr/bin"' \
+	      -DLOCALSTATEDIR='"$(localstatedir)"'
+
 dist_sysconf_DATA = dhclient.conf.example
 sbin_PROGRAMS = dhclient
 dhclient_SOURCES = clparse.c dhclient.c dhc6.c \
@@ -16,11 +19,3 @@ dhclient_LDADD = ../common/libdhcp.a ../omapip/libomapi.a $(BINDLIBDIR)/libirs.a
 		 $(BINDLIBDIR)/libdns.a $(BINDLIBDIR)/libisccfg.a $(BINDLIBDIR)/libisc.a
 man_MANS = dhclient.8 dhclient-script.8 dhclient.conf.5 dhclient.leases.5
 EXTRA_DIST = $(man_MANS)
-
-dhclient.o: dhclient.c
-	$(COMPILE) -DCLIENT_PATH='"PATH=$(sbindir):/sbin:/bin:/usr/sbin:/usr/bin"' \
-		   -DLOCALSTATEDIR='"$(localstatedir)"' -c dhclient.c
-
-dhc6.o: dhc6.c
-	$(COMPILE) -DCLIENT_PATH='"PATH=$(sbindir):/sbin:/bin:/usr/sbin:/usr/bin"' \
-		   -DLOCALSTATEDIR='"$(localstatedir)"' -c dhc6.c

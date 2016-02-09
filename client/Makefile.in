@@ -253,6 +253,7 @@ AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
 BINDCONFIG = @BINDCONFIG@
 BINDDIR = @BINDDIR@
+BINDSRCDIR = @BINDSRCDIR@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
@@ -261,6 +262,7 @@ CPPFLAGS = @CPPFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
+DISTCHECK_ATF_CONFIGURE_FLAG = @DISTCHECK_ATF_CONFIGURE_FLAG@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
@@ -355,6 +357,9 @@ top_srcdir = @top_srcdir@
 # production code. Sadly, we are not there yet.
 SUBDIRS = . tests
 BINDLIBDIR = @BINDDIR@/lib
+AM_CPPFLAGS = -DCLIENT_PATH='"PATH=$(sbindir):/sbin:/bin:/usr/sbin:/usr/bin"' \
+	      -DLOCALSTATEDIR='"$(localstatedir)"'
+
 dist_sysconf_DATA = dhclient.conf.example
 dhclient_SOURCES = clparse.c dhclient.c dhc6.c \
 		   scripts/bsdos scripts/freebsd scripts/linux scripts/macos \
@@ -861,14 +866,6 @@ uninstall-man: uninstall-man5 uninstall-man8
 
 .PRECIOUS: Makefile
 
-
-dhclient.o: dhclient.c
-	$(COMPILE) -DCLIENT_PATH='"PATH=$(sbindir):/sbin:/bin:/usr/sbin:/usr/bin"' \
-		   -DLOCALSTATEDIR='"$(localstatedir)"' -c dhclient.c
-
-dhc6.o: dhc6.c
-	$(COMPILE) -DCLIENT_PATH='"PATH=$(sbindir):/sbin:/bin:/usr/sbin:/usr/bin"' \
-		   -DLOCALSTATEDIR='"$(localstatedir)"' -c dhc6.c
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

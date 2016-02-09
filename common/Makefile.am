@@ -1,4 +1,4 @@
-AM_CPPFLAGS = -I.. -DLOCALSTATEDIR='"@localstatedir@"'
+AM_CPPFLAGS = -I$(top_srcdir) -DLOCALSTATEDIR='"@localstatedir@"'
 AM_CFLAGS = $(LDAP_CFLAGS)
 
 noinst_LIBRARIES = libdhcp.a

@@ -219,22 +219,25 @@ fi
 
 # Testing section
 
+DISTCHECK_ATF_CONFIGURE_FLAG=
 atf_path="no"
 AC_ARG_WITH([atf],
     AS_HELP_STRING([--with-atf=PATH],[specify location where atf was installed (or "bind")]),
     [atf_path="$withval"])
 AM_CONDITIONAL(BIND_ATF, test "$atf_path" = "bind")
 if test "$atf_path" = "bind" ; then
+    DISTCHECK_ATF_CONFIGURE_FLAG="--with-atf=bind"
     atf_pcp="bind"
     atf_path="\${top_srcdir}/bind/atf"
     ATF_CFLAGS="-I$atf_path/include -DUNIT_TEST"
     ATF_LDFLAGS="-L$atf_path/lib -latf-c"
-    ATF_BIN=`pwd`/bind/atf/bin
+    ATF_BIN=`cd $srcdir; pwd`/bind/atf/bin
     AC_SUBST(ATF_CFLAGS)
     AC_SUBST(ATF_LDFLAGS)
     AC_SUBST(ATF_BIN)
     BINDCONFIG="$BINDCONFIG --with-atf"
 elif test "$atf_path" != "no" ; then
+    DISTCHECK_ATF_CONFIGURE_FLAG="--with-atf=$atf_path"
     # Config path for pkg-config
     atf_pcp=""
     if test "$atf_path" != "yes" ; then
@@ -286,6 +289,7 @@ fi
 
 AM_CONDITIONAL(HAVE_ATF, test "$atf_pcp" != "")
 AM_COND_IF([HAVE_ATF], [AC_DEFINE([HAVE_ATF], [1], [ATF framework specified?])])
+AC_SUBST(DISTCHECK_ATF_CONFIGURE_FLAG)
 
 ###
 ### Path fun.  Older versions of DHCP were installed in /usr/sbin, so we
@@ -618,10 +622,13 @@ AC_CHECK_MEMBER(struct sockaddr.sa_len,
 	[#include <sys/socket.h>])
 
 # figure out pointer size
+SAVE_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -I$srcdir"
 AC_CHECK_SIZEOF(struct iaddr *, , [
 #include "includes/inet.h"
 #include <stdio.h>
 ])
+CFLAGS="$SAVE_CFLAGS"
 
 # Solaris does not have the msg_control or msg_controlen members
 # in the msghdr structure unless you define:
@@ -656,6 +663,7 @@ AC_CHECK_MEMBER(struct tpacket_auxdata.tp_vlan_tci,
     ,, [#include <linux/if_packet.h>])
 
 BINDDIR=
+BINDSRCDIR=
 AC_ARG_WITH(libbind,
 	AS_HELP_STRING([--with-libbind=PATH],[bind includes and libraries are in PATH
 		        (default is ./bind)]),
@@ -663,18 +671,20 @@ AC_ARG_WITH(libbind,
 case "$use_libbind" in
 yes)
 	BINDDIR="\${top_srcdir}/bind"
+	BINDSRCDIR="\${top_srcdir}/bind"
 	;;
 no)
 	BINDDIR="\${top_srcdir}/bind"
+	BINDSRCDIR="\${top_srcdir}/bind"
 	;;
 *)
 	BINDDIR="$use_libbind"
-	if test ! -d "bind"; then
+	if test ! -d "$srcdir/bind"; then
 		# no bind directory, create it with a fake Makefile.in
 		# (AC_CONFIG_FILES and top Makefile refer to it so
 		# it must exits)
-		mkdir bind
-		cat > bind/Makefile.in << EOF
+		mkdir $srcdir/bind
+		cat > $srcdir/bind/Makefile.in << EOF
 # placeholder
 all check clean distclean distdir install uninstall:
 
@@ -683,6 +693,7 @@ EOF
 	;;
 esac
 AC_SUBST(BINDDIR)
+AC_SUBST(BINDSRCDIR)
 
 # OpenLDAP support.
 AC_ARG_WITH(ldap,
@@ -759,8 +770,8 @@ fi
 # AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[]])],[],[]) & etc).
 CFLAGS="$CFLAGS $STD_CWARNINGS"
 
-# Try to add the bind include directory
-CFLAGS="$CFLAGS -I$BINDDIR/include"
+# Try to add the bind and dhcp include directories
+CFLAGS="$CFLAGS -I\$(top_srcdir)/includes -I$BINDDIR/include"
 
 case "$host" in
 *-darwin*)
@@ -771,7 +782,7 @@ AC_C_FLEXIBLE_ARRAY_MEMBER
 
 AC_CONFIG_FILES([
   Makefile
-  bind/Makefile
+  $srcdir/bind/Makefile
   client/Makefile
   client/tests/Makefile
   common/Makefile
@@ -788,10 +799,12 @@ AC_CONFIG_FILES([
 ])
 AC_OUTPUT
 
-sh util/bindvar.sh
-if test $? -ne 0; then
-    AC_MSG_ERROR([*** util/bindvar.sh failed])
-fi
+(cd $srcdir
+    sh util/bindvar.sh
+    if test $? -ne 0; then
+        AC_MSG_ERROR([*** util/bindvar.sh failed])
+    fi
+)
 
 cat > config.report << END
 

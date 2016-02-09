@@ -207,6 +207,11 @@ by Eric Young (eay@cryptsoft.com).
   incorrectly parse the new flags value from the omapi message.
   [ISC-Bugs #31179]
 
+- ISC DHCP can now be configured and built from a directory other than
+  the top level source directory. Note that "make distcheck" uses this
+  feature.
+  [ISC-Bugs #39262]
+
 			Changes since 4.3.3b1
 
 - None
