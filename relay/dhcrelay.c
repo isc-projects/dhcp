@@ -61,6 +61,7 @@ int server_packets_relayed = 0;	/* Packets relayed from server to client. */
 int client_packet_errors = 0;	/* Errors sending packets to clients. */
 
 int add_agent_options = 0;	/* If nonzero, add relay agent options. */
+int add_rfc3527_suboption = 0;	/* If nonzero, add RFC3527 link selection sub-option. */
 
 int agent_option_errors = 0;    /* Number of packets forwarded without
 				   agent options because there was no room. */
@@ -99,6 +100,8 @@ struct server_list {
 	struct server_list *next;
 	struct sockaddr_in to;
 } *servers;
+
+struct interface_info *uplink;
 
 #ifdef DHCPv6
 struct stream_list {
@@ -150,6 +153,7 @@ char *progname;
 "                     [-pf <pid-file>] [--no-pid]\n"\
 "                     [-m append|replace|forward|discard]\n" \
 "                     [-i interface0 [ ... -i interfaceN]\n" \
+"                     [-u interface]\n" \
 "                     server0 [ ... serverN]\n\n" \
 "       %s -6   [-d] [-q] [-I] [-c <hops>] [-p <port>]\n" \
 "                     [-pf <pid-file>] [--no-pid]\n" \
@@ -164,6 +168,7 @@ char *progname;
 "                [-pf <pid-file>] [--no-pid]\n" \
 "                [-m append|replace|forward|discard]\n" \
 "                [-i interface0 [ ... -i interfaceN]\n" \
+"                [-u interface]\n" \
 "                server0 [ ... serverN]\n\n"
 #endif
 
@@ -368,6 +373,23 @@ main(int argc, char **argv) {
 				agent_relay_mode = discard;
 			} else
 				usage("Unknown argument to -m: %s", argv[i]);
+		} else if (!strcmp(argv [i], "-u")) {
+			if (++i == argc)
+				usage(use_noarg, argv[i-1]);
+
+			/* Allocate the uplink interface */
+			status = interface_allocate(&uplink, MDL);
+			if (status != ISC_R_SUCCESS) {
+				log_fatal("%s: uplink interface_allocate: %s",
+					 argv[i], isc_result_totext(status));
+			}
+
+			strcpy(uplink->name, argv[i]);
+			interface_snorf(uplink, INTERFACE_REQUESTED);
+
+			/* Turn on -a, in case they don't do so explicitly */
+			add_agent_options = 1;
+			add_rfc3527_suboption = 1;
 		} else if (!strcmp(argv[i], "-D")) {
 #ifdef DHCPv6
 			if (local_family_set && (local_family == AF_INET6)) {
@@ -753,7 +775,8 @@ do_relay4(struct interface_info *ip, struct dhcp_packet *packet,
 		return;
 
 	/* Add relay agent options if indicated.   If something goes wrong,
-	   drop the packet. */
+	 * drop the packet.  Note this may set packet->giaddr if RFC3527
+	 * is enabled. */
 	if (!(length = add_relay_agent_options(ip, packet, length,
 					       ip->addresses[0])))
 		return;
@@ -995,6 +1018,7 @@ add_relay_agent_options(struct interface_info *ip, struct dhcp_packet *packet,
 	int is_dhcp = 0, mms;
 	unsigned optlen;
 	u_int8_t *op, *nextop, *sp, *max, *end_pad = NULL;
+	int adding_link_select;
 
 	/* If we're not adding agent options to packets, we can skip
 	   this. */
@@ -1007,6 +1031,10 @@ add_relay_agent_options(struct interface_info *ip, struct dhcp_packet *packet,
 		return (length);
 
 	max = ((u_int8_t *)packet) + dhcp_max_agent_option_packet_length;
+
+	/* Add link selection suboption if enabled and we're the first relay */
+	adding_link_select = (add_rfc3527_suboption
+			      && (packet->giaddr.s_addr == 0));
 
 	/* Commence processing after the cookie. */
 	sp = op = &packet->options[4];
@@ -1137,6 +1165,10 @@ add_relay_agent_options(struct interface_info *ip, struct dhcp_packet *packet,
 		optlen += ip->remote_id_len + 2;    /* RAI_REMOTE_ID + len */
 	}
 
+	if (adding_link_select) {
+		optlen += 6;
+	}
+
 	/* We do not support relay option fragmenting(multiple options to
 	 * support an option data exceeding 255 bytes).
 	 */
@@ -1167,6 +1199,19 @@ add_relay_agent_options(struct interface_info *ip, struct dhcp_packet *packet,
 			*sp++ = ip->remote_id_len;
 			memcpy(sp, ip->remote_id, ip->remote_id_len);
 			sp += ip->remote_id_len;
+		}
+
+		/* RFC3527: Use the inbound packet's interface address in
+		 * the link selection suboption and set the outbound giaddr
+		 * to the uplink address. */
+		if (adding_link_select) {
+			*sp++ = RAI_LINK_SELECT;
+			*sp++ = 4u;
+			memcpy(sp, &giaddr.s_addr, 4);
+			sp += 4;
+			packet->giaddr = uplink->addresses[0];
+			log_debug ("Adding link selection suboption"
+				   " with addr: %s", inet_ntoa(giaddr));
 		}
 	} else {
 		++agent_option_errors;

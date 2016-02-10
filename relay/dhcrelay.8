@@ -1,6 +1,6 @@
 .\"	dhcrelay.8
 .\"
-.\" Copyright (c) 2009-2013 by Internet Systems Consortium, Inc. ("ISC")
+.\" Copyright (c) 2009-2013,2016 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1997-2003 by Internet Software Consortium
 .\"
@@ -78,6 +78,8 @@ dhcrelay - Dynamic Host Configuration Protocol Relay Agent
 .B -i
 .I interfaceN 
 ]
+.B -l
+.I interface
 ]
 .I server0
 [
@@ -215,8 +217,37 @@ in four ways:  It may \fIappend\fR its own set of relay options to the
 packet, leaving the supplied option field intact; it may \fIreplace\fR the
 existing agent option field; it may \fIforward\fR the packet unchanged; or,
 it may \fIdiscard\fR it.
+.TP
+-u \fIifname\fR
+Enables the addition of a RFC 3527 compliant link selection suboption for
+clients directly connected to the relay.  This RFC allows a relay to
+specify two different IP addresses: one for the server to use when
+communicating with the relay (giaddr) the other for choosing the subnet
+for the client (the suboption).  This can be useful if the server is
+unable to send packets to the relay via the address used for the subnet.
 
-To use this option you must also enable the \fB-a\fR option.
+When enabled, dhcrelay will add an agent option (as per \fB-a\fR above) that
+includes the link selection suboption to the forwarded packet.  This will only
+be done to packets received from clients that are directly connected to the
+relay (i.e. giaddr is zero).  The address used in the suboption will be that
+of the link upon which the inbound packet was received (which would otherwise
+be used for giaddr). The value of giaddr will be set to that of interface
+\fIifname\fR.
+
+Only one interface should be marked in this fashion.  Currently enabling
+this option on an interface causes the relay to process all DHCP traffic
+similar to the \fI-i\fR option, in the future we may split the two more
+completely.
+
+This option is off by default.  Note that enabling this option automatically
+enables the \fB-a\fR option.
+
+Keep in mind that using options such as \fB-m replace\fR or \fB-m discard\fR
+on relays upstream from one using \fB-u\fR can pose problems.  The upstream
+relay will wipe out the initial agent option containing the link selection
+while leaving the re-purposed giaddr value in place, causing packets to go
+astray.
+
 .PP
 \fIOptions available in DHCPv6 mode only:\fR
 .TP
