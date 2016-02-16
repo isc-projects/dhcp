@@ -70,7 +70,7 @@ struct reply_state {
 	 * "t1", "t2", preferred, and valid lifetimes records for calculating
 	 * t1 and t2 (min/max).
 	 */
-	u_int32_t renew, rebind, prefer, valid;
+	u_int32_t renew, rebind, min_prefer, min_valid;
 
 	/* Client-requested valid and preferred lifetimes. */
 	u_int32_t client_valid, client_prefer;
@@ -163,6 +163,9 @@ static isc_result_t shared_network_from_requested_addr (struct shared_network
 							struct packet* packet);
 static isc_result_t get_first_ia_addr_val (struct packet* packet, int addr_type,
 					   struct iaddr* iaddr);
+
+static void
+set_reply_tee_times(struct reply_state* reply, unsigned ia_cursor);
 
 /*
  * Schedule lease timeouts for all of the iasubopts in the reply.
@@ -1816,7 +1819,7 @@ lease_to_client(struct data_string *reply_ret,
 		data_string_forget(&reply.client_id, MDL);
 	if (packet_oro.buffer != NULL)
 		data_string_forget(&packet_oro, MDL);
-	reply.renew = reply.rebind = reply.prefer = reply.valid = 0;
+	reply.renew = reply.rebind = reply.min_prefer = reply.min_valid = 0;
 	reply.cursor = 0;
 }
 
@@ -1952,7 +1955,7 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 	 * A not included IA ("cleanup" below) could give a Renew/Rebind.
 	 */
 	oc = lookup_option(&dhcpv6_universe, packet_ia, D6O_IAADDR);
-	reply->valid = reply->prefer = 0xffffffff;
+	reply->min_valid = reply->min_prefer = 0xffffffff;
 	reply->client_valid = reply->client_prefer = 0;
 	for (; oc != NULL ; oc = oc->next) {
 		status = reply_process_addr(reply, oc);
@@ -2063,50 +2066,8 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 	putUShort(reply->buf.data + ia_cursor + 2,
 		  reply->cursor - (ia_cursor + 4));
 
-	/*
-	 * T1/T2 time selection is kind of weird.  We actually use DHCP
-	 * (v4) scoped options as handy existing places where these might
-	 * be configured by an administrator.  A value of zero tells the
-	 * client it may choose its own renewal time.
-	 */
-	reply->renew = 0;
-	oc = lookup_option(&dhcp_universe, reply->opt_state,
-			   DHO_DHCP_RENEWAL_TIME);
-	if (oc != NULL) {
-		if (!evaluate_option_cache(&data, reply->packet, NULL, NULL,
-					   reply->packet->options,
-					   reply->opt_state, &global_scope,
-					   oc, MDL) ||
-		    (data.len != 4)) {
-			log_error("Invalid renewal time.");
-		} else {
-			reply->renew = getULong(data.data);
-		}
-
-		if (data.data != NULL)
-			data_string_forget(&data, MDL);
-	}
-	putULong(reply->buf.data + ia_cursor + 8, reply->renew);
-
-	/* Now T2. */
-	reply->rebind = 0;
-	oc = lookup_option(&dhcp_universe, reply->opt_state,
-			   DHO_DHCP_REBINDING_TIME);
-	if (oc != NULL) {
-		if (!evaluate_option_cache(&data, reply->packet, NULL, NULL,
-					   reply->packet->options,
-					   reply->opt_state, &global_scope,
-					   oc, MDL) ||
-		    (data.len != 4)) {
-			log_error("Invalid rebinding time.");
-		} else {
-			reply->rebind = getULong(data.data);
-		}
-
-		if (data.data != NULL)
-			data_string_forget(&data, MDL);
-	}
-	putULong(reply->buf.data + ia_cursor + 12, reply->rebind);
+	/* Calculate T1/T2 and stuff them in the reply */
+	set_reply_tee_times(reply, ia_cursor);
 
 	/*
 	 * yes, goto's aren't the best but we also want to avoid extra
@@ -2722,7 +2683,7 @@ reply_process_ia_ta(struct reply_state *reply, struct option_cache *ia) {
 	 * Deal with an IAADDR for lifetimes.
 	 * For all or none, process IAADDRs as hints.
 	 */
-	reply->valid = reply->prefer = 0xffffffff;
+	reply->min_valid = reply->min_prefer = 0xffffffff;
 	reply->client_valid = reply->client_prefer = 0;
 	oc = lookup_option(&dhcpv6_universe, packet_ia, D6O_IAADDR);
 	for (; oc != NULL; oc = oc->next) {
@@ -3477,11 +3438,11 @@ reply_process_is_addressed(struct reply_state *reply,
 	}
 
 	/* Note lowest values for later calculation of renew/rebind times. */
-	if (reply->prefer > reply->send_prefer)
-		reply->prefer = reply->send_prefer;
+	if (reply->min_prefer > reply->send_prefer)
+		reply->min_prefer = reply->send_prefer;
 
-	if (reply->valid > reply->send_valid)
-		reply->valid = reply->send_valid;
+	if (reply->min_valid > reply->send_valid)
+		reply->min_valid = reply->send_valid;
 
 #if 0
 	/*
@@ -3796,7 +3757,7 @@ reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia) {
 	 * For each prefix in this IA_PD, decide what to do about it.
 	 */
 	oc = lookup_option(&dhcpv6_universe, packet_ia, D6O_IAPREFIX);
-	reply->valid = reply->prefer = 0xffffffff;
+	reply->min_valid = reply->min_prefer = 0xffffffff;
 	reply->client_valid = reply->client_prefer = 0;
 	reply->preflen = -1;
 	for (; oc != NULL ; oc = oc->next) {
@@ -3885,50 +3846,8 @@ reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia) {
 	putUShort(reply->buf.data + ia_cursor + 2,
 		  reply->cursor - (ia_cursor + 4));
 
-	/*
-	 * T1/T2 time selection is kind of weird.  We actually use DHCP
-	 * (v4) scoped options as handy existing places where these might
-	 * be configured by an administrator.  A value of zero tells the
-	 * client it may choose its own renewal time.
-	 */
-	reply->renew = 0;
-	oc = lookup_option(&dhcp_universe, reply->opt_state,
-			   DHO_DHCP_RENEWAL_TIME);
-	if (oc != NULL) {
-		if (!evaluate_option_cache(&data, reply->packet, NULL, NULL,
-					   reply->packet->options,
-					   reply->opt_state, &global_scope,
-					   oc, MDL) ||
-		    (data.len != 4)) {
-			log_error("Invalid renewal time.");
-		} else {
-			reply->renew = getULong(data.data);
-		}
-
-		if (data.data != NULL)
-			data_string_forget(&data, MDL);
-	}
-	putULong(reply->buf.data + ia_cursor + 8, reply->renew);
-
-	/* Now T2. */
-	reply->rebind = 0;
-	oc = lookup_option(&dhcp_universe, reply->opt_state,
-			   DHO_DHCP_REBINDING_TIME);
-	if (oc != NULL) {
-		if (!evaluate_option_cache(&data, reply->packet, NULL, NULL,
-					   reply->packet->options,
-					   reply->opt_state, &global_scope,
-					   oc, MDL) ||
-		    (data.len != 4)) {
-			log_error("Invalid rebinding time.");
-		} else {
-			reply->rebind = getULong(data.data);
-		}
-
-		if (data.data != NULL)
-			data_string_forget(&data, MDL);
-	}
-	putULong(reply->buf.data + ia_cursor + 12, reply->rebind);
+	/* Calculate T1/T2 and stuff them in the reply */
+	set_reply_tee_times(reply, ia_cursor);
 
 	/*
 	 * yes, goto's aren't the best but we also want to avoid extra
@@ -4765,11 +4684,11 @@ reply_process_is_prefixed(struct reply_state *reply,
 	}
 
 	/* Note lowest values for later calculation of renew/rebind times. */
-	if (reply->prefer > reply->send_prefer)
-		reply->prefer = reply->send_prefer;
+	if (reply->min_prefer > reply->send_prefer)
+		reply->min_prefer = reply->send_prefer;
 
-	if (reply->valid > reply->send_valid)
-		reply->valid = reply->send_valid;
+	if (reply->min_valid > reply->send_valid)
+		reply->min_valid = reply->send_valid;
 
 	/* Perform dynamic prefix related update work. */
 	if (reply->lease != NULL) {
@@ -7177,5 +7096,117 @@ get_first_ia_addr_val (struct packet* packet, int addr_type,
 
 	return (status);
 }
+
+/*
+* \brief Calculates the reply T1/T2 times and stuffs them in outbound buffer
+*
+* T1/T2 time selection is kind of weird.  We actually use DHCP * (v4) scoped
+* options, dhcp-renewal-time and dhcp-rebinding-time, as handy existing places
+* where these can be configured by an administrator.  A value of zero tells the
+* client it may choose its own value.
+*
+* When those options are not defined, the values will be set to zero unless
+* the global option, dhcpv6-set-tee-times is enabled. When this option is
+* enabled the values are calculated as recommended by RFC 3315, Section 22.4:
+*
+* 	T1 will be set to 0.5 times the shortest preferred lifetime
+* 	in the IA_XX option.  If the "shortest" preferred lifetime is
+* 	0xFFFFFFFF,  T1 will set to 0xFFFFFFFF.
+*
+* 	T2 will be set to 0.8 times the shortest preferred lifetime
+* 	in the IA_XX option.  If the "shortest" preferred lifetime is
+* 	0xFFFFFFFF,  T2 will set to 0xFFFFFFFF.
+*
+* Note that dhcpv6-set-tee-times is intended to be transitional and will
+* likely be removed in 4.4.0, leaving the behavior as getting the values
+* either from the configured parameters (if you want zeros, define them as
+* zeros) or by calculating them per the RFC.
+*
+* \param reply - pointer to the reply_state structure
+* \param ia_cursor - offset of the beginning of the IA_XX option within the
+* reply's outbound data buffer
+*/
+static void
+set_reply_tee_times(struct reply_state* reply, unsigned ia_cursor)
+{
+	struct option_cache *oc;
+	int set_tee_times;
+
+	/* Found out if calculated values are enabled. */
+	oc = lookup_option(&server_universe, reply->opt_state,
+			   SV_DHCPV6_SET_TEE_TIMES);
+	set_tee_times = (oc &&
+			 evaluate_boolean_option_cache(NULL, reply->packet,
+						       NULL, NULL,
+						       reply->packet->options,
+						       reply->opt_state,
+						       &global_scope, oc, MDL));
+
+	oc = lookup_option(&dhcp_universe, reply->opt_state,
+			   DHO_DHCP_RENEWAL_TIME);
+	if (oc != NULL) {
+		/* dhcp-renewal-time is defined, use it */
+		struct data_string data;
+		memset(&data, 0x00, sizeof(data));
+
+		if (!evaluate_option_cache(&data, reply->packet, NULL, NULL,
+					   reply->packet->options,
+					   reply->opt_state, &global_scope,
+					   oc, MDL) ||
+		    (data.len != 4)) {
+			log_error("Invalid renewal time.");
+			reply->renew = 0;
+		} else {
+			reply->renew = getULong(data.data);
+		}
+
+		if (data.data != NULL)
+			data_string_forget(&data, MDL);
+	} else if (set_tee_times) {
+		/* Setting them is enabled so T1 is either infinite or
+		 * 0.5 * the shortest preferred lifetime in the IA_XX  */
+		reply->renew = (reply->min_prefer == 0xFFFFFFFF ? 0xFFFFFFFF
+				 : reply->min_prefer / 2);
+	} else {
+		/* Default is to let the client choose */
+		reply->renew = 0;
+	}
+
+	putULong(reply->buf.data + ia_cursor + 8, reply->renew);
+
+	/* Now T2. */
+	oc = lookup_option(&dhcp_universe, reply->opt_state,
+			   DHO_DHCP_REBINDING_TIME);
+	if (oc != NULL) {
+		/* dhcp-rebinding-time is defined, use it */
+		struct data_string data;
+		memset(&data, 0x00, sizeof(data));
+
+		if (!evaluate_option_cache(&data, reply->packet, NULL, NULL,
+					   reply->packet->options,
+					   reply->opt_state, &global_scope,
+					   oc, MDL) ||
+		    (data.len != 4)) {
+			log_error("Invalid rebinding time.");
+			reply->rebind = 0;
+		} else {
+			reply->rebind = getULong(data.data);
+		}
+
+		if (data.data != NULL)
+			data_string_forget(&data, MDL);
+	} else if (set_tee_times) {
+		/* Setting them is enabled so T2 is either infinite or
+		 * 0.8 * the shortest preferred lifetime in the reply */
+		reply->rebind = (reply->min_prefer == 0xFFFFFFFF ? 0xFFFFFFFF
+				 : (reply->min_prefer / 5) * 4);
+	} else {
+		/* Default is to let the client choose */
+		reply->rebind = 0;
+	}
+
+	putULong(reply->buf.data + ia_cursor + 12, reply->rebind);
+}
+
 
 #endif /* DHCPv6 */

@@ -3,7 +3,7 @@
    Tables of information only used by server... */
 
 /*
- * Copyright (c) 2004-2011,2013-2015 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2011,2013-2016 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -275,6 +275,7 @@ static struct option server_options[] = {
 	{ "echo-client-id", "f",		&server_universe,  SV_ECHO_CLIENT_ID, 1 },
 	{ "server-id-check", "f",		&server_universe,  SV_SERVER_ID_CHECK, 1 },
 	{ "prefix-length-mode", "Nprefix_length_modes.",	&server_universe,  SV_PREFIX_LEN_MODE, 1 },
+	{ "dhcpv6-set-tee-times", "f",		&server_universe,  SV_DHCPV6_SET_TEE_TIMES, 1 },
 	{ NULL, NULL, NULL, 0, 0 }
 };
 

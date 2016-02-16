@@ -790,6 +790,7 @@ struct lease_state {
 #define SV_ECHO_CLIENT_ID		85
 #define SV_SERVER_ID_CHECK		86
 #define SV_PREFIX_LEN_MODE		87
+#define SV_DHCPV6_SET_TEE_TIMES		88
 
 #if !defined (DEFAULT_PING_TIMEOUT)
 # define DEFAULT_PING_TIMEOUT 1

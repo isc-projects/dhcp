@@ -1,6 +1,6 @@
 .\"	dhcpd.conf.5
 .\"
-.\" Copyright (c) 2004-2015 by Internet Systems Consortium, Inc. ("ISC")
+.\" Copyright (c) 2004-2016 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
@@ -2822,8 +2822,7 @@ longer useable.  A preferred lifetime is an advisory condition to help
 applications move off of the address and onto currently valid addresses
 (should there still be any open TCP sockets or similar).
 .PP
-The preferred lifetime defaults to the renew+rebind timers, or 3/4 the
-default lease time if none were specified.
+The preferred lifetime defaults to 5/8 the default lease time.
 .RE
 .PP
 The
@@ -3022,6 +3021,42 @@ statement
 The \fIserver-name\fR statement can be used to inform the client of
 the name of the server from which it is booting.  \fIName\fR should
 be the name that will be provided to the client.
+.RE
+.PP
+The
+.I dhcpv6-set-tee-times
+statement
+.RS 0.25i
+.PP
+.B dhcpv6-set-tee-times\fR \fIflag\fR\fB;\fR
+.PP
+The \fIdhcpv6-set-tee-times\fR statement enables setting T1 and T2 to the
+values recommended in RFC 3315 (Section 22.4).  When setting T1 and T2, the
+server will use dhcp-renewal-time and dhcp-rebinding-time, respectively.
+A value of zero tells the client it may choose its own value.
+
+When those options are not defined then values will be set to zero unless the
+global \fIdhcpv6-set-tee-times\R is enabled.  When this option is enabled the
+times are calculated as recommended by RFC 3315, Section 22.4:
+
+      T1 will be set to 0.5 times the shortest preferred lifetime
+      in the reply.  If the "shortest" preferred lifetime is
+      0xFFFFFFFF,  T1 will set to 0xFFFFFFFF.
+
+      T2 will be set to 0.8 times the shortest preferred lifetime
+      in the reply.  If the "shortest" preferred lifetime is
+      0xFFFFFFFF,  T2 will set to 0xFFFFFFFF.
+
+Keep in mind that given sufficiently small lease lifetimes, the above
+calculations will result in the two values being equal. For example, a 9 second
+lease lifetime would yield T1 = T2 = 4 seconds, which would cause clients to
+issue rebinds only.  In such a case it would likely be better to explicitly
+define the values.
+
+Note that dhcpv6-set-tee-times is intended to be transitional and will likely
+be removed in a future release. Once removed the behavior will be to use
+the configured values when present or calculate them per the RFC. If you want
+zeros, define them as zeros.
 .RE
 .PP
 The

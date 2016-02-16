@@ -213,10 +213,15 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Bugs #39262]
 
 - Add support for RFC 3527 to dhcrelay.  A new, dhcrelay command line argument,
-  "-l <interface>" enables the addition of a RFC 3527 compliant link selection
+  "-u <interface>" enables the addition of a RFC 3527 compliant link selection
   suboption to the agent option added for clients directly connected to the
   relay.
   [ISC-Bugs #34875]
+
+- Add a new global DHCPv6 option, dhcpv6-set-tee-times, which when enabled
+  instructs the server to calculate T1 and T2 as recommended in RFC 3315,
+  Section 22.4.
+  [ISC-Bugs #25687]
 
 			Changes since 4.3.3b1
 
