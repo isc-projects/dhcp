@@ -101,7 +101,7 @@ struct server_list {
 	struct sockaddr_in to;
 } *servers;
 
-struct interface_info *uplink;
+struct interface_info *uplink = NULL;
 
 #ifdef DHCPv6
 struct stream_list {
@@ -377,14 +377,27 @@ main(int argc, char **argv) {
 			if (++i == argc)
 				usage(use_noarg, argv[i-1]);
 
+			if (uplink) {
+				usage("more than one uplink (-u) specified: %s"
+				      ,argv[i]);
+			}
+
 			/* Allocate the uplink interface */
 			status = interface_allocate(&uplink, MDL);
 			if (status != ISC_R_SUCCESS) {
 				log_fatal("%s: uplink interface_allocate: %s",
 					 argv[i], isc_result_totext(status));
 			}
+		
+			if (strlen(argv[i]) >= sizeof(uplink->name)) {
+				log_fatal("%s: uplink name too long,"
+					  " it cannot exceed: %ld characters",
+					  argv[i], sizeof(uplink->name) - 1);
+			}
 
-			strcpy(uplink->name, argv[i]);
+			uplink->name[sizeof(uplink->name) - 1] = 0x00;
+			strncpy(uplink->name, argv[i],
+				sizeof(uplink->name) - 1);
 			interface_snorf(uplink, INTERFACE_REQUESTED);
 
 			/* Turn on -a, in case they don't do so explicitly */
