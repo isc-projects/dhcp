@@ -392,7 +392,7 @@ main(int argc, char **argv) {
 			if (strlen(argv[i]) >= sizeof(uplink->name)) {
 				log_fatal("%s: uplink name too long,"
 					  " it cannot exceed: %ld characters",
-					  argv[i], sizeof(uplink->name) - 1);
+					  argv[i], (long)(sizeof(uplink->name) - 1));
 			}
 
 			uplink->name[sizeof(uplink->name) - 1] = 0x00;
