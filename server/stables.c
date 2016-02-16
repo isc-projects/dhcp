@@ -238,6 +238,7 @@ static struct option server_options[] = {
 	{ "delayed-ack", "S",			&server_universe,  58, 1 },
 	{ "max-ack-delay", "L",			&server_universe,  59, 1 },
 #endif
+	{ "dhcpv6-set-tee-times", "f",		&server_universe,  SV_DHCPV6_SET_TEE_TIMES, 1 },
 	{ NULL, NULL, NULL, 0, 0 }
 };
 

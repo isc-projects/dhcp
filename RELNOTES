@@ -172,6 +172,11 @@ by Eric Young (eay@cryptsoft.com).
   incorrectly parse the new flags value from the omapi message.
   [ISC-Bugs #31179]
 
+- Add a new global DHCPv6 option, dhcpv6-set-tee-times, which when enabled
+  instructs the server to calculate T1 and T2 as recommended in RFC 3315,
+  Section 22.4.
+  [ISC-Bugs #25687]
+
 			Changes since 4.1-ESV-R12b1
 
 - None

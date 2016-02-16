@@ -621,6 +621,7 @@ struct lease_state {
 #define SV_LIMIT_PREFS_PER_IA		57
 #define SV_DELAYED_ACK			58
 #define SV_MAX_ACK_DELAY		59
+#define SV_DHCPV6_SET_TEE_TIMES		60
 
 #if !defined (DEFAULT_PING_TIMEOUT)
 # define DEFAULT_PING_TIMEOUT 1
