@@ -3,7 +3,7 @@
    Parser for dhcpd config file... */
 
 /*
- * Copyright (c) 2004-2015 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2016 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -1181,17 +1181,10 @@ void parse_failover_peer (cfile, group, type)
 		group->shared_network->failover_peer = peer;
 
 	/* Set the initial state. */
-	if (peer -> i_am == primary) {
-		peer -> me.state = recover;
-		peer -> me.stos = cur_time;
-		peer -> partner.state = unknown_state;
-		peer -> partner.stos = cur_time;
-	} else {
-		peer -> me.state = recover;
-		peer -> me.stos = cur_time;
-		peer -> partner.state = unknown_state;
-		peer -> partner.stos = cur_time;
-	}
+	peer->me.state = recover;
+	peer->me.stos = cur_time;
+	peer->partner.state = unknown_state;
+	peer->partner.stos = cur_time;
 
 	status = enter_failover_peer (peer);
 	if (status != ISC_R_SUCCESS)

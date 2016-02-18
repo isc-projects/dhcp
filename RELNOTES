@@ -177,6 +177,9 @@ by Eric Young (eay@cryptsoft.com).
   Section 22.4.
   [ISC-Bugs #25687]
 
+- Corrected minor Coverity issues.
+  [ISC-Bugs #35144]
+
 			Changes since 4.1-ESV-R12b1
 
 - None
