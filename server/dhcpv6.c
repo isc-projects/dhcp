@@ -5424,7 +5424,6 @@ iterate_over_ia_na(struct data_string *reply_ret,
 	struct data_string cli_enc_opt_data;
 	struct option_state *cli_enc_opt_state;
 	struct host_decl *host;
-	struct option_state *host_opt_state;
 	struct data_string iaaddr;
 	struct data_string fixed_addr;
 	char reply_data[65536];
@@ -5445,7 +5444,6 @@ iterate_over_ia_na(struct data_string *reply_ret,
 	cli_enc_opt_state = NULL;
 	memset(&iaaddr, 0, sizeof(iaaddr));
 	memset(&fixed_addr, 0, sizeof(fixed_addr));
-	host_opt_state = NULL;
 	lease = NULL;
 
 	/*
@@ -5657,9 +5655,6 @@ iterate_over_ia_na(struct data_string *reply_ret,
 exit:
 	if (lease != NULL) {
 		iasubopt_dereference(&lease, MDL);
-	}
-	if (host_opt_state != NULL) {
-		option_state_dereference(&host_opt_state, MDL);
 	}
 	if (fixed_addr.buffer != NULL) {
 		data_string_forget(&fixed_addr, MDL);
@@ -5933,7 +5928,6 @@ iterate_over_ia_pd(struct data_string *reply_ret,
 	struct data_string cli_enc_opt_data;
 	struct option_state *cli_enc_opt_state;
 	struct host_decl *host;
-	struct option_state *host_opt_state;
 	struct data_string iaprefix;
 	char reply_data[65536];
 	int reply_ofs;
@@ -5951,7 +5945,6 @@ iterate_over_ia_pd(struct data_string *reply_ret,
 	memset(&cli_enc_opt_data, 0, sizeof(cli_enc_opt_data));
 	cli_enc_opt_state = NULL;
 	memset(&iaprefix, 0, sizeof(iaprefix));
-	host_opt_state = NULL;
 	prefix = NULL;
 
 	/*
@@ -6130,9 +6123,6 @@ iterate_over_ia_pd(struct data_string *reply_ret,
 exit:
 	if (prefix != NULL) {
 		iasubopt_dereference(&prefix, MDL);
-	}
-	if (host_opt_state != NULL) {
-		option_state_dereference(&host_opt_state, MDL);
 	}
 	if (iaprefix.buffer != NULL) {
 		data_string_forget(&iaprefix, MDL);

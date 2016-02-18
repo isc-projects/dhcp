@@ -3,7 +3,7 @@
    DHCP options parsing and reassembly. */
 
 /*
- * Copyright (c) 2004-2012,2014-2015 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2016 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -4344,7 +4344,7 @@ void parse_vendor_option(packet, lease, client_state, in_options,
 		return;
 
 	memset(&name, 0, sizeof(name));
-	evaluate_option_cache(&name, packet, lease, client_state,
+	(void) evaluate_option_cache(&name, packet, lease, client_state,
 			      in_options, out_options, scope, oc, MDL);
 
 	/* No name, all done */

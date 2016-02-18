@@ -5497,8 +5497,7 @@ secondary_not_hoarding(dhcp_failover_state_t *state, struct pool *p) {
 isc_result_t dhcp_failover_process_bind_ack (dhcp_failover_state_t *state,
 					     failover_message_t *msg)
 {
-	struct lease *lt = (struct lease *)0;
-	struct lease *lease = (struct lease *)0;
+	struct lease *lease = NULL;
 	struct iaddr ia;
 	const char *message = "no memory";
 	u_int32_t pot_expire;
@@ -5646,9 +5645,6 @@ isc_result_t dhcp_failover_process_bind_ack (dhcp_failover_state_t *state,
 
       out:
 	lease_dereference (&lease, MDL);
-	if (lt)
-		lease_dereference (&lt, MDL);
-
 	return ISC_R_SUCCESS;
 
       bad:
