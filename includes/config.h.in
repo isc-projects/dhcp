@@ -151,6 +151,9 @@
 /* Define to include server activity tracing support. */
 #undef TRACING
 
+/* Define to 1 if ethernet devices are in /dev/net */
+#undef USE_DEV_NET
+
 /* Define to include PIDs in syslog messages. */
 #undef USE_LOG_PID
 

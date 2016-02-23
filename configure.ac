@@ -630,7 +630,13 @@ CFLAGS="$CFLAGS $STD_CWARNINGS"
 
 case "$host" in
 *-darwin*)
-    CFLAGS="$CFLAGS -D__APPLE_USE_RFC_3542" ;;
+    CFLAGS="$CFLAGS -D__APPLE_USE_RFC_3542";;
+*-solaris*)
+    # As of Solaris 11, ethernet dev files are in /dev/net
+    AC_CHECK_FILE(/dev/net,
+		    [AC_DEFINE([USE_DEV_NET], [1],
+			[Define to 1 if ethernet devices are in /dev/net])])
+    ;;
 esac
 
 AC_C_FLEXIBLE_ARRAY_MEMBER

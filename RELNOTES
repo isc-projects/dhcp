@@ -180,6 +180,12 @@ by Eric Young (eay@cryptsoft.com).
 - Corrected minor Coverity issues.
   [ISC-Bugs #35144]
 
+- Corrected interface name formation when using DLPI under Solaris 11. As of
+  Solaris 11, ethernet device files are located in "/dev/net".  The configure
+  script has been modified to detect this situation and adjust the directory
+  used accordingly.
+  [ISC-Bugs #37954]
+
 			Changes since 4.1-ESV-R12b1
 
 - None

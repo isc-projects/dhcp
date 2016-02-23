@@ -3,7 +3,7 @@
    Data Link Provider Interface (DLPI) network interface code. */
 
 /*
- * Copyright (c) 2009-2011,2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2011,2014,2016 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
@@ -130,7 +130,13 @@ static int strioctl (int fd, int cmd, int timeout, int len, char *dp);
 
 #define DLPI_MAXDLBUF		8192	/* Buffer size */
 #define DLPI_MAXDLADDR		1024	/* Max address size */
-#define DLPI_DEVDIR		"/dev/"	/* Device directory */
+
+/* Device directory */
+#if defined(USE_DEV_NET)
+#define DLPI_DEVDIR		"/dev/net/"  /* Solaris 11 + */
+#else
+#define DLPI_DEVDIR		"/dev/"      /* Pre Solaris 11 */
+#endif
 
 static int dlpiopen(const char *ifname);
 static int dlpiunit (char *ifname);
@@ -791,9 +797,13 @@ dlpiopen(const char *ifname) {
 	ep = cp = ifname;
 	while (*ep)
 		ep++;
+
+/* Before Solaris 11 we strip off the digit to open the base dev name */
+#if !defined(USE_DEV_NET)
 	/* And back up to the first digit (unit number) */
 	while ((*(ep - 1) >= '0' && *(ep - 1) <= '9') || *(ep - 1) == ':')
 		ep--;
+#endif
 	
 	/* Copy everything up to the unit number */
 	while (cp < ep) {
