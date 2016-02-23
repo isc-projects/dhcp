@@ -3877,6 +3877,7 @@ void do_packet (interface, packet, len, from_port, from, hfrom)
 	/* Allocate packet->options now so it is non-null for all packets */
 	decoded_packet->options_valid = 0;
 	if (!option_state_allocate (&decoded_packet->options, MDL)) {
+		packet_dereference(&decoded_packet, MDL);
 		return;
 	}
 

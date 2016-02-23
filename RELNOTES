@@ -244,6 +244,10 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Bugs #37954]
   [ISC-Bugs #40752]
 
+- Add a dereference call when handling an error condition while
+  decoding a packet.
+  [ISC-Bugs #41774]
+
 			Changes since 4.3.3b1
 
 - None
