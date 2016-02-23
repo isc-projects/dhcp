@@ -3,7 +3,7 @@
    DHCP options parsing and reassembly. */
 
 /*
- * Copyright (c) 2004-2012,2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2012,2014,2016 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -3811,6 +3811,7 @@ void do_packet (interface, packet, len, from_port, from, hfrom)
 	/* Allocate packet->options now so it is non-null for all packets */
 	decoded_packet->options_valid = 0;
 	if (!option_state_allocate (&decoded_packet->options, MDL)) {
+		packet_dereference(&decoded_packet, MDL);
 		return;
 	}
 

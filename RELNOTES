@@ -188,6 +188,10 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Bugs #37954]
   [ISC-Bugs #40752]
 
+- Add a dereference call when handling an error condition while
+  decoding a packet and clean up some memory on error conditions.
+  [ISC-Bugs #41774]
+
 			Changes since 4.1-ESV-R12b1
 
 - None

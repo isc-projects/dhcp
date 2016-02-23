@@ -4314,6 +4314,7 @@ int locate_network (packet)
 			return 0;
 		}
 		if (data.len != 4) {
+			data_string_forget (&data, MDL);
 			return 0;
 		}
 		ia.len = 4;
