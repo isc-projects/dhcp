@@ -185,6 +185,7 @@ by Eric Young (eay@cryptsoft.com).
   script has been modified to detect this situation and adjust the directory
   used accordingly.
   [ISC-Bugs #37954]
+  [ISC-Bugs #40752]
 
 			Changes since 4.1-ESV-R12b1
 
