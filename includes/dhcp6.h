@@ -76,10 +76,49 @@
 #define D6O_CLT_TIME				46 /* RFC5007 */
 #define D6O_LQ_RELAY_DATA			47 /* RFC5007 */
 #define D6O_LQ_CLIENT_LINK			48 /* RFC5007 */
+#define D6O_MIP6_HNIDF				49 /* RFC6610 */
+#define D6O_MIP6_VDINF				50 /* RFC6610 */
+#define D6O_V6_LOST				51 /* RFC5223 */
+#define D6O_CAPWAP_AC_V6			52 /* RFC5417 */
+#define D6O_RELAY_ID				53 /* RFC5460 */
+#define D6O_IPV6_ADDRESS_MOS			54 /* RFC5678 */
+#define D6O_IPV6_FQDN_MOS			55 /* RFC5678 */
+#define D6O_NTP_SERVER				56 /* RFC5908 */
+#define D6O_V6_ACCESS_DOMAIN			57 /* RFC5986 */
+#define D6O_SIP_UA_CS_LIST			58 /* RFC6011 */
+#define D6O_BOOTFILE_URL			59 /* RFC5970 */
+#define D6O_BOOTFILE_PARAM			60 /* RFC5970 */
+#define D6O_CLIENT_ARCH_TYPE			61 /* RFC5970 */
+#define D6O_NII					62 /* RFC5970 */
+#define D6O_GEOLOCATION				63 /* RFC6225 */
+#define D6O_AFTR_NAME				64 /* RFC6334 */
+#define D6O_ERP_LOCAL_DOMAIN_NAME		65 /* RFC6440 */
+#define D6O_RSOO				66 /* RFC6422 */
+#define D6O_PD_EXCLUDE				67 /* RFC6603 */
+#define D6O_VSS					68 /* RFC6607 */
+#define D6O_MIP6_IDINF				69 /* RFC6610 */
+#define D6O_MIP6_UDINF				70 /* RFC6610 */
+#define D6O_MIP6_HNP				71 /* RFC6610 */
+#define D6O_MIP6_HAA				72 /* RFC6610 */
+#define D6O_MIP6_HAF				73 /* RFC6610 */
+#define D6O_RDNSS_SELECTION			74 /* RFC6731 */
+#define D6O_KRB_PRINCIPAL_NAME			75 /* RFC6784 */
+#define D6O_KRB_REALM_NAME			76 /* RFC6784 */
+#define D6O_KRB_DEFAULT_REALM_NAME		77 /* RFC6784 */
+#define D6O_KRB_KDC				78 /* RFC6784 */
 #define D6O_CLIENT_LINKLAYER_ADDR		79 /* RFC6939 */
+#define D6O_LINK_ADDRESS			80 /* RFC6977 */
+#define D6O_RADIUS				81 /* RFC7037 */
+#define D6O_SOL_MAX_RT				82 /* RFC7083 */
+#define D6O_INF_MAX_RT				83 /* RFC7083 */
+#define D6O_ADDRSEL				84 /* RFC7078 */
+#define D6O_ADDRSEL_TABLE			85 /* RFC7078 */
+#define D6O_V6_PCP_SERVER			86 /* RFC7291 */
+#define D6O_DHCPV4_MSG				87 /* RFC7341 */
+#define D6O_DHCP4_O_DHCP6_SERVER		88 /* RFC7341 */
 
 /* 
- * Status Codes, from RFC 3315 section 24.4, and RFC 3633, 5007.
+ * Status Codes, from RFC 3315 section 24.4, and RFC 3633, 5007, 5460.
  */
 #define STATUS_Success		 0
 #define STATUS_UnspecFail	 1
@@ -92,6 +131,7 @@
 #define STATUS_MalformedQuery	 8
 #define STATUS_NotConfigured	 9
 #define STATUS_NotAllowed	10
+#define STATUS_QueryTerminated	11
 
 /* 
  * DHCPv6 message types, defined in section 5.3 of RFC 3315 
@@ -109,8 +149,14 @@
 #define DHCPV6_INFORMATION_REQUEST 11
 #define DHCPV6_RELAY_FORW	   12
 #define DHCPV6_RELAY_REPL	   13
-#define DHCPV6_LEASEQUERY	   14
-#define DHCPV6_LEASEQUERY_REPLY    15
+#define DHCPV6_LEASEQUERY	   14	/* RFC5007 */
+#define DHCPV6_LEASEQUERY_REPLY	   15	/* RFC5007 */
+#define DHCPV6_LEASEQUERY_DONE	   16	/* RFC5460 */
+#define DHCPV6_LEASEQUERY_DATA	   17	/* RFC5460 */
+#define DHCPV6_RECONFIGURE_REQUEST 18	/* RFC6977 */
+#define DHCPV6_RECONFIGURE_REPLY   19	/* RFC6977 */
+#define DHCPV6_DHCPV4_QUERY	   20	/* RFC7341 */
+#define DHCPV6_DHCPV4_RESPONSE	   21	/* RFC7341 */
 
 extern const char *dhcpv6_type_names[];
 extern const int dhcpv6_type_name_max;
@@ -120,6 +166,7 @@ extern const int dhcpv6_type_name_max;
 #define DUID_LLT	1
 #define DUID_EN		2
 #define DUID_LL		3
+#define DUID_UUID	4	/* RFC6355 */
 
 /* Offsets into IA_*'s where Option spaces commence.  */
 #define IA_NA_OFFSET 12 /* IAID, T1, T2, all 4 octets each */
@@ -197,10 +244,27 @@ struct dhcpv6_relay_packet {
 };
 #define MAX_V6RELAY_HOPS 32
 
-/* Leasequery query-types (RFC 5007) */
+/*
+ * DHCPv4-over-DHCPv6 packet format, defined in RFC 4731
+ */
+struct dhcpv4_over_dhcpv6_packet {
+	unsigned char msg_type;
+	unsigned char flags[3];
+	unsigned char options[FLEXIBLE_ARRAY_MEMBER];
+};
+#define DHCP4O6_QUERY_UNICAST	128
+
+/* DHCPv4-over-DHCPv6 ISC vendor suboptions */
+#define D4O6_INTERFACE		60000
+#define D4O6_SRC_ADDRESS	60001
+
+/* Leasequery query-types (RFC 5007, 5460) */
 
 #define LQ6QT_BY_ADDRESS	1
 #define LQ6QT_BY_CLIENTID	2
+#define LQ6QT_BY_RELAY_ID	3
+#define LQ6QT_BY_LINK_ADDRESS	4
+#define LQ6QT_BY_REMOTE_ID	5
 
 /*
  * DUID time starts 2000-01-01.

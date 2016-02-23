@@ -80,6 +80,9 @@ static const char url [] = "For info, please visit https://www.isc.org/software/
 
 u_int16_t local_port = 0;
 u_int16_t remote_port = 0;
+#if defined(DHCPv6) && defined(DHCP4o6)
+int dhcp4o6_state = -1; /* -1 = stopped, 0 = polling, 1 = started */
+#endif
 int no_daemon = 0;
 struct string_list *client_env = NULL;
 int client_env_count = 0;
@@ -97,7 +100,7 @@ char *mockup_relay = NULL;
 
 char *progname = NULL;
 
-void run_stateless(int exit_mode);
+void run_stateless(int exit_mode, u_int16_t port);
 
 static isc_result_t write_duid(struct data_string *duid);
 static void add_reject(struct packet *packet);
@@ -126,6 +129,17 @@ static void dhclient_ddns_cb_free(dhcp_ddns_cb_t *ddns_cb,
  * \return Nothing
  */
 
+#if defined(DHCPv6) && defined(DHCP4o6)
+static void dhcp4o6_poll(void *dummy);
+static void dhcp4o6_resume(void);
+static void recv_dhcpv4_response(struct data_string *raw);
+static int send_dhcpv4_query(struct client_state *client, int broadcast);
+
+static void dhcp4o6_stop(void);
+static void forw_dhcpv4_response(struct packet *packet);
+static void forw_dhcpv4_query(struct data_string *raw);
+#endif
+
 #ifndef UNIT_TEST
 /* These are only used when we call usage() from the main routine
  * which isn't compiled when building for unit tests
@@ -151,14 +165,19 @@ usage(const char *sfmt, const char *sarg)
 
 	log_fatal("Usage: %s "
 #ifdef DHCPv6
+#ifdef DHCP4o6
+		  "[-4|-6] [-SNTPRI1dvrxi] [-nw] -4o6 <port>]\n"
+		  "                [-p <port>] [-D LL|LLT] \n"
+#else /* DHCP4o6 */
 		  "[-4|-6] [-SNTPRI1dvrxi] [-nw] [-p <port>] [-D LL|LLT] \n"
+#endif
 #else /* DHCPv6 */
 		  "[-I1dvrxi] [-nw] [-p <port>] [-D LL|LLT] \n"
 #endif /* DHCPv6 */
 		  "                [-s server-addr] [-cf config-file]\n"
 		  "                [-df duid-file] [-lf lease-file]\n"
 		  "                [-pf pid-file] [--no-pid] [-e VAR=val]\n"
-		  "                [-sf script-file] [interface]",
+		  "                [-sf script-file] [interface]*",
 		  isc_file_basename(progname));
 }
 
@@ -183,6 +202,9 @@ main(int argc, char **argv) {
 	int no_dhclient_script = 0;
 #ifdef DHCPv6
 	int local_family_set = 0;
+#ifdef DHCP4o6
+	u_int16_t dhcp4o6_port = 0;
+#endif /* DHCP4o6 */
 #endif /* DHCPv6 */
 	char *s;
 
@@ -252,6 +274,17 @@ main(int argc, char **argv) {
 					  "both.");
 			local_family_set = 1;
 			local_family = AF_INET6;
+#ifdef DHCP4o6
+		} else if (!strcmp(argv[i], "-4o6")) {
+			if (++i == argc)
+				usage(use_noarg, argv[i-1]);
+			dhcp4o6_port = validate_port_pair(argv[i]);
+
+			log_debug("DHCPv4 over DHCPv6 over ::1 port %d and %d",
+				  ntohs(dhcp4o6_port),
+				  ntohs(dhcp4o6_port) + 1);
+			dhcpv4_over_dhcpv6 = 1;
+#endif /* DHCP4o6 */
 #endif /* DHCPv6 */
 		} else if (!strcmp(argv[i], "-x")) { /* eXit, no release */
 			release_mode = 0;
@@ -434,6 +467,17 @@ main(int argc, char **argv) {
 		usage("PD %s only supports one requested interface", "-P");
 	}
 
+#if defined(DHCPv6) && defined(DHCP4o6)
+	if ((local_family == AF_INET6) && dhcpv4_over_dhcpv6 &&
+	    (exit_mode || release_mode))
+		log_error("Can't relay DHCPv4-over-DHCPv6 "
+			  "without a persistent DHCPv6 client");
+	if ((local_family == AF_INET) && dhcpv4_over_dhcpv6 &&
+	    (interfaces_requested != 1))
+		log_fatal("DHCPv4-over-DHCPv6 requires an explicit "
+			  "interface on which to be applied");
+#endif
+
 	if (!no_dhclient_conf && (s = getenv("PATH_DHCLIENT_CONF"))) {
 		path_dhclient_conf = s;
 	}
@@ -572,7 +616,11 @@ main(int argc, char **argv) {
 			usage("Stateless commnad: %s incompatibile with "
 			      "other commands", "-S");
 		}
-		run_stateless(exit_mode);
+#if defined(DHCPv6) && defined(DHCP4o6)
+		run_stateless(exit_mode, dhcp4o6_port);
+#else
+		run_stateless(exit_mode, 0);
+#endif
 		return 0;
 	}
 
@@ -682,6 +730,11 @@ main(int argc, char **argv) {
 		}
 	}
 
+#if defined(DHCPv6) && defined(DHCP4o6)
+	if (dhcpv4_over_dhcpv6 && !exit_mode)
+		dhcp4o6_setup(dhcp4o6_port);
+#endif
+
 	/* Start a configuration state machine for each interface. */
 #ifdef DHCPv6
 	if (local_family == AF_INET6) {
@@ -715,7 +768,7 @@ main(int argc, char **argv) {
 			     client = client->next) {
 				if (exit_mode)
 					state_stop(client);
-				else if (release_mode)
+				if (release_mode)
 					do_release(client);
 				else {
 					client->state = S_INIT;
@@ -752,7 +805,7 @@ main(int argc, char **argv) {
 #ifndef DHCPv6
 		return 0;
 #else
-		if (local_family == AF_INET6) {
+		if ((local_family == AF_INET6) || dhcpv4_over_dhcpv6) {
 			if (onetry)
 				return 0;
 		} else
@@ -813,12 +866,24 @@ main(int argc, char **argv) {
 	return 0;
 }
 
-void run_stateless(int exit_mode)
+/*
+ * \brief Run the DHCPv6 stateless client (dhclient -6 -S)
+ *
+ * \param exist_mode set to 1 when dhclient was called with -x
+ * \param port DHCPv4-over-DHCPv6 client inter-process communication
+ *  UDP port pair (port,port+1 with port in network byte order)
+ */
+
+void run_stateless(int exit_mode, u_int16_t port)
 {
 #ifdef DHCPv6
 	struct client_state *client;
 	omapi_object_t *listener;
 	isc_result_t result;
+
+#ifndef DHCP4o6
+	IGNORE_UNUSED(port);
+#endif
 
 	/* Discover the network interface. */
 	discover_interfaces(DISCOVER_REQUESTED);
@@ -827,6 +892,12 @@ void run_stateless(int exit_mode)
 		usage("No interfaces available for stateless command: %s", "-S");
 
 	/* Parse the dhclient.conf file. */
+#ifdef DHCP4o6
+	if (dhcpv4_over_dhcpv6) {
+		/* Mark we want to request IRT too! */
+		dhcpv4_over_dhcpv6++;
+	}
+#endif
 	read_client_conf();
 
 	/* Parse the lease database. */
@@ -844,6 +915,11 @@ void run_stateless(int exit_mode)
 
 		form_duid(&default_duid, MDL);
 	}
+
+#ifdef DHCP4o6
+	if (dhcpv4_over_dhcpv6 && !exit_mode)
+		dhcp4o6_setup(port);
+#endif
 
 	/* Start a configuration state machine. */
 	for (client = interfaces->client ;
@@ -966,6 +1042,17 @@ void state_reboot (cpp)
 	void *cpp;
 {
 	struct client_state *client = cpp;
+
+#if defined(DHCPv6) && defined(DHCP4o6)
+	if (dhcpv4_over_dhcpv6 && (dhcp4o6_state <= 0)) {
+		if (dhcp4o6_state < 0)
+			dhcp4o6_poll(NULL);
+		client->pending = P_REBOOT;
+		return;
+	}
+#endif
+
+	client->pending= P_NONE;
 
 	/* If we don't remember an active lease, go straight to INIT. */
 	if (!client -> active ||
@@ -1405,6 +1492,8 @@ void state_stop (cpp)
 {
 	struct client_state *client = cpp;
 
+	client->pending = P_NONE;
+
 	/* Cancel all timeouts. */
 	cancel_timeout(state_selecting, client);
 	cancel_timeout(send_discover, client);
@@ -1553,6 +1642,17 @@ dhcpv6(struct packet *packet) {
 
 	/* Screen out nonsensical messages. */
 	switch(packet->dhcpv6_msg_type) {
+#ifdef DHCP4o6
+	      case DHCPV6_DHCPV4_RESPONSE:
+		if (dhcpv4_over_dhcpv6) {
+		  log_info("RCV: %s message on %s from %s.",
+			   dhcpv6_type_names[packet->dhcpv6_msg_type],
+			   packet->interface->name,
+			   piaddr(packet->client_addr));
+		  forw_dhcpv4_response(packet);
+		}
+		return;
+#endif
 	      case DHCPV6_ADVERTISE:
 	      case DHCPV6_RECONFIGURE:
 		if (stateless)
@@ -1581,6 +1681,176 @@ dhcpv6(struct packet *packet) {
 	/* XXX: temporary log for debugging */
 	log_info("Packet received, but nothing done with it.");
 }
+
+#ifdef DHCP4o6
+/*
+ * \brief Forward a DHCPv4-response to the DHCPv4 client.
+ *  (DHCPv6 client function)
+ *
+ * The DHCPv6 client receives a DHCPv4-response which is forwarded
+ * to the DHCPv4 client.
+ * Format: address:16 + DHCPv4 message content
+ * (we have no state to keep the address so it is transported in
+ *  DHCPv6 <-> DHCPv6 inter-process messages)
+ *
+ * \param packet the DHCPv4-response packet
+ */
+static void forw_dhcpv4_response(struct packet *packet)
+{
+	struct option_cache *oc;
+	struct data_string enc_opt_data;
+	struct data_string ds;
+	int cc;
+
+	/*
+	 * Discard if relay is not ready.
+	 */
+	if (dhcp4o6_state == -1) {
+		log_info("forw_dhcpv4_response: not ready.");
+		return;
+	}
+
+	if (packet->client_addr.len != 16) {
+		log_error("forw_dhcpv4_response: bad address");
+		return;
+	}
+
+	/*
+	 * Get our encapsulated DHCPv4 message.
+	 */
+	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_DHCPV4_MSG);
+	if (oc == NULL) {
+		log_info("DHCPv4-response from %s missing "
+			 "DHCPv4 Message option.",
+			 piaddr(packet->client_addr));
+		return;
+	}
+
+	memset(&enc_opt_data, 0, sizeof(enc_opt_data));
+	if (!evaluate_option_cache(&enc_opt_data, NULL, NULL, NULL,
+				   NULL, NULL, &global_scope, oc, MDL)) {
+		log_error("forw_dhcpv4_response: error evaluating "
+			  "DHCPv4 message.");
+		data_string_forget(&enc_opt_data, MDL);
+		return;
+	}
+
+	if (enc_opt_data.len < DHCP_FIXED_NON_UDP) {
+		log_error("forw_dhcpv4_response: "
+			  "no memory for encapsulated packet.");
+		data_string_forget(&enc_opt_data, MDL);
+		return;
+	}
+
+	/*
+	 * Append address.
+	 */
+	memset(&ds, 0, sizeof(ds));
+	if (!buffer_allocate(&ds.buffer, enc_opt_data.len + 16, MDL)) {
+		log_error("forw_dhcpv4_response: no memory buffer.");
+		data_string_forget(&enc_opt_data, MDL);
+		return;
+	}
+	ds.data = ds.buffer->data;
+	ds.len = enc_opt_data.len + 16;
+	memcpy(ds.buffer->data, enc_opt_data.data, enc_opt_data.len);
+	memcpy(ds.buffer->data + enc_opt_data.len,
+	       packet->client_addr.iabuf, 16);
+	data_string_forget(&enc_opt_data, MDL);
+
+	/*
+	 * Forward them.
+	 */
+	cc = send(dhcp4o6_fd, ds.data, ds.len, 0);
+	if (cc < 0)
+		log_error("forw_dhcpv4_response: send(): %m");
+
+	data_string_forget(&ds, MDL);
+}
+
+/*
+ * \brief Receive a DHCPv4-response from the DHCPv6 client.
+ *  (DHCPv4 client function)
+ *
+ * The DHCPv4 client receives a DHCPv4-response forwarded
+ * by the DHCPv6 client (using \ref forw_dhcpv4_response())
+ *
+ * \param raw the DHCPv4-response raw packet
+ */
+static void recv_dhcpv4_response(struct data_string *raw)
+{
+	struct packet *packet;
+	struct iaddr from;
+
+	if (interfaces == NULL) {
+		log_error("recv_dhcpv4_response: no interfaces.");
+		return;
+	}
+
+	from.len = 16;
+	memcpy(from.iabuf, raw->data + (raw->len - 16), 16);
+
+	/*
+	 * Build a packet structure.
+	 */
+	packet = NULL;
+	if (!packet_allocate(&packet, MDL)) {
+		log_error("recv_dhcpv4_response: no memory for packet.");
+		return;
+	}
+
+	packet->raw = (struct dhcp_packet *) raw->data;
+	packet->packet_length = raw->len - 16;
+	packet->client_port = remote_port;
+	packet->client_addr = from;
+	interface_reference(&packet->interface, interfaces, MDL);
+
+	/* Allocate packet->options now so it is non-null for all packets */
+	if (!option_state_allocate (&packet->options, MDL)) {
+		log_error("recv_dhcpv4_response: no memory for options.");
+		packet_dereference (&packet, MDL);
+		return;
+	}
+
+	/* If there's an option buffer, try to parse it. */
+	if (packet->packet_length >= DHCP_FIXED_NON_UDP + 4) {
+		struct option_cache *op;
+		if (!parse_options(packet)) {
+			if (packet->options)
+				option_state_dereference
+					(&packet->options, MDL);
+			packet_dereference (&packet, MDL);
+			return;
+		}
+
+		if (packet->options_valid &&
+		    (op = lookup_option(&dhcp_universe,
+					packet->options,
+					DHO_DHCP_MESSAGE_TYPE))) {
+			struct data_string dp;
+			memset(&dp, 0, sizeof dp);
+			evaluate_option_cache(&dp, packet, NULL, NULL,
+					      packet->options, NULL,
+					      NULL, op, MDL);
+			if (dp.len > 0)
+				packet->packet_type = dp.data[0];
+			else
+				packet->packet_type = 0;
+			data_string_forget(&dp, MDL);
+		}
+	}
+
+	if (validate_packet(packet) != 0) {
+		if (packet->packet_type)
+			dhcp(packet);
+		else
+			bootp(packet);
+	}
+
+	/* If the caller kept the packet, they'll have upped the refcnt. */
+	packet_dereference(&packet, MDL);
+}
+#endif /* DHCP4o6 */
 #endif /* DHCPv6 */
 
 void dhcpoffer (packet)
@@ -2002,16 +2272,33 @@ void send_discover (cpp)
 		client -> packet.secs = htons (65535);
 	client -> secs = client -> packet.secs;
 
+#if defined(DHCPv6) && defined(DHCP4o6)
+	if (dhcpv4_over_dhcpv6) {
+		log_info ("DHCPDISCOVER interval %ld",
+			  (long)(client -> interval));
+	} else
+#endif
 	log_info ("DHCPDISCOVER on %s to %s port %d interval %ld",
 	      client -> name ? client -> name : client -> interface -> name,
 	      inet_ntoa (sockaddr_broadcast.sin_addr),
 	      ntohs (sockaddr_broadcast.sin_port), (long)(client -> interval));
 
 	/* Send out a packet. */
+#if defined(DHCPv6) && defined(DHCP4o6)
+	if (dhcpv4_over_dhcpv6) {
+		result = send_dhcpv4_query(client, 1);
+	} else
+#endif
 	result = send_packet(client->interface, NULL, &client->packet,
 			     client->packet_length, inaddr_any,
                              &sockaddr_broadcast, NULL);
         if (result < 0) {
+#if defined(DHCPv6) && defined(DHCP4o6)
+		if (dhcpv4_over_dhcpv6) {
+			log_error("%s:%d: Failed to send %d byte long packet.",
+				  MDL, client->packet_length);
+		} else
+#endif
 		log_error("%s:%d: Failed to send %d byte long packet over %s "
 			  "interface.", MDL, client->packet_length,
 			  client->interface->name);
@@ -2274,11 +2561,28 @@ void send_request (cpp)
 			client -> packet.secs = htons (65535);
 	}
 
+#if defined(DHCPv6) && defined(DHCP4o6)
+	if (dhcpv4_over_dhcpv6) {
+		log_info ("DHCPREQUEST");
+	} else
+#endif
 	log_info ("DHCPREQUEST on %s to %s port %d",
 	      client -> name ? client -> name : client -> interface -> name,
 	      inet_ntoa (destination.sin_addr),
 	      ntohs (destination.sin_port));
 
+#if defined(DHCPv6) && defined(DHCP4o6)
+	if (dhcpv4_over_dhcpv6) {
+		int broadcast = 0;
+		if (destination.sin_addr.s_addr == INADDR_BROADCAST)
+			broadcast = 1;
+		result = send_dhcpv4_query(client, broadcast);
+		if (result < 0) {
+			log_error("%s:%d: Failed to send %d byte long packet.",
+				  MDL, client->packet_length);
+		}
+	} else
+#endif
 	if (destination.sin_addr.s_addr != INADDR_BROADCAST &&
 	    fallback_interface) {
 		result = send_packet(fallback_interface, NULL, &client->packet,
@@ -2317,16 +2621,32 @@ void send_decline (cpp)
 
 	int result;
 
+#if defined(DHCPv6) && defined(DHCP4o6)
+	if (dhcpv4_over_dhcpv6) {
+		log_info ("DHCPDECLINE");
+	} else
+#endif
 	log_info ("DHCPDECLINE on %s to %s port %d",
 	      client->name ? client->name : client->interface->name,
 	      inet_ntoa(sockaddr_broadcast.sin_addr),
 	      ntohs(sockaddr_broadcast.sin_port));
 
 	/* Send out a packet. */
+#if defined(DHCPv6) && defined(DHCP4o6)
+	if (dhcpv4_over_dhcpv6) {
+		result = send_dhcpv4_query(client, 1);
+	} else
+#endif
 	result = send_packet(client->interface, NULL, &client->packet,
 			     client->packet_length, inaddr_any,
 			     &sockaddr_broadcast, NULL);
 	if (result < 0) {
+#if defined(DHCPv6) && defined(DHCP4o6)
+		if (dhcpv4_over_dhcpv6) {
+			log_error("%s:%d: Failed to send %d byte long packet.",
+				  MDL, client->packet_length);
+		} else
+#endif
 		log_error("%s:%d: Failed to send %d byte long packet over %s"
 			  " interface.", MDL, client->packet_length,
 			  client->interface->name);
@@ -2363,11 +2683,28 @@ void send_release (cpp)
 		return;
 	}
 
+#if defined(DHCPv6) && defined(DHCP4o6)
+	if (dhcpv4_over_dhcpv6) {
+		log_info ("DHCPRELEASE");
+	} else
+#endif
 	log_info ("DHCPRELEASE on %s to %s port %d",
 	      client -> name ? client -> name : client -> interface -> name,
 	      inet_ntoa (destination.sin_addr),
 	      ntohs (destination.sin_port));
 
+#if defined(DHCPv6) && defined(DHCP4o6)
+	if (dhcpv4_over_dhcpv6) {
+		int broadcast = 0;
+		if (destination.sin_addr.s_addr == INADDR_BROADCAST)
+			broadcast = 1;
+		result = send_dhcpv4_query(client, broadcast);
+		if (result < 0) {
+			log_error("%s:%d: Failed to send %d byte long packet.",
+				  MDL, client->packet_length);
+		}
+	} else
+#endif
 	if (fallback_interface) {
 		result = send_packet(fallback_interface, NULL, &client->packet,
 				      client->packet_length, from, &destination,
@@ -2392,6 +2729,151 @@ void send_release (cpp)
 
         }
 }
+
+#if defined(DHCPv6) && defined(DHCP4o6)
+/*
+ * \brief Send a DHCPv4-query to the DHCPv6 client
+ *  (DHCPv4 client function)
+ *
+ * The DHCPv4 client sends a DHCPv4-query to the DHCPv6 client over
+ * the inter-process communication socket.
+ *
+ * \param client the DHCPv4 client state
+ * \param broadcast the broadcast flag
+ * \return the sent byte count (-1 on error)
+ */
+static int send_dhcpv4_query(struct client_state *client, int broadcast) {
+	struct data_string ds;
+	struct dhcpv4_over_dhcpv6_packet *query;
+	int ofs, len, cc;
+
+	if (dhcp4o6_state <= 0) {
+		log_info("send_dhcpv4_query: not ready.");
+		return -1;
+	}
+
+	/*
+	 * Compute buffer length and allocate it.
+	 */
+	len = ofs = (int)(offsetof(struct dhcpv4_over_dhcpv6_packet, options));
+	len += dhcpv6_universe.tag_size + dhcpv6_universe.length_size;
+	len += client->packet_length;
+	memset(&ds, 0, sizeof(ds));
+	if (!buffer_allocate(&ds.buffer, len, MDL)) {
+		log_error("Unable to allocate memory for DHCPv4-query.");
+		return -1;
+	}
+	ds.data = ds.buffer->data;
+	ds.len = len;
+
+	/*
+	 * Fill header.
+	 */
+	query = (struct dhcpv4_over_dhcpv6_packet *)ds.data;
+	query->msg_type = DHCPV6_DHCPV4_QUERY;
+	query->flags[0] = query->flags[1] = query->flags[2] = 0;
+	if (!broadcast)
+		query->flags[0] |= DHCP4O6_QUERY_UNICAST;
+
+	/*
+	 * Append DHCPv4 message.
+	 */
+	dhcpv6_universe.store_tag(ds.buffer->data + ofs, D6O_DHCPV4_MSG);
+	ofs += dhcpv6_universe.tag_size;
+	dhcpv6_universe.store_length(ds.buffer->data + ofs,
+				     client->packet_length);
+	ofs += dhcpv6_universe.length_size;
+	memcpy(ds.buffer->data + ofs, &client->packet, client->packet_length);
+
+	/*
+	 * Send DHCPv6 message.
+	 */
+	cc = send(dhcp4o6_fd, ds.data, ds.len, 0);
+	if (cc < 0)
+		log_error("send_dhcpv4_query: send(): %m");
+
+	data_string_forget(&ds, MDL);
+
+	return cc;
+}
+
+/*
+ * \brief Forward a DHCPv4-query to all DHCPv4 over DHCPv6 server addresses.
+ *  (DHCPv6 client function)
+ *
+ * \param raw the DHCPv6 DHCPv4-query message raw content
+ */
+static void forw_dhcpv4_query(struct data_string *raw) {
+	struct interface_info *ip;
+	struct client_state *client;
+	struct dhc6_lease *lease;
+	struct option_cache *oc;
+	struct data_string addrs;
+	struct sockaddr_in6 sin6;
+	int i, send_ret, attempt, success;
+
+	attempt = success = 0;
+	memset(&sin6, 0, sizeof(sin6));
+	sin6.sin6_family = AF_INET6;
+	sin6.sin6_port = remote_port;
+#ifdef HAVE_SA_LEN
+	sin6.sin6_len = sizeof(sin6);
+#endif
+	memset(&addrs, 0, sizeof(addrs));
+	for (ip = interfaces; ip != NULL; ip = ip->next) {
+		for (client = ip->client; client != NULL;
+		     client = client->next) {
+			if ((client->state != S_BOUND) &&
+			    (client->state != S_RENEWING) &&
+			    (client->state != S_REBINDING))
+				continue;
+			lease = client->active_lease;
+			if ((lease == NULL) || lease->released)
+				continue;
+			oc = lookup_option(&dhcpv6_universe,
+					   lease->options,
+					   D6O_DHCP4_O_DHCP6_SERVER);
+			if ((oc == NULL) ||
+			    !evaluate_option_cache(&addrs, NULL, NULL, NULL,
+						   lease->options, NULL,
+						   &global_scope, oc, MDL) ||
+			    ((addrs.len % sizeof(sin6.sin6_addr)) != 0)) {
+				data_string_forget(&addrs, MDL);
+				continue;
+			}
+			if (addrs.len == 0) {
+				/* note there is nothing to forget */
+				inet_pton(AF_INET6,
+					  All_DHCP_Relay_Agents_and_Servers,
+					  &sin6.sin6_addr);
+				attempt++;
+				send_ret = send_packet6(ip, raw->data,
+							raw->len, &sin6);
+				if (send_ret == raw->len)
+					success++;
+				continue;
+			}
+			for (i = 0; i < addrs.len;
+			     i += sizeof(sin6.sin6_addr)) {
+				memcpy(&sin6.sin6_addr, addrs.data + i,
+				       sizeof(sin6.sin6_addr));
+				attempt++;
+				send_ret = send_packet6(ip, raw->data,
+							raw->len, &sin6);
+				if (send_ret == raw->len)
+					success++;
+			}
+			data_string_forget(&addrs, MDL);
+		}
+	}
+
+	log_info("forw_dhcpv4_query: sent(%d): %d/%d",
+		 raw->len, success, attempt);
+
+	if (attempt == 0)
+		dhcp4o6_stop();
+}
+#endif
 
 void
 make_client_options(struct client_state *client, struct client_lease *lease,
@@ -2579,6 +3061,7 @@ void make_discover (client, lease)
 
 	client -> packet.op = BOOTREQUEST;
 	client -> packet.htype = client -> interface -> hw_address.hbuf [0];
+	/* Assumes hw_address is known, otherwise a random value may result */
 	client -> packet.hlen = client -> interface -> hw_address.hlen - 1;
 	client -> packet.hops = 0;
 	client -> packet.xid = random ();
@@ -2652,6 +3135,7 @@ void make_request (client, lease)
 
 	client -> packet.op = BOOTREQUEST;
 	client -> packet.htype = client -> interface -> hw_address.hbuf [0];
+	/* Assumes hw_address is known, otherwise a random value may result */
 	client -> packet.hlen = client -> interface -> hw_address.hlen - 1;
 	client -> packet.hops = 0;
 	client -> packet.xid = client -> xid;
@@ -2726,6 +3210,7 @@ void make_decline (client, lease)
 
 	client -> packet.op = BOOTREQUEST;
 	client -> packet.htype = client -> interface -> hw_address.hbuf [0];
+	/* Assumes hw_address is known, otherwise a random value may result */
 	client -> packet.hlen = client -> interface -> hw_address.hlen - 1;
 	client -> packet.hops = 0;
 	client -> packet.xid = client -> xid;
@@ -2787,6 +3272,7 @@ void make_release (client, lease)
 
 	client -> packet.op = BOOTREQUEST;
 	client -> packet.htype = client -> interface -> hw_address.hbuf [0];
+	/* Assumes hw_address is known, otherwise a random value may result */
 	client -> packet.hlen = client -> interface -> hw_address.hlen - 1;
 	client -> packet.hops = 0;
 	client -> packet.xid = random ();
@@ -3796,6 +4282,15 @@ void do_release(client)
 	struct data_string ds;
 	struct option_cache *oc;
 
+#if defined(DHCPv6) && defined(DHCP4o6)
+	if (dhcpv4_over_dhcpv6 && (dhcp4o6_state <= 0)) {
+		if (dhcp4o6_state < 0)
+			dhcp4o6_poll(NULL);
+		client->pending = P_RELEASE;
+		return;
+	}
+#endif
+
 	/* Pick a random xid. */
 	client -> xid = random ();
 
@@ -3852,6 +4347,11 @@ void do_release(client)
 	cancel_timeout (send_request, client);
 	cancel_timeout (state_reboot, client);
 	client -> state = S_STOPPED;
+
+#if defined(DHCPv6) && defined(DHCP4o6)
+	if (dhcpv4_over_dhcpv6)
+		exit(0);
+#endif
 }
 
 int dhclient_interface_shutdown_hook (struct interface_info *interface)
@@ -4647,3 +5147,237 @@ dhclient_ddns_cb_free(dhcp_ddns_cb_t *ddns_cb, char* file, int line) {
         ddns_cb_free(ddns_cb, file, line);
     }
 }
+
+#if defined(DHCPv6) && defined(DHCP4o6)
+/*
+ * \brief Omapi I/O handler
+ *
+ * The inter-process communication receive handler.
+ *
+ * On the DHCPv6 side, the message is either a POLL (which is answered
+ *  by a START or a STOP) or a DHCPv4-QUERY (which is forwarded to
+ *  DHCPv4 over DHCPv6 servers by forw_dhcpv4_query()).
+ *
+ * On the DHCPv4 side, the message is either a START, a STOP
+ *  (both for the DHCP4 over DHCPv6 state machine) or a DHCPv4-RESPONSE
+ *  (which is processed by recv_dhcpv4_response()).
+ *
+ * \param h the OMAPI object
+ * \return a result for I/O success or error (used by the I/O subsystem)
+ */
+isc_result_t dhcpv4o6_handler(omapi_object_t *h) {
+	char buf[65536];
+	char start_msg[5] = { 'S', 'T', 'A', 'R', 'T' };
+	char stop_msg[4] = { 'S', 'T', 'O', 'P' };
+	char poll_msg[4] = { 'P', 'O', 'L', 'L' };
+	struct data_string raw;
+	int cc;
+
+	if (h->type != dhcp4o6_type)
+		return DHCP_R_INVALIDARG;
+
+	cc = recv(dhcp4o6_fd, buf, sizeof(buf), 0);
+	if (cc <= 0)
+		return ISC_R_UNEXPECTED;
+
+	if (local_family == AF_INET6) {
+		if ((cc == 4) &&
+		    (memcmp(buf, poll_msg, sizeof(poll_msg)) == 0)) {
+			log_info("RCV: POLL");
+			if (dhcp4o6_state < 0)
+				cc = send(dhcp4o6_fd, stop_msg,
+					  sizeof(stop_msg), 0);
+			else
+				cc = send(dhcp4o6_fd, start_msg,
+					  sizeof(start_msg), 0);
+			if (cc < 0) {
+				log_error("dhcpv4o6_handler: send(): %m");
+				return ISC_R_IOERROR;
+			}
+		} else {
+			if (cc < DHCP_FIXED_NON_UDP + 8)
+				return ISC_R_UNEXPECTED;
+			memset(&raw, 0, sizeof(raw));
+			if (!buffer_allocate(&raw.buffer, cc, MDL)) {
+				log_error("dhcpv4o6_handler: "
+					  "no memory buffer.");
+				return ISC_R_NOMEMORY;
+			}
+			raw.data = raw.buffer->data;
+			raw.len = cc;
+			memcpy(raw.buffer->data, buf, cc);
+
+			forw_dhcpv4_query(&raw);
+
+			data_string_forget(&raw, MDL);
+		}
+	} else {
+		if ((cc == 4) &&
+		    (memcmp(buf, stop_msg, sizeof(stop_msg)) == 0)) {
+			log_info("RCV: STOP");
+			if (dhcp4o6_state > 0) {
+				dhcp4o6_state = 0;
+				dhcp4o6_poll(NULL);
+			}
+		} else if ((cc == 5) &&
+			   (memcmp(buf, start_msg, sizeof(start_msg)) == 0)) {
+			log_info("RCV: START");
+			if (dhcp4o6_state == 0)
+				cancel_timeout(dhcp4o6_poll, NULL);
+			dhcp4o6_state = 1;
+			dhcp4o6_resume();
+		} else {
+			if (cc < DHCP_FIXED_NON_UDP + 16)
+				return ISC_R_UNEXPECTED;
+			memset(&raw, 0, sizeof(raw));
+			if (!buffer_allocate(&raw.buffer, cc, MDL)) {
+				log_error("dhcpv4o6_handler: "
+					  "no memory buffer.");
+				return ISC_R_NOMEMORY;
+			}
+			raw.data = raw.buffer->data;
+			raw.len = cc;
+			memcpy(raw.buffer->data, buf, cc);
+
+			recv_dhcpv4_response(&raw);
+
+			data_string_forget(&raw, MDL);
+		}
+	}
+
+	return ISC_R_SUCCESS;
+}
+
+/*
+ * \brief Poll the DHCPv6 client
+ *  (DHCPv4 client function)
+ *
+ * A POLL message is sent to the DHCPv6 client periodically to check
+ * if the DHCPv6 is ready (i.e., has a valid DHCPv4-over-DHCPv6 server
+ * address option).
+ */
+static void dhcp4o6_poll(void *dummy) {
+	char msg[4] = { 'P', 'O', 'L', 'L' };
+	struct timeval tv;
+	int cc;
+
+	IGNORE_UNUSED(dummy);
+
+	if (dhcp4o6_state < 0)
+		dhcp4o6_state = 0;
+
+	log_info("POLL");
+
+	cc = send(dhcp4o6_fd, msg, sizeof(msg), 0);
+	if (cc < 0)
+		log_error("dhcp4o6_poll: send(): %m");
+
+	tv.tv_sec = cur_time + 60;
+	tv.tv_usec = random() % 1000000;
+
+	add_timeout(&tv, dhcp4o6_poll, NULL, 0, 0);
+}
+
+/*
+ * \brief Resume pending operations
+ *  (DHCPv4 client function)
+ *
+ * A START message was received from the DHCPv6 client so pending
+ * operations (RELEASE or REBOOT) must be resumed.
+ */
+static void dhcp4o6_resume() {
+	struct interface_info *ip;
+	struct client_state *client;
+
+	for (ip = interfaces; ip != NULL; ip = ip->next) {
+		for (client = ip->client; client != NULL;
+		     client = client->next) {
+			if (client->pending == P_RELEASE)
+				do_release(client);
+			else if (client->pending == P_REBOOT)
+				state_reboot(client);
+		}
+	}
+}
+
+/*
+ * \brief Send a START to the DHCPv4 client
+ *  (DHCPv6 client function)
+ *
+ * First check if there is a valid DHCPv4-over-DHCPv6 server address option,
+ * and when found go UP and on a transition from another state send
+ * a START message to the DHCPv4 client.
+ */
+void dhcp4o6_start() {
+	struct interface_info *ip;
+	struct client_state *client;
+	struct dhc6_lease *lease;
+	struct option_cache *oc;
+	struct data_string addrs;
+	char msg[5] = { 'S', 'T', 'A', 'R', 'T' };
+	int cc;
+
+	memset(&addrs, 0, sizeof(addrs));
+	for (ip = interfaces; ip != NULL; ip = ip->next) {
+		for (client = ip->client; client != NULL;
+		     client = client->next) {
+			if ((client->state != S_BOUND) &&
+			    (client->state != S_RENEWING) &&
+			    (client->state != S_REBINDING))
+				continue;
+			lease = client->active_lease;
+			if ((lease == NULL) || lease->released)
+				continue;
+			oc = lookup_option(&dhcpv6_universe,
+					   lease->options,
+					   D6O_DHCP4_O_DHCP6_SERVER);
+			if ((oc == NULL) ||
+			    !evaluate_option_cache(&addrs, NULL, NULL, NULL,
+						   lease->options, NULL,
+						   &global_scope, oc, MDL))
+				continue;
+			if ((addrs.len % 16) != 0) {
+				data_string_forget(&addrs, MDL);
+				continue;
+			}
+			data_string_forget(&addrs, MDL);
+			goto found;
+		}
+	}
+	log_info("dhcp4o6_start: failed");
+	dhcp4o6_stop();
+	return;
+
+found:
+	if (dhcp4o6_state == 1)
+		return;
+	log_info("dhcp4o6_start: go to UP");
+	dhcp4o6_state = 1;
+
+	cc = send(dhcp4o6_fd, msg, sizeof(msg), 0);
+	if (cc < 0)
+		log_info("dhcp4o6_start: send(): %m");
+}
+
+/*
+ * Send a STOP to the DHCPv4 client
+ *  (DHCPv6 client function)
+ *
+ * Go DOWN and on a transition from another state send a STOP message
+ * to the DHCPv4 client.
+ */
+static void dhcp4o6_stop() {
+	char msg[4] = { 'S', 'T', 'O', 'P' };
+	int cc;
+
+	if (dhcp4o6_state == -1)
+		return;
+
+	log_info("dhcp4o6_stop: go to DOWN");
+	dhcp4o6_state = -1;
+
+	cc = send(dhcp4o6_fd, msg, sizeof(msg), 0);
+	if (cc < 0)
+		log_error("dhcp4o6_stop: send(): %m");
+}
+#endif /* DHCPv6 && DHCP4o6 */

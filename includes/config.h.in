@@ -12,6 +12,9 @@
 /* Define to queue multiple DHCPACK replies per fsync. */
 #undef DELAYED_ACK
 
+/* Define to 1 to include DHCPv4 over DHCPv6 support. */
+#undef DHCP4o6
+
 /* Define to BIG_ENDIAN for MSB (Motorola or SPARC CPUs) or LITTLE_ENDIAN for
    LSB (Intel CPUs). */
 #undef DHCP_BYTE_ORDER

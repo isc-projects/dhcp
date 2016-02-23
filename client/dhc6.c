@@ -4835,6 +4835,11 @@ start_bound(struct client_state *client)
 		script_go(client);
 	}
 
+#ifdef DHCP4o6
+	if (dhcpv4_over_dhcpv6)
+		dhcp4o6_start();
+#endif
+
 	go_daemon();
 
 	if (client->old_lease != NULL) {
@@ -5314,8 +5319,12 @@ dhc6_check_irt(struct client_state *client)
 		}
 	}
 	/* Simply return gives a endless loop waiting for nothing. */
-	if (!found)
+	if (!found) {
+#ifdef DHCP4o6
+		if (!dhcpv4_over_dhcpv6)
+#endif
 		exit(0);
+	}
 
 	oc = lookup_option(&dhcpv6_universe, client->active_lease->options,
 			   D6O_INFORMATION_REFRESH_TIME);
@@ -5367,6 +5376,11 @@ start_informed(struct client_state *client)
 	script_write_params6(client, "new_", client->active_lease->options);
 	script_write_requested6(client);
 	script_go(client);
+
+#ifdef DHCP4o6
+	if (dhcpv4_over_dhcpv6)
+		dhcp4o6_start();
+#endif
 
 	go_daemon();
 

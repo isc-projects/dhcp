@@ -20,6 +20,15 @@
 
 #ifdef DHCPv6
 
+#ifdef DHCP4o6
+static void forw_dhcpv4_query(struct packet *packet);
+static void send_dhcpv4_response(struct data_string *raw);
+
+static void recv_dhcpv4_query(struct data_string *raw);
+static void dhcp4o6_dhcpv4_query(struct data_string *reply_ret,
+				 struct packet *packet);
+#endif
+
 /*
  * We use print_hex_1() to output DUID values. We could actually output
  * the DUID with more information... MAC address if using type 1 or 3,
@@ -166,6 +175,104 @@ static isc_result_t get_first_ia_addr_val (struct packet* packet, int addr_type,
 
 static void
 set_reply_tee_times(struct reply_state* reply, unsigned ia_cursor);
+
+#ifdef DHCP4o6
+/*
+ * \brief Omapi I/O handler
+ *
+ * The inter-process communication receive handler.
+ * Get the message, put it into the raw data_string
+ * and call \ref send_dhcpv4_response() (DHCPv6 side) or
+ * \ref recv_dhcpv4_query() (DHCPv4 side)
+ *
+ * \param h the OMAPI object
+ * \return a result for I/O success or error (used by the I/O subsystem)
+ */
+isc_result_t dhcpv4o6_handler(omapi_object_t *h) {
+	char buf[65536];
+	struct data_string raw;
+	int cc;
+
+	if (h->type != dhcp4o6_type)
+		return DHCP_R_INVALIDARG;
+
+	cc = recv(dhcp4o6_fd, buf, sizeof(buf), 0);
+
+	if (cc < DHCP_FIXED_NON_UDP + 32)
+		return ISC_R_UNEXPECTED;
+	memset(&raw, 0, sizeof(raw));
+	if (!buffer_allocate(&raw.buffer, cc, MDL)) {
+		log_error("dhcpv4o6_handler: no memory buffer.");
+		return ISC_R_NOMEMORY;
+	}
+	raw.data = raw.buffer->data;
+	raw.len = cc;
+	memcpy(raw.buffer->data, buf, cc);
+
+	if (local_family == AF_INET6) {
+		send_dhcpv4_response(&raw);
+	} else {
+		recv_dhcpv4_query(&raw);
+	}
+
+	data_string_forget(&raw, MDL);
+
+	return ISC_R_SUCCESS;
+}
+
+/*
+ * \brief Send the DHCPv4-response back to the DHCPv6 side
+ *  (DHCPv6 server function)
+ *
+ * Format: interface:16 + address:16 + DHCPv6 DHCPv4-response message
+ *
+ * \param raw the IPC message content
+ */
+static void send_dhcpv4_response(struct data_string *raw) {
+	struct interface_info *ip;
+	char name[16 + 1];
+	struct sockaddr_in6 to_addr;
+	char pbuf[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
+	int send_ret;
+
+	memset(name, 0, sizeof(name));
+	memcpy(name, raw->data, 16);
+	for (ip = interfaces; ip != NULL; ip = ip->next) {
+		if (!strcmp(name, ip->name))
+			break;
+	}
+	if (ip == NULL) {
+		log_error("send_dhcpv4_response: can't find interface %s.",
+			  name);
+		return;
+	}
+
+	memset(&to_addr, 0, sizeof(to_addr));
+	to_addr.sin6_family = AF_INET6;
+	memcpy(&to_addr.sin6_addr, raw->data + 16, 16);
+	if ((raw->data[32] == DHCPV6_RELAY_FORW) ||
+	    (raw->data[32] == DHCPV6_RELAY_REPL)) {
+		to_addr.sin6_port = local_port;
+	} else {
+		to_addr.sin6_port = remote_port;
+	}
+
+	log_info("send_dhcpv4_response(): sending %s on %s to %s port %d",
+		 dhcpv6_type_names[raw->data[32]],
+		 name,
+		 inet_ntop(AF_INET6, raw->data + 16, pbuf, sizeof(pbuf)),
+		 ntohs(to_addr.sin6_port));
+
+	send_ret = send_packet6(ip, raw->data + 32, raw->len - 32, &to_addr);
+	if (send_ret < 0) {
+		log_error("send_dhcpv4_response: send_packet6(): %m");
+	} else if (send_ret != raw->len - 32) {
+		log_error("send_dhcpv4_response: send_packet6() "
+			  "sent %d of %d bytes",
+			  send_ret, raw->len - 32);
+	}
+}
+#endif /* DHCP4o6 */
 
 /*
  * Schedule lease timeouts for all of the iasubopts in the reply.
@@ -754,6 +861,12 @@ static const int required_opts_STATUS_CODE[] = {
 	D6O_STATUS_CODE,
 	0
 };
+#ifdef DHCP4o6
+static const int required_opts_4o6[] = {
+	D6O_DHCPV4_MSG,
+	0
+};
+#endif
 
 static const int unicast_reject_opts[] = {
 	D6O_CLIENTID,
@@ -1379,7 +1492,7 @@ try_client_v6_prefix(struct iasubopt **pref,
  *                     hash the address.  After a number of failures we
  *                     conclude the pool is basically full.
  */
-static isc_result_t 
+static isc_result_t
 pick_v6_prefix(struct reply_state *reply) {
         struct ipv6_pool *p = NULL;
         struct ipv6_pond *pond;
@@ -6231,6 +6344,7 @@ dhcpv6_information_request(struct data_string *reply, struct packet *packet) {
 
 /* XXX: this is very, very similar to do_packet6(), and should probably
 	be combined in a clever way */
+/* DHCPv6 server side */
 static void
 dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 	struct option_cache *oc;
@@ -6275,12 +6389,14 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 
 	if (!evaluate_option_cache(&enc_opt_data, NULL, NULL, NULL,
 				   NULL, NULL, &global_scope, oc, MDL)) {
+		/* should be dhcpv6_relay_forw */
 		log_error("dhcpv6_forw_relay: error evaluating "
 			  "relayed message.");
 		goto exit;
 	}
 
 	if (!packet6_len_okay((char *)enc_opt_data.data, enc_opt_data.len)) {
+		/* should be dhcpv6_relay_forw */
 		log_error("dhcpv6_forw_relay: encapsulated packet too short.");
 		goto exit;
 	}
@@ -6290,12 +6406,14 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 	 */
 	enc_packet = NULL;
 	if (!packet_allocate(&enc_packet, MDL)) {
+		/* should be dhcpv6_relay_forw */
 		log_error("dhcpv6_forw_relay: "
 			  "no memory for encapsulated packet.");
 		goto exit;
 	}
 
 	if (!option_state_allocate(&enc_packet->options, MDL)) {
+		/* should be dhcpv6_relay_forw */
 		log_error("dhcpv6_forw_relay: "
 			  "no memory for encapsulated packet's options.");
 		goto exit;
@@ -6328,6 +6446,23 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 			   cases where it fails */
 			goto exit;
 		}
+	} else if ((msg_type == DHCPV6_DHCPV4_QUERY) ||
+		   (msg_type == DHCPV6_DHCPV4_RESPONSE)) {
+#ifdef DHCP4o6
+		if (!dhcpv4_over_dhcpv6 ||
+		    (msg_type == DHCPV6_DHCPV4_RESPONSE)) {
+			log_error("dhcpv6_relay_forw: "
+				  "unsupported %s message type.",
+				  dhcpv6_type_names[msg_type]);
+			goto exit;
+		}
+		forw_dhcpv4_query(packet);
+		goto exit;
+#else /* DHCP4o6 */
+		log_error("dhcpv6_relay_forw: unsupported %s message type.",
+			  dhcpv6_type_names[msg_type]);
+		goto exit;
+#endif /* DHCP4o6 */
 	} else {
 		int msglen = (int)(offsetof(struct dhcpv6_packet, options));
 		msg = (struct dhcpv6_packet *)enc_opt_data.data;
@@ -6509,6 +6644,536 @@ exit:
 	}
 }
 
+#ifdef DHCP4o6
+/* \brief Internal processing of a relayed DHCPv4-query
+ *  (DHCPv4 server side)
+ *
+ * Code copied from \ref dhcpv6_relay_forw() which itself is
+ * from \ref do_packet6().
+ *
+ * \param reply_ret pointer to the response
+ * \param packet the query
+ */
+static void
+dhcp4o6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
+	struct option_cache *oc;
+	struct data_string enc_opt_data;
+	struct packet *enc_packet;
+	unsigned char msg_type;
+	const struct dhcpv6_relay_packet *relay;
+	const struct dhcpv4_over_dhcpv6_packet *msg;
+	struct data_string enc_reply;
+	char link_addr[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
+	char peer_addr[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
+	struct data_string a_opt, packet_ero;
+	struct option_state *opt_state;
+	static char reply_data[65536];
+	struct dhcpv6_relay_packet *reply;
+	int reply_ofs;
+
+	/*
+	 * Initialize variables for early exit.
+	 */
+	opt_state = NULL;
+	memset(&a_opt, 0, sizeof(a_opt));
+	memset(&packet_ero, 0, sizeof(packet_ero));
+	memset(&enc_reply, 0, sizeof(enc_reply));
+	memset(&enc_opt_data, 0, sizeof(enc_opt_data));
+	enc_packet = NULL;
+
+	/*
+	 * Get our encapsulated relay message.
+	 */
+	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_RELAY_MSG);
+	if (oc == NULL) {
+		inet_ntop(AF_INET6, &packet->dhcpv6_link_address,
+			  link_addr, sizeof(link_addr));
+		inet_ntop(AF_INET6, &packet->dhcpv6_peer_address,
+			  peer_addr, sizeof(peer_addr));
+		log_info("Relay-forward from %s with link address=%s and "
+			 "peer address=%s missing Relay Message option.",
+			  piaddr(packet->client_addr), link_addr, peer_addr);
+		goto exit;
+	}
+
+	if (!evaluate_option_cache(&enc_opt_data, NULL, NULL, NULL,
+				   NULL, NULL, &global_scope, oc, MDL)) {
+		log_error("dhcp4o6_relay_forw: error evaluating "
+			  "relayed message.");
+		goto exit;
+	}
+
+	if (!packet6_len_okay((char *)enc_opt_data.data, enc_opt_data.len)) {
+		log_error("dhcp4o6_relay_forw: "
+			  "encapsulated packet too short.");
+		goto exit;
+	}
+
+	/*
+	 * Build a packet structure from this encapsulated packet.
+	 */
+	if (!packet_allocate(&enc_packet, MDL)) {
+		log_error("dhcp4o6_relay_forw: "
+			  "no memory for encapsulated packet.");
+		goto exit;
+	}
+
+	if (!option_state_allocate(&enc_packet->options, MDL)) {
+		log_error("dhcp4o6_relay_forw: "
+			  "no memory for encapsulated packet's options.");
+		goto exit;
+	}
+
+	enc_packet->client_port = packet->client_port;
+	enc_packet->client_addr = packet->client_addr;
+	interface_reference(&enc_packet->interface, packet->interface, MDL);
+	enc_packet->dhcpv6_container_packet = packet;
+
+	msg_type = enc_opt_data.data[0];
+	if ((msg_type == DHCPV6_RELAY_FORW) ||
+	    (msg_type == DHCPV6_RELAY_REPL)) {
+		int relaylen = (int)(offsetof(struct dhcpv6_relay_packet, options));
+		relay = (struct dhcpv6_relay_packet *)enc_opt_data.data;
+		enc_packet->dhcpv6_msg_type = relay->msg_type;
+
+		/* relay-specific data */
+		enc_packet->dhcpv6_hop_count = relay->hop_count;
+		memcpy(&enc_packet->dhcpv6_link_address,
+		       relay->link_address, sizeof(relay->link_address));
+		memcpy(&enc_packet->dhcpv6_peer_address,
+		       relay->peer_address, sizeof(relay->peer_address));
+
+		if (!parse_option_buffer(enc_packet->options,
+					 relay->options,
+					 enc_opt_data.len - relaylen,
+					 &dhcpv6_universe)) {
+			/* no logging here, as parse_option_buffer() logs all
+			   cases where it fails */
+			goto exit;
+		}
+	} else if ((msg_type == DHCPV6_DHCPV4_QUERY) ||
+		   (msg_type == DHCPV6_DHCPV4_RESPONSE)) {
+		int msglen =
+		    (int)(offsetof(struct dhcpv4_over_dhcpv6_packet, options));
+		msg = (struct dhcpv4_over_dhcpv6_packet *)enc_opt_data.data;
+		enc_packet->dhcpv6_msg_type = msg->msg_type;
+
+		/* message-specific data */
+		memcpy(enc_packet->dhcp4o6_flags,
+		       msg->flags,
+		       sizeof(enc_packet->dhcp4o6_flags));
+
+		if (!parse_option_buffer(enc_packet->options,
+					 msg->options,
+					 enc_opt_data.len - msglen,
+					 &dhcpv6_universe)) {
+			/* no logging here, as parse_option_buffer() logs all
+			   cases where it fails */
+			goto exit;
+		}
+	} else {
+		log_error("dhcp4o6_relay_forw: unexpected message of type %d.",
+			  (int)msg_type);
+		goto exit;
+	}
+
+	/*
+	 * This is recursive. It is possible to exceed maximum packet size.
+	 * XXX: This will cause the packet send to fail.
+	 */
+	build_dhcpv6_reply(&enc_reply, enc_packet);
+
+	/*
+	 * If we got no encapsulated data, then it is discarded, and
+	 * our reply-forw is also discarded.
+	 */
+	if (enc_reply.data == NULL) {
+		goto exit;
+	}
+
+	/*
+	 * Now we can use the reply_data buffer.
+	 * Packet header stuff all comes from the forward message.
+	 */
+	reply = (struct dhcpv6_relay_packet *)reply_data;
+	reply->msg_type = DHCPV6_RELAY_REPL;
+	reply->hop_count = packet->dhcpv6_hop_count;
+	memcpy(reply->link_address, &packet->dhcpv6_link_address,
+	       sizeof(reply->link_address));
+	memcpy(reply->peer_address, &packet->dhcpv6_peer_address,
+	       sizeof(reply->peer_address));
+	reply_ofs = (int)(offsetof(struct dhcpv6_relay_packet, options));
+
+	/*
+	 * Get the reply option state.
+	 */
+	if (!option_state_allocate(&opt_state, MDL)) {
+		log_error("dhcp4o6_relay_forw: no memory for option state.");
+		goto exit;
+	}
+
+	/*
+	 * Append the interface-id if present.
+	 */
+	oc = lookup_option(&dhcpv6_universe, packet->options,
+			   D6O_INTERFACE_ID);
+	if (oc != NULL) {
+		if (!evaluate_option_cache(&a_opt, packet,
+					   NULL, NULL,
+					   packet->options, NULL,
+					   &global_scope, oc, MDL)) {
+			log_error("dhcp4o6_relay_forw: error evaluating "
+				  "Interface ID.");
+			goto exit;
+		}
+		if (!save_option_buffer(&dhcpv6_universe, opt_state, NULL,
+					(unsigned char *)a_opt.data,
+					a_opt.len,
+					D6O_INTERFACE_ID, 0)) {
+			log_error("dhcp4o6_relay_forw: error saving "
+				  "Interface ID.");
+			goto exit;
+		}
+		data_string_forget(&a_opt, MDL);
+	}
+
+	/*
+	 * Append our encapsulated stuff for caller.
+	 */
+	if (!save_option_buffer(&dhcpv6_universe, opt_state, NULL,
+				(unsigned char *)enc_reply.data,
+				enc_reply.len,
+				D6O_RELAY_MSG, 0)) {
+		log_error("dhcp4o6_relay_forw: error saving Relay MSG.");
+		goto exit;
+	}
+
+	/*
+	 * Get the ERO if any.
+	 */
+	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_ERO);
+	if (oc != NULL) {
+		unsigned req;
+		int i;
+
+		if (!evaluate_option_cache(&packet_ero, packet,
+					   NULL, NULL,
+					   packet->options, NULL,
+					   &global_scope, oc, MDL) ||
+			(packet_ero.len & 1)) {
+			log_error("dhcp4o6_relay_forw: error evaluating ERO.");
+			goto exit;
+		}
+
+		/* Decode and apply the ERO. */
+		for (i = 0; i < packet_ero.len; i += 2) {
+			req = getUShort(packet_ero.data + i);
+			/* Already in the reply? */
+			oc = lookup_option(&dhcpv6_universe, opt_state, req);
+			if (oc != NULL)
+				continue;
+			/* Get it from the packet if present. */
+			oc = lookup_option(&dhcpv6_universe,
+					   packet->options,
+					   req);
+			if (oc == NULL)
+				continue;
+			if (!evaluate_option_cache(&a_opt, packet,
+						   NULL, NULL,
+						   packet->options, NULL,
+						   &global_scope, oc, MDL)) {
+				log_error("dhcp4o6_relay_forw: error "
+					  "evaluating option %u.", req);
+				goto exit;
+			}
+			if (!save_option_buffer(&dhcpv6_universe,
+						opt_state,
+						NULL,
+						(unsigned char *)a_opt.data,
+						a_opt.len,
+						req,
+						0)) {
+				log_error("dhcp4o6_relay_forw: error saving "
+					  "option %u.", req);
+				goto exit;
+			}
+			data_string_forget(&a_opt, MDL);
+		}
+	}
+
+	reply_ofs += store_options6(reply_data + reply_ofs,
+				    sizeof(reply_data) - reply_ofs,
+				    opt_state, packet,
+				    required_opts_agent, &packet_ero);
+
+	/*
+	 * Return our reply to the caller.
+	 */
+	reply_ret->len = reply_ofs;
+	reply_ret->buffer = NULL;
+	if (!buffer_allocate(&reply_ret->buffer, reply_ret->len, MDL)) {
+		log_fatal("No memory to store reply.");
+	}
+	reply_ret->data = reply_ret->buffer->data;
+	memcpy(reply_ret->buffer->data, reply_data, reply_ofs);
+
+exit:
+	if (opt_state != NULL)
+		option_state_dereference(&opt_state, MDL);
+	if (a_opt.data != NULL) {
+		data_string_forget(&a_opt, MDL);
+	}
+	if (packet_ero.data != NULL) {
+		data_string_forget(&packet_ero, MDL);
+	}
+	if (enc_reply.data != NULL) {
+		data_string_forget(&enc_reply, MDL);
+	}
+	if (enc_opt_data.data != NULL) {
+		data_string_forget(&enc_opt_data, MDL);
+	}
+	if (enc_packet != NULL) {
+		packet_dereference(&enc_packet, MDL);
+	}
+}
+
+/*
+ * \brief Internal processing of a DHCPv4-query
+ *  (DHCPv4 server function)
+ *
+ * Code copied from \ref do_packet().
+ *
+ * \param reply_ret pointer to the response
+ * \param packet the query
+ */
+static void
+dhcp4o6_dhcpv4_query(struct data_string *reply_ret, struct packet *packet) {
+	struct option_cache *oc;
+	struct data_string enc_opt_data;
+	struct packet *enc_packet;
+	struct data_string enc_response;
+	struct option_state *opt_state;
+	static char response_data[65536];
+	struct dhcpv4_over_dhcpv6_packet *response;
+	int response_ofs;
+
+	/*
+	 * Initialize variables for early exit.
+	 */
+	opt_state = NULL;
+	memset(&enc_response, 0, sizeof(enc_response));
+	memset(&enc_opt_data, 0, sizeof(enc_opt_data));
+	enc_packet = NULL;
+
+	/*
+	 * Get our encapsulated relay message.
+	 */
+	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_DHCPV4_MSG);
+	if (oc == NULL) {
+		log_info("DHCPv4-query from %s missing DHCPv4 Message option.",
+			 piaddr(packet->client_addr));
+		goto exit;
+	}
+
+	if (!evaluate_option_cache(&enc_opt_data, NULL, NULL, NULL,
+				   NULL, NULL, &global_scope, oc, MDL)) {
+		log_error("dhcp4o6_dhcpv4_query: error evaluating "
+			  "DHCPv4 message.");
+		goto exit;
+	}
+
+	if (enc_opt_data.len < DHCP_FIXED_NON_UDP) {
+		log_error("dhcp4o6_dhcpv4_query: DHCPv4 packet too short.");
+		goto exit;
+	}
+
+	/*
+	 * Build a packet structure from this encapsulated packet.
+         */
+	if (!packet_allocate(&enc_packet, MDL)) {
+		log_error("dhcp4o6_dhcpv4_query: "
+			  "no memory for encapsulated packet.");
+		goto exit;
+	}
+
+	enc_packet->raw = (struct dhcp_packet *)enc_opt_data.data;
+	enc_packet->packet_length = enc_opt_data.len;
+	enc_packet->dhcp4o6_response = &enc_response;
+	enc_packet->client_port = packet->client_port;
+	enc_packet->client_addr = packet->client_addr;
+	interface_reference(&enc_packet->interface, packet->interface, MDL);
+	enc_packet->dhcpv6_container_packet = packet;
+	if (packet->dhcp4o6_flags[0] & DHCP4O6_QUERY_UNICAST)
+		enc_packet->unicast = 1;
+
+	if (enc_packet->raw->hlen > sizeof(enc_packet->raw->chaddr)) {
+		log_info("dhcp4o6_dhcpv4_query: "
+			 "discarding packet with bogus hlen.");
+		goto exit;
+	}
+
+	/* Allocate packet->options now so it is non-null for all packets */
+	if (!option_state_allocate (&enc_packet->options, MDL)) {
+		log_error("dhcp4o6_dhcpv4_query: no memory for options.");
+		goto exit;
+	}
+
+	/* If there's an option buffer, try to parse it. */
+	if (enc_packet->packet_length >= DHCP_FIXED_NON_UDP + 4) {
+		struct option_cache *op;
+		if (!parse_options(enc_packet)) {
+			if (enc_packet->options)
+				option_state_dereference
+					(&enc_packet->options, MDL);
+			packet_dereference (&enc_packet, MDL);
+			goto exit;
+		}
+
+		if (enc_packet->options_valid &&
+		    (op = lookup_option(&dhcp_universe,
+					enc_packet->options,
+					DHO_DHCP_MESSAGE_TYPE))) {
+			struct data_string dp;
+			memset(&dp, 0, sizeof dp);
+			evaluate_option_cache(&dp, enc_packet, NULL, NULL,
+					      enc_packet->options, NULL,
+					      NULL, op, MDL);
+			if (dp.len > 0)
+				enc_packet->packet_type = dp.data[0];
+			else
+				enc_packet->packet_type = 0;
+			data_string_forget(&dp, MDL);
+		}
+	}
+
+	if (validate_packet(enc_packet) != 0) {
+		if (enc_packet->packet_type)
+			dhcp(enc_packet);
+		else
+			bootp(enc_packet);
+	}
+
+	/* If the caller kept the packet, they'll have upped the refcnt. */
+	packet_dereference(&enc_packet, MDL);
+
+	/*
+	 * If we got no response data, then it is discarded, and
+	 * our DHCPv4-response is also discarded.
+	 */
+	if (enc_response.data == NULL) {
+		goto exit;
+	}
+
+	/*
+	 * Now we can use the response_data buffer.
+	 */
+	response = (struct dhcpv4_over_dhcpv6_packet *)response_data;
+	response->msg_type = DHCPV6_DHCPV4_RESPONSE;
+	response->flags[0] = response->flags[1] = response->flags[2] = 0;
+	response_ofs =
+		(int)(offsetof(struct dhcpv4_over_dhcpv6_packet, options));
+
+	/*
+	 * Get the response option state.
+	 */
+	if (!option_state_allocate(&opt_state, MDL)) {
+		log_error("dhcp4o6_dhcpv4_query: no memory for option state.");
+		goto exit;
+	}
+
+	/*
+	 * Append our encapsulated stuff for caller.
+	 */
+	if (!save_option_buffer(&dhcpv6_universe, opt_state, NULL,
+				(unsigned char *)enc_response.data,
+				enc_response.len,
+				D6O_DHCPV4_MSG, 0)) {
+		log_error("dhcp4o6_dhcpv4_query: error saving DHCPv4 MSG.");
+		goto exit;
+	}
+
+	response_ofs += store_options6(response_data + response_ofs,
+				       sizeof(response_data) - response_ofs,
+				       opt_state, packet,
+				       required_opts_4o6, NULL);
+
+	/*
+         * Return our response to the caller.
+	 */
+	reply_ret->len = response_ofs;
+	reply_ret->buffer = NULL;
+	if (!buffer_allocate(&reply_ret->buffer, reply_ret->len, MDL)) {
+		log_fatal("dhcp4o6_dhcpv4_query: no memory to store reply.");
+	}
+	reply_ret->data = reply_ret->buffer->data;
+	memcpy(reply_ret->buffer->data, response_data, response_ofs);
+
+exit:
+	if (opt_state != NULL)
+		option_state_dereference(&opt_state, MDL);
+	if (enc_response.data != NULL) {
+		data_string_forget(&enc_response, MDL);
+	}
+	if (enc_opt_data.data != NULL) {
+		data_string_forget(&enc_opt_data, MDL);
+	}
+	if (enc_packet != NULL) {
+		packet_dereference(&enc_packet, MDL);
+	}
+}
+
+/*
+ * \brief Forward a DHCPv4-query message to the DHCPv4 side
+ *  (DHCPv6 server function)
+ *
+ * Format: interface:16 + address:16 + DHCPv6 DHCPv4-query message
+ *
+ * \brief packet the DHCPv6 DHCPv4-query message
+ */
+static void forw_dhcpv4_query(struct packet *packet) {
+	struct data_string ds;
+	unsigned len;
+	int cc;
+
+	/* Get the initial message. */
+	while (packet->dhcpv6_container_packet != NULL)
+		packet = packet->dhcpv6_container_packet;
+
+	/* Check the initial message. */
+	if ((packet->raw == NULL) ||
+	    (packet->client_addr.len != 16) ||
+	    (packet->interface == NULL)) {
+		log_error("forw_dhcpv4_query: can't find initial message.");
+		return;
+	}
+
+	/* Get a buffer. */
+	len = packet->packet_length + 32;
+	memset(&ds, 0, sizeof(ds));
+	if (!buffer_allocate(&ds.buffer, len, MDL)) {
+		log_error("forw_dhcpv4_query: "
+			  "no memory for encapsulating packet.");
+		return;
+	}
+	ds.data = ds.buffer->data;
+	ds.len = len;
+
+	/* Fill the buffer. */
+	strncpy((char *)ds.buffer->data, packet->interface->name, 16);
+	memcpy(ds.buffer->data + 16,
+	       packet->client_addr.iabuf, 16);
+	memcpy(ds.buffer->data + 32,
+	       (unsigned char *)packet->raw,
+	       packet->packet_length);
+
+	/* Forward to the DHCPv4 server. */
+	cc = send(dhcp4o6_fd, ds.data, ds.len, 0);
+	if (cc < 0)
+		log_error("forw_dhcpv4_query: send(): %m");
+	data_string_forget(&ds, MDL);
+}
+#endif
+
 static void
 dhcpv6_discard(struct packet *packet) {
 	/* INSIST(packet->msg_type > 0); */
@@ -6574,6 +7239,11 @@ build_dhcpv6_reply(struct data_string *reply, struct packet *packet) {
 			dhcpv6_information_request(reply, packet);
 			break;
 		case DHCPV6_RELAY_FORW:
+#ifdef DHCP4o6
+			if (dhcpv4_over_dhcpv6 && (local_family == AF_INET))
+				dhcp4o6_relay_forw(reply, packet);
+			else
+#endif /* DHCP4o6 */
 			dhcpv6_relay_forw(reply, packet);
 			break;
 		case DHCPV6_RELAY_REPL:
@@ -6584,6 +7254,21 @@ build_dhcpv6_reply(struct data_string *reply, struct packet *packet) {
 			dhcpv6_leasequery(reply, packet);
 			break;
 		case DHCPV6_LEASEQUERY_REPLY:
+			dhcpv6_discard(packet);
+			break;
+		case DHCPV6_DHCPV4_QUERY:
+#ifdef DHCP4o6
+			if (dhcpv4_over_dhcpv6) {
+				if (local_family == AF_INET6) {
+					forw_dhcpv4_query(packet);
+				} else {
+					dhcp4o6_dhcpv4_query(reply, packet);
+				}
+			} else
+#endif /* DHCP4o6 */
+			dhcpv6_discard(packet);
+			break;
+		case DHCPV6_DHCPV4_RESPONSE:
 			dhcpv6_discard(packet);
 			break;
 		default:
@@ -6626,7 +7311,8 @@ log_packet_in(const struct packet *packet) {
 	    	data_string_sprintfa(&s, ", peer address %s",
 				     inet_ntop(AF_INET6, addr,
 					       tmp_addr, sizeof(tmp_addr)));
-	} else {
+	} else if ((packet->dhcpv6_msg_type != DHCPV6_DHCPV4_QUERY) &&
+		   (packet->dhcpv6_msg_type != DHCPV6_DHCPV4_RESPONSE)) {
 		tid = 0;
 		memcpy(((char *)&tid)+1, packet->dhcpv6_transaction_id, 3);
 		data_string_sprintfa(&s, ", transaction ID 0x%06X", tid);
@@ -6711,6 +7397,203 @@ dhcpv6(struct packet *packet) {
 		data_string_forget(&reply, MDL);
 	}
 }
+
+#ifdef DHCP4o6
+/*
+ * \brief Receive a DHCPv4-query message from the DHCPv6 side
+ *  (DHCPv4 server function)
+ *
+ * Receive a message with a DHCPv4-query inside from the DHCPv6 server.
+ * (code copied from \ref do_packet6() \ref and dhcpv6())
+ *
+ * Format: interface:16 + address:16 + DHCPv6 DHCPv4-query message
+ *
+ * \param raw the DHCPv6 DHCPv4-query message raw content
+ */
+static void recv_dhcpv4_query(struct data_string *raw) {
+	struct interface_info *ip;
+	char name[16 + 1];
+	struct iaddr iaddr;
+	struct packet *packet;
+	unsigned char msg_type;
+	const struct dhcpv6_relay_packet *relay;
+	const struct dhcpv4_over_dhcpv6_packet *msg;
+	struct data_string reply;
+	struct data_string ds;
+	unsigned len;
+	int cc;
+
+	memset(name, 0, sizeof(name));
+	memcpy(name, raw->data, 16);
+	for (ip = interfaces; ip != NULL; ip = ip->next) {
+		if (!strcmp(name, ip->name))
+			break;
+	}
+	if (ip == NULL) {
+		log_error("recv_dhcpv4_query: can't find interface %s.",
+			  name);
+		return;
+	}
+
+	iaddr.len = 16;
+	memcpy(iaddr.iabuf, raw->data + 16, 16);
+
+	/*
+	 * From do_packet6().
+	 */
+
+	if (!packet6_len_okay((char *)raw->data + 32, raw->len - 32)) {
+		log_error("recv_dhcpv4_query: "
+			 "short packet from %s, len %d, dropped",
+			 piaddr(iaddr), raw->len - 32);
+		return;
+	}
+
+	/*
+	 * Build a packet structure.
+	 */
+	packet = NULL;
+	if (!packet_allocate(&packet, MDL)) {
+		log_error("recv_dhcpv4_query: no memory for packet.");
+		return;
+	}
+
+	if (!option_state_allocate(&packet->options, MDL)) {
+		log_error("recv_dhcpv4_query: no memory for options.");
+		packet_dereference(&packet, MDL);
+		return;
+	}
+
+	packet->raw = (struct dhcp_packet *)(raw->data + 32);
+	packet->packet_length = raw->len - 32;
+	packet->client_port = remote_port;
+	packet->client_addr = iaddr;
+	interface_reference(&packet->interface, ip, MDL);
+
+	msg_type = raw->data[32];
+	if ((msg_type == DHCPV6_RELAY_FORW) ||
+	    (msg_type == DHCPV6_RELAY_REPL)) {
+		int relaylen =
+		    (int)(offsetof(struct dhcpv6_relay_packet, options));
+		relay = (const struct dhcpv6_relay_packet *)(raw->data + 32);
+		packet->dhcpv6_msg_type = relay->msg_type;
+
+		/* relay-specific data */
+		packet->dhcpv6_hop_count = relay->hop_count;
+		memcpy(&packet->dhcpv6_link_address,
+		       relay->link_address, sizeof(relay->link_address));
+		memcpy(&packet->dhcpv6_peer_address,
+		       relay->peer_address, sizeof(relay->peer_address));
+
+		if (!parse_option_buffer(packet->options,
+					 relay->options,
+					 raw->len - 32 - relaylen,
+					 &dhcpv6_universe)) {
+			/* no logging here, as parse_option_buffer() logs all
+			   cases where it fails */
+			packet_dereference(&packet, MDL);
+			return;
+		}
+	} else if ((msg_type == DHCPV6_DHCPV4_QUERY) ||
+		   (msg_type == DHCPV6_DHCPV4_RESPONSE)) {
+		int msglen =
+		    (int)(offsetof(struct dhcpv4_over_dhcpv6_packet, options));
+		msg = (struct dhcpv4_over_dhcpv6_packet *)(raw->data + 32);
+		packet->dhcpv6_msg_type = msg->msg_type;
+
+		/* message-specific data */
+		memcpy(packet->dhcp4o6_flags, msg->flags,
+		       sizeof(packet->dhcp4o6_flags));
+
+		if (!parse_option_buffer(packet->options,
+					 msg->options,
+					 raw->len - 32 - msglen,
+					 &dhcpv6_universe)) {
+			/* no logging here, as parse_option_buffer() logs all
+			   cases where it fails */
+			packet_dereference(&packet, MDL);
+			return;
+		}
+	} else {
+		log_error("recv_dhcpv4_query: unexpected message of type %d.",
+			  (int)msg_type);
+		packet_dereference(&packet, MDL);
+		return;
+	}
+
+	/*
+	 * From dhcpv6().
+	 */
+
+	/*
+	 * Log a message that we received this packet.
+	 */
+	/* log_packet_in(packet); */
+	memset(&ds, 0, sizeof(ds));
+	if (packet->dhcpv6_msg_type < dhcpv6_type_name_max) {
+		data_string_sprintfa(&ds, "%s message from %s",
+				     dhcpv6_type_names[packet->dhcpv6_msg_type],
+				     piaddr(packet->client_addr));
+	} else {
+		data_string_sprintfa(&ds,
+				     "Unknown message type %d from %s",
+				     packet->dhcpv6_msg_type,
+				     piaddr(packet->client_addr));
+	}
+	if ((packet->dhcpv6_msg_type == DHCPV6_RELAY_FORW) ||
+	    (packet->dhcpv6_msg_type == DHCPV6_RELAY_REPL)) {
+		char tmp_addr[INET6_ADDRSTRLEN];
+		const void *addr;
+
+		addr = &packet->dhcpv6_link_address;
+		data_string_sprintfa(&ds, ", link address %s",
+				     inet_ntop(AF_INET6, addr,
+					       tmp_addr, sizeof(tmp_addr)));
+	    	addr = &packet->dhcpv6_peer_address;
+	    	data_string_sprintfa(&ds, ", peer address %s",
+				     inet_ntop(AF_INET6, addr,
+					       tmp_addr, sizeof(tmp_addr)));
+	} else if ((packet->dhcpv6_msg_type != DHCPV6_DHCPV4_QUERY) &&
+		   (packet->dhcpv6_msg_type != DHCPV6_DHCPV4_RESPONSE)) {
+		u_int32_t tid = 0;
+
+		memcpy(((char *)&tid)+1, packet->dhcpv6_transaction_id, 3);
+		data_string_sprintfa(&ds, ", transaction ID 0x%06X", tid);
+	}
+	log_info("%s", ds.data);
+	data_string_forget(&ds, MDL);
+
+	/*
+	 * Build our reply packet.
+         */
+	build_dhcpv6_reply(&reply, packet);
+
+	packet_dereference(&packet, MDL);
+
+	if (reply.data == NULL)
+		return;
+
+	/*
+	 * Forward the response.
+	 */
+	len = reply.len + 32;
+	memset(&ds, 0, sizeof(ds));
+	if (!buffer_allocate(&ds.buffer, len, MDL)) {
+		log_error("recv_dhcpv4_query: no memory.");
+		return;
+	}
+	ds.data = ds.buffer->data;
+	ds.len = len;
+
+	memcpy(ds.buffer->data, name, 16);
+	memcpy(ds.buffer->data + 16, iaddr.iabuf, 16);
+	memcpy(ds.buffer->data + 32, reply.data, reply.len);
+	cc = send(dhcp4o6_fd, ds.data, ds.len, 0);
+	if (cc < 0)
+		log_error("recv_dhcpv4_query: send(): %m");
+	data_string_forget(&ds, MDL);
+}
+#endif /* DHCP4o6 */
 
 static void
 seek_shared_host(struct host_decl **hp, struct shared_network *shared) {
@@ -6803,7 +7686,7 @@ unicast_reject(struct data_string *reply_ret,
 	struct reply_state reply;
 	memset(&reply, 0x0, sizeof(struct reply_state));
 
-	/* Locate the client. */ 
+	/* Locate the client. */
 	if (shared_network_from_packet6(&reply.shared, packet)
 		!= ISC_R_SUCCESS) {
 		log_error("unicast_reject: could not locate client.");

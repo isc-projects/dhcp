@@ -3,7 +3,7 @@
    Tables of information... */
 
 /*
- * Copyright (c) 2011-2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2011-2014, 2016 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
@@ -565,13 +565,20 @@ static struct option dhcpv6_options[] = {
 	{ "ipv6-address-andsf", "6A",		&dhcpv6_universe, 143, 1 },
 #endif
 
+			/* RFC7341 OPTIONS */
+#if defined(RFC7341_OPTIONS)
+	{ "dhcpv4-msg", "X",			&dhcpv6_universe, 87, 1 },
+	{ "dhcp4-o-dhcp6-server", "6A",		&dhcpv6_universe, 88, 1 },
+#endif
+
 	{ NULL, NULL, NULL, 0, 0 }
 };
 
 struct enumeration_value dhcpv6_duid_type_values[] = {
-	{ "duid-llt",	DUID_LLT }, /* Link-Local Plus Time */
-	{ "duid-en",	DUID_EN },  /* DUID based upon enterprise-ID. */
-	{ "duid-ll",	DUID_LL },  /* DUID from Link Local address only. */
+	{ "duid-llt",	DUID_LLT },  /* Link-Local Plus Time */
+	{ "duid-en",	DUID_EN },   /* DUID based upon enterprise-ID. */
+	{ "duid-ll",	DUID_LL },   /* DUID from Link Local address only. */
+	{ "duid-uuid",	DUID_UUID }, /* DUID based upon UUID */
 	{ NULL, 0 }
 };
 
@@ -593,6 +600,7 @@ struct enumeration_value dhcpv6_status_code_values[] = {
 	{ "MalformedQuery", 8 }, /* Leasequery not valid.		*/
 	{ "NotConfigured", 9 }, /* The target address is not in config.	*/
 	{ "NotAllowed",  10 }, /* Server doesn't allow the leasequery.	*/
+	{ "QueryTerminated", 11 }, /* Leasequery terminated.		*/
 	{ NULL, 0 }
 };
 
@@ -605,6 +613,9 @@ struct enumeration dhcpv6_status_codes = {
 struct enumeration_value lq6_query_type_values[] = {
 	{ "query-by-address", 1 },
 	{ "query-by-clientid", 2 },
+	{ "query-by-relay-id", 3 },
+	{ "query-by-link-address", 4 },
+	{ "query-by-remote-id", 5 },
 	{ NULL, 0 }
 };
 
@@ -630,6 +641,12 @@ struct enumeration_value dhcpv6_message_values[] = {
 	{ "RELAY-REPL", 13 },
 	{ "LEASEQUERY", 14 },
 	{ "LEASEQUERY-REPLY", 15 },
+	{ "LEASEQUERY-DONE", 16 },
+	{ "LEASEQUERY-DATA", 17 },
+	{ "RECONFIGURE-REQUEST", 18 },
+	{ "RECONFIGURE-REPLY", 19 },
+	{ "DHCPV4-QUERY", 20 },
+	{ "DHCPV4-RESPONSE", 21 },
 	{ NULL, 0 }
 };
 
@@ -650,7 +667,13 @@ const char *dhcpv6_type_names[] = {
 	"Relay-forward",
 	"Relay-reply",
 	"Leasequery",
-	"Leasequery-reply"
+	"Leasequery-reply",
+	"Leasequery-done",
+	"Leasequery-data",
+	"Reconfigure-request",
+	"Reconfigure-reply",
+	"Dhcpv4-query",
+	"Dhcpv4-response"
 };
 const int dhcpv6_type_name_max =
 	(sizeof(dhcpv6_type_names) / sizeof(dhcpv6_type_names[0]));
@@ -670,7 +693,9 @@ static struct option vsio_options[] = {
 struct universe isc6_universe;
 static struct option isc6_options[] = {
 	{ "media", "t",				&isc6_universe,     1, 1 },
-	{ "update-assist", "X",			&isc6_universe,	    2, 1 },
+	{ "update-assist", "X",			&isc6_universe,     2, 1 },
+	{ "4o6-interface", "t",			&isc6_universe, 60000, 1 },
+	{ "4o6-source-address", "6",		&isc6_universe, 60001, 1 },
 	{ NULL, NULL, NULL, 0, 0 }
 };
 

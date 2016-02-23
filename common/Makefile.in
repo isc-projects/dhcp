@@ -107,14 +107,15 @@ am__v_AR_1 =
 libdhcp_a_AR = $(AR) $(ARFLAGS)
 libdhcp_a_LIBADD =
 am_libdhcp_a_OBJECTS = alloc.$(OBJEXT) bpf.$(OBJEXT) comapi.$(OBJEXT) \
-	conflex.$(OBJEXT) ctrace.$(OBJEXT) discover.$(OBJEXT) \
-	dispatch.$(OBJEXT) dlpi.$(OBJEXT) dns.$(OBJEXT) \
-	ethernet.$(OBJEXT) execute.$(OBJEXT) fddi.$(OBJEXT) \
-	icmp.$(OBJEXT) inet.$(OBJEXT) lpf.$(OBJEXT) memory.$(OBJEXT) \
-	nit.$(OBJEXT) ns_name.$(OBJEXT) options.$(OBJEXT) \
-	packet.$(OBJEXT) parse.$(OBJEXT) print.$(OBJEXT) raw.$(OBJEXT) \
-	resolv.$(OBJEXT) socket.$(OBJEXT) tables.$(OBJEXT) \
-	tr.$(OBJEXT) tree.$(OBJEXT) upf.$(OBJEXT)
+	conflex.$(OBJEXT) ctrace.$(OBJEXT) dhcp4o6.$(OBJEXT) \
+	discover.$(OBJEXT) dispatch.$(OBJEXT) dlpi.$(OBJEXT) \
+	dns.$(OBJEXT) ethernet.$(OBJEXT) execute.$(OBJEXT) \
+	fddi.$(OBJEXT) icmp.$(OBJEXT) inet.$(OBJEXT) lpf.$(OBJEXT) \
+	memory.$(OBJEXT) nit.$(OBJEXT) ns_name.$(OBJEXT) \
+	options.$(OBJEXT) packet.$(OBJEXT) parse.$(OBJEXT) \
+	print.$(OBJEXT) raw.$(OBJEXT) resolv.$(OBJEXT) \
+	socket.$(OBJEXT) tables.$(OBJEXT) tr.$(OBJEXT) tree.$(OBJEXT) \
+	upf.$(OBJEXT)
 libdhcp_a_OBJECTS = $(am_libdhcp_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -358,11 +359,11 @@ top_srcdir = @top_srcdir@
 AM_CPPFLAGS = -I$(top_srcdir) -DLOCALSTATEDIR='"@localstatedir@"'
 AM_CFLAGS = $(LDAP_CFLAGS)
 noinst_LIBRARIES = libdhcp.a
-libdhcp_a_SOURCES = alloc.c bpf.c comapi.c conflex.c ctrace.c discover.c \
-		    dispatch.c dlpi.c dns.c ethernet.c execute.c fddi.c \
-		    icmp.c inet.c lpf.c memory.c nit.c ns_name.c options.c \
-		    packet.c parse.c print.c raw.c resolv.c socket.c \
-		    tables.c tr.c tree.c upf.c
+libdhcp_a_SOURCES = alloc.c bpf.c comapi.c conflex.c ctrace.c dhcp4o6.c \
+		    discover.c dispatch.c dlpi.c dns.c ethernet.c execute.c \
+		    fddi.c icmp.c inet.c lpf.c memory.c nit.c ns_name.c \
+		    options.c packet.c parse.c print.c raw.c resolv.c \
+		    socket.c tables.c tr.c tree.c upf.c
 
 man_MANS = dhcp-eval.5 dhcp-options.5
 EXTRA_DIST = $(man_MANS)
@@ -425,6 +426,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/comapi.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/conflex.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ctrace.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dhcp4o6.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/discover.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dispatch.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dlpi.Po@am__quote@

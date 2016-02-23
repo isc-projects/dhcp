@@ -3,7 +3,7 @@
    Parser for dhclient config and lease files... */
 
 /*
- * Copyright (c) 2004-2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2014,2016 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -32,7 +32,8 @@
 struct client_config top_level_config;
 
 #define NUM_DEFAULT_REQUESTED_OPTS	9
-struct option *default_requested_options[NUM_DEFAULT_REQUESTED_OPTS + 1];
+/* There can be 2 extra requested options for DHCPv4-over-DHCPv6. */
+struct option *default_requested_options[NUM_DEFAULT_REQUESTED_OPTS + 2 + 1];
 
 static void parse_client_default_duid(struct parse *cfile);
 static void parse_client6_lease_statement(struct parse *cfile);
@@ -120,6 +121,43 @@ isc_result_t read_client_conf ()
 				  "assembly.", code);
 	}
 
+#ifdef DHCP4o6
+	/* DHCPv4-over-DHCPv6 extra requested options in code order */
+	if (dhcpv4_over_dhcpv6 == 1) {
+		/* The DHCP4o6 server option should be requested */
+		code = D6O_DHCP4_O_DHCP6_SERVER;
+		option_code_hash_lookup(&default_requested_options[9],
+					dhcpv6_universe.code_hash,
+					&code, 0, MDL);
+		if (default_requested_options[9] == NULL) {
+			log_fatal("Unable to find option definition for "
+				  "index %u during default parameter request "
+				  "assembly.", code);
+		}
+	} else if (dhcpv4_over_dhcpv6 > 1) {
+		/* Called from run_stateless so the IRT should
+		   be requested too */
+		code = D6O_INFORMATION_REFRESH_TIME;
+		option_code_hash_lookup(&default_requested_options[9],
+					dhcpv6_universe.code_hash,
+					&code, 0, MDL);
+		if (default_requested_options[9] == NULL) {
+			log_fatal("Unable to find option definition for "
+				  "index %u during default parameter request "
+				  "assembly.", code);
+		}
+		code = D6O_DHCP4_O_DHCP6_SERVER;
+		option_code_hash_lookup(&default_requested_options[10],
+					dhcpv6_universe.code_hash,
+					&code, 0, MDL);
+		if (default_requested_options[10] == NULL) {
+			log_fatal("Unable to find option definition for "
+				  "index %u during default parameter request "
+				  "assembly.", code);
+		}
+	}
+#endif
+					
 	/* Initialize the top level client configuration. */
 	memset (&top_level_config, 0, sizeof top_level_config);
 

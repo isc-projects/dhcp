@@ -164,7 +164,12 @@ usage(const char *sfmt, const char *sarg) {
 
 	log_fatal("Usage: %s [-p <UDP port #>] [-f] [-d] [-q] [-t|-T]\n"
 #ifdef DHCPv6
+#ifdef DHCP4o6
+		  "             [-4|-6] [-4o6 <port>]\n"
+		  "             [-cf config-file] [-lf lease-file]\n"
+#else /* DHCP4o6 */
 		  "             [-4|-6] [-cf config-file] [-lf lease-file]\n"
+#endif /* DHCP4o6 */
 #else /* !DHCPv6 */
 		  "             [-cf config-file] [-lf lease-file]\n"
 #endif /* DHCPv6 */
@@ -228,6 +233,9 @@ main(int argc, char **argv) {
 	int no_dhcpd_pid = 0;
 #ifdef DHCPv6
 	int local_family_set = 0;
+#ifdef DHCP4o6
+	u_int16_t dhcp4o6_port = 0;
+#endif /* DHCP4o6 */
 #endif /* DHCPv6 */
 #if defined (TRACING)
 	char *traceinfile = (char *)0;
@@ -369,6 +377,17 @@ main(int argc, char **argv) {
 			}
 			local_family = AF_INET6;
 			local_family_set = 1;
+#ifdef DHCP4o6
+		} else if (!strcmp(argv[i], "-4o6")) {
+			if (++i == argc)
+				usage(use_noarg, argv[i-1]);
+			dhcp4o6_port = validate_port_pair(argv[i]);
+
+			log_debug("DHCPv4 over DHCPv6 over ::1 port %d and %d",
+				  ntohs(dhcp4o6_port),
+				  ntohs(dhcp4o6_port) + 1);
+			dhcpv4_over_dhcpv6 = 1;
+#endif /* DHCP4o6 */
 #endif /* DHCPv6 */
 		} else if (!strcmp (argv [i], "--version")) {
 			const char vstring[] = "isc-dhcpd-";
@@ -414,6 +433,18 @@ main(int argc, char **argv) {
 			tmp -> flags = INTERFACE_REQUESTED;
 		}
 	}
+
+#if defined(DHCPv6) && defined(DHCP4o6)
+	if (dhcpv4_over_dhcpv6) {
+		if (!local_family_set)
+			log_error("please specify the address family "
+				  "with DHPv4 over DHCPv6 [-4|-6].");
+		if ((local_family == AF_INET) && (interfaces != NULL))
+			log_fatal("DHCPv4 server in DHPv4 over DHCPv6 "
+				  "mode with command line specified "
+				  "interfaces.");
+	}
+#endif /* DHCPv6 && DHCP4o6 */
 
 	if (!no_dhcpd_conf && (s = getenv ("PATH_DHCPD_CONF"))) {
 		path_dhcpd_conf = s;
@@ -677,6 +708,15 @@ main(int argc, char **argv) {
 
 	postconf_initialization (quiet);
 
+#if defined(DHCPv6) && defined(DHCP4o6)
+	if (dhcpv4_over_dhcpv6) {
+		if ((local_family == AF_INET) && (interfaces != NULL))
+			log_fatal("DHCPv4 server in DHPv4 over DHCPv6 "
+				  "mode with config file specified "
+				  "interfaces.");
+	}
+#endif /* DHCPv6 && DHCP4o6 */
+
 #if defined (PARANOIA) && !defined (EARLY_CHROOT)
 	if (set_chroot) setup_chroot (set_chroot);
 #endif /* PARANOIA && !EARLY_CHROOT */
@@ -727,6 +767,20 @@ main(int argc, char **argv) {
 		exit (0);
 
 	/* Discover all the network interfaces and initialize them. */
+#if defined(DHCPv6) && defined(DHCP4o6)
+	if (dhcpv4_over_dhcpv6) {
+		int real_family = local_family;
+		local_family = AF_INET6;
+		/* The DHCPv4 side of DHCPv4-over-DHCPv6 service
+		   uses a specific discovery which doesn't register
+		   DHCPv6 sockets. */
+		if (real_family == AF_INET)
+			discover_interfaces(DISCOVER_SERVER46);
+		else
+			discover_interfaces(DISCOVER_SERVER);
+		local_family = real_family;
+	} else
+#endif /* DHCPv6 && DHCP4o6 */
 	discover_interfaces(DISCOVER_SERVER);
 
 #ifdef DHCPv6
@@ -772,7 +826,7 @@ main(int argc, char **argv) {
 	 * server-duid from the lease file
 	 * server-duid from the config file (the config file is read first
 	 * and the lease file overwrites the config file information)
-	 * genrate a new one
+	 * generate a new one from the interface hardware addresses.
 	 * In all cases we write it out to the lease file.
 	 * See dhcpv6.c for discussion of setting DUID.
 	 */
@@ -782,6 +836,10 @@ main(int argc, char **argv) {
 		log_fatal("Unable to set server identifier.");
 	}
 	write_server_duid();
+#ifdef DHCP4o6
+	if (dhcpv4_over_dhcpv6)
+		dhcp4o6_setup(dhcp4o6_port);
+#endif /* DHCP4o6 */
 #endif /* DHCPv6 */
 
 #ifndef DEBUG

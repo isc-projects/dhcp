@@ -3,7 +3,7 @@
    Find and identify the network interfaces. */
 
 /*
- * Copyright (c) 2013-2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2013-2014,2016 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2009,2011 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
@@ -45,6 +45,7 @@ int interfaces_invalidated;
 int quiet_interface_discovery;
 u_int16_t local_port;
 u_int16_t remote_port;
+int dhcpv4_over_dhcpv6 = 0;
 int (*dhcp_interface_setup_hook) (struct interface_info *, struct iaddr *);
 int (*dhcp_interface_discovery_hook) (struct interface_info *);
 isc_result_t (*dhcp_interface_startup_hook) (struct interface_info *);
@@ -1002,7 +1003,8 @@ discover_interfaces(int state) {
 			/* We don't want the loopback interface. */
 			if (a->sin_addr.s_addr == htonl(INADDR_LOOPBACK) &&
 			    ((tmp->flags & INTERFACE_AUTOMATIC) &&
-			     state == DISCOVER_SERVER))
+			     ((state == DISCOVER_SERVER) ||
+			      (state == DISCOVER_SERVER46))))
 				continue;
 
 			/* If the only address we have is 0.0.0.0, we
@@ -1029,7 +1031,8 @@ discover_interfaces(int state) {
 			/* We don't want the loopback interface. */
 			if (IN6_IS_ADDR_LOOPBACK(&a->sin6_addr) && 
 			    ((tmp->flags & INTERFACE_AUTOMATIC) &&
-			     state == DISCOVER_SERVER))
+			     ((state == DISCOVER_SERVER) ||
+			      (state == DISCOVER_SERVER46))))
 			    continue;
 
 			/* If the only address we have is 0.0.0.0, we
@@ -1226,31 +1229,48 @@ discover_interfaces(int state) {
 		tmp -> index = -1;
 
 		/* Register the interface... */
-		if (local_family == AF_INET) {
-			if_register_receive(tmp);
-			if_register_send(tmp);
+		switch (local_family) {
+		case AF_INET:
+			if (!dhcpv4_over_dhcpv6) {
+				if_register_receive(tmp);
+				if_register_send(tmp);
+			} else {
+				/* get_hw_addr() was called by register. */
+				get_hw_addr(tmp->name, &tmp->hw_address);
+			}
+			break;
 #ifdef DHCPv6
-		} else {
+		case AF_INET6:
 			if ((state == DISCOVER_SERVER) ||
 			    (state == DISCOVER_RELAY)) {
 				if_register6(tmp, 1);
+			} else if (state == DISCOVER_SERVER46) {
+				/* get_hw_addr() was called by if_register*6
+				   so now we have to call it explicitly
+				   to not leave the hardware address unknown
+				   (some code expects it cannot be. */
+				get_hw_addr(tmp->name, &tmp->hw_address);
 			} else {
 				if_register_linklocal6(tmp);
 			}
+			break;
 #endif /* DHCPv6 */
 		}
 
 		interface_stash (tmp);
 		wifcount++;
 #if defined (F_SETFD)
-		if (fcntl (tmp -> rfdesc, F_SETFD, 1) < 0)
+		/* if_register*() are no longer always called so
+		   descriptors  must be checked. */
+		if ((tmp -> rfdesc >= 0) &&
+		    (fcntl (tmp -> rfdesc, F_SETFD, 1) < 0))
 			log_error ("Can't set close-on-exec on %s: %m",
 				   tmp -> name);
-		if (tmp -> rfdesc != tmp -> wfdesc) {
-			if (fcntl (tmp -> wfdesc, F_SETFD, 1) < 0)
-				log_error ("Can't set close-on-exec on %s: %m",
-					   tmp -> name);
-		}
+		if ((tmp -> wfdesc != tmp -> rfdesc) &&
+		    (tmp -> wfdesc >= 0) &&
+		    (fcntl (tmp -> wfdesc, F_SETFD, 1) < 0))
+			log_error ("Can't set close-on-exec on %s: %m",
+				   tmp -> name);
 #endif
 	      next:
 		interface_dereference (&tmp, MDL);
@@ -1308,7 +1328,8 @@ discover_interfaces(int state) {
 		log_fatal ("Not configured to listen on any interfaces!");
 	}
 
-	if ((local_family == AF_INET) && !setup_fallback) {
+	if ((local_family == AF_INET) &&
+	    !setup_fallback && !dhcpv4_over_dhcpv6) {
 		setup_fallback = 1;
 		maybe_setup_fallback();
 	}

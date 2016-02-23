@@ -149,6 +149,23 @@ if test "$enable_dhcpv6" != "no"; then
 		  [Define to 1 to include DHCPv6 support.])
 fi
 
+# DHCPv4o6 optional compile-time feature.
+AC_ARG_ENABLE(dhcpv4o6,
+	AS_HELP_STRING([--enable-dhcpv4o6],[enable support for DHCPv4-over-DHCPv6 (default is no)]))
+# DHCPv4o6 is off by default, so define if it is explicitly enabled.
+if test "$enable_dhcpv4o6" = "yes"; then
+	# DHCPv4o6 requires DHCPv6
+	if test "$enable_dhcpv6" = "no"; then
+		AC_MSG_ERROR([dhcpv4o6 requires dhcpv6])
+	fi
+	# DHCPv4o6 is not yet compatible with delayed-ack
+	if test "$enable_delayed_ack" = "yes"; then
+		AC_MSG_ERROR([dhcpv4o6 is not compatible with delayed-ack])
+	fi
+	AC_DEFINE([DHCP4o6], [1], 
+		  [Define to 1 to include DHCPv4 over DHCPv6 support.])
+fi
+
 # PARANOIA is off by default (until we can test it with all features)
 AC_ARG_ENABLE(paranoia,
 	AS_HELP_STRING([--enable-paranoia],[enable support for chroot/setuid (default is no)]))
@@ -799,6 +816,14 @@ AC_CONFIG_FILES([
 ])
 AC_OUTPUT
 
+if test "$enable_dhcpv4o6" = "yes"; then
+	DHCP_VERSIONS="DHCPv4, DHCPv6 and DHCPv4-over-DHCPv6"
+elif test "$enable_dhcpv6" != "no"; then
+	DHCP_VERSIONS="DHCPv4 and DHCPv6"
+else
+	DHCP_VERSIONS="DHCPv4"
+fi
+
 (cd $srcdir
     sh util/bindvar.sh
     if test $? -ne 0; then
@@ -820,6 +845,8 @@ C Compiler:      $CC
 Flags:
   DEFS:          $DEFS
   CFLAGS:        $CFLAGS
+
+DHCP versions:   $DHCP_VERSIONS
 
 Features:
   debug:         $enable_debug

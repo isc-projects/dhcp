@@ -2786,12 +2786,21 @@ parse_subnet6_declaration(struct parse *cfile, struct shared_network *share) {
 				    0xF0, 0xF8, 0xFC, 0xFE };
 	struct iaddr iaddr;
 
-        if (local_family != AF_INET6) {
+#if defined(DHCP4o6)
+        if ((local_family != AF_INET6) && !dhcpv4_over_dhcpv6) {
+                parse_warn(cfile, "subnet6 statement is only supported "
+				  "in DHCPv6 and DHCPv4o6 modes.");
+                skip_to_semi(cfile);
+                return;
+        }
+#else /* defined(DHCP4o6) */
+	if (local_family != AF_INET6) {
                 parse_warn(cfile, "subnet6 statement is only supported "
 				  "in DHCPv6 mode.");
                 skip_to_semi(cfile);
                 return;
         }
+#endif /* !defined(DHCP4o6) */
 
 	subnet = NULL;
 	status = subnet_allocate(&subnet, MDL);

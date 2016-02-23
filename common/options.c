@@ -3955,6 +3955,9 @@ do_packet6(struct interface_info *interface, const char *packet,
 	unsigned char msg_type;
 	const struct dhcpv6_packet *msg;
 	const struct dhcpv6_relay_packet *relay; 
+#ifdef DHCP4o6
+	const struct dhcpv4_over_dhcpv6_packet *msg46;
+#endif
 	struct packet *decoded_packet;
 #if defined (DEBUG_MEMORY_LEAKAGE)
 	unsigned long previous_outstanding = dmalloc_outstanding;
@@ -4016,6 +4019,28 @@ do_packet6(struct interface_info *interface, const char *packet,
 			packet_dereference(&decoded_packet, MDL);
 			return;
 		}
+#ifdef DHCP4o6
+	} else if ((msg_type == DHCPV6_DHCPV4_QUERY) ||
+		   (msg_type == DHCPV6_DHCPV4_RESPONSE)) {
+		int msglen =
+		    (int)(offsetof(struct dhcpv4_over_dhcpv6_packet, options));
+		msg46 = (struct dhcpv4_over_dhcpv6_packet *)packet;
+		decoded_packet->dhcpv6_msg_type = msg46->msg_type;
+
+		/* message-specific data */
+		memcpy(decoded_packet->dhcp4o6_flags, 
+		       msg46->flags,
+		       sizeof(decoded_packet->dhcp4o6_flags));
+
+		if (!parse_option_buffer(decoded_packet->options, 
+					 msg46->options, len - msglen, 
+					 &dhcpv6_universe)) {
+			/* no logging here, as parse_option_buffer() logs all
+			   cases where it fails */
+			packet_dereference(&decoded_packet, MDL);
+			return;
+		}
+#endif
 	} else {
 		int msglen = (int)(offsetof(struct dhcpv6_packet, options));
 		msg = (const struct dhcpv6_packet *)packet;

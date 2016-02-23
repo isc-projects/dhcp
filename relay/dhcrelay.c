@@ -1498,6 +1498,7 @@ process_up6(struct packet *packet, struct stream_list *dp) {
 	      case DHCPV6_INFORMATION_REQUEST:
 	      case DHCPV6_RELAY_FORW:
 	      case DHCPV6_LEASEQUERY:
+	      case DHCPV6_DHCPV4_QUERY:
 		log_info("Relaying %s from %s port %d going up.",
 			 dhcpv6_type_names[packet->dhcpv6_msg_type],
 			 piaddr(packet->client_addr),
@@ -1509,6 +1510,7 @@ process_up6(struct packet *packet, struct stream_list *dp) {
 	      case DHCPV6_RECONFIGURE:
 	      case DHCPV6_RELAY_REPL:
 	      case DHCPV6_LEASEQUERY_REPLY:
+	      case DHCPV6_DHCPV4_RESPONSE:
 		log_info("Discarding %s from %s port %d going up.",
 			 dhcpv6_type_names[packet->dhcpv6_msg_type],
 			 piaddr(packet->client_addr),
@@ -1727,6 +1729,7 @@ process_down6(struct packet *packet) {
 	      case DHCPV6_RECONFIGURE:
 	      case DHCPV6_RELAY_FORW:
 	      case DHCPV6_LEASEQUERY_REPLY:
+	      case DHCPV6_DHCPV4_RESPONSE:
 		log_info("Relaying %s to %s port %d down.",
 			 dhcpv6_type_names[msg->msg_type],
 			 piaddr(peer),
@@ -1742,6 +1745,7 @@ process_down6(struct packet *packet) {
 	      case DHCPV6_DECLINE:
 	      case DHCPV6_INFORMATION_REQUEST:
 	      case DHCPV6_LEASEQUERY:
+	      case DHCPV6_DHCPV4_QUERY:
 		log_info("Discarding %s to %s port %d down.",
 			 dhcpv6_type_names[msg->msg_type],
 			 piaddr(peer),

@@ -1,6 +1,6 @@
 .\"	$Id: dhclient.8,v 1.36 2011/04/15 21:58:12 sar Exp $
 .\"
-.\" Copyright (c) 2004,2007-2015 by Internet Systems Consortium, Inc. ("ISC")
+.\" Copyright (c) 2004,2007-2016 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
@@ -62,6 +62,10 @@ dhclient - Dynamic Host Configuration Protocol Client
 ]
 [
 .B -I
+]
+[
+.B -4o6
+.I port
 ]
 [
 .B -D
@@ -238,6 +242,14 @@ along with configuration parameters.  It cannot be combined with
 \fB\-D\fR arguments provide more control over aspects of the DHCPv6
 processing.  Note: it is not recommended to mix queries of different
 types together or even to share the lease file between them.
+.TP
+.BI \-4o6 \ port
+Participate in the DHCPv4 over DHCPv6 protocol specified by RFC 7341.
+This associates a DHCPv4 and a DHCPv6 client to allow the v4 client to
+send v4 requests encapuslated in a v6 packet.  Communication
+between the two clients is done on a pair of UDP sockets bound
+to ::1 \fIport\fR and \fIport + 1\fR. Both clients must
+be launched using the same \fIport\fR argument.
 .TP
 .BI \-1
 Try to get a lease once.  On failure exit with code 2.  In DHCPv6 this

@@ -227,6 +227,15 @@ by Eric Young (eay@cryptsoft.com).
 - Corrected minor Coverity issues.
   [ISC-Bugs #35144]
 
+- Add support for RFC 7341 DHCPv4 over DHCPv6 with a new configuration
+  option "--enable-dhcpv4o6". Note this feature requires DHCPv6 support
+  and is not compatible with delayed-ack. Both client and server use 2
+  processes which communicate over UDP on a pair of sockets. The new
+  "-4o6 <port>" command line argment enables DHCPv4 over DHCPv6 support
+  and specifies the consecutive ports to use for inter-process communication.
+  Please look at doc/DHCPv4-over-DHCPv6 for more details.
+  [ISC-Bugs #35711]
+
 			Changes since 4.3.3b1
 
 - None

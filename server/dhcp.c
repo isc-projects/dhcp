@@ -36,6 +36,9 @@ static void maybe_return_agent_options(struct packet *packet,
 static int reuse_lease (struct packet* packet, struct lease* new_lease,
 			struct lease* lease, struct lease_state *state,
 			int offer);
+#if defined(DHCPv6) && defined(DHCP4o6)
+static int locate_network6(struct packet *packet);
+#endif
 
 int outstanding_pings;
 
@@ -108,6 +111,20 @@ dhcp (struct packet *packet) {
 			s = typebuf;
 		}
 		
+#if defined(DHCPv6) && defined(DHCP4o6)
+		if (dhcpv4_over_dhcpv6 && (packet->dhcp4o6_response != NULL)) {
+			log_info("DHCP4o6 %s from %s via %s: %s", s,
+				 (packet->raw->htype
+				  ? print_hw_addr(packet->raw->htype,
+						  packet->raw->hlen,
+						  packet->raw->chaddr)
+				  : "<no identifier>"),
+				 piaddr(packet->client_addr),
+				 errmsg);
+			goto out;
+		}
+#endif
+
 		log_info("%s from %s via %s: %s", s,
 			 (packet->raw->htype
 			  ? print_hw_addr(packet->raw->htype,
@@ -292,6 +309,21 @@ void dhcpdiscover (packet, ms_nulltp)
 	/* %Audit% This is log output. %2004.06.17,Safe%
 	 * If we truncate we hope the user can get a hint from the log.
 	 */
+#if defined(DHCPv6) && defined(DHCP4o6)
+	if (dhcpv4_over_dhcpv6 && (packet->dhcp4o6_response != NULL)) {
+		snprintf (msgbuf, sizeof msgbuf,
+			  "DHCP4o6 DHCPDISCOVER from %s %s%s%svia %s",
+			  (packet -> raw -> htype
+			   ? print_hw_addr (packet -> raw -> htype,
+					    packet -> raw -> hlen,
+					    packet -> raw -> chaddr)
+			   : (lease
+			      ? print_hex_1(lease->uid_len, lease->uid, 60)
+			      : "<no identifier>")),
+			  s ? "(" : "", s ? s : "", s ? ") " : "",
+			  piaddr(packet->client_addr));
+	} else
+#endif
 	snprintf (msgbuf, sizeof msgbuf, "DHCPDISCOVER from %s %s%s%svia %s",
 		 (packet -> raw -> htype
 		  ? print_hw_addr (packet -> raw -> htype,
@@ -307,6 +339,12 @@ void dhcpdiscover (packet, ms_nulltp)
 
 	/* Sourceless packets don't make sense here. */
 	if (!packet -> shared_network) {
+#if defined(DHCPv6) && defined(DHCP4o6)
+		if (dhcpv4_over_dhcpv6 && (packet->dhcp4o6_response != NULL)) {
+			log_info ("DHCP4o6 packet from unknown subnet: %s",
+				  piaddr(packet->client_addr));
+		} else
+#endif
 		log_info ("Packet from unknown subnet: %s",
 		      inet_ntoa (packet -> raw -> giaddr));
 		goto out;
@@ -482,6 +520,22 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 	/* %Audit% This is log output. %2004.06.17,Safe%
 	 * If we truncate we hope the user can get a hint from the log.
 	 */
+#if defined(DHCPv6) && defined(DHCP4o6)
+	if (dhcpv4_over_dhcpv6 && (packet->dhcp4o6_response != NULL)) {
+		snprintf (msgbuf, sizeof msgbuf,
+			  "DHCP4o6 DHCPREQUEST for %s%s from %s %s%s%svia %s",
+			  piaddr (cip), smbuf,
+			  (packet -> raw -> htype
+			   ? print_hw_addr (packet -> raw -> htype,
+					    packet -> raw -> hlen,
+					    packet -> raw -> chaddr)
+			   : (lease
+			      ? print_hex_1(lease->uid_len, lease->uid, 60)
+			      : "<no identifier>")),
+			  s ? "(" : "", s ? s : "", s ? ") " : "",
+			  piaddr(packet->client_addr));
+	} else
+#endif
 	snprintf (msgbuf, sizeof msgbuf,
 		 "DHCPREQUEST for %s%s from %s %s%s%svia %s",
 		 piaddr (cip), smbuf,
@@ -801,6 +855,24 @@ void dhcprelease (packet, ms_nulltp)
 	/* %Audit% This is log output. %2004.06.17,Safe%
 	 * If we truncate we hope the user can get a hint from the log.
 	 */
+#if defined(DHCPv6) && defined(DHCP4o6)
+	if (dhcpv4_over_dhcpv6 && (packet->dhcp4o6_response != NULL)) {
+		snprintf (msgbuf, sizeof msgbuf,
+			  "DHCP4o6 DHCPRELEASE of %s from %s %s%s%svia "
+			  "%s (%sfound)",
+			  cstr,
+			  (packet -> raw -> htype
+			   ? print_hw_addr (packet -> raw -> htype,
+					    packet -> raw -> hlen,
+					    packet -> raw -> chaddr)
+			   : (lease
+			      ? print_hex_1(lease->uid_len, lease->uid, 60)
+			      : "<no identifier>")),
+			  s ? "(" : "", s ? s : "", s ? ") " : "",
+			  piaddr(packet->client_addr),
+			  lease ? "" : "not ");
+	} else
+#endif
 	snprintf (msgbuf, sizeof msgbuf,
 		 "DHCPRELEASE of %s from %s %s%s%svia %s (%sfound)",
 		 cstr,
@@ -892,6 +964,22 @@ void dhcpdecline (packet, ms_nulltp)
 	/* %Audit% This is log output. %2004.06.17,Safe%
 	 * If we truncate we hope the user can get a hint from the log.
 	 */
+#if defined(DHCPv6) && defined(DHCP4o6)
+	if (dhcpv4_over_dhcpv6 && (packet->dhcp4o6_response != NULL)) {
+		snprintf (msgbuf, sizeof msgbuf,
+			  "DHCP4o6 DHCPDECLINE of %s from %s %s%s%svia %s",
+			  piaddr (cip),
+			  (packet -> raw -> htype
+			   ? print_hw_addr (packet -> raw -> htype,
+					    packet -> raw -> hlen,
+					    packet -> raw -> chaddr)
+			   : (lease
+			      ? print_hex_1(lease->uid_len, lease->uid, 60)
+			      : "<no identifier>")),
+			  s ? "(" : "", s ? s : "", s ? ") " : "",
+			  piaddr(packet->client_addr));
+	} else
+#endif
 	snprintf (msgbuf, sizeof msgbuf,
 		 "DHCPDECLINE of %s from %s %s%s%svia %s",
 		 piaddr (cip),
@@ -1003,9 +1091,17 @@ void dhcpinform (packet, ms_nulltp)
 	   source address if they didn't set ciaddr. */
 	if (!packet->raw->ciaddr.s_addr) {
 		zeroed_ciaddr = ISC_TRUE;
-		cip.len = 4;
-		memcpy(cip.iabuf, &packet->client_addr.iabuf, 4);
-		addr_type = "source";
+		/* With DHCPv4-over-DHCPv6 it can be an IPv6 address
+		   so we check its length. */
+		if (packet->client_addr.len == 4) {
+			cip.len = 4;
+			memcpy(cip.iabuf, &packet->client_addr.iabuf, 4);
+			addr_type = "source";
+		} else {
+			cip.len = 0;
+			memset(cip.iabuf, 0, 4);
+			addr_type = "v4o6";
+		}
 	} else {
 		zeroed_ciaddr = ISC_FALSE;
 		cip.len = 4;
@@ -1028,6 +1124,14 @@ void dhcpinform (packet, ms_nulltp)
 	/* %Audit% This is log output. %2004.06.17,Safe%
 	 * If we truncate we hope the user can get a hint from the log.
 	 */
+#if defined(DHCPv6) && defined(DHCP4o6)
+	if (dhcpv4_over_dhcpv6 && (packet->dhcp4o6_response != NULL)) {
+		snprintf(msgbuf, sizeof(msgbuf),
+			 "DHCP4o6 DHCPINFORM from %s via %s",
+			 piaddr(cip),
+			 piaddr(packet->client_addr));
+	} else
+#endif
 	snprintf(msgbuf, sizeof(msgbuf), "DHCPINFORM from %s via %s",
 		 piaddr(cip),
 		 packet->raw->giaddr.s_addr ?
@@ -1511,6 +1615,36 @@ void dhcpinform (packet, ms_nulltp)
 	dump_raw ((unsigned char *)&raw, outgoing.packet_length);
 #endif
 
+#if defined(DHCPv6) && defined(DHCP4o6)
+	if (dhcpv4_over_dhcpv6 && (packet->dhcp4o6_response != NULL)) {
+		/* Report what we're sending. */
+		snprintf(msgbuf, sizeof msgbuf,
+			 "DHCP4o6 DHCPACK to %s (%s) via", piaddr(cip),
+			 (packet->raw->htype && packet->raw->hlen) ?
+			 print_hw_addr(packet->raw->htype, packet->raw->hlen,
+				       packet->raw->chaddr) :
+			 "<no client hardware address>");
+		log_info("%s %s", msgbuf, piaddr(packet->client_addr));
+
+		/* fill dhcp4o6_response */
+		packet->dhcp4o6_response->len = outgoing.packet_length;
+		packet->dhcp4o6_response->buffer = NULL;
+		if (!buffer_allocate(&packet->dhcp4o6_response->buffer,
+				     outgoing.packet_length, MDL)) {
+			log_fatal("No memory to store DHCP4o6 reply.");
+		}
+		packet->dhcp4o6_response->data =
+			packet->dhcp4o6_response->buffer->data;
+		memcpy(packet->dhcp4o6_response->buffer->data,
+		       outgoing.raw, outgoing.packet_length);
+
+		/* done */
+		if (subnet)
+			subnet_dereference (&subnet, MDL);
+		return;
+	}
+#endif
+
 	/* Set up the common stuff... */
 	to.sin_family = AF_INET;
 #ifdef HAVE_SA_LEN
@@ -1711,7 +1845,21 @@ void nak_lease (packet, cip, network_group)
 	raw.hops = packet -> raw -> hops;
 	raw.op = BOOTREPLY;
 
+	/* Make sure that the packet is at least as big as a BOOTP packet. */
+	if (outgoing.packet_length < BOOTP_MIN_LEN)
+		outgoing.packet_length = BOOTP_MIN_LEN;
+
 	/* Report what we're sending... */
+#if defined(DHCPv6) && defined(DHCP4o6)
+	if (dhcpv4_over_dhcpv6 && (packet->dhcp4o6_response != NULL)) {
+		log_info ("DHCP4o6 DHCPNAK on %s to %s via %s",
+			  piaddr (*cip),
+			  print_hw_addr (packet -> raw -> htype,
+					 packet -> raw -> hlen,
+					 packet -> raw -> chaddr),
+			  piaddr(packet->client_addr));
+	} else
+#endif
 	log_info ("DHCPNAK on %s to %s via %s",
 	      piaddr (*cip),
 	      print_hw_addr (packet -> raw -> htype,
@@ -1728,16 +1876,29 @@ void nak_lease (packet, cip, network_group)
 	dump_raw ((unsigned char *)&raw, outgoing.packet_length);
 #endif
 
+#if defined(DHCPv6) && defined(DHCP4o6)
+	if (dhcpv4_over_dhcpv6 && (packet->dhcp4o6_response != NULL)) {
+		/* fill dhcp4o6_response */
+		packet->dhcp4o6_response->len = outgoing.packet_length;
+		packet->dhcp4o6_response->buffer = NULL;
+		if (!buffer_allocate(&packet->dhcp4o6_response->buffer,
+				     outgoing.packet_length, MDL)) {
+			log_fatal("No memory to store DHCP4o6 reply.");
+		}
+		packet->dhcp4o6_response->data =
+			packet->dhcp4o6_response->buffer->data;
+		memcpy(packet->dhcp4o6_response->buffer->data,
+		       outgoing.raw, outgoing.packet_length);
+		return;
+	}
+#endif
+
 	/* Set up the common stuff... */
 	to.sin_family = AF_INET;
 #ifdef HAVE_SA_LEN
 	to.sin_len = sizeof to;
 #endif
 	memset (to.sin_zero, 0, sizeof to.sin_zero);
-
-	/* Make sure that the packet is at least as big as a BOOTP packet. */
-	if (outgoing.packet_length < BOOTP_MIN_LEN)
-		outgoing.packet_length = BOOTP_MIN_LEN;
 
 	/* If this was gatewayed, send it back to the gateway.
 	   Otherwise, broadcast it on the local network. */
@@ -1964,7 +2125,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 	struct in_addr from;
 	TIME remaining_time;
 	struct iaddr cip;
-#if defined(DELAYED_ACK)
+#if defined(DELAYED_ACK) && !defined(DHCP4o6)
 	/* By default we don't do the enqueue */
 	isc_boolean_t enqueue = ISC_FALSE;
 #endif
@@ -2965,7 +3126,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 			commit = 0;
 		}
 
-#if !defined(DELAYED_ACK)
+#if !defined(DELAYED_ACK) || defined(DHCP4o6)
 		/* Install the new information on 'lt' onto the lease at
 		 * 'lease'.  If this is a DHCPOFFER, it is a 'soft' promise,
 		 * if it is a DHCPACK, it is a 'hard' binding, so it needs
@@ -2977,7 +3138,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		if ((use_old_lease == 0) &&
 		    !supersede_lease(lease, lt, commit,
 				     offer == DHCPACK, offer == DHCPACK, 0)) {
-#else /* defined(DELAYED_ACK) */
+#else /* defined(DELAYED_ACK) && !defined(DHCP4o6) */
 		/*
 		 * If there already isn't a need for a lease commit, and we
 		 * can just answer right away, set a flag to indicate this.
@@ -3374,7 +3535,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		++outstanding_pings;
 	} else {
   		lease->cltt = cur_time;
-#if defined(DELAYED_ACK)
+#if defined(DELAYED_ACK) && !defined(DHCP4o6)
 		if (enqueue)
 			delayed_ack_enqueue(lease);
 		else 
@@ -3650,6 +3811,48 @@ void dhcp_reply (lease)
 	} else
 		s = (char *)0;
 
+	/* Make sure outgoing packets are at least as big
+	   as a BOOTP packet. */
+	if (packet_length < BOOTP_MIN_LEN)
+		packet_length = BOOTP_MIN_LEN;
+
+#if defined(DHCPv6) && defined(DHCP4o6)
+	if (dhcpv4_over_dhcpv6 && (state->packet->dhcp4o6_response != NULL)) {
+		/* Say what we're doing... */
+		log_info ("DHCP4o6 %s on %s to %s %s%s%svia %s",
+			  (state -> offer
+			   ? (state -> offer == DHCPACK
+			      ? "DHCPACK" : "DHCPOFFER")
+			   : "BOOTREPLY"),
+			  piaddr (lease -> ip_addr),
+			  (lease -> hardware_addr.hlen
+			   ? print_hw_addr (lease -> hardware_addr.hbuf [0],
+					    lease -> hardware_addr.hlen - 1,
+					    &lease -> hardware_addr.hbuf [1])
+			   : print_hex_1(lease->uid_len, lease->uid, 60)),
+			  s ? "(" : "", s ? s : "", s ? ") " : "",
+			  piaddr(state->packet->client_addr));
+
+		/* fill dhcp4o6_response */
+		state->packet->dhcp4o6_response->len = packet_length;
+		state->packet->dhcp4o6_response->buffer = NULL;
+		if (!buffer_allocate(&state->packet->dhcp4o6_response->buffer,
+				     packet_length, MDL)) {
+			log_fatal("No memory to store DHCP4o6 reply.");
+		}
+		state->packet->dhcp4o6_response->data =
+			state->packet->dhcp4o6_response->buffer->data;
+		memcpy(state->packet->dhcp4o6_response->buffer->data,
+		       &raw, packet_length);
+
+		/* done */
+		free_lease_state (state, MDL);
+		lease -> state = (struct lease_state *)0;
+
+		return;
+	}
+#endif
+
 	/* Say what we're doing... */
 	log_info ("%s on %s to %s %s%s%svia %s",
 		  (state -> offer
@@ -3666,6 +3869,10 @@ void dhcp_reply (lease)
 		   ? inet_ntoa (state -> giaddr)
 		   : state -> ip -> name));
 
+#ifdef DEBUG_PACKET
+	dump_raw ((unsigned char *)&raw, packet_length);
+#endif
+
 	/* Set up the hardware address... */
 	hto.hlen = lease -> hardware_addr.hlen;
 	memcpy (hto.hbuf, lease -> hardware_addr.hbuf, hto.hlen);
@@ -3675,15 +3882,6 @@ void dhcp_reply (lease)
 	to.sin_len = sizeof to;
 #endif
 	memset (to.sin_zero, 0, sizeof to.sin_zero);
-
-#ifdef DEBUG_PACKET
-	dump_raw ((unsigned char *)&raw, packet_length);
-#endif
-
-	/* Make sure outgoing packets are at least as big
-	   as a BOOTP packet. */
-	if (packet_length < BOOTP_MIN_LEN)
-		packet_length = BOOTP_MIN_LEN;
 
 	/* If this was gatewayed, send it back to the gateway... */
 	if (raw.giaddr.s_addr) {
@@ -4801,6 +4999,132 @@ int permitted (packet, permit_list)
 	return 0;
 }
 
+#if defined(DHCPv6) && defined(DHCP4o6)
+static int locate_network6 (packet)
+	struct packet *packet;
+{
+	const struct packet *chk_packet;
+	const struct in6_addr *link_addr, *first_link_addr;
+	struct iaddr ia;
+	struct data_string data;
+	struct subnet *subnet = NULL;
+	struct option_cache *oc;
+
+	/* from locate_network() */
+
+	/* See if there's a Relay Agent Link Selection Option, or a
+	 * Subnet Selection Option.  The Link-Select and Subnet-Select
+	 * are formatted and used precisely the same, but we must prefer
+	 * the link-select over the subnet-select.
+	 * BTW in DHCPv4 over DHCPv6 no cross version relay was specified
+	 * so it is unlikely to see a link-select.
+	 */
+	if ((oc = lookup_option(&agent_universe, packet->options,
+				RAI_LINK_SELECT)) == NULL)
+		oc = lookup_option(&dhcp_universe, packet->options,
+				   DHO_SUBNET_SELECTION);
+
+	/* If there's an option indicating link connection or subnet
+	 * selection, and it's valid, use it to figure out the subnet.
+	 * If it's not valid, fail.
+	 */
+	if (oc) {
+		memset(&data, 0, sizeof data);
+		if (!evaluate_option_cache(&data, packet, NULL, NULL,
+					   packet->options, NULL,
+					   &global_scope, oc, MDL)) {
+			return (0);
+		}
+		if (data.len == 0) {
+			return (0);
+		}
+		if (data.len != 4) {
+			data_string_forget(&data, MDL);
+			return (0);
+		}
+		ia.len = 4;
+		memcpy(ia.iabuf, data.data, 4);
+		data_string_forget(&data, MDL);
+
+		if (find_subnet(&subnet, ia, MDL)) {
+			shared_network_reference(&packet->shared_network,
+						 subnet->shared_network, MDL);
+			subnet_dereference(&subnet, MDL);
+			return (1);
+		}
+		return (0);
+	}
+
+	/* See if there is a giaddr (still unlikely), if there is one
+	 * use it to figure out the subnet.  If it's not valid, fail.
+	 */
+	if (packet->raw->giaddr.s_addr) {
+		ia.len = 4;
+		memcpy(ia.iabuf, &packet->raw->giaddr, 4);
+
+		if (find_subnet(&subnet, ia, MDL)) {
+			shared_network_reference(&packet->shared_network,
+						 subnet->shared_network, MDL);
+			subnet_dereference(&subnet, MDL);
+			return (1);
+		}
+		return (0);
+	}
+
+	/* from shared_network_from_packet6() */
+
+	/* First, find the link address where the packet from the client
+	 * first appeared (if this packet was relayed).
+	 */
+	first_link_addr = NULL;
+	chk_packet = packet->dhcpv6_container_packet;
+	while (chk_packet != NULL) {
+		link_addr = &chk_packet->dhcpv6_link_address;
+		if (!IN6_IS_ADDR_UNSPECIFIED(link_addr) &&
+		    !IN6_IS_ADDR_LINKLOCAL(link_addr)) {
+			first_link_addr = link_addr;
+			break;
+		}
+		chk_packet = chk_packet->dhcpv6_container_packet;
+	}
+
+	/* If there is a relayed link address, find the subnet associated
+	 * with that, and use that to get the appropriate shared_network.
+	 */
+	if (first_link_addr != NULL) {
+		ia.len = sizeof(*first_link_addr);
+		memcpy(ia.iabuf, first_link_addr, sizeof(*first_link_addr));
+		if (find_subnet (&subnet, ia, MDL)) {
+			shared_network_reference(&packet->shared_network,
+						 subnet->shared_network, MDL);
+			subnet_dereference(&subnet, MDL);
+			return (1);
+		}
+		return (0);
+	}
+
+	/* If there is no link address, we will use the interface
+	 * that this packet came in on to pick the shared_network.
+	 */
+	if (packet->interface != NULL) {
+		if (packet->interface->shared_network == NULL)
+			return (0);
+		shared_network_reference(&packet->shared_network,
+					 packet->interface->shared_network,
+					 MDL);
+		return (1);
+	}
+
+	/* We shouldn't be able to get here but if there is no link
+	 * address and no interface we don't know where to get the
+	 * shared_network from, log an error and return an error.
+	 */
+	log_error("No interface and no link address "
+		  "can't determine DHCP4o6 shared network");
+	return (0);
+}
+#endif
+
 int locate_network (packet)
 	struct packet *packet;
 {
@@ -4808,6 +5132,12 @@ int locate_network (packet)
 	struct data_string data;
 	struct subnet *subnet = (struct subnet *)0;
 	struct option_cache *oc;
+
+#if defined(DHCPv6) && defined(DHCP4o6)
+	if (dhcpv4_over_dhcpv6 && (packet->dhcp4o6_response != NULL)) {
+		return (locate_network6 (packet));
+	}
+#endif
 
 	/* See if there's a Relay Agent Link Selection Option, or a
 	 * Subnet Selection Option.  The Link-Select and Subnet-Select
@@ -4843,7 +5173,11 @@ int locate_network (packet)
 					    &global_scope, oc, MDL)) {
 			return 0;
 		}
+		if (data.len == 0) {
+			return 0;
+		}
 		if (data.len != 4) {
+			data_string_forget (&data, MDL);
 			return 0;
 		}
 		ia.len = 4;

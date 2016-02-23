@@ -421,6 +421,12 @@ struct packet {
 	/* DHCPv6 packet containing this one, or NULL if none */
 	struct packet *dhcpv6_container_packet;
 
+	/* DHCPv4-over-DHCPv6 flags */
+	unsigned char dhcp4o6_flags[3];
+
+	/* DHCPv4-over-DHCPv6 response, or NULL */
+	struct data_string *dhcp4o6_response;
+
 	int options_valid;
 	int client_port;
 	struct iaddr client_addr;
@@ -684,7 +690,8 @@ struct lease_state {
 #define DISCOVER_SERVER		1
 #define DISCOVER_UNCONFIGURED	2
 #define DISCOVER_RELAY		3
-#define DISCOVER_REQUESTED	4
+#define DISCOVER_SERVER46	4
+#define DISCOVER_REQUESTED	5
 
 /* DDNS_UPDATE_STYLE enumerations. */
 #define DDNS_UPDATE_STYLE_NONE		0
@@ -1167,6 +1174,13 @@ enum dhcp_state {
 	S_STOPPED = 8
 };
 
+/* Possible pending client operations. */
+enum dhcp_pending {
+	P_NONE = 0,
+	P_REBOOT = 1,
+	P_RELEASE = 2
+};
+
 /* Authentication and BOOTP policy possibilities (not all values work
    for each). */
 enum policy { P_IGNORE, P_ACCEPT, P_PREFER, P_REQUIRE, P_DONT };
@@ -1245,6 +1259,7 @@ struct client_state {
 	struct option_state *sent_options;		 /* Options we sent. */
 	enum dhcp_state state;          /* Current state for this interface. */
 	TIME last_write;		/* Last time this state was written. */
+	enum dhcp_pending pending;	       /* Current pending operation. */
 
 	/* DHCPv4 values. */
 	struct client_lease *active;		  /* Currently active lease. */
@@ -2029,6 +2044,17 @@ void parse_vendor_option(struct packet *packet,
 			 struct option_state *out_options,
 			 struct binding_scope **scope);
 
+/* dhcp4o6.c */
+#if defined(DHCP4o6)
+extern int dhcp4o6_fd;
+extern omapi_object_t *dhcp4o6_object;
+extern omapi_object_type_t *dhcp4o6_type;
+extern void dhcp4o6_setup(u_int16_t);
+
+/* dependency */
+extern isc_result_t dhcpv4o6_handler(omapi_object_t *);
+
+#endif
 /* dhcpd.c */
 extern struct timeval cur_tv;
 #define cur_time cur_tv.tv_sec
@@ -2748,6 +2774,7 @@ extern struct in_addr local_address;
 
 extern u_int16_t local_port;
 extern u_int16_t remote_port;
+extern int dhcpv4_over_dhcpv6;
 extern int (*dhcp_interface_setup_hook) (struct interface_info *,
 					 struct iaddr *);
 extern int (*dhcp_interface_discovery_hook) (struct interface_info *);
@@ -2858,6 +2885,7 @@ const char *piaddr (struct iaddr);
 char *piaddrmask(struct iaddr *, struct iaddr *);
 char *piaddrcidr(const struct iaddr *, unsigned int);
 u_int16_t validate_port(char *);
+u_int16_t validate_port_pair(char *);
 
 /* dhclient.c */
 extern int nowait;
@@ -2950,6 +2978,8 @@ void client_dns_remove(struct client_state *client, struct iaddr *addr);
 void dhcpv4_client_assignments(void);
 void dhcpv6_client_assignments(void);
 void form_duid(struct data_string *duid, const char *file, int line);
+
+void dhcp4o6_start(void);
 
 /* dhc6.c */
 void dhc6_lease_destroy(struct dhc6_lease **src, const char *file, int line);

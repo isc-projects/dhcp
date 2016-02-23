@@ -4,7 +4,7 @@
    way... */
 
 /*
- * Copyright (c) 2011,2013,2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2011,2013,2014,2016 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2007-2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004,2005 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
@@ -618,6 +618,32 @@ validate_port(char *port) {
 
 	if (local_port < lower || local_port > upper)
 		log_fatal("Port number specified is out of range (%ld-%ld).",
+			  lower, upper);
+
+	return htons((u_int16_t)local_port);
+}
+
+/* \brief Validate that the string represents a valid port pair (i.e. n,n+1)
+ *
+ * \param the string to validate
+ * \return the first port number in network byte order
+ */
+
+u_int16_t
+validate_port_pair(char *port) {
+	long local_port = 0;
+	long lower = 1;
+	long upper = 65534;
+	char *endptr;
+
+	errno = 0;
+	local_port = strtol(port, &endptr, 10);
+	
+	if ((*endptr != '\0') || (errno == ERANGE) || (errno == EINVAL))
+		log_fatal ("Invalid port pair specification: %s", port);
+
+	if (local_port < lower || local_port > upper)
+		log_fatal("Port pair specified is out of range (%ld-%ld).",
 			  lower, upper);
 
 	return htons((u_int16_t)local_port);
