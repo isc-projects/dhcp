@@ -236,6 +236,12 @@ by Eric Young (eay@cryptsoft.com).
   Please look at doc/DHCPv4-over-DHCPv6 for more details.
   [ISC-Bugs #35711]
 
+- Corrected interface name formation when using DLPI under Solaris 11. As of
+  Solaris 11, ethernet device files are located in "/dev/net".  The configure
+  script has been modified to detect this situation and adjust the directory
+  used accordingly.
+  [ISC-Bugs #37954]
+
 			Changes since 4.3.3b1
 
 - None
