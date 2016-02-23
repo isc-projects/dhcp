@@ -1,0 +1,113 @@
+Short notice about DHCPv4 over DHCPv6 aka RFC 7341
+--------------------------------------------------
+Note well: this code is still somewhat experimental and any user
+should take care when trying to use it.
+
+First both the DHCPv4 over DHCPv6 client and server come with two
+processes (named "side" below):
+ - a DHCPv6 side which performs usual DHCPv6 operations and
+  forwards DHCPv4-query / DHCPv4-response (eventually encapsulated
+  by / for DHCPv6 relay traversal) from / to the DHCPv4 side
+
+ - a DHCPv4 side which processes encapsulated DHCPv4 messages
+
+Both sides support different command line arguments and configuration /
+lease / process ID files even some could be common, for instance
+most of the topology description.
+
+Second open of the hairy issues about configuring a DHCP server is
+the localization, i.e., how to associate a client with a subnetwork
+on a link (aka shared network).
+
+The topology is described in the server configuration file with
+shared-network and subnet/subnet6 declarations. A subnetwork is
+included in a shared-network, a shared network is created for
+each orphan subnetwork. For each requested interface, a shared network
+is built with all subnetworks matching its address.
+
+The procedure for DHCPv4 is in order:
+ - follow the Relay Agent Link Selection option if exists
+
+ - follow the Subnet Selection option if exists
+
+ - use the relay address if relayed
+
+ - use the receiving interface
+
+At the exception of the last case the address must match a subnet address.
+
+The procedure for DHCPv6 is in order:
+ - when relayed, use the first relay with an usable (i.e., not unspecified
+  or link-local) address
+
+ - use the receiving interface
+
+Note there can be multiple relays in DHCPv6, including layer 2 relays
+which provide no usuable link addresses.
+
+The localization issue is more complex (fun!) with DHCPv4 over DHCPv6
+as explained in RFC 7341 quoted here:
+   Since the DHCPv4 message is encapsulated in the DHCPv6 message, it
+   lacks the information that is typically used by the DHCPv4 server,
+   implementing [RFC2131], to make address- allocation decisions,
+   e.g., giaddr for relayed messages and IPv4 address of the interface
+   that the server is using to communicate with a directly connected
+   client.
+
+In DHCPv4 over DHCPv6, there are a mixture of IPv6 and IPv4 addresses.
+The DHCPv4 over DHCPv6 server externally uses only IPv6 addresses,
+even at the DHCPv4 side, so shared networks associated to directly
+attached interfaces are identified by subnet6 declarations.
+For this reason, the DHCPv4 side should request no interface
+by the command line or configuration file: all usable interfaces
+will be requested (i.e., standard behavior when no interface is
+specified in the command line or configuration file) and it is
+not an error to have an interface with an address and no matching
+subnet6 declaration, nor an error to have no usable interfaces
+(i.e., fully relayed or routed topologies are accepted).
+
+Note also there is no involved DHCPv4 relays (DHCPv4 messages are
+directly encapsulated into DHCPv6 DHCPv4-query/DHCPv4-response
+messages by clients and servers as there is no cross DHCP version
+relays specified by RFC 7341) so to get a Relay Agent option or
+a relay address are very unlikely cases.
+
+So the procedure is:
+ - follow the Relay Agent Link Selection option if exists
+
+ - follow the DHCPv4 Subnet Selection option if exists
+
+ - use the DHCPv4 relay address if DHCPv4 relayed
+
+ - when DHCPv6 relayed, use the first relay with an usable (i.e., not
+  unspecified or link-local) address
+
+ - use the receiving interface
+
+So for more fun one can get a configuration like:
+
+shared-network "link1" {
+    subnet6 2001:db8:1:1::/64 { }
+
+    subnet 192.168.1.0 netmask 255.255.255.0 {
+        range 192.168.1.100 192.168.1.199;
+    }
+}
+
+So a DHCPv4 over DHCPv6 client using the 2001:db8:1:1::10 IPv6 address
+will get a 192.168.1.1xy assigned.
+
+For more fun there is a remaining question: on which interface
+a DHCPv4 over DHCPv6 client should apply the assigned IPv4 address?
+RFC 7341 does not really help:
+   Before applying for an IPv4 address via a DHCPv4-query message, the
+   client must identify a suitable network interface for the address.
+   Once the request is acknowledged by the server, the client can
+   configure the address and other relevant parameters on this
+   interface.  The mechanism for determining a suitable interface is out
+   of the scope of the document.
+
+The ISC DHCP answer is the IPv4 address is (in fact is required to be)
+specified in the command line of the DHCPv4 side of the DHCPv4 over DHCPv6
+client. BTW in the usual case where the upstream interface is IPv6 only,
+the IPv4 interface will be a different one.
