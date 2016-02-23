@@ -1,0 +1,190 @@
+This document describes the packet flows in DHCPv4, DHCPv6 and
+DHCPv4-over-DHCPv6 for the client and the server.
+
+DHCPv4 client
+-------------
+
+State machine (including startup and timeouts)
+ |
+send_<message_type>()
+ |            |
+send_packet() |
+              |
+             add_timeout() (for retry)
+
+I/O receive handler got_one()
+ |
+receive_packet()
+ |
+do_packet() (bootp_packet_handler)
+ |              |           |
+parse_options() |           |
+               bootp()      |
+                |          dhcp()
+               dhcpoffer()  |
+                           dhcp{offer,nack,ack}()
+                            |
+                           manage lease & state machine
+
+DHCPv6 client
+-------------
+
+State machine (including startup and timeouts)
+ |
+do_xxx()
+ |
+append IA_NA, IA_TA and/or IA_PD
+ |             |
+send_packet6() |
+               |
+              add_timeout() (for retry)
+
+I/O receive handler got_one_v6()
+ |
+receive_packet6()
+ |
+do_packet6() (dhcpv6_packet_handler) (relayed or direct message)
+ |
+parse_option_buffer()
+ |
+dhcpv6()
+ |
+xxx_handler() (v6_handler)
+ |            |
+valid_reply() |
+              |
+             manage lease (dhc6_leaseify(), ...) & state machine
+
+DHCPv4-over-DHCPv6 client, DHCPv4 side
+--------------------------------------
+
+State machine (including startup and timeouts)
+ |
+send_<message_type>()
+ |                  |
+send_dhcpv4_query() |
+ |   	            |
+ V                  |
+to DHCPv6 side      |
+                   add_timeout() (for retry)
+
+from DHCPv6 side
+ |
+dhcpv4o6_handler() (including DHCP4o6 IPC state machine)
+ |
+recv_dhcpv4_response()
+ |
+parse_options()
+ |
+bootp()/dhcp() (cf DHCPv4 client)
+
+DHCPv4-over-DHCPv6 client, DHCPv6 side
+--------------------------------------
+
+I/O receive handler got_one_v6()
+ |
+do_packet6() (dhcpv6_packet_handler) (relayed, dhcpv4 or direct message)
+ |
+parse_option_buffer()
+ |
+dhcpv6()
+ |
+forw_dhcpv4_response() (when the message is a DHCPv4-response)
+ |
+to DHCPv4 side
+
+from DHCPv4 side
+ |
+dhcpv4o6_handler() (including DHCP4o6 IPC state machine)
+ |
+forw_dhcpv4_query()
+ |
+send_packet6() to all DHCP4o6 server addresses or multicast
+
+DHCPv4 server
+-------------
+
+I/O receive handler got_one()
+ |
+receive_packet()
+ |
+do_packet() (bootp_packet_handler)
+ |               |
+parse_options()  |
+                 |
+                bootp()/dhcp()
+                 |
+                locate_network()
+                 |
+                manage lease (find_lease*(), ...)
+                 |         |
+                dhcpxxx()  |
+                          send_packet()
+
+DHCPv6 server
+-------------
+
+I/O receive handler got_one_v6()
+ |
+receive_packet6()
+ |
+do_packet6() (dhcpv6_packet_handler) (relayed or direct message)
+ |
+parse_option_buffer()
+ |
+dhcpv6()
+ |
+build_dhcpv6_reply()
+ |              |
+send_packet6()  |
+               dhcpv6_<message_type>()
+                |
+               valid_client_{msg,resp}()
+                |
+               lease_to_client()/start_reply()/...
+
+DHCPv4-over-DHCPv6 server DHCPv4 side
+-------------------------------------
+
+from DHCPv6 side
+ |
+dhcpv4o6_handler()
+ |
+recv_dhcpv4_query()
+ |
+inline code from do_packet6(), e.g., parse_option_buffer()
+ |
+inline code from dhcpv6(), e.g., build_dhcpv6_reply()
+ |
+to DHCPv6 side
+
+DHCPv4-over-DHCPv6 server DHCPv6 side
+-------------------------------------
+
+I/O receive handler got_one_v6()
+ |
+receive_packet6()
+ |
+do_packet6() (dhcpv6_packet_handler) (relayed or direct message)
+ |
+parse_option_buffer()
+ |
+dhcpv6()
+ |
+build_dhcpv6_reply() (relayed or direct message)
+ |                   |
+forw_dhcpv4_query()  |
+ |                  dhcp4o6_relay_forw()
+to DHCPv4 side       |
+                    parse_option_buffer()
+                     |
+                    build_dhcpv6_reply() (recursive call)
+
+from DHCPv6 side
+ |
+dhcpv4o6_handler()
+ |
+send_dhcpv4_response()
+ |
+send_packet6()
+
