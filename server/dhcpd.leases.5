@@ -1,6 +1,6 @@
 .\"	dhcpd.leases.5
 .\"
-.\" Copyright (c) 2014-2015 by Internet Systems Consortium, Inc. ("ISC")
+.\" Copyright (c) 2014-2016 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 2004,2009 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
 .\"
@@ -246,7 +246,8 @@ The client identifier is recorded as a colon-separated hexadecimal
 list or as a quoted string.   If it is recorded as a quoted string and
 it contains one or more non-printable characters, those characters are
 represented as octal escapes - a backslash character followed by three
-octal digits.
+octal digits.  The format used is determined by the lease-id-format
+parameter, which defaults to octal.
 .PP
 .B client-hostname "\fIhostname\fB";\fR
 .PP
@@ -327,7 +328,8 @@ The IAID_DUID value is recorded as a colon-separated hexadecimal
 list or as a quoted string.   If it is recorded as a quoted string and
 it contains one or more non-printable characters, those characters are
 represented as octal escapes - a backslash character followed by three
-octal digits.
+octal digits.  The format used is governed by the lease-id-format parameter,
+which defaults to octal.
 .PP
 .B cltt \fIdate\fB;\fR
 .PP

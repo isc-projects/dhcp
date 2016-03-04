@@ -3489,10 +3489,12 @@ form_duid(struct data_string *duid, const char *file, int line)
 		       ip->hw_address.hlen - 1);
 	}
 
-	str = quotify_buf(duid->data, duid->len, MDL);
-	if (str == NULL)
-		log_info("Created duid.");
-	else {
+	/* Now format the output based on lease-id-format */
+	str = format_lease_id(duid->data, duid->len,
+			      top_level_config.lease_id_format, MDL);
+	if (str == NULL) {
+		log_info("form_duid: Couldn't allocate memory to log duid!");
+	} else {
 		log_info("Created duid %s.", str);
 		dfree(str, MDL);
 	}
@@ -3516,16 +3518,13 @@ write_duid(struct data_string *duid)
 		}
 	}
 
-	/* It would make more sense to write this as a hex string,
-	 * but our function to do that (print_hex_n) uses a fixed
-	 * length buffer...and we can't guarantee a duid would be
-	 * less than the fixed length.
-	 */
-	str = quotify_buf(duid->data, duid->len, MDL);
+	/* Generate a formatted duid string per lease-id-format */
+	str = format_lease_id(duid->data, duid->len,
+			      top_level_config.lease_id_format, MDL);
 	if (str == NULL)
 		return ISC_R_NOMEMORY;
 
-	stat = fprintf(leaseFile, "default-duid \"%s\";\n", str);
+	stat = fprintf(leaseFile, "default-duid %s;\n", str);
 	dfree(str, MDL);
 	if (stat <= 0)
 		return ISC_R_IOERROR;
@@ -3586,8 +3585,35 @@ write_client6_lease(struct client_state *client, struct dhc6_lease *lease,
 				ianame = "ia-pd";
 				break;
 		}
-		stat = fprintf(leaseFile, "  %s %s {\n",
-			       ianame, print_hex_1(4, ia->iaid, 12));
+
+		/* For some reason IAID was never octal or hex, but string or
+		 * hex. Go figure.  So for compatibilty's sake we will either
+		 * do hex or "legacy" i.e string rather than octal. What a
+		 * cluster. */
+		switch(top_level_config.lease_id_format) {
+			case TOKEN_HEX: {
+				char* iaid_str = format_lease_id(
+					(const unsigned char *) &ia->iaid, 4,
+					top_level_config.lease_id_format, MDL);
+
+				if (!iaid_str) {
+					log_error("Can't format iaid");
+					return ISC_R_IOERROR;
+				}
+
+				stat = fprintf(leaseFile, "  %s %s {\n",
+					       ianame, iaid_str);
+				dfree(iaid_str, MDL);
+				break;
+			}
+
+			case TOKEN_OCTAL:
+			default:
+				stat = fprintf(leaseFile, "  %s %s {\n", ianame,
+					       print_hex_1(4, ia->iaid, 12));
+				break;
+		}
+
 		if (stat <= 0)
 			return ISC_R_IOERROR;
 

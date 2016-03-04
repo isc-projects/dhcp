@@ -236,7 +236,7 @@ by Eric Young (eay@cryptsoft.com).
   Please look at doc/DHCPv4-over-DHCPv6 for more details.
   [ISC-Bugs #35711]
 
-- Corrected interface name formation when using DLPI under Solaris 11. As of
+- Correct interface name formation when using DLPI under Solaris 11. As of
   Solaris 11, ethernet device files are located in "/dev/net".  The configure
   script has been modified to detect this situation and adjust the directory
   used accordingly. Thanks to Jarkko Torppa for reporting this issue and
@@ -247,6 +247,12 @@ by Eric Young (eay@cryptsoft.com).
 - Add a dereference call when handling an error condition while
   decoding a packet.
   [ISC-Bugs #41774]
+
+- Add a new parameter, lease-id-format, to both dhcpd and dhclient. The
+  parameter controls the format in which certain values are written to lease
+  files.  Formats supported are octal - quoted string containing octal
+  escapes, and hex - unquoted, colon separated hex digits.
+  [ISC-Busg #26378]
 
 			Changes since 4.3.3b1
 

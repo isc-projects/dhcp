@@ -3,7 +3,7 @@
    Tokens for config file lexer and parser. */
 
 /*
- * Copyright (c) 2011-2015 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2011-2016 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004,2007-2009 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
@@ -371,7 +371,10 @@ enum dhcp_token {
 	PARSE_VENDOR_OPT = 672,
 	AUTHORING_BYTE_ORDER = 673,
 	TOKEN_LITTLE_ENDIAN = 674,
-	TOKEN_BIG_ENDIAN = 675
+	TOKEN_BIG_ENDIAN = 675,
+	LEASE_ID_FORMAT = 676,
+	TOKEN_HEX = 677,
+	TOKEN_OCTAL = 678
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\

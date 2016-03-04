@@ -1243,6 +1243,9 @@ struct client_config {
 	int do_forward_update;		/* If nonzero, and if we have the
 					   information we need, update the
 					   A record for the address we get. */
+
+	int lease_id_format;		/* format for IDs in lease file,
+					   TOKEN_OCTAL or TOKEN_HEX */
 };
 
 /* Per-interface state used in the dhcp client... */
@@ -2065,6 +2068,7 @@ extern int server_id_check;
 
 extern int prefix_length_mode;
 extern int authoring_byte_order;
+extern int lease_id_format;
 
 extern const char *path_dhcpd_conf;
 extern const char *path_dhcpd_db;
@@ -2089,6 +2093,7 @@ extern enum dhcp_shutdown_state shutdown_state;
 isc_result_t dhcp_io_shutdown (omapi_object_t *, void *);
 isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
 				     control_object_state_t newstate);
+
 #if defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 void relinquish_ackqueue(void);
 #endif
@@ -2532,13 +2537,13 @@ int binding_scope_reference (struct binding_scope **,
 int dns_zone_allocate (struct dns_zone **, const char *, int);
 int dns_zone_reference (struct dns_zone **,
 			struct dns_zone *, const char *, int);
-
 /* print.c */
 #define DEFAULT_TIME_FORMAT 0
 #define LOCAL_TIME_FORMAT   1
 extern int db_time_format;
 char *quotify_string (const char *, const char *, int);
-char *quotify_buf (const unsigned char *, unsigned, const char *, int);
+char *quotify_buf (const unsigned char *, unsigned, const char,
+		   const char *, int);
 char *print_base64 (const unsigned char *, unsigned, const char *, int);
 char *print_hw_addr (const int, const int, const unsigned char *);
 void print_lease (struct lease *);
@@ -2572,7 +2577,10 @@ void print_dns_status (int, struct dhcp_ddns_cb *, isc_result_t);
 const char *print_time(TIME);
 
 void get_hw_addr(const char *name, struct hardware *hw);
-
+char *buf_to_hex (const unsigned char *s, unsigned len,
+                   const char *file, int line);
+char *format_lease_id(const unsigned char *s, unsigned len, int format,
+                      const char *file, int line);
 /* socket.c */
 #if defined (USE_SOCKET_SEND) || defined (USE_SOCKET_RECEIVE) \
 	|| defined (USE_SOCKET_FALLBACK)
