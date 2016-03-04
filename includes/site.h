@@ -300,3 +300,9 @@
    messages, as we don't expect that is necessary it is on by
    default. */
 #define PRINT_SPECIFIC_CL_ERRORS
+
+/* Limit the value of a file descriptor the serve will use
+   when accepting a connecting request.  This can be used to
+   limit the number of TCP connections that the server will
+   allow at one time.  A value of 0 means there is no limit.*/
+#define MAX_FD_VALUE 200
