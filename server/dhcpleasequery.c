@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2011-2013,2016 by Internet Systems Consortium, Inc. ("ISC")
- * Copyright (C) 2006-2007,2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2006-2016 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above

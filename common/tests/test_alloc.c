@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007,2009-2014,2016 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2007-2016 by Internet Systems Consortium, Inc. ("ISC")
  *
  * We test the functions provided in alloc.c here. These are very
  * basic functions, and it is very important that they work correctly.
