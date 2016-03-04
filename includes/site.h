@@ -312,6 +312,12 @@
    default. */
 #define PRINT_SPECIFIC_CL_ERRORS
 
+/* Limit the value of a file descriptor the serve will use
+   when accepting a connecting request.  This can be used to
+   limit the number of TCP connections that the server will
+   allow at one time.  A value of 0 means there is no limit.*/
+#define MAX_FD_VALUE 200
+
 /* Include definitions for various options.  In general these
    should be left as is, but if you have already defined one
    of these and prefer your definition you can comment the 
