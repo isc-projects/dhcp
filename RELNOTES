@@ -64,14 +64,14 @@ by Eric Young (eay@cryptsoft.com).
   keep the previous behavior.
   [ISC-Bugs #38692]
 
-- The linux packet filter code now correctly treats only least significant
-  12 bits an inbound packet's TCI value as the VLAN id (per IEEE 802.1Q).
+- The linux packet filter code now correctly treats only the least significant
+  12 bits in an inbound packet's TCI value as the VLAN id (per IEEE 802.1Q).
   Prior to this it was using the entire 16 bit value as the VLAN id and
   incorrectly discarding packets.  Thanks to Jiri Popelka at Red Hat for
   reporting this issue and supplying its patch.
   [ISC-Bugs #40591]
 
-- Fixed several issues static analysis issues such as potential null
+- Fixed several static analysis issues such as potential null
   references, unchecked strdup returns.  Thanks to Bill Parker (wp02855 at
   gmail dot com) who identified these issues and supplied patches to
   address them.
@@ -146,7 +146,7 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Bugs #40371]
 
 - Properly terminate strings before passing them to regex and fix
-  a boudnary error when creating certain new data strings.
+  a boundary error when creating certain new data strings.
   Thanks to Andrey Jr. Melnikov for the bug report.
   [ISC-Bugs #41217]
 
