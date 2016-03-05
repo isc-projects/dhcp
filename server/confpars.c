@@ -37,8 +37,10 @@ static int parse_binding_value(struct parse *cfile,
 
 static void parse_authoring_byte_order (struct parse *cfile);
 static void parse_lease_id_format (struct parse *cfile);
+#ifdef DHCPv6
 static int parse_iaid_duid(struct parse *cfile, struct ia_xx** ia,
 			   u_int32_t *iaid, const char* file, int line);
+#endif
 
 #if defined (TRACING)
 trace_type_t *trace_readconf_type;
