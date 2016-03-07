@@ -100,7 +100,7 @@
 #ifdef USE_SOCKETS
 #  define USE_SOCKET_SEND
 #  define USE_SOCKET_RECEIVE
-#  if defined(HAVE_DLPI)
+#  if defined(HAVE_DLPI) && !defined(sun) && !defined(USE_V4_PKTINFO)
 #    define USE_DLPI_HWADDR
 #  elif defined(HAVE_LPF)
 #    define USE_LPF_HWADDR
