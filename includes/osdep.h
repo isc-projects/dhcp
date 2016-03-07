@@ -3,7 +3,7 @@
    Operating system dependencies... */
 
 /*
- * Copyright (c) 2004-2005,2007-2010,2014 by Internet Systems Consortium,
+ * Copyright (c) 2004-2016 by Internet Systems Consortium,
  *                                        Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *

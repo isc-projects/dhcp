@@ -80,6 +80,9 @@ dhcrelay - Dynamic Host Configuration Protocol Relay Agent
 .B -l
 .I interface
 ]
+.B -U
+.I interface
+]
 .I server0
 [
 .I ...serverN
@@ -217,7 +220,7 @@ packet, leaving the supplied option field intact; it may \fIreplace\fR the
 existing agent option field; it may \fIforward\fR the packet unchanged; or,
 it may \fIdiscard\fR it.
 .TP
--u \fIifname\fR
+-U \fIifname\fR
 Enables the addition of a RFC 3527 compliant link selection suboption for
 clients directly connected to the relay.  This RFC allows a relay to
 specify two different IP addresses: one for the server to use when
@@ -242,7 +245,7 @@ This option is off by default.  Note that enabling this option automatically
 enables the \fB-a\fR option.
 
 Keep in mind that using options such as \fB-m replace\fR or \fB-m discard\fR
-on relays upstream from one using \fB-u\fR can pose problems.  The upstream
+on relays upstream from one using \fB-U\fR can pose problems.  The upstream
 relay will wipe out the initial agent option containing the link selection
 while leaving the re-purposed giaddr value in place, causing packets to go
 astray.
