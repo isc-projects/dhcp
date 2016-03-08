@@ -257,7 +257,7 @@ and the "protocol not configured" problem.
 		    LINUX: PROTOCOL NOT CONFIGURED
 
 If you get the following message, it's because your kernel doesn't
-have the linux packetfilter or raw packet socket configured:
+have the Linux packetfilter or raw packet socket configured:
 
  Make sure CONFIG_PACKET (Packet socket) and CONFIG_FILTER (Socket
  Filtering) are enabled in your kernel configuration
@@ -689,7 +689,7 @@ bug reports are more likely to get handled more quickly overall.
 	  something about your situation that we don't know.
       6.  Include your dhcpd.conf and dhcpd.leases file as MIME attachments
 	  if they're not over 100 kilobytes in size each.  If they are
-	  this large, please make them available to us eg via a hidden
+	  this large, please make them available to us, e.g., via a hidden
 	  http:// URL or FTP site.  If you're not comfortable releasing
 	  this information due to sensitive contents, you may encrypt
 	  the file to our release signing key, available on our website.
