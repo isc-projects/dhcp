@@ -65,12 +65,12 @@ by Eric Young (eay@cryptsoft.com).
 
 - ISC DHCP now follows the common convention to use the base name a
   program is invoked with (aka argv[0], vs. a builtin name) for
-  logs. This should help differentiate syslog entires for DHCPv4 and
+  logs. This should help differentiate syslog entries for DHCPv4 and
   DHCPv6 servers. You can define OLD_LOG_NAME in includes/site.h to
   keep the previous behavior.
   [ISC-Bugs #38692]
 
-- The linux packet filter code now correctly treats only the least significant
+- The Linux packet filter code now correctly treats only the least significant
   12 bits in an inbound packet's TCI value as the VLAN id (per IEEE 802.1Q).
   Prior to this it was using the entire 16 bit value as the VLAN id and
   incorrectly discarding packets.  Thanks to Jiri Popelka at Red Hat for
