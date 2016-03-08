@@ -66,7 +66,7 @@ struct data_string default_duid;
 #define ASSERT_STATE(state_is, state_shouldbe) {}
 
 static const char copyright[] = 
-"Copyright 2004-2015 Internet Systems Consortium.";
+"Copyright 2004-2016 Internet Systems Consortium.";
 static const char arr [] = "All rights reserved.";
 static const char message [] = "Internet Systems Consortium DHCP Client";
 static const char url [] = 
