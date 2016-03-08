@@ -36,6 +36,11 @@ static int parse_binding_value(struct parse *cfile,
 				struct binding_value *value);
 
 static void parse_authoring_byte_order (struct parse *cfile);
+static void parse_lease_id_format (struct parse *cfile);
+#ifdef DHCPv6
+static int parse_iaid_duid(struct parse *cfile, struct ia_xx** ia,
+			   u_int32_t *iaid, const char* file, int line);
+#endif
 
 #if defined (TRACING)
 trace_type_t *trace_readconf_type;
@@ -802,6 +807,11 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		break;
 #endif /* DHCPv6 */
 
+	      case LEASE_ID_FORMAT:
+		token = next_token (&val, (unsigned *)0, cfile);
+		parse_lease_id_format(cfile);
+		break;
+
 	      default:
 		et = (struct executable_statement *)0;
 		lose = 0;
@@ -1442,6 +1452,52 @@ void parse_authoring_byte_order (struct parse *cfile)
 		log_error ("WARNING: Lease file authored using different"
                            " byte order, will attempt to convert");
 	}
+
+        token = next_token(&val, &len, cfile);
+        if (token != SEMI) {
+                parse_warn(cfile, "corrupt lease file; expecting a semicolon");
+                skip_to_semi(cfile);
+                return;
+        }
+}
+
+/*!
+ * \brief Parses a lease-id-format statement
+ *
+ * A valid statement looks like this:
+ *
+ *	lease-id-format :==
+ *		LEASE_ID_FORMAT TOKEN_OCTAL | TOKEN_HEX ;
+ *
+ * This function is used to parse the lease-id-format statement. It sets the
+ * global variable, lease_id_format.
+ *
+ * \param cfile the current parse file
+ *
+*/
+void parse_lease_id_format (struct parse *cfile)
+{
+	enum dhcp_token token;
+	const char *val;
+	unsigned int len;
+
+	token = next_token(&val, NULL, cfile);
+	switch(token) {
+	case TOKEN_OCTAL:
+		lease_id_format = TOKEN_OCTAL;
+		break;
+	case TOKEN_HEX:
+		lease_id_format = TOKEN_HEX;
+		break;
+	default:
+		parse_warn(cfile, "lease-id-format is invalid: "
+                                   " it must be octal or hex.");
+		skip_to_semi(cfile);
+		return;
+	}
+
+	log_debug("lease_id_format is: %s",
+		  lease_id_format == TOKEN_OCTAL ? "octal" : "hex");
 
         token = next_token(&val, &len, cfile);
         if (token != SEMI) {
@@ -4664,10 +4720,9 @@ parse_ia_na_declaration(struct parse *cfile) {
 	skip_to_semi(cfile);
 #else /* defined(DHCPv6) */
 	enum dhcp_token token;
-	struct ia_xx *ia;
+	struct ia_xx *ia = NULL;
 	const char *val;
 	struct ia_xx *old_ia;
-	unsigned int len;
 	u_int32_t iaid;
 	struct iaddr iaddr;
 	binding_state_t state;
@@ -4690,26 +4745,10 @@ parse_ia_na_declaration(struct parse *cfile) {
                 return;
         }
 
-	token = next_token(&val, &len, cfile);
-	if (token != STRING) {
-		parse_warn(cfile, "corrupt lease file; "
-				  "expecting an iaid+ia_na string");
-		skip_to_semi(cfile);
-		return;
-	}
-	if (len < 5) {
-		parse_warn(cfile, "corrupt lease file; "
-				  "iaid+ia_na string too short");
-		skip_to_semi(cfile);
+	if (!parse_iaid_duid(cfile, &ia, &iaid, MDL)) {
 		return;
 	}
 
-	iaid = parse_byte_order_uint32(val);
-
-	ia = NULL;
-	if (ia_allocate(&ia, iaid, val+4, len-4, MDL) != ISC_R_SUCCESS) {
-		log_fatal("Out of memory.");
-	}
 	ia->ia_type = D6O_IA_NA;
 
 	token = next_token(&val, NULL, cfile);
@@ -5117,10 +5156,9 @@ parse_ia_ta_declaration(struct parse *cfile) {
 	skip_to_semi(cfile);
 #else /* defined(DHCPv6) */
 	enum dhcp_token token;
-	struct ia_xx *ia;
+	struct ia_xx *ia = NULL;
 	const char *val;
 	struct ia_xx *old_ia;
-	unsigned int len;
 	u_int32_t iaid;
 	struct iaddr iaddr;
 	binding_state_t state;
@@ -5143,26 +5181,10 @@ parse_ia_ta_declaration(struct parse *cfile) {
                 return;
         }
 
-	token = next_token(&val, &len, cfile);
-	if (token != STRING) {
-		parse_warn(cfile, "corrupt lease file; "
-				  "expecting an iaid+ia_ta string");
-		skip_to_semi(cfile);
-		return;
-	}
-	if (len < 5) {
-		parse_warn(cfile, "corrupt lease file; "
-				  "iaid+ia_ta string too short");
-		skip_to_semi(cfile);
+	if (!parse_iaid_duid(cfile, &ia, &iaid, MDL)) {
 		return;
 	}
 
-	iaid = parse_byte_order_uint32(val);
-
-	ia = NULL;
-	if (ia_allocate(&ia, iaid, val+4, len-4, MDL) != ISC_R_SUCCESS) {
-		log_fatal("Out of memory.");
-	}
 	ia->ia_type = D6O_IA_TA;
 
 	token = next_token(&val, NULL, cfile);
@@ -5570,10 +5592,9 @@ parse_ia_pd_declaration(struct parse *cfile) {
 	skip_to_semi(cfile);
 #else /* defined(DHCPv6) */
 	enum dhcp_token token;
-	struct ia_xx *ia;
+	struct ia_xx *ia = NULL;
 	const char *val;
 	struct ia_xx *old_ia;
-	unsigned int len;
 	u_int32_t iaid;
 	struct iaddr iaddr;
 	u_int8_t plen;
@@ -5597,26 +5618,10 @@ parse_ia_pd_declaration(struct parse *cfile) {
                 return;
         }
 
-	token = next_token(&val, &len, cfile);
-	if (token != STRING) {
-		parse_warn(cfile, "corrupt lease file; "
-				  "expecting an iaid+ia_pd string");
-		skip_to_semi(cfile);
-		return;
-	}
-	if (len < 5) {
-		parse_warn(cfile, "corrupt lease file; "
-				  "iaid+ia_pd string too short");
-		skip_to_semi(cfile);
+	if (!parse_iaid_duid(cfile, &ia, &iaid, MDL)) {
 		return;
 	}
 
-	iaid = parse_byte_order_uint32(val);
-
-	ia = NULL;
-	if (ia_allocate(&ia, iaid, val+4, len-4, MDL) != ISC_R_SUCCESS) {
-		log_fatal("Out of memory.");
-	}
 	ia->ia_type = D6O_IA_PD;
 
 	token = next_token(&val, NULL, cfile);
@@ -6024,39 +6029,37 @@ parse_ia_pd_declaration(struct parse *cfile) {
  * DUID stored in a string:
  *
  * server-duid "\000\001\000\001\015\221\034JRT\000\0224Y";
+ *
+ * OR as a hex string of digits:
+ *
+ * server-duid 00:01:00:01:1e:68:b3:db:0a:00:27:00:00:02;
  */
 void 
 parse_server_duid(struct parse *cfile) {
-	enum dhcp_token token;
-	const char *val;
-	unsigned int len;
 	struct data_string duid;
+	unsigned char bytes[128];  /* Maximum valid DUID is 128 */
+	unsigned int len;
 
-	token = next_token(&val, &len, cfile);
-	if (token != STRING) {
-		parse_warn(cfile, "corrupt lease file; expecting a DUID");
+	len = parse_X(cfile, bytes, sizeof(bytes));
+	if (len <= 2) {
+		parse_warn(cfile, "Invalid duid contents");
 		skip_to_semi(cfile);
 		return;
 	}
 
-	memset(&duid, 0, sizeof(duid));
-	duid.len = len;
-	if (!buffer_allocate(&duid.buffer, duid.len, MDL)) {
-		log_fatal("Out of memory storing DUID");
+	memset(&duid, 0x0, sizeof(duid));
+	if (!buffer_allocate(&duid.buffer, len, MDL)) {
+		log_fatal("parse_server_duid: out of memory");
 	}
-	duid.data = (unsigned char *)duid.buffer->data;
-	memcpy(duid.buffer->data, val, len);
+
+	memcpy(duid.buffer->data, bytes, len);
+	duid.len = len;
+	duid.data = duid.buffer->data;
 
 	set_server_duid(&duid);
-
 	data_string_forget(&duid, MDL);
 
-	token = next_token(&val, &len, cfile);
-	if (token != SEMI) {
-		parse_warn(cfile, "corrupt lease file; expecting a semicolon");
-		skip_to_semi(cfile);
-		return;
-	}
+	parse_semi(cfile);
 }
 
 /*
@@ -6341,6 +6344,52 @@ uint32_t parse_byte_order_uint32(const void *source) {
 	}
 
 	return (value);
+}
+
+/* !brief Parses an iaid/duid string into an iaid and struct ia
+ *
+ * Given a string containing the iaid-duid value read from the file,
+ * and using the format specified by input lease-id-format, convert
+ * it into an IAID value and an ia_xx struct.
+ *
+ * \param cfile - file being parsed
+ * \param ia - pointer in which to store the allocated ia_xx struct
+ * \param iaid - pointer in which to return the IAID value
+ * \param file - source file name of invocation
+ * \param line - line numbe of invocation
+ *
+ * \return 0 if parsing fails, non-zero otherwise
+*/
+int
+parse_iaid_duid(struct parse* cfile, struct ia_xx** ia, u_int32_t *iaid,
+	const char* file, int line) {
+        unsigned char bytes[132];  /* Maximum valid IAID-DUID is 132 */
+        unsigned int len;
+
+	if (!ia) {
+		log_error("parse_iaid_duid: ia ptr cannot be null");
+		return (0);
+	}
+
+	*ia = NULL;
+        len = parse_X(cfile, bytes, sizeof(bytes));
+        if (len <= 5) {
+		parse_warn(cfile, "corrupt lease file; "
+			   "iaid+ia_xx string too short");
+                skip_to_semi(cfile);
+                return (0);
+        }
+
+	/* Extract the IAID from the front */
+	*iaid = parse_byte_order_uint32(bytes);
+
+	/* Instantiate the ia_xx */
+	if (ia_allocate(ia, *iaid, (const char*)bytes + 4, len - 4, file, line)
+	    != ISC_R_SUCCESS) {
+		log_fatal("parse_iaid_duid:Out of memory.");
+	}
+
+	return (1);
 }
 
 #endif /* DHCPv6 */

@@ -2509,6 +2509,26 @@ is, the latter value will be used.
 .RE
 .PP
 The
+.I lease-id-format
+parameter
+.RS 0.25i
+.PP
+.B lease-id-format \fIformat\fB;\fR
+.PP
+The \fIformat\fR parameter must be either \fBoctal\fR or \fBhex\fR.
+This parameter governs the format used to write certain values to lease
+files. With the default format, octal, values are written as quoted strings in
+which non-printable characters are represented as octal escapes -
+a backslash character followed by three octal digits.  When the hex format
+is specified, values are written as an unquoted series of pairs of
+hexadecimal digits, separated by colons.
+
+Currently, the values written out based on lease-id-format are the server-duid,
+the uid (DHCPv4 leases), and the IAID_DUID (DHCPv6 leases).  Note the server
+automatically reads the values in either format.
+.RE
+.PP
+The
 .I local-port
 statement
 .RS 0.25i

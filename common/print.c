@@ -3,8 +3,7 @@
    Turn data structures into printable text. */
 
 /*
- * Copyright (c) 2009-2014 by Internet Systems Consortium, Inc. ("ISC")
- * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2016 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -69,7 +68,7 @@ char *quotify_string (const char *s, const char *file, int line)
 	return buf;
 }
 
-char *quotify_buf (const unsigned char *s, unsigned len,
+char *quotify_buf (const unsigned char *s, unsigned len, char enclose_char,
 		   const char *file, int line)
 {
 	unsigned nulen = 0;
@@ -87,9 +86,17 @@ char *quotify_buf (const unsigned char *s, unsigned len,
 			nulen++;
 	}
 
+	if (enclose_char) {
+		nulen +=2 ;
+	}
+
 	buf = dmalloc (nulen + 1, MDL);
 	if (buf) {
 		nsp = buf;
+		if (enclose_char) {
+			*nsp++ = enclose_char;
+		}
+
 		for (i = 0; i < len; i++) {
 			if (s [i] == ' ')
 				*nsp++ = ' ';
@@ -101,6 +108,10 @@ char *quotify_buf (const unsigned char *s, unsigned len,
 				*nsp++ = s [i];
 			} else
 				*nsp++ = s [i];
+		}
+
+		if (enclose_char) {
+			*nsp++ = enclose_char;
 		}
 		*nsp++ = 0;
 	}
@@ -1516,4 +1527,88 @@ print_time(TIME t)
 	}
 
 	return buf;
+}
+
+/* !brief Return the given data as a string of hex digits "xx:xx:xx ..."
+ *
+ * Converts the given data into a null-terminated, string of hex digits,
+ * stored in an allocated buffer.  It is the caller's responsiblity to free
+ * the buffer.
+ *
+ * \param s - pointer to the data to convert
+ * \param len - length of the data to convert
+ * \param file - source file of invocation
+ * \param line - line number of invocation
+ *
+ * \return Returns an allocated buffer containing the hex string
+*/
+char *buf_to_hex (const unsigned char *s, unsigned len,
+		   const char *file, int line)
+{
+	unsigned nulen = 0;
+	char *buf;
+
+	/* If somebody hands us length of zero, we'll give them
+	 * back an empty string */
+	if (!len) {
+		buf = dmalloc (1, MDL);
+		if (buf) {
+			*buf = 0x0;
+		}
+
+		return (buf);
+	}
+
+
+	/* Figure out how big it needs to be. print_to_hex uses
+	 * "%02x:" per character.  Note since there's no trailing colon
+	 * we'll have room for the null */
+	nulen = (len * 3);
+
+	/* Allocate our buffer */
+	buf = dmalloc (nulen, MDL);
+
+	/* Hex-ify it */
+	if (buf) {
+		print_hex_only (len, s, nulen, buf);
+	}
+
+	return buf;
+}
+
+/* !brief Formats data into a string based on a lease id format
+ *
+ * Takes the given data and returns an allocated string whose contents are
+ * the string version of that data, formatted according to the output lease
+ * id format.  Note it is the caller's responsiblity to delete the string.
+ *
+ * Currently two formats are supported:
+ *
+ *  OCTAL - Default or "legacy" CSL format enclosed in quotes '"'.
+ *
+ *  HEX - Bytes represented as string colon seperated of hex digit pairs
+ *  (xx:xx:xx...)
+ *
+ * \param s - data to convert
+ * \param len - length of the data to convert
+ * \param format - desired format of the result
+ * \param file -  source file of invocation
+ * \param line - line number of invocation
+ *
+ * \return A pointer to the allocated, null-terminated string
+*/
+char *format_lease_id(const unsigned char *s, unsigned len,
+                      int format, const char *file, int line) {
+	char *idstr = NULL;
+
+	switch (format) {
+		case TOKEN_HEX:
+			idstr = buf_to_hex(s, len, MDL);
+			break;
+		case TOKEN_OCTAL:
+		default:
+			idstr = quotify_buf(s, len, '"', MDL);
+			break;
+	}
+	return (idstr);
 }

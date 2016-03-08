@@ -137,7 +137,7 @@ static int strip_relay_agent_options(struct interface_info *,
 				     struct dhcp_packet *, unsigned);
 
 static const char copyright[] =
-"Copyright 2004-2015 Internet Systems Consortium.";
+"Copyright 2004-2016 Internet Systems Consortium.";
 static const char arr[] = "All rights reserved.";
 static const char message[] =
 "Internet Systems Consortium DHCP Relay Agent";
@@ -153,7 +153,7 @@ char *progname;
 "                     [-pf <pid-file>] [--no-pid]\n"\
 "                     [-m append|replace|forward|discard]\n" \
 "                     [-i interface0 [ ... -i interfaceN]\n" \
-"                     [-u interface]\n" \
+"                     [-U interface]\n" \
 "                     server0 [ ... serverN]\n\n" \
 "       %s -6   [-d] [-q] [-I] [-c <hops>] [-p <port>]\n" \
 "                     [-pf <pid-file>] [--no-pid]\n" \
@@ -168,7 +168,7 @@ char *progname;
 "                [-pf <pid-file>] [--no-pid]\n" \
 "                [-m append|replace|forward|discard]\n" \
 "                [-i interface0 [ ... -i interfaceN]\n" \
-"                [-u interface]\n" \
+"                [-U interface]\n" \
 "                server0 [ ... serverN]\n\n"
 #endif
 
@@ -373,7 +373,7 @@ main(int argc, char **argv) {
 				agent_relay_mode = discard;
 			} else
 				usage("Unknown argument to -m: %s", argv[i]);
-		} else if (!strcmp(argv [i], "-u")) {
+		} else if (!strcmp(argv [i], "-U")) {
 			if (++i == argc)
 				usage(use_noarg, argv[i-1]);
 

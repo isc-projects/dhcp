@@ -3,7 +3,7 @@
    Operating system dependencies... */
 
 /*
- * Copyright (c) 2004-2005,2007-2010,2014 by Internet Systems Consortium,
+ * Copyright (c) 2004-2016 by Internet Systems Consortium,
  *                                        Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
@@ -100,7 +100,7 @@
 #ifdef USE_SOCKETS
 #  define USE_SOCKET_SEND
 #  define USE_SOCKET_RECEIVE
-#  if defined(HAVE_DLPI)
+#  if defined(HAVE_DLPI) && !defined(sun) && !defined(USE_V4_PKTINFO)
 #    define USE_DLPI_HWADDR
 #  elif defined(HAVE_LPF)
 #    define USE_LPF_HWADDR

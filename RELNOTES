@@ -1,6 +1,6 @@
                 Internet Systems Consortium DHCP Distribution
-                             Version 4.3.3
-                            03 September 2015
+                            Version 4.3.4b1
+                             09 March 2016
 
                              Release Notes
 
@@ -64,14 +64,14 @@ by Eric Young (eay@cryptsoft.com).
   keep the previous behavior.
   [ISC-Bugs #38692]
 
-- The Linux packet filter code now correctly treats only least significant
-  12 bits an inbound packet's TCI value as the VLAN id (per IEEE 802.1Q).
+- The Linux packet filter code now correctly treats only the least significant
+  12 bits in an inbound packet's TCI value as the VLAN id (per IEEE 802.1Q).
   Prior to this it was using the entire 16 bit value as the VLAN id and
   incorrectly discarding packets.  Thanks to Jiri Popelka at Red Hat for
   reporting this issue and supplying its patch.
   [ISC-Bugs #40591]
 
-- Fixed several issues static analysis issues such as potential null
+- Fixed several static analysis issues such as potential null
   references, unchecked strdup returns.  Thanks to Bill Parker (wp02855 at
   gmail dot com) who identified these issues and supplied patches to
   address them.
@@ -146,7 +146,7 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Bugs #40371]
 
 - Properly terminate strings before passing them to regex and fix
-  a boudnary error when creating certain new data strings.
+  a boundary error when creating certain new data strings.
   Thanks to Andrey Jr. Melnikov for the bug report.
   [ISC-Bugs #41217]
 
@@ -213,7 +213,7 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Bugs #39262]
 
 - Add support for RFC 3527 to dhcrelay.  A new, dhcrelay command line argument,
-  "-u <interface>" enables the addition of a RFC 3527 compliant link selection
+  "-U <interface>" enables the addition of a RFC 3527 compliant link selection
   suboption to the agent option added for clients directly connected to the
   relay.
   [ISC-Bugs #34875]
@@ -236,7 +236,7 @@ by Eric Young (eay@cryptsoft.com).
   Please look at doc/DHCPv4-over-DHCPv6 for more details.
   [ISC-Bugs #35711]
 
-- Corrected interface name formation when using DLPI under Solaris 11. As of
+- Correct interface name formation when using DLPI under Solaris 11. As of
   Solaris 11, ethernet device files are located in "/dev/net".  The configure
   script has been modified to detect this situation and adjust the directory
   used accordingly. Thanks to Jarkko Torppa for reporting this issue and
@@ -247,6 +247,16 @@ by Eric Young (eay@cryptsoft.com).
 - Add a dereference call when handling an error condition while
   decoding a packet.
   [ISC-Bugs #41774]
+
+- Add a new parameter, lease-id-format, to both dhcpd and dhclient. The
+  parameter controls the format in which certain values are written to lease
+  files.  Formats supported are octal - quoted string containing octal
+  escapes, and hex - unquoted, colon separated hex digits.
+  [ISC-Busg #26378]
+
+! Add an option in site.h to limit the number of failover and control
+  connections the server will accept.  By default this is 200.
+  [ISC-Bugs #41845]
 
 			Changes since 4.3.3b1
 

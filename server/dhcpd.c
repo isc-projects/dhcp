@@ -27,7 +27,7 @@
  */
 
 static const char copyright[] =
-"Copyright 2004-2015 Internet Systems Consortium.";
+"Copyright 2004-2016 Internet Systems Consortium.";
 static const char arr [] = "All rights reserved.";
 static const char message [] = "Internet Systems Consortium DHCP Server";
 static const char url [] =
@@ -77,6 +77,7 @@ int server_id_check = 0; /* 0 = default, don't check server id, 1 = do check */
 int prefix_length_mode = PLM_EXACT;
 
 int authoring_byte_order = 0; /* 0 = not set */
+int lease_id_format = TOKEN_OCTAL; /* octal by default */
 
 const char *path_dhcpd_conf = _PATH_DHCPD_CONF;
 const char *path_dhcpd_db = _PATH_DHCPD_DB;

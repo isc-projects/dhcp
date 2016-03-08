@@ -3,8 +3,7 @@
    Persistent database management routines for DHCPD... */
 
 /*
- * Copyright (c) 2012-2015 by Internet Systems Consortium, Inc. ("ISC")
- * Copyright (c) 2004-2010 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2016 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -56,10 +55,10 @@ write_binding_scope(FILE *db_file, struct binding *bnd, char *prepend) {
 	if (bnd->value->type == binding_data) {
 		if (bnd->value->value.data.data != NULL) {
 			s = quotify_buf(bnd->value->value.data.data,
-					bnd->value->value.data.len, MDL);
+					bnd->value->value.data.len, '"', MDL);
 			if (s != NULL) {
 				errno = 0;
-				fprintf(db_file, "%sset %s = \"%s\";",
+				fprintf(db_file, "%sset %s = %s;",
 					prepend, bnd->name, s);
 				dfree(s, MDL);
 				if (errno)
@@ -207,10 +206,11 @@ int write_lease (lease)
 			++errors;
 	}
 	if (lease -> uid_len) {
-		s = quotify_buf (lease -> uid, lease -> uid_len, MDL);
+		s = format_lease_id(lease->uid, lease->uid_len, lease_id_format,
+				    MDL);
 		if (s) {
 			errno = 0;
-			fprintf (db_file, "\n  uid \"%s\";", s);
+			fprintf (db_file, "\n  uid %s;", s);
 			if (errno)
 				++errors;
 			dfree (s, MDL);
@@ -539,23 +539,23 @@ write_ia(const struct ia_xx *ia) {
 		++count;
 	}
 
-	
-	s = quotify_buf(ia->iaid_duid.data, ia->iaid_duid.len, MDL);
+	s = format_lease_id(ia->iaid_duid.data, ia->iaid_duid.len,
+			    lease_id_format, MDL);
 	if (s == NULL) {
 		goto error_exit;
 	}
 	switch (ia->ia_type) {
 	case D6O_IA_NA:
-		fprintf_ret = fprintf(db_file, "ia-na \"%s\" {\n", s);
+		fprintf_ret = fprintf(db_file, "ia-na %s {\n", s);
 		break;
 	case D6O_IA_TA:
-		fprintf_ret = fprintf(db_file, "ia-ta \"%s\" {\n", s);
+		fprintf_ret = fprintf(db_file, "ia-ta %s {\n", s);
 		break;
 	case D6O_IA_PD:
-		fprintf_ret = fprintf(db_file, "ia-pd \"%s\" {\n", s);
+		fprintf_ret = fprintf(db_file, "ia-pd %s {\n", s);
 		break;
 	default:
-		log_error("Unknown ia type %u for \"%s\" at %s:%d",
+		log_error("Unknown ia type %u for %s at %s:%d",
 			  (unsigned)ia->ia_type, s, MDL);
 		fprintf_ret = -1;
 	}
@@ -712,7 +712,8 @@ write_server_duid(void) {
 	 */
 	memset(&server_duid, 0, sizeof(server_duid));
 	copy_server_duid(&server_duid, MDL);
-	s = quotify_buf(server_duid.data, server_duid.len, MDL);
+	s = format_lease_id(server_duid.data, server_duid.len, lease_id_format,
+			    MDL);
 	data_string_forget(&server_duid, MDL);
 	if (s == NULL) {
 		goto error_exit;
@@ -721,7 +722,7 @@ write_server_duid(void) {
 	/*
 	 * Write to the leases file.
 	 */
-	fprintf_ret = fprintf(db_file, "server-duid \"%s\";\n\n", s);
+	fprintf_ret = fprintf(db_file, "server-duid %s;\n\n", s);
 	dfree(s, MDL);
 	if (fprintf_ret < 0) {
 		goto error_exit;
@@ -1182,7 +1183,6 @@ int new_lease_file ()
 		  "little-endian" : "big-endian"));
 	if (errno)
 		goto fail;
-
 
 	/* At this point we have a new lease file that, so far, could not
 	 * be described as either corrupt nor valid.

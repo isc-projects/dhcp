@@ -3,7 +3,7 @@
    Lexical scanner for dhcpd config file... */
 
 /*
- * Copyright (c) 2004-2015 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2016 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -1050,6 +1050,9 @@ intern(char *atom, enum dhcp_token dfv) {
 			return HOSTNAME;
 		if (!strcasecmp (atom + 1, "elp"))
 			return TOKEN_HELP;
+		if (!strcasecmp (atom + 1, "ex")) {
+			return TOKEN_HEX;
+		}
 		break;
 	      case 'i':
 	      	if (!strcasecmp(atom+1, "a-na")) 
@@ -1135,6 +1138,9 @@ intern(char *atom, enum dhcp_token dfv) {
 		}
 		if (!strcasecmp(atom+1, "ittle-endian")) {
 			return TOKEN_LITTLE_ENDIAN;
+		}
+		if (!strcasecmp (atom + 1, "ease-id-format")) {
+			return LEASE_ID_FORMAT;
 		}
 		break;
 	      case 'm':
@@ -1236,6 +1242,9 @@ intern(char *atom, enum dhcp_token dfv) {
 			return OF;
 		if (!strcasecmp (atom + 1, "wner"))
 			return OWNER;
+		if (!strcasecmp (atom + 1, "ctal")) {
+			return TOKEN_OCTAL;
+		}
 		break;
 	      case 'p':
 		if (!strcasecmp (atom + 1, "arse-vendor-option"))
