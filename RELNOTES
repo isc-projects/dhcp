@@ -18,7 +18,7 @@ for DHCPv4.  These include:
 
 - Support for using DHCPv6 relay options in expressions
 
-This release also adds suppport for the standard DDNS as described in the
+This release also adds support for the standard DDNS as described in the
 current RFCs as well as enhancing support for dynamically adding and removing
 subclasses via OMAPI.
 
@@ -59,12 +59,12 @@ by Eric Young (eay@cryptsoft.com).
 
 - ISC DHCP now follows the common convention to use the base name a
   program is invoked with (aka argv[0], vs. a builtin name) for
-  logs. This should help differentiate syslog entires for DHCPv4 and
+  logs. This should help differentiate syslog entries for DHCPv4 and
   DHCPv6 servers. You can define OLD_LOG_NAME in includes/site.h to
   keep the previous behavior.
   [ISC-Bugs #38692]
 
-- The linux packet filter code now correctly treats only least significant
+- The Linux packet filter code now correctly treats only least significant
   12 bits an inbound packet's TCI value as the VLAN id (per IEEE 802.1Q).
   Prior to this it was using the entire 16 bit value as the VLAN id and
   incorrectly discarding packets.  Thanks to Jiri Popelka at Red Hat for
@@ -231,7 +231,7 @@ by Eric Young (eay@cryptsoft.com).
   option "--enable-dhcpv4o6". Note this feature requires DHCPv6 support
   and is not compatible with delayed-ack. Both client and server use 2
   processes which communicate over UDP on a pair of sockets. The new
-  "-4o6 <port>" command line argment enables DHCPv4 over DHCPv6 support
+  "-4o6 <port>" command line argument enables DHCPv4 over DHCPv6 support
   and specifies the consecutive ports to use for inter-process communication.
   Please look at doc/DHCPv4-over-DHCPv6 for more details.
   [ISC-Bugs #35711]
@@ -609,7 +609,7 @@ by Eric Young (eay@cryptsoft.com).
   Thanks to Jiri Popelka at Red Hat for the bug report and patch.
   [ISC-Bugs #37084]
 
-- Modified linux packet handling such that packets received via VLAN are now
+- Modified Linux packet handling such that packets received via VLAN are now
   seen only by the VLAN interface. Prior to this, such packets were seen by
   both the VLAN interface and its parent (physical) interface, causing the
   server to respond to both.  Note this remains an issue for non-Linux OSs.
