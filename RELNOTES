@@ -251,7 +251,8 @@ by Eric Young (eay@cryptsoft.com).
 - Add a new parameter, lease-id-format, to both dhcpd and dhclient. The
   parameter controls the format in which certain values are written to lease
   files.  Formats supported are octal - quoted string containing octal
-  escapes, and hex - unquoted, colon separated hex digits.
+  escapes, and hex - unquoted, colon separated hex digits.  Thanks to
+  Jay Ford, University of Iowa for bringing the issue to our attention.
   [ISC-Bugs #26378]
 
 ! Add an option in site.h to limit the number of failover and control
