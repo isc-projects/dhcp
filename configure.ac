@@ -836,6 +836,9 @@ fi
         AC_MSG_ERROR([*** util/bindvar.sh failed])
     fi
 )
+if test $? -ne 0; then
+    exit $?
+fi
 
 cat > config.report << END
 
