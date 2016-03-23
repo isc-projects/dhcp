@@ -214,7 +214,7 @@ Run as a DHCPv6 server. This cannot be combined with \fB\-4\fR.
 .BI \-4o6 \ port
 Participate in the DHCPv4 over DHCPv6 protocol specified by RFC 7341.
 This associates a DHCPv4 and a DHCPv6 server to allow the v4 server to
-receive v4 requests that were encapsualted in a v6 packet.  Communication
+receive v4 requests that were encapsulated in a v6 packet.  Communication
 between the two servers is done on a pair of UDP sockets bound
 to ::1 \fIport\fR and \fIport + 1\fR. Both servers must
 be launched using the same \fIport\fR argument.
@@ -349,9 +349,9 @@ and send most DHCPv4 packets.  It also opens a fallback UDP socket
 for use in sending unicast packets.  Normally these will both
 use the well known port number for BOOTPS.
 
-For each DHCPv4 failover peer you list in the configuartion file
+For each DHCPv4 failover peer you list in the configuration file
 there will be a TCP socket listening for connections on the
-ports specififed in the configuration file.  When the peer connects
+ports specified in the configuration file.  When the peer connects
 there will be another socket for the established connection.
 For the established connection the side (primary or secondary)
 opening the connection will use a random port.

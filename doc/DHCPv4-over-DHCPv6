@@ -25,9 +25,9 @@ The v6 client and server processes can continue to process
 DHCPv6 packets as normal but will also allow a DHCPv4 process
 to connect to them via a socket.  The DHCPv4 client will pass
 a request to the DHCPv6 client which will encapsulate it within
-a DHPCv6 request which is sent to the DHCPv6 server (possibly
+a DHCPv6 request which is sent to the DHCPv6 server (possibly
 via DHCPv6 relays).  When the DHCPv6 server receives the packet
-it will get the DHPCv4 query and pass it to the DHCPv4
+it will get the DHCPv4 query and pass it to the DHCPv4
 server.  The response will by handled in a similar fashion.
 
 When starting up the paired processes one should take care that
@@ -217,5 +217,5 @@ and that the configuration, lease and process id files should have different
 names.  Again the The leases file (leases4) must be created before attempting
 to start the server.
 
-Finally note in the configuration file the use of the shared-netowrk to
+Finally note in the configuration file the use of the shared-network to
 connect the DHCPv4 and  DHCPv6 subnets.

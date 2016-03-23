@@ -904,7 +904,7 @@ total number of clients within a particular class or subclass that may
 hold leases at one time, and it is possible to specify automatic
 subclassing based on the contents of the client packet.
 .PP
-Classing support for DHCPv6 clients was addded in 4.3.0.  It follows
+Classing support for DHCPv6 clients was added in 4.3.0.  It follows
 the same rules as for DHCPv4 except that support for billing classes
 has not been added yet.
 .PP
@@ -1554,7 +1554,7 @@ statement may be specified matching the same client.
 .PP
 The
 .I fixed-address6
-delcaration is used for v6 addresses.  At this time it only works with a single
+declaration is used for v6 addresses.  At this time it only works with a single
 address.  For multiple addresses specify multiple
 .B host
 statements.
@@ -2342,7 +2342,7 @@ If there are multiple prefixes for a given host entry the server will
 choose one that matches the requested prefix size or, if none match,
 the first one.
 .PP
-If there are multiple \fIhost\fR delcarations the server will try to
+If there are multiple \fIhost\fR declarations the server will try to
 choose a declaration where the \fIfixed-address6\fR matches the client's
 subnet.  If none match it will choose one that doesn't have a \fIfixed-address6\fR
 statement.
