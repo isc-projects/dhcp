@@ -262,6 +262,7 @@ by Eric Young (eay@cryptsoft.com).
 ! Add an option in site.h to limit the number of failover and control
   connections the server will accept.  By default this is 200.
   [ISC-Bugs #41845]
+  CVE: CVE-2016-2774
 
 			Changes since 4.3.3b1
 
