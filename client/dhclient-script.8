@@ -1,6 +1,6 @@
 .\"	dhclient-script.8
 .\"
-.\" Copyright (c) 2012,2014 by Internet Systems Consortium, Inc. ("ISC")
+.\" Copyright (c) 2012,2014,2016 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
@@ -124,7 +124,7 @@ described in \fBdhcp-options\fR, except that dashes (\'-\') are replaced
 by underscores (\'_\') in order to make valid shell variables, and the
 variable names start with new_.  So for example, the new subnet mask
 would be passed in $new_subnet_mask.  Options from a non-default
-universe will have the universe name prepended to the option name for
+universe will have the universe name prepended to the option name, for
 example $new_dhcp6_server_id.  The options that the client
 explicitly requested via a PRL or ORO option are passed with the same
 option name as above but prepended with requested_ and with a value of 1,
