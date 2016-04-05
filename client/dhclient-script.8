@@ -122,11 +122,13 @@ passed in $interface.   The media type is passed in $medium.   Any
 options acquired from the server are passed using the option name
 described in \fBdhcp-options\fR, except that dashes (\'-\') are replaced
 by underscores (\'_\') in order to make valid shell variables, and the
-variable names start with new_.   So for example, the new subnet mask
-would be passed in $new_subnet_mask.  The options that the client
+variable names start with new_.  So for example, the new subnet mask
+would be passed in $new_subnet_mask.  Options from a non-default
+universe will have the universe name prepended to the option name for
+example $new_dhcp6_server_id.  The options that the client
 explicitly requested via a PRL or ORO option are passed with the same
 option name as above but prepended with requested_ and with a value of 1,
-or example requested_subnet_mask=1.  No such variable is defined for
+for example requested_subnet_mask=1.  No such variable is defined for
 options not requested by the client or options that don't require a
 request option, such as the ip address (*_ip_address) or expiration
 time (*_expiry). 
