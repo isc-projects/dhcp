@@ -54,7 +54,8 @@ by Eric Young (eay@cryptsoft.com).
 
 			Changes since 4.3.4
 
-
+- Fixed util/bindvar.sh error handling.
+  [ISC-Bugs #41973]
 
 			Changes since 4.3.4b1
 
