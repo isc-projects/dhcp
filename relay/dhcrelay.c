@@ -1174,7 +1174,7 @@ add_relay_agent_options(struct interface_info *ip, struct dhcp_packet *packet,
 	if (ip->remote_id) {
 		if (ip->remote_id_len > 255 || ip->remote_id_len < 1)
 			log_fatal("Remote ID length %d out of range [1-255] "
-				  "on %s\n", ip->circuit_id_len, ip->name);
+				  "on %s\n", ip->remote_id_len, ip->name);
 		optlen += ip->remote_id_len + 2;    /* RAI_REMOTE_ID + len */
 	}
 
