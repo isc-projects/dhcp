@@ -60,7 +60,9 @@ by Eric Young (eay@cryptsoft.com).
 
 			Changes since 4.1-ESV-R13
 
-
+- Correct error message in relay to use remote id length instead
+  of circuit id length.
+  [ISC-Bugs #42556]
 
 			Changes since 4.1-ESV-R13b1
 
