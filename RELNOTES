@@ -61,6 +61,11 @@ by Eric Young (eay@cryptsoft.com).
   of circuit id length.
   [ISC-Bugs #42556]
 
+- Add support for including an encapsulated option in a response
+  from the DHCPv6 server.  This allows the v6 FQDN option to be
+  returned in responses.
+  [ISC-Bugs #29246]
+
 			Changes since 4.3.4b1
 
 - None

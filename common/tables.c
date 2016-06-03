@@ -1537,8 +1537,10 @@ void initialize_common_option_spaces()
 			  &vsio_universe, MDL);
 	universe_hash_add(universe_hash, isc6_universe.name, 0,
 			  &isc6_universe, MDL);
-/* This should not be necessary.  Listing here just for consistency.
- *	universe_hash_add(universe_hash, fqdn6_universe.name, 0,
- *			  &fqdn6_universe, MDL);
- */
+	/* previously this wasn't necessary, now that we can send
+	 * v6 encapsulated options it is.
+	 */
+	universe_hash_add(universe_hash, fqdn6_universe.name, 0,
+			  &fqdn6_universe, MDL);
+
 }
