@@ -51,7 +51,9 @@ leaseq_unittests_SOURCES = $(DHCPSRC) leaseq_unittest.c
 leaseq_unittests_LDADD = $(DHCPLIBS) $(ATF_LDFLAGS)
 
 check: $(ATF_TESTS)
-	-cp -n $(top_srcdir)/server/tests/Atffile Atffile
+	@if test $(top_srcdir) != ${top_builddir}; then \
+		cp $(top_srcdir)/server/tests/Atffile Atffile; \
+	fi
 	sh ${top_builddir}/tests/unittest.sh
 
 distclean-local:

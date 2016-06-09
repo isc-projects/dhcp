@@ -34,11 +34,13 @@ duid_unittests_LDADD = $(ATF_LDFLAGS)
 duid_unittests_LDADD += $(DHCPLIBS)
 
 check: $(ATF_TESTS)
-	-cp -n $(top_srcdir)/client/tests/Atffile Atffile
-	-cp -n $(top_srcdir)/client/tests/duid0_test.txt duid0_test.txt
-	-cp -n $(top_srcdir)/client/tests/duid1_test.txt duid1_test.txt
-	-cp -n $(top_srcdir)/client/tests/duid2_test.txt duid2_test.txt
-	-cp -n $(top_srcdir)/client/tests/duid3_test.txt duid3_test.txt
+	@if test $(top_srcdir) != ${top_builddir}; then \
+		cp $(top_srcdir)/client/tests/Atffile Atffile; \
+		cp $(top_srcdir)/client/tests/duid0_test.txt duid0_test.txt; \
+		cp $(top_srcdir)/client/tests/duid1_test.txt duid1_test.txt; \
+		cp $(top_srcdir)/client/tests/duid2_test.txt duid2_test.txt; \
+		cp $(top_srcdir)/client/tests/duid3_test.txt duid3_test.txt; \
+	fi
 	sh ${top_builddir}/tests/unittest.sh
 
 distclean-local:

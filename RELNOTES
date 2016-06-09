@@ -66,6 +66,11 @@ by Eric Young (eay@cryptsoft.com).
   returned in responses.
   [ISC-Bugs #29246]
 
+- Add logic to test directory Makefiles to avoid copying Attfile(s)
+  when building within the source tree.  This eliminates a noisy but
+  otherwise harmless error message when running "make check".
+  [ISC-Bugs #41883]
+
 			Changes since 4.3.4b1
 
 - None

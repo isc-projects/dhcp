@@ -1048,7 +1048,9 @@ info:
 	@echo "ATF_LIBS=$(ATF_LIBS)"
 
 @HAVE_ATF_TRUE@check: $(ATF_TESTS)
-@HAVE_ATF_TRUE@	-cp -n $(top_srcdir)/server/tests/Atffile Atffile
+@HAVE_ATF_TRUE@	@if test $(top_srcdir) != ${top_builddir}; then \
+@HAVE_ATF_TRUE@		cp $(top_srcdir)/server/tests/Atffile Atffile; \
+@HAVE_ATF_TRUE@	fi
 @HAVE_ATF_TRUE@	sh ${top_builddir}/tests/unittest.sh
 
 @HAVE_ATF_TRUE@distclean-local:

@@ -37,7 +37,9 @@ ns_name_unittest_LDADD += ../libdhcp.a  \
 	$(BINDLIBDIR)/libdns.a $(BINDLIBDIR)/libisccfg.a  $(BINDLIBDIR)/libisc.a
 
 check: $(ATF_TESTS)
-	-cp -n $(top_srcdir)/common/tests/Atffile Atffile
+	@if test $(top_srcdir) != ${top_builddir}; then \
+		cp $(top_srcdir)/common/tests/Atffile Atffile; \
+	fi
 	sh ${top_builddir}/tests/unittest.sh
 
 distclean-local:
