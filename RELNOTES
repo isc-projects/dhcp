@@ -71,6 +71,12 @@ by Eric Young (eay@cryptsoft.com).
   otherwise harmless error message when running "make check".
   [ISC-Bugs #41883]
 
+- Leases are now scrubbed of certain prior use information when pool
+  re-balancing reassigns them from one FO peer to the other.  This
+  corrects an issue where leases that were offered but ignored retained
+  the client hostname from the original client.
+  [ISC-Bugs #42008]
+
 			Changes since 4.3.4b1
 
 - None

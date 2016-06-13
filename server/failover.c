@@ -48,6 +48,7 @@ static int dhcp_failover_pool_dobalance(dhcp_failover_state_t *state,
 					isc_boolean_t *sendreq);
 static inline int secondary_not_hoarding(dhcp_failover_state_t *state,
 					 struct pool *p);
+static void scrub_lease(struct lease* lease, const char *file, int line);
 
 
 void dhcp_failover_startup ()
@@ -2618,6 +2619,7 @@ dhcp_failover_pool_dobalance(dhcp_failover_state_t *state,
 			    lp->tstp = cur_time;
 			    lp->starts = cur_time;
 
+			    scrub_lease(lp, MDL);
 			    if (!supersede_lease(lp, NULL, 0, 1, 0, 0) ||
 			        !write_lease(lp))
 			    	    log_error("can't commit lease %s on "
@@ -6501,4 +6503,49 @@ const char *binding_state_print (enum failover_state state)
 		return "unknown";
 		break;
 	}
+}
+
+
+/*!
+ * \brief Given a char pointer, return always return a printable value
+ *
+ * This function is intended to be used in within log statements, such that
+ * its invocation only occurs if the logging level is enabled.
+ *
+ * \param value pointer the character to print
+ *
+ * \return If value is null, returns the string "<none>", if it contains
+ * non-printable bytes, returns the string "<unsuitable for printing>",
+ * otherwise it returns a const pointer to value
+ */
+const char *printable(const char* value) {
+	const char *print_value = "<none>";
+	if (value) {
+		if ((strlen (value) <= 64) &&
+		     db_printable((unsigned char*)value)) {
+			print_value = value;
+		}
+                else {
+                        print_value = "<unsuitable for printing>";
+		}
+	}
+
+	return (print_value);
+}
+
+/*!
+ * \brief Remove information from a prior use of a lease
+ *
+ * Remove information from a lease that is not germain to lease affinity
+ *
+ * \param lease the lease to scrub
+ */
+void scrub_lease(struct lease* lease, const char *file, int line) {
+	log_debug ("%s(%d):scrubbing lease for %s, hostname: %s", file, line,
+		   piaddr(lease->ip_addr), printable(lease->client_hostname));
+
+        if (lease->client_hostname) {
+                dfree (lease->client_hostname, MDL);
+                lease->client_hostname = (char *)0;
+        }
 }
