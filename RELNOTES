@@ -77,6 +77,11 @@ by Eric Young (eay@cryptsoft.com).
   the client hostname from the original client.
   [ISC-Bugs #42008]
 
+- In the LDAP code and schema add some missing '6' characters to use
+  the v6 instead of the v4 versions.  Thanks to Denis Taranushin for
+  reporting this issue and supplying its patch.
+  [ISC-Bugs #42666]
+
 			Changes since 4.3.4b1
 
 - None

@@ -3,7 +3,7 @@
    Routines for reading the configuration from LDAP */
 
 /*
- * Copyright (c) 2010,2015 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2010,2015-2016 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2003-2006 Ntelos, Inc.
  * All rights reserved.
  *
@@ -638,7 +638,7 @@ ldap_parse_subnet6 (struct ldap_config_stack *item, struct parse *cfile)
 
   ldap_value_free_len (tempbv);
 
-  if ((tempbv = ldap_get_values_len (ld, item->ldent, "dhcpRange")) != NULL)
+  if ((tempbv = ldap_get_values_len (ld, item->ldent, "dhcpRange6")) != NULL)
     {
       for (i=0; tempbv[i] != NULL; i++)
         {
@@ -702,9 +702,9 @@ ldap_parse_pool6 (struct ldap_config_stack *item, struct parse *cfile)
   struct berval **tempbv;
   int i;
 
-  x_parser_strcat (cfile, "pool {\n");
+  x_parser_strcat (cfile, "pool6 {\n");
 
-  if ((tempbv = ldap_get_values_len (ld, item->ldent, "dhcpRange")) != NULL)
+  if ((tempbv = ldap_get_values_len (ld, item->ldent, "dhcpRange6")) != NULL)
     {
       x_parser_strcat (cfile, "range6");
       for (i=0; tempbv[i] != NULL; i++)
