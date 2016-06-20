@@ -82,6 +82,11 @@ by Eric Young (eay@cryptsoft.com).
   reporting this issue and supplying its patch.
   [ISC-Bugs #42666]
 
+- Correct how the pick-first-value expression is written to a lease
+  file.  Previously it was written as a concat expression due to
+  a cut and paste error.
+  [ISC-Bugs #42253]
+
 			Changes since 4.3.4b1
 
 - None

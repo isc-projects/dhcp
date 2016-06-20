@@ -3645,7 +3645,7 @@ int write_expression (file, expr, col, indent, firstp)
 	      case expr_pick_first_value:
 		e = expr;
 		col = token_print_indent (file, col, indent, "", "",
-					  "concat");
+					  "pick-first-value");
 		col = token_print_indent (file, col, indent, " ", "",
 					  "(");
 		scol = col;
