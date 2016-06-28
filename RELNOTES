@@ -72,7 +72,8 @@ by Eric Young (eay@cryptsoft.com).
 - Leases are now scrubbed of certain prior use information when pool
   re-balancing reassigns them from one FO peer to the other.  This
   corrects an issue where leases that were offered but ignored retained
-  the client hostname from the original client.
+  the client hostname from the original client. Thanks to Pavel Polacek,
+  Jan Evangelista Purkyne University for reporting the issue.
   [ISC-Bugs #42008]
 
 - Correct how the pick-first-value expression is written to a lease
