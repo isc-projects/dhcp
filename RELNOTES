@@ -88,6 +88,10 @@ by Eric Young (eay@cryptsoft.com).
   a cut and paste error.
   [ISC-Bugs #42253]
 
+- Modify the DDNS code to clean up the PTR record even if there
+  are issues while cleaning up the A or AAAA records.
+  [ISC-Bugs #23954]
+
 			Changes since 4.3.4b1
 
 - None

@@ -1347,6 +1347,12 @@ ddns_ptr_remove(dhcp_ddns_cb_t *ddns_cb,
 		break;
 	}
 
+	/* If we aren't suppossed to do the next step, set the result
+	 * flag so ddns_fwd_srv_connector won't do much
+	 */
+	if ((ddns_cb->flags & DDNS_EXECUTE_NEXT) == 0)
+		result = ISC_R_FAILURE;
+
 	ddns_update_lease_ptr(NULL, NULL, ddns_cb, NULL, MDL);
 	ddns_fwd_srv_connector(NULL, NULL, NULL, ddns_cb->next_op, result);
 	ddns_cb_free(ddns_cb, MDL);
@@ -1587,23 +1593,42 @@ void
 ddns_fwd_srv_rem2(dhcp_ddns_cb_t *ddns_cb,
 		  isc_result_t    eresult)
 {
-	if (eresult == ISC_R_SUCCESS) {
+
+	/*
+	 * To get here we have already managed to remove the A/AAAA
+	 * record and are trying to remove the DHCID/TXT record as well.
+	 * On success (removed DHCID/TXT) or YXRRSET (DHCID/TXT still in
+	 * use by something else) we clean up the lease.
+	 * On some other error we don't clean up the lease and hope that
+	 * if we try this again it will work.  An example would be if we
+	 * got a timeout as the DNS server halted between the first and
+	 * second steps.  The DNS server would still have the DHCID/TXT
+	 * and we would like to remove that in the future.
+	 *
+	 * On success set the EXECUTE_NEXT flag which triggers any
+	 * add that is next in the chain.
+	 */
+	if ((eresult == ISC_R_SUCCESS) ||
+	    (eresult == DNS_R_YXRRSET))  {
 		ddns_update_lease_text(ddns_cb, NULL);
+		eresult = ISC_R_SUCCESS;
+	}
 
-		/* Do the next operation */
-		if ((ddns_cb->flags & DDNS_UPDATE_PTR) != 0) {
-			/* if we have zone information get rid of it */
-			if (ddns_cb->zone != NULL) {
-				ddns_cb_forget_zone(ddns_cb);
-			}
+	/* Do the next operation */
+	if ((ddns_cb->flags & DDNS_UPDATE_PTR) != 0) {
+		/* if we have zone information get rid of it */
+		if (ddns_cb->zone != NULL) {
+			ddns_cb_forget_zone(ddns_cb);
+		}
 
-			ddns_cb->state = DDNS_STATE_REM_PTR;
-			ddns_cb->cur_func = ddns_ptr_remove;
-			
-			eresult = ddns_modify_ptr(ddns_cb, MDL);
-			if (eresult == ISC_R_SUCCESS) {
-				return;
-			}
+		ddns_cb->state = DDNS_STATE_REM_PTR;
+		ddns_cb->cur_func = ddns_ptr_remove;
+		if (eresult == ISC_R_SUCCESS)
+			ddns_cb->flags |= DDNS_EXECUTE_NEXT;
+
+		eresult = ddns_modify_ptr(ddns_cb, MDL);
+		if (eresult == ISC_R_SUCCESS) {
+			return;
 		}
 	}
 
@@ -1654,7 +1679,20 @@ ddns_fwd_srv_rem1(dhcp_ddns_cb_t *ddns_cb,
 		log_info("DDNS: no forward map to remove. %p", ddns_cb);
 #endif
 
-		/* Do the next operation */
+		/* Trigger the add operation */
+		eresult = ISC_R_SUCCESS;
+
+		/* Fall through */
+	default:
+
+		/* We do the remove operation in most cases
+		 * but we don't want to continue with adding a forward
+		 * record if the forward removal had issues so we
+		 * check the eresult and set the EXECUTE_NEXT flag on
+		 * success.
+		 */
+
+		/* Do the remove operation */
 		if ((ddns_cb->flags & DDNS_UPDATE_PTR) != 0) {
 			/* if we have zone information get rid of it */
 			if (ddns_cb->zone != NULL) {
@@ -1663,19 +1701,14 @@ ddns_fwd_srv_rem1(dhcp_ddns_cb_t *ddns_cb,
 
 			ddns_cb->state    = DDNS_STATE_REM_PTR;
 			ddns_cb->cur_func = ddns_ptr_remove;
-			
+			if (eresult == ISC_R_SUCCESS)
+				ddns_cb->flags |= DDNS_EXECUTE_NEXT;
+
 			result = ddns_modify_ptr(ddns_cb, MDL);
 			if (result == ISC_R_SUCCESS) {
 				return;
 			}
 		}
-		else {
-			/* Trigger the add operation */
-			eresult = ISC_R_SUCCESS;
-		}
-		break;
-			
-	default:
 		break;
 	}
 
@@ -1956,6 +1989,7 @@ ddns_removals(struct lease    *lease,
 	if ((ddns_cb->flags & DDNS_UPDATE_PTR) != 0) {
 		ddns_cb->state      = DDNS_STATE_REM_PTR;
 		ddns_cb->cur_func   = ddns_ptr_remove;
+		ddns_cb->flags      |= DDNS_EXECUTE_NEXT;
 
 		/*
 		 * if execute add isn't success remove the control block so
