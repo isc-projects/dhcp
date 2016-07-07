@@ -798,6 +798,7 @@ struct lease_state {
 #define SV_SERVER_ID_CHECK		86
 #define SV_PREFIX_LEN_MODE		87
 #define SV_DHCPV6_SET_TEE_TIMES		88
+#define SV_ABANDON_LEASE_TIME		89
 
 #if !defined (DEFAULT_PING_TIMEOUT)
 # define DEFAULT_PING_TIMEOUT 1
@@ -844,6 +845,10 @@ struct lease_state {
 
 #if !defined (MIN_LEASE_WRITE)
 # define MIN_LEASE_WRITE 15
+#endif
+
+#if !defined (DEFAULT_ABANDON_LEASE_TIME)
+# define DEFAULT_ABANDON_LEASE_TIME 86400
 #endif
 
 #define PLM_IGNORE 0
@@ -2069,6 +2074,7 @@ extern int server_id_check;
 extern int prefix_length_mode;
 extern int authoring_byte_order;
 extern int lease_id_format;
+extern u_int32_t abandon_lease_time;
 
 extern const char *path_dhcpd_conf;
 extern const char *path_dhcpd_db;

@@ -78,6 +78,7 @@ int prefix_length_mode = PLM_EXACT;
 
 int authoring_byte_order = 0; /* 0 = not set */
 int lease_id_format = TOKEN_OCTAL; /* octal by default */
+u_int32_t abandon_lease_time = DEFAULT_ABANDON_LEASE_TIME;
 
 const char *path_dhcpd_conf = _PATH_DHCPD_CONF;
 const char *path_dhcpd_db = _PATH_DHCPD_DB;
@@ -1240,6 +1241,20 @@ void postconf_initialization (int quiet)
 
 		data_string_forget(&db, MDL);
 	}
+
+	// Set global abandon-lease-time option.
+	oc = lookup_option (&server_universe, options, SV_ABANDON_LEASE_TIME);
+	if ((oc != NULL) &&
+	    evaluate_option_cache(&db, NULL, NULL, NULL, options, NULL,
+				  &global_scope, oc, MDL)) {
+		if (db.len == sizeof (u_int32_t)) {
+			abandon_lease_time = getULong (db.data);
+		} else {
+			log_fatal("invalid abandon-lease-time");
+		}
+
+		data_string_forget (&db, MDL);
+        }
 
 #if defined (BINARY_LEASES)
 	if (local_family == AF_INET) {

@@ -92,6 +92,12 @@ by Eric Young (eay@cryptsoft.com).
   are issues while cleaning up the A or AAAA records.
   [ISC-Bugs #23954]
 
+- Added global configuration parameter, abandon-lease-time, which determines
+  the amount of time a lease remains abandoned.  The default is 84600 seconds.
+  Additionaly, the server now conducts a ping check (if ping checks are
+  enabled) prior to offering an abandoned lease to client.
+  [ISC-Bugs #41815]
+
 			Changes since 4.3.4b1
 
 - None

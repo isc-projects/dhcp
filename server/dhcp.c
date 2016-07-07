@@ -3490,7 +3490,8 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 	/* If this is a DHCPOFFER, ping the lease address before actually
 	   sending the offer. */
 	if (offer == DHCPOFFER && !(lease -> flags & STATIC_LEASE) &&
-	    ((cur_time - lease_cltt) > 60) &&
+	    (((cur_time - lease_cltt) > 60) ||
+             (lease->binding_state == FTS_ABANDONED)) &&
 	    (!(oc = lookup_option (&server_universe, state -> options,
 				   SV_PING_CHECKS)) ||
 	     evaluate_boolean_option_cache (&ignorep, packet, lease,
@@ -4871,8 +4872,11 @@ int allocate_lease (struct lease **lp, struct packet *packet,
 		 * "no free leases" error when the last lease has been
 		 * offered, but it's not exactly broken either.
 		 */
-		if (!candl || (candl -> ends > cur_time))
+		if (!candl ||
+	            (candl->binding_state != FTS_ABANDONED &&
+		     (candl->ends > cur_time))) {
 			continue;
+		}
 
 		if (!lease) {
 			lease = candl;
