@@ -622,6 +622,7 @@ struct lease_state {
 #define SV_DELAYED_ACK			58
 #define SV_MAX_ACK_DELAY		59
 #define SV_DHCPV6_SET_TEE_TIMES		60
+#define SV_ABANDON_LEASE_TIME		61
 
 #if !defined (DEFAULT_PING_TIMEOUT)
 # define DEFAULT_PING_TIMEOUT 1
@@ -661,6 +662,10 @@ struct lease_state {
 
 #if !defined (MIN_LEASE_WRITE)
 # define MIN_LEASE_WRITE 15
+#endif
+
+#if !defined (DEFAULT_ABANDON_LEASE_TIME)
+# define DEFAULT_ABANDON_LEASE_TIME 86400
 #endif
 
 /* Client option names */
@@ -1683,6 +1688,7 @@ extern struct timeval cur_tv;
 
 extern int ddns_update_style;
 extern int authoring_byte_order;
+extern u_int32_t abandon_lease_time;
 
 extern const char *path_dhcpd_conf;
 extern const char *path_dhcpd_db;

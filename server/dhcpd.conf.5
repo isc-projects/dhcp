@@ -397,7 +397,8 @@ the lease as in use.
 If a response is received to an ICMP Echo request, the DHCP server
 assumes that there is a configuration error - the IP address is in use
 by some host on the network that is not a DHCP client.  It marks the
-address as abandoned, and will not assign it to clients.
+address as abandoned, and will not assign it to clients.  The lease will
++remain abandoned for a minimum of abandon-lease-time seconds.
 .PP
 If a DHCP client tries to get an IP address, but none are available,
 but there are abandoned IP addresses, then the DHCP server will
@@ -1900,6 +1901,27 @@ min-lease-time allows for a gradual change.
 e.g. 4 2007/08/24 11:14:32 -7200
 .SH REFERENCE: PARAMETERS
 The
+.I abandon-lease-time
+statement
+.RS 0.25i
+.PP
+.B adandon-lease-time \fItime\fR\fB;\fR
+.PP
+.I Time
+should be the maximum amount of time (in seconds) that an abandoned IPv4 lease
+remains unavailable for assignment to a client.  Abandoned leases will only be
+offered to clients if there are no free leases.  If not defined, the default
+abandon lease time is 86400 seconds (24 hours).  Note the abandoned lease time
+for a given lease is preserved across server restarts.  The parameter may only
+be set at the global scope and is evaluated only once during server startup.
+.PP
+Values less than sixty seconds are not recommended as this is below the ping
+check threshold and can cause leases once abandoned but since returned to the
+free state to not be pinged before being offered.  If the requested time is
+larger than 0x7FFFFFFF - 1 or the sum of the current time plus the abandoned time isgreater than 0x7FFFFFFF it is treated as infinite.
+.RE
+.PP
+The
 .I adaptive-lease-time-threshold
 statement
 .RS 0.25i
@@ -2649,7 +2671,12 @@ address to a client, it first sends an ICMP Echo request (a \fIping\fR)
 to the address being assigned.  It waits for a second, and if no
 ICMP Echo response has been heard, it assigns the address.  If a
 response \fIis\fR heard, the lease is abandoned, and the server does
-not respond to the client.
+not respond to the client.  The lease will remain abandoned for a minimum
+of abandon-lease-time seconds.
+.PP
+If a there are no free addressses but there are abandoned IP addresses, the
+DHCP server will attempt to reclaim an abandoned IP address regardless of the
+value of abandon-lease-time.
 .PP
 This \fIping check\fR introduces a default one-second delay in responding
 to DHCPDISCOVER messages, which can be a problem for some clients.  The
