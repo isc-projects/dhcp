@@ -92,6 +92,7 @@ by Eric Young (eay@cryptsoft.com).
   could lead to crashes or interface recognition errors during startup
   of dhcpd, dhclient, and dhcrelay.
   [ISC-Bugs #42226]
+  [ISC-Bugs #42310]
 
 			Changes since 4.1-ESV-R13b1
 
