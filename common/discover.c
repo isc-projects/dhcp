@@ -332,8 +332,8 @@ next_iface(struct iface_info *info, int *err, struct iface_conf_list *ifaces) {
 			continue;
 		}
 
-		strcpy(info->name, p->lifr_name);
-		memset(&info->addr, 0, sizeof(info->addr));
+		memset(info, 0, sizeof(struct iface_info));
+		strncpy(info->name, p->lifr_name, sizeof(info->name) - 1);
 		memcpy(&info->addr, &p->lifr_addr, sizeof(p->lifr_addr));
 
 #if defined(sun) || defined(__linux)
@@ -349,7 +349,7 @@ next_iface(struct iface_info *info, int *err, struct iface_conf_list *ifaces) {
 		 (strncmp(info->name, "dummy", 5) == 0));
 	
 	memset(&tmp, 0, sizeof(tmp));
-	strcpy(tmp.lifr_name, info->name);
+	strncpy(tmp.lifr_name, info->name, sizeof(tmp.lifr_name) - 1);
 	if (ioctl(ifaces->sock, SIOCGLIFFLAGS, &tmp) < 0) {
 		log_error("Error getting interface flags for '%s'; %m", 
 			  p->lifr_name);
@@ -664,7 +664,7 @@ next_iface6(struct iface_info *info, int *err, struct iface_conf_list *ifaces) {
 			log_error("IPv6 interface name '%s' too long", name);
 			return 0;
 		}
-		strcpy(info->name, name);
+		strncpy(info->name, name, sizeof(info->name) - 1);
 
 #ifdef SKIP_DUMMY_INTERFACES
 	} while (strncmp(info->name, "dummy", 5) == 0);
@@ -702,7 +702,7 @@ next_iface6(struct iface_info *info, int *err, struct iface_conf_list *ifaces) {
 	 * Get our flags.
 	 */
 	memset(&tmp, 0, sizeof(tmp));
-	strcpy(tmp.ifr_name, name);
+	strncpy(tmp.ifr_name, name, sizeof(tmp.ifr_name) - 1);
 	if (ioctl(ifaces->sock, SIOCGIFFLAGS, &tmp) < 0) {
 		log_error("Error getting interface flags for '%s'; %m", name);
 		*err = 1;
@@ -723,6 +723,7 @@ next_iface6(struct iface_info *info, int *err, struct iface_conf_list *ifaces) {
  */
 int
 next_iface(struct iface_info *info, int *err, struct iface_conf_list *ifaces) {
+	memset(info, 0, sizeof(struct iface_info));
 	if (next_iface4(info, err, ifaces)) {
 		return 1;
 	}
@@ -815,7 +816,8 @@ next_iface(struct iface_info *info, int *err, struct iface_conf_list *ifaces) {
 		*err = 1;
 		return 0;
 	}
-	strcpy(info->name, ifaces->next->ifa_name);
+	memset(info, 0, sizeof(struct iface_info));
+	strncpy(info->name, ifaces->next->ifa_name, sizeof(info->name) - 1);
 	memcpy(&info->addr, ifaces->next->ifa_addr, 
 	       ifaces->next->ifa_addr->sa_len);
 	info->flags = ifaces->next->ifa_flags;
@@ -984,7 +986,7 @@ discover_interfaces(int state) {
 				log_fatal("Error allocating interface %s: %s",
 					  info.name, isc_result_totext(status));
 			}
-			strcpy(tmp->name, info.name);
+			strncpy(tmp->name, info.name, sizeof(tmp->name) - 1);
 			interface_snorf(tmp, ir);
 			interface_dereference(&tmp, MDL);
 			tmp = interfaces; /* XXX */
