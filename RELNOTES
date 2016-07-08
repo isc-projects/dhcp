@@ -87,6 +87,12 @@ by Eric Young (eay@cryptsoft.com).
   enabled) prior to offering an abandoned lease to client.
   [ISC-Bugs #41815]
 
+- Correct handling of interface names during interface discovery. This
+  addresses an issue where interface names of 15 characters in length
+  could lead to crashes or interface recognition errors during startup
+  of dhcpd, dhclient, and dhcrelay.
+  [ISC-Bugs #42226]
+
 			Changes since 4.1-ESV-R13b1
 
 - None
