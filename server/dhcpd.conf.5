@@ -2159,9 +2159,11 @@ to pass inbetween queuing a packet pending an fsync, and performing the
 fsync.  Valid values range from 0 to 2^32-1, and defaults to 250,000 (1/4 of
 a second).
 .PP
-Please note that as delayed-ack is currently experimental, the delayed-ack
-feature is not compiled in by default, but must be enabled at compile time
-with \'./configure --enable-delayed-ack\'.
+The delayed-ack feature is not compiled in by default, but must be enabled
+at compile time with \'./configure --enable-delayed-ack\'.  While we no
+longer consider it experimental and we don't know of any issues with it,
+in order to minimize problems with existing configuration files we have
+left it disabled by default.
 .RE
 .PP
 The
