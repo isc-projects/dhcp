@@ -624,7 +624,7 @@ by Eric Young (eay@cryptsoft.com).
   the existing lease and the forward DNS name had not changed.  This has been
   corrected.
   [ISC-Bugs #37368]
-  [ISC-Bugs #38686]
+  [ISC-Bugs #38636]
 
 - Corrected an issue which caused dhclient to incorrectly form the result when
   prepending or appending to the IPv4 domain-search option, received from the
