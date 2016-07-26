@@ -104,6 +104,12 @@ by Eric Young (eay@cryptsoft.com).
   of dhcpd, dhclient, and dhcrelay.
   [ISC-Bugs #42226]
 
+- Updates to contrib/dhcp-lease-list.pl to make it more friendly.
+  They are looking for the lease file in more places and skipping
+  the "processing complete" output when creating machine readable
+  output.
+  [ISC-Bugs #42113]
+
 			Changes since 4.3.4b1
 
 - None
