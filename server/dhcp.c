@@ -3062,6 +3062,8 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 			lt -> client_hostname [d1.len] = 0;
 		}
 		data_string_forget (&d1, MDL);
+		/* hostname changed, can't reuse lease */
+		lease->cannot_reuse = 1;
 	}
 
 	/* Record the hardware address, if given... */
@@ -5523,7 +5525,10 @@ void use_host_decl_name(struct packet* packet,
  *  c. The lease "age" is less than that allowed by the threshold
  *  d. DNS updates are not being performed on the new lease.
  *  e. Lease has not been otherwise disqualified for reuse (Ex: billing class
- *  changed)
+ *  or hostname changed)
+ *  f. The host declaration has changed (either a new one was added
+ *  or an older one was found due to something like a change in the uid)
+ *  g. The UID or hardware address have changed.
  *
  * Clients may renew leases using full DORA cycles or just RAs. This means
  * that reusability must be checked when acking both DISCOVERs and REQUESTs.
@@ -5538,6 +5543,8 @@ void use_host_decl_name(struct packet* packet,
  * \param new_lease candidate new lease to associate with the client
  * \param lease current lease associated with the client
  * \param options option state to search and update
+ *
+ * \return 1 if the lease can be reused.
  */
 int
 reuse_lease (struct packet* packet,
@@ -5550,10 +5557,20 @@ reuse_lease (struct packet* packet,
 	/* To even consider reuse all of the following must be true:
 	 * 1 - reuse hasn't already disqualified
 	 * 2 - current lease is active
-	 * 3 - DNS info hasn't changed */
+	 * 3 - DNS info hasn't changed
+	 * 4 - the host declaration hasn't changed
+	 * 5 - the uid hasn't changed
+	 * 6 - the hardware address hasn't changed */
 	if ((lease->cannot_reuse == 0) &&
 	    (lease->binding_state == FTS_ACTIVE) &&
-	    (new_lease->ddns_cb == NULL)) {
+	    (new_lease->ddns_cb == NULL) &&
+	    (lease->host == new_lease->host) &&
+	    (lease->uid_len == new_lease->uid_len) &&
+	    (memcmp(lease->uid, new_lease->uid, lease->uid_len) == 0) &&
+	    (lease->hardware_addr.hlen == new_lease->hardware_addr.hlen) &&
+	    (memcmp(&lease->hardware_addr.hbuf[0],
+		    &new_lease->hardware_addr.hbuf[0],
+		    lease->hardware_addr.hlen) == 0)) {
 		int thresh = DEFAULT_CACHE_THRESHOLD;
 		struct option_cache* oc = NULL;
 		struct data_string d1;
@@ -5587,7 +5604,7 @@ reuse_lease (struct packet* packet,
 			/* Note new_lease->starts is really just cur_time */
 			lease_age = new_lease->starts - lease->starts;
 
-			/* Is the lease is young enough to reuse? */
+			/* Is the lease young enough to reuse? */
 			if (lease_age <= limit) {
 				/* Restore expiry to its original value */
 				state->offered_expiry = lease->ends;
@@ -5602,6 +5619,13 @@ reuse_lease (struct packet* packet,
 
 					binding_scope_reference(&lease->scope,
 							new_lease->scope, MDL);
+				}
+
+				/* restore client hostname, fixes 42849. */
+				if (new_lease->client_hostname) {
+					lease->client_hostname =
+					  new_lease->client_hostname;
+					new_lease->client_hostname = NULL;
 				}
 
 				/* We're cleared to reuse it */

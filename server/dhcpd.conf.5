@@ -2196,7 +2196,14 @@ if all of the following conditions are true:
     any of the following:
        a. DNS information and DNS updates are enabled
        b. Billing class to which the lease is associated
+       c. The host declaration associated with the lease
+       d. The client id - this may happen if a client boots without
+       a client id and then starts using one in subsequent requests.
 .fi
+.PP
+Note that the lease can be reused if the options the client or relay agent
+sends are changed.  These changes will not be recorded in the in-memory or
+on-disk databases until the client renews after the threshold time is reached.
 .RE
 .PP
 The
