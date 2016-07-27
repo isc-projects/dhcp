@@ -551,7 +551,7 @@ void checkBuffer(size_t test_size, const char *file, int line) {
     max_size = ((size_t)-1) - DMDSIZE;
 
     if (test_size > max_size) {
-	atf_tc_skip("Test size greater than max size, %lx", test_size);
+	atf_tc_skip("Test size greater than max size, %zu", test_size);
 	return;
     }
 
@@ -562,10 +562,10 @@ void checkBuffer(size_t test_size, const char *file, int line) {
     if (buf != NULL) {
 	buf[test_size - 1] = 1;
 	if (buf[test_size - 1] != 1)
-	    atf_tc_fail("Value mismatch for index %lu", test_size);
+	    atf_tc_fail("Value mismatch for index %zu", test_size);
 	dfree(buf, file, line);
     } else {
-	atf_tc_skip("Unable to allocate memory %lu", test_size);
+	atf_tc_skip("Unable to allocate memory %zu", test_size);
     }
 }
 
