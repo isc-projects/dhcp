@@ -113,6 +113,8 @@ by Eric Young (eay@cryptsoft.com).
 - When reusing a lease for dhcp-cache-threshold return the hostname
   to the original lease.  Also if the host pointer, UID or hardware address
   change don't allow reuse of the lease.
+  Thanks to Michael Vincent for reporting this and helping us
+  verify the problem and fix.
   [ISC-Bugs #42849]
 
 			Changes since 4.3.4b1
