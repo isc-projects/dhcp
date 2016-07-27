@@ -26,6 +26,7 @@
 #include "config.h"
 #include <atf-c.h>
 #include "dhcpd.h"
+#include "omapip/alloc.h"
 
 static const char* checkString (struct data_string* ds, const char *src);
 
@@ -539,6 +540,85 @@ ATF_TC_BODY(data_string_terminate, tc) {
     data_string_forget(&new_string, MDL);
 }
 
+void checkBuffer(size_t test_size, const char *file, int line) {
+    char *buf;
+    size_t max_size;
+    /* Determine the maximum size we may have
+     * Depending on configuration options we may be adding some
+     * space to the allocated buffer for debugging purposes
+     * so remove that as well.
+     */
+    max_size = ((size_t)-1) - DMDSIZE;
+
+    if (test_size > max_size) {
+	atf_tc_skip("Test size greater than max size, %lx", test_size);
+	return;
+    }
+
+    /* We allocate the buffer and then try to set the last character
+     * to a known value.
+     */
+    buf = dmalloc(test_size, file, line);
+    if (buf != NULL) {
+	buf[test_size - 1] = 1;
+	if (buf[test_size - 1] != 1)
+	    atf_tc_fail("Value mismatch for index %lu", test_size);
+	dfree(buf, file, line);
+    } else {
+	atf_tc_skip("Unable to allocate memory %lu", test_size);
+    }
+}
+
+ATF_TC(dmalloc_max32);
+
+ATF_TC_HEAD(dmalloc_max32, tc) {
+    atf_tc_set_md_var(tc, "descr", "dmalloc_max32 test, "
+		      "dmalloc 0xFFFFFFFF");
+}
+ATF_TC_BODY(dmalloc_max32, tc) {
+    checkBuffer(0XFFFFFFFF, MDL);
+}
+
+ATF_TC(dmalloc_med1);
+
+ATF_TC_HEAD(dmalloc_med1, tc) {
+    atf_tc_set_md_var(tc, "descr", "dmalloc_med1 test, "
+		      "dmalloc 0x80000000,");
+}
+ATF_TC_BODY(dmalloc_med1, tc) {
+    checkBuffer(0x80000000, MDL);
+}
+
+ATF_TC(dmalloc_med2);
+
+ATF_TC_HEAD(dmalloc_med2, tc) {
+    atf_tc_set_md_var(tc, "descr", "dmalloc_med2 test, "
+		      "dmalloc 0x7FFFFFFF, ");
+}
+ATF_TC_BODY(dmalloc_med2, tc) {
+    checkBuffer(0x7FFFFFFF,  MDL);
+}
+
+ATF_TC(dmalloc_med3);
+
+ATF_TC_HEAD(dmalloc_med3, tc) {
+    atf_tc_set_md_var(tc, "descr", "dmalloc_med3 test, "
+		      "dmalloc 0x10000000,");
+}
+ATF_TC_BODY(dmalloc_med3, tc) {
+    checkBuffer(0x10000000, MDL);
+}
+
+ATF_TC(dmalloc_small);
+
+ATF_TC_HEAD(dmalloc_small, tc) {
+    atf_tc_set_md_var(tc, "descr", "dmalloc_small test, "
+		      "dmalloc 0x0FFFFFFF");
+}
+ATF_TC_BODY(dmalloc_small, tc) {
+    checkBuffer(0X0FFFFFFF, MDL);
+}
+
 ATF_TP_ADD_TCS(tp)
 {
     ATF_TP_ADD_TC(tp, buffer_allocate);
@@ -550,6 +630,11 @@ ATF_TP_ADD_TCS(tp)
     ATF_TP_ADD_TC(tp, data_string_copy_nobuf);
     ATF_TP_ADD_TC(tp, data_string_new);
     ATF_TP_ADD_TC(tp, data_string_terminate);
+    ATF_TP_ADD_TC(tp, dmalloc_max32);
+    ATF_TP_ADD_TC(tp, dmalloc_med1);
+    ATF_TP_ADD_TC(tp, dmalloc_med2);
+    ATF_TP_ADD_TC(tp, dmalloc_med3);
+    ATF_TP_ADD_TC(tp, dmalloc_small);
 
     return (atf_no_error());
 }

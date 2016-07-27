@@ -94,6 +94,11 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Bugs #42226]
   [ISC-Bugs #42310]
 
+- Change dmalloc to use a size_t as the length argument to bring it
+  in line with the call it will make to malloc().
+  [ISC-Bugs #40843]
+
+
 			Changes since 4.1-ESV-R13b1
 
 - None
