@@ -4,7 +4,7 @@
    protocol... */
 
 /*
- * Copyright (c) 2012,2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2012,2014,2016 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2009-2010 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
@@ -53,9 +53,9 @@ static void print_rc_hist_entry (int);
 #endif
 
 void *
-dmalloc(unsigned size, const char *file, int line) {
+dmalloc(size_t size, const char *file, int line) {
 	unsigned char *foo;
-	unsigned len;
+	size_t len;
 	void **bar;
 #if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL) || \
 		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)

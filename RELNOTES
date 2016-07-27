@@ -117,6 +117,10 @@ by Eric Young (eay@cryptsoft.com).
   verify the problem and fix.
   [ISC-Bugs #42849]
 
+- Change dmalloc to use a size_t as the length argument to bring it
+  in line with the call it will make to malloc().
+  [ISC-Bugs #40843]
+
 			Changes since 4.3.4b1
 
 - None
