@@ -3844,6 +3844,7 @@ int find_lease (struct lease **lp,
 #if defined (DEBUG_FIND_LEASE)
 			log_info ("not choosing requested address (!).");
 #endif
+			lease_dereference (&ip_lease, MDL);
 		} else {
 #if defined (DEBUG_FIND_LEASE)
 			log_info ("choosing lease on requested address.");
@@ -3852,7 +3853,6 @@ int find_lease (struct lease **lp,
 			if (lease -> host)
 				host_dereference (&lease -> host, MDL);
 		}
-		lease_dereference (&ip_lease, MDL);
 	}
 
 	/* If we got a lease that matched the client identifier, we may want
