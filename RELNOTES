@@ -98,6 +98,11 @@ by Eric Young (eay@cryptsoft.com).
   in line with the call it will make to malloc().
   [ISC-Bugs #40843]
 
+- If the failover socket can't be bound close it, otherwise if the
+  user configures an incorrect address in the failover stanza the
+  server will continue to open new sockets every 90 seconds until
+  it runs out.
+  [ISC-Bugs #42452]
 
 			Changes since 4.1-ESV-R13b1
 
