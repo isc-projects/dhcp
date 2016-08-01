@@ -378,7 +378,7 @@ main(int argc, char **argv) {
 				usage(use_noarg, argv[i-1]);
 
 			if (uplink) {
-				usage("more than one uplink (-u) specified: %s"
+				usage("more than one uplink (-U) specified: %s"
 				      ,argv[i]);
 			}
 
