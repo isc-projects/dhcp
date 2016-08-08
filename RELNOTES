@@ -851,7 +851,8 @@ by Eric Young (eay@cryptsoft.com).
 - Updates to contrib/dhcp-lease-list.pl to make it more friendly.
   They are looking for the lease file in more places and skipping
   the "processing complete" output when creating machine readable
-  output.
+  output.  Thanks to Cameron Paine (cbp at null dot net) for the
+  patch.
   [ISC-Bugs #42113]
 
 - When reusing a lease for dhcp-cache-threshold return the hostname
