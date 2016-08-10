@@ -141,6 +141,7 @@ char *progname;
 "                     [-pf <pid-file>] [--no-pid]\n"\
 "                     [-m append|replace|forward|discard]\n" \
 "                     [-i interface0 [ ... -i interfaceN]\n" \
+"                     [-ui interface0 [ ... -ui interfaceN]\n" \
 "                     server0 [ ... serverN]\n\n" \
 "       %s -6   [-d] [-q] [-I] [-c <hops>] [-p <port>]\n" \
 "                     [-pf <pid-file>] [--no-pid]\n"\
@@ -154,6 +155,7 @@ char *progname;
 "                [-pf <pid-file>] [--no-pid]\n"\
 "                [-m append|replace|forward|discard]\n" \
 "                [-i interface0 [ ... -i interfaceN]\n" \
+"                [-ui interface0 [ ... -ui interfaceN]\n" \
 "                server0 [ ... serverN]\n\n"
 #endif
 
@@ -311,7 +313,34 @@ main(int argc, char **argv) {
 					  isc_result_totext(status));
 			}
 			strcpy(tmp->name, argv[i]);
-			interface_snorf(tmp, INTERFACE_REQUESTED);
+			interface_snorf(tmp, (INTERFACE_REQUESTED
+					      | INTERFACE_STREAMS));
+			interface_dereference(&tmp, MDL);
+		} else if (!strcmp(argv[i], "-iu")) {
+#ifdef DHCPv6
+			if (local_family_set && (local_family == AF_INET6)) {
+				usage(use_v4command, argv[i]);
+			}
+			local_family_set = 1;
+			local_family = AF_INET;
+#endif
+			if (++i == argc) {
+				usage(use_noarg, argv[i-1]);
+			}
+			if (strlen(argv[i]) >= sizeof(tmp->name)) {
+				log_fatal("%s: interface name too long "
+					  "(is %ld)",
+					  argv[i], (long)strlen(argv[i]));
+			}
+			status = interface_allocate(&tmp, MDL);
+			if (status != ISC_R_SUCCESS) {
+				log_fatal("%s: interface_allocate: %s",
+					  argv[i],
+					  isc_result_totext(status));
+			}
+			strcpy(tmp->name, argv[i]);
+			interface_snorf(tmp, (INTERFACE_REQUESTED
+					      | INTERFACE_UPSTREAM));
 			interface_dereference(&tmp, MDL);
 		} else if (!strcmp(argv[i], "-a")) {
 #ifdef DHCPv6
@@ -670,6 +699,11 @@ do_relay4(struct interface_info *ip, struct dhcp_packet *packet,
 
 	/* If it's a bootreply, forward it to the client. */
 	if (packet->op == BOOTREPLY) {
+		if (!(ip->flags & INTERFACE_UPSTREAM)) {
+			log_debug("Dropping reply received on %s", ip->name);
+			return;
+		}
+
 		if (!(packet->flags & htons(BOOTP_BROADCAST)) &&
 			can_unicast_without_arp(out)) {
 			to.sin_addr = packet->yiaddr;

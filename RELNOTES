@@ -104,6 +104,10 @@ by Eric Young (eay@cryptsoft.com).
   it runs out.
   [ISC-Bugs #42452]
 
+- Add a new command line option, "-iu", to dhcrelay which allows one
+  or more interfaces to be regisetered to listen only for BOOTP replies.
+  [ISC-Bugs #41547]
+
 			Changes since 4.1-ESV-R13b1
 
 - None
