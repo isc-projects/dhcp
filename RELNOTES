@@ -872,6 +872,10 @@ by Eric Young (eay@cryptsoft.com).
   it runs out.
   [ISC-Bugs #42452]
 
+- Add a new command line option, "-iu", to dhcrelay which allows one
+  or more interfaces to be regisetered to listen only for BOOTP replies.
+  [ISC-Bugs #41547]
+
 			Changes since 4.2.0 (new features)
 
 - If a client renews before 'dhcp-cache-threshold' percent of its lease
