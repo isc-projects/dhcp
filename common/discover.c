@@ -950,8 +950,14 @@ discover_interfaces(int state) {
 		ir = 0;
 	else if (state == DISCOVER_UNCONFIGURED)
 		ir = INTERFACE_REQUESTED | INTERFACE_AUTOMATIC;
-	else
+	else {
 		ir = INTERFACE_REQUESTED;
+		if (state == DISCOVER_RELAY && local_family == AF_INET) {
+			/* We're a v4 relay without specifically requested
+			 * interfaces, so mark them all as bidirectional. */
+			ir |= INTERFACE_STREAMS;
+		}
+	}
 
 	/* Cycle through the list of interfaces looking for IP addresses. */
 	while (next_iface(&info, &err, &ifaces)) {

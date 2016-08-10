@@ -77,6 +77,14 @@ dhcrelay - Dynamic Host Configuration Protocol Relay Agent
 .B -i
 .I interfaceN 
 ]
+[
+.B -iu
+.I interface0
+[
+.B ...
+.B -iu
+.I interfaceN
+]
 .B -l
 .I interface
 ]
@@ -204,11 +212,18 @@ a query that came via a different relay agent.  If this option is not
 specified, such packets will be relayed anyway.
 .TP
 -i \fIifname\fR
-Listen for DHCPv4/BOOTP queries on interface \fIifname\fR.  Multiple
+Listen for DHCPv4/BOOTP traffic on interface \fIifname\fR.  Multiple
 interfaces may be specified by using more than one \fB-i\fR option.  If
 no interfaces are specified on the command line, dhcrelay will identify
 all network interfaces, eliminating non-broadcast interfaces if possible,
 and attempt to listen on all of them.
+.TP
+-iu \fIifname\fR
+Specifies an upstream network interface for DHCPv4 relay mode: an
+interface from which replies from servers and other relay agents will be
+accepted.  Multiple interfaces may be specified by using more
+than one \fB-u\fR option.  This argument is intended to be used
+in conjunction with one or more -i arguments.
 .TP
 -m \fIappend\fR|\fIreplace\fR|\fIforward\fR|\fIdiscard\fR
 Control the handling of incoming DHCPv4 packets which already contain
