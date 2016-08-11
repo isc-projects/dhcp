@@ -187,80 +187,84 @@ int parse_option_buffer (options, buffer, length, universe)
 			return 0;
 		}
 
-		/* If the option contains an encapsulation, parse it.   If
-		   the parse fails, or the option isn't an encapsulation (by
-		   far the most common case), or the option isn't entirely
-		   an encapsulation, keep the raw data as well. */
-		if (!(option &&
-		      (option->format[0] == 'e' ||
-		       option->format[0] == 'E') &&
-		      (parse_encapsulated_suboptions(options, option,
-						     bp->data + offset, len,
-						     universe, NULL)))) {
-			op = lookup_option(universe, options, code);
+		/* If the option contains an encapsulation, parse it.  In
+		   any case keep the raw data as well.  (Previous to 4.4.0
+		   we only kept the raw data if the parse failed, the option
+		   wasn't an encapsulation (by far the most common case), or
+		   the option wasn't entirely an encapsulation
+		*/
 
-			if (op != NULL && universe->concat_duplicates) {
-				struct data_string new;
-				memset(&new, 0, sizeof new);
-				if (!buffer_allocate(&new.buffer,
-						     op->data.len + len,
-						     MDL)) {
-					log_error("parse_option_buffer: "
-						  "No memory.");
-					buffer_dereference(&bp, MDL);
-					return 0;
-				}
-				/* Copy old option to new data object. */
-				memcpy(new.buffer->data, op->data.data,
-					op->data.len);
-				/* Concat new option behind old. */
-				memcpy(new.buffer->data + op->data.len,
-					bp->data + offset, len);
-				new.len = op->data.len + len;
-				new.data = new.buffer->data;
-				/* Save new concat'd object. */
-				data_string_forget(&op->data, MDL);
-				data_string_copy(&op->data, &new, MDL);
-				data_string_forget(&new, MDL);
-			} else if (op != NULL) {
-				/* We must append this statement onto the
-				 * end of the list.
-				 */
-				while (op->next != NULL)
-					op = op->next;
-
-				if (!option_cache_allocate(&nop, MDL)) {
-					log_error("parse_option_buffer: "
-						  "No memory.");
-					buffer_dereference(&bp, MDL);
-					return 0;
-				}
-
-				option_reference(&nop->option, op->option, MDL);
-
-				nop->data.buffer = NULL;
-				buffer_reference(&nop->data.buffer, bp, MDL);
-				nop->data.data = bp->data + offset;
-				nop->data.len = len;
-
-				option_cache_reference(&op->next, nop, MDL);
-				option_cache_dereference(&nop, MDL);
-			} else {
-				if (save_option_buffer(universe, options, bp,
-						       bp->data + offset, len,
-						       code, 1) == 0) {
-					log_error("parse_option_buffer: "
-						  "save_option_buffer failed");
-					buffer_dereference(&bp, MDL);
-					return 0;
-				}
-			}
+		if (option &&
+		    (option->format[0] == 'e' || option->format[0] == 'E')) {
+			(void) parse_encapsulated_suboptions(options, option,
+							     bp->data + offset,
+							     len,
+							     universe, NULL);
 		}
+
+		op = lookup_option(universe, options, code);
+		if (op == NULL) {
+			/* If we don't have an option create one */
+			if (save_option_buffer(universe, options, bp,
+					       bp->data + offset, len,
+					       code, 1) == 0) {
+				log_error("parse_option_buffer: "
+					  "save_option_buffer failed");
+				buffer_dereference(&bp, MDL);
+				return (0);
+			}
+		} else if (universe->concat_duplicates) {
+			/* If we do have an option either concat with
+			   what is there ...*/
+			struct data_string new;
+			memset(&new, 0, sizeof new);
+			if (!buffer_allocate(&new.buffer, op->data.len + len,
+					     MDL)) {
+				log_error("parse_option_buffer: No memory.");
+				buffer_dereference(&bp, MDL);
+				return (0);
+			}
+			/* Copy old option to new data object. */
+			memcpy(new.buffer->data, op->data.data,
+			       op->data.len);
+			/* Concat new option behind old. */
+			memcpy(new.buffer->data + op->data.len,
+			       bp->data + offset, len);
+			new.len = op->data.len + len;
+			new.data = new.buffer->data;
+			/* Save new concat'd object. */
+			data_string_forget(&op->data, MDL);
+			data_string_copy(&op->data, &new, MDL);
+			data_string_forget(&new, MDL);
+		} else  {
+			/* ... or we must append this statement onto the
+			 * end of the list.
+			 */
+			while (op->next != NULL)
+				op = op->next;
+
+			if (!option_cache_allocate(&nop, MDL)) {
+				log_error("parse_option_buffer: No memory.");
+				buffer_dereference(&bp, MDL);
+				return (0);
+			}
+
+			option_reference(&nop->option, op->option, MDL);
+
+			nop->data.buffer = NULL;
+			buffer_reference(&nop->data.buffer, bp, MDL);
+			nop->data.data = bp->data + offset;
+			nop->data.len = len;
+
+			option_cache_reference(&op->next, nop, MDL);
+			option_cache_dereference(&nop, MDL);
+		}
+
 		option_dereference(&option, MDL);
 		offset += len;
 	}
 	buffer_dereference (&bp, MDL);
-	return 1;
+	return (1);
 }
 
 /* If an option in an option buffer turns out to be an encapsulation,
