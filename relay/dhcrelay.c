@@ -136,6 +136,8 @@ static int strip_relay_agent_options(struct interface_info *,
 				     struct interface_info **,
 				     struct dhcp_packet *, unsigned);
 
+static void request_v4_interface(const char* name, int flags);
+
 static const char copyright[] =
 "Copyright 2004-2016 Internet Systems Consortium.";
 static const char arr[] = "All rights reserved.";
@@ -154,6 +156,7 @@ char *progname;
 "                     [-m append|replace|forward|discard]\n" \
 "                     [-i interface0 [ ... -i interfaceN]\n" \
 "                     [-iu interface0 [ ... -iu interfaceN]\n" \
+"                     [-id interface0 [ ... -id interfaceN]\n" \
 "                     [-U interface]\n" \
 "                     server0 [ ... serverN]\n\n" \
 "       %s -6   [-d] [-q] [-I] [-c <hops>] [-p <port>]\n" \
@@ -170,6 +173,7 @@ char *progname;
 "                [-m append|replace|forward|discard]\n" \
 "                [-i interface0 [ ... -i interfaceN]\n" \
 "                [-iu interface0 [ ... -iu interfaceN]\n" \
+"                [-id interface0 [ ... -id interfaceN]\n" \
 "                [-U interface]\n" \
 "                server0 [ ... serverN]\n\n"
 #endif
@@ -217,7 +221,6 @@ main(int argc, char **argv) {
 	isc_result_t status;
 	struct servent *ent;
 	struct server_list *sp = NULL;
-	struct interface_info *tmp = NULL;
 	char *service_local = NULL, *service_remote = NULL;
 	u_int16_t port_local = 0, port_remote = 0;
 	int no_daemon = 0, quiet = 0;
@@ -315,21 +318,8 @@ main(int argc, char **argv) {
 			if (++i == argc) {
 				usage(use_noarg, argv[i-1]);
 			}
-			if (strlen(argv[i]) >= sizeof(tmp->name)) {
-				log_fatal("%s: interface name too long "
-					  "(is %ld)",
-					  argv[i], (long)strlen(argv[i]));
-			}
-			status = interface_allocate(&tmp, MDL);
-			if (status != ISC_R_SUCCESS) {
-				log_fatal("%s: interface_allocate: %s",
-					  argv[i],
-					  isc_result_totext(status));
-			}
-			strcpy(tmp->name, argv[i]);
-			interface_snorf(tmp, (INTERFACE_REQUESTED |
-					     INTERFACE_STREAMS));
-			interface_dereference(&tmp, MDL);
+
+			request_v4_interface(argv[i], INTERFACE_STREAMS);
 		} else if (!strcmp(argv[i], "-iu")) {
 #ifdef DHCPv6
 			if (local_family_set && (local_family == AF_INET6)) {
@@ -341,21 +331,21 @@ main(int argc, char **argv) {
 			if (++i == argc) {
 				usage(use_noarg, argv[i-1]);
 			}
-			if (strlen(argv[i]) >= sizeof(tmp->name)) {
-				log_fatal("%s: interface name too long "
-					  "(is %ld)",
-					  argv[i], (long)strlen(argv[i]));
+
+			request_v4_interface(argv[i], INTERFACE_UPSTREAM);
+		} else if (!strcmp(argv[i], "-id")) {
+#ifdef DHCPv6
+			if (local_family_set && (local_family == AF_INET6)) {
+				usage(use_v4command, argv[i]);
 			}
-			status = interface_allocate(&tmp, MDL);
-			if (status != ISC_R_SUCCESS) {
-				log_fatal("%s: interface_allocate: %s",
-					  argv[i],
-					  isc_result_totext(status));
+			local_family_set = 1;
+			local_family = AF_INET;
+#endif
+			if (++i == argc) {
+				usage(use_noarg, argv[i-1]);
 			}
-			strcpy(tmp->name, argv[i]);
-			interface_snorf(tmp, (INTERFACE_REQUESTED |
-					     INTERFACE_UPSTREAM));
-			interface_dereference(&tmp, MDL);
+
+			request_v4_interface(argv[i], INTERFACE_DOWNSTREAM);
 		} else if (!strcmp(argv[i], "-a")) {
 #ifdef DHCPv6
 			if (local_family_set && (local_family == AF_INET6)) {
@@ -821,6 +811,11 @@ do_relay4(struct interface_info *ip, struct dhcp_packet *packet,
 	   we just sent it. */
 	if (out)
 		return;
+
+	if (!(ip->flags & INTERFACE_DOWNSTREAM)) {
+		log_debug("Dropping request received on %s", ip->name);
+		return;
+	}
 
 	/* Add relay agent options if indicated.   If something goes wrong,
 	 * drop the packet.  Note this may set packet->giaddr if RFC3527
@@ -1877,4 +1872,41 @@ dhcp_set_control_state(control_object_state_t oldstate,
 		(void) unlink(path_dhcrelay_pid);
 
 	exit(0);
+}
+
+/*!
+ *
+ * \brief Allocate an interface as requested with a given set of flags
+ *
+ * The requested interface is allocated, its flags field is set to
+ * INTERFACE_REQUESTED OR'd with the given flags,  and then added to
+ * the list of interfaces.
+ *
+ * \param name - name of the requested interface
+ * \param flags - additional flags for the interface
+ *
+ * \return Nothing
+ */
+void request_v4_interface(const char* name, int flags) {
+        struct interface_info *tmp = NULL;
+        int len = strlen(name);
+        isc_result_t status;
+
+        if (len >= sizeof(tmp->name)) {
+                log_fatal("%s: interface name too long (is %d)", name, len);
+        }
+
+        status = interface_allocate(&tmp, MDL);
+        if (status != ISC_R_SUCCESS) {
+                log_fatal("%s: interface_allocate: %s", name,
+                          isc_result_totext(status));
+        }
+
+	log_debug("Requesting: %s as upstream: %c downstream: %c", name,
+		  (flags & INTERFACE_UPSTREAM ? 'Y' : 'N'),
+		  (flags & INTERFACE_DOWNSTREAM ? 'Y' : 'N'));
+
+        strncpy(tmp->name, name, len);
+        interface_snorf(tmp, (INTERFACE_REQUESTED | flags));
+        interface_dereference(&tmp, MDL);
 }

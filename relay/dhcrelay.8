@@ -77,6 +77,7 @@ dhcrelay - Dynamic Host Configuration Protocol Relay Agent
 .B -i
 .I interfaceN 
 ]
+]
 [
 .B -iu
 .I interface0
@@ -85,9 +86,17 @@ dhcrelay - Dynamic Host Configuration Protocol Relay Agent
 .B -iu
 .I interfaceN
 ]
-.B -l
-.I interface
 ]
+[
+.B -id
+.I interface0
+[
+.B ...
+.B -id
+.I interfaceN
+]
+]
+[
 .B -U
 .I interface
 ]
@@ -219,11 +228,16 @@ all network interfaces, eliminating non-broadcast interfaces if possible,
 and attempt to listen on all of them.
 .TP
 -iu \fIifname\fR
-Specifies an upstream network interface for DHCPv4 relay mode: an
-interface from which replies from servers and other relay agents will be
-accepted.  Multiple interfaces may be specified by using more
-than one \fB-u\fR option.  This argument is intended to be used
-in conjunction with one or more -i arguments.
+Specifies an upstream network interface: an interface from which replies
+from servers and other relay agents will be accepted.  Multiple interfaces
+may be specified by using more than one \fB-iu\fR option.  This argument is
+ intended to be used in conjunction with one or more -i or -id arguments.
+.TP
+-id \fIifname\fR
+Specifies a downstream network interface: an interface from which requests
+from clients and other relay agents will be accepted.  Multiple interfaces
+may be specified by using more than one \fB-id\fR option.  This argument is
+intended to be used in conjunction with one or more -i or -iu arguments.
 .TP
 -m \fIappend\fR|\fIreplace\fR|\fIforward\fR|\fIdiscard\fR
 Control the handling of incoming DHCPv4 packets which already contain
