@@ -104,8 +104,10 @@ by Eric Young (eay@cryptsoft.com).
   it runs out.
   [ISC-Bugs #42452]
 
-- Add a new command line option, "-iu", to dhcrelay which allows one
-  or more interfaces to be regisetered to listen only for BOOTP replies.
+- Add DHCPv4-mode, dhcrelay command line options, "-iu" and "-id", that
+  allow interfaces to be upstream or downstream respectively.  Upstream
+  interfaces will only accept and forward BOOTP replies, while downstream
+  interfaces will only accept and forward BOOTP requests.
   [ISC-Bugs #41547]
 
 			Changes since 4.1-ESV-R13b1
