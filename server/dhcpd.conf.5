@@ -533,9 +533,9 @@ primary server might look like this:
 .nf
 failover peer "foo" {
   primary;
-  address anthrax.rc.vix.com;
+  address anthrax.rc.example.com;
   port 519;
-  peer address trantor.rc.vix.com;
+  peer address trantor.rc.example.com;
   peer port 520;
   max-response-delay 60;
   max-unacked-updates 10;
@@ -2954,7 +2954,7 @@ hostname.  So, for example,
 
       host joe {
         hardware ethernet 08:00:2b:4c:29:32;
-        fixed-address joe.fugue.com;
+        fixed-address joe.example.com;
       }
     }
 
@@ -2962,7 +2962,7 @@ is equivalent to
 
       host joe {
         hardware ethernet 08:00:2b:4c:29:32;
-        fixed-address joe.fugue.com;
+        fixed-address joe.example.com;
         option host-name "joe";
       }
 .fi
