@@ -4,7 +4,7 @@
 
 /*
  * 
- * Copyright (c) 2009-2015 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2009-2016 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2000-2003 by Internet Software Consortium
  *
@@ -30,8 +30,7 @@
  * by Damien Neil of Nominum, Inc.
  *
  * To learn more about Internet Systems Consortium, see
- * ``https://www.isc.org/''.   To learn more about Nominum, Inc., see
- * ``http://www.nominum.com''.
+ * ``https://www.isc.org/''.
  */
 
 #include "dhcpd.h"
