@@ -583,14 +583,14 @@ void execute_statements_in_scope (result, packet,
 	   scope, we are done.   This is so that if somebody does something
 	   like this, it does the expected thing:
 
-	        domain-name "fugue.com";
+	        domain-name "example.com";
 		shared-network FOO {
 			host bar {
-				domain-name "othello.fugue.com";
+				domain-name "othello.example.com";
 				fixed-address 10.20.30.40;
 			}
 			subnet 10.20.30.0 netmask 255.255.255.0 {
-				domain-name "manhattan.fugue.com";
+				domain-name "manhattan.example.com";
 			}
 		}
 
