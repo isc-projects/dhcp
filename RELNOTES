@@ -110,6 +110,9 @@ by Eric Young (eay@cryptsoft.com).
   interfaces will only accept and forward BOOTP requests.
   [ISC-Bugs #41547]
 
+- Clean up some memory references in the vendor-class construct.
+  [ISC-Bugs #42984]
+
 			Changes since 4.1-ESV-R13b1
 
 - None

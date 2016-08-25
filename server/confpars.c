@@ -2131,7 +2131,9 @@ int parse_class_declaration (cp, cfile, group, type)
 		data.data = &data.buffer -> data [0];
 		data.terminated = 1;
 
-		tname = type ? "implicit-vendor-class" : "implicit-user-class";
+		tname = (type == CLASS_TYPE_VENDOR) ?
+		  "implicit-vendor-class" : "implicit-user-class";
+
 	} else if (type == CLASS_TYPE_CLASS) {
 		tname = val;
 	} else {
@@ -2142,7 +2144,7 @@ int parse_class_declaration (cp, cfile, group, type)
 		name = dmalloc (strlen (tname) + 1, MDL);
 		if (!name)
 			log_fatal ("No memory for class name %s.", tname);
-		strcpy (name, val);
+		strcpy (name, tname);
 	} else
 		name = (char *)0;
 
