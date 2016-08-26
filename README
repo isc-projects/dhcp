@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-			    Version 4.3.4
-			    29 March 2016
+			    Version 4.3.5b1
+			    7 September 2016
 
 			      README FILE
 
@@ -142,12 +142,12 @@ information.   On Digital Unix, type ``man pfilt''.
 To build the DHCP Distribution, unpack the compressed tar file using
 the tar utility and the gzip command - type something like:
 
-	gunzip dhcp-4.3.4.tar.gz
-	tar xvf dhcp-4.3.4.tar
+	gunzip dhcp-4.3.5b1.tar.gz
+	tar xvf dhcp-4.3.5b1.tar
 
 			    CONFIGURING IT
 
-Now, cd to the dhcp-4.3.4 subdirectory that you've just created and
+Now, cd to the dhcp-4.3.5b1 subdirectory that you've just created and
 configure the source tree by typing:
 
 	./configure
