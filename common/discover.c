@@ -3,7 +3,7 @@
    Find and identify the network interfaces. */
 
 /*
- * Copyright (c) 2013-2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2013-2016 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2004-2009,2011 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
