@@ -73,9 +73,10 @@ by Eric Young (eay@cryptsoft.com).
 
 - Leases are now scrubbed of certain prior use information when pool
   re-balancing reassigns them from one FO peer to the other.  This
-  corrects an issue where leases that were offered but ignored retained
-  the client hostname from the original client. Thanks to Pavel Polacek,
-  Jan Evangelista Purkyne University for reporting the issue.
+  corrects an issue where leases that were offered but not used
+  by the client retained the client hostname from the original
+  client. Thanks to Pavel Polacek, Jan Evangelista Purkyne University
+  for reporting the issue.
   [ISC-Bugs #42008]
 
 - In the LDAP code and schema add some missing '6' characters to use
@@ -107,7 +108,7 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Bugs #42226]
 
 - Updates to contrib/dhcp-lease-list.pl to make it more friendly.
-  They are looking for the lease file in more places and skipping
+  The updates are: looking for the lease file in more places and skipping
   the "processing complete" output when creating machine readable
   output.  Thanks to Cameron Paine (cbp at null dot net) for the
   patch.
@@ -124,7 +125,7 @@ by Eric Young (eay@cryptsoft.com).
   in line with the call it will make to malloc().
   [ISC-Bugs #40843]
 
-- If the failover socket can't be bound close it, otherwise if the
+- If the failover socket can't be bound, close it.  Otherwise if the
   user configures an incorrect address in the failover stanza the
   server will continue to open new sockets every 90 seconds until
   it runs out.
