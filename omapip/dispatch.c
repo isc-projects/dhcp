@@ -134,12 +134,11 @@ omapi_iscsock_cb(isc_task_t   *task,
 	 * walk through the io states list, if our object is on there
 	 * service it.  if not ignore it.
 	 */
-	for (obj = omapi_io_states.next;
-	     (obj != NULL) && (obj->next != NULL);
-	     obj = obj->next) {
+	for (obj = omapi_io_states.next; obj != NULL; obj = obj->next) {
 		if (obj == cbarg)
 			break;
 	}
+
 	if (obj == NULL) {
 		return(0);
 	}
