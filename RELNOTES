@@ -1194,7 +1194,7 @@ by Eric Young (eay@cryptsoft.com).
 
 ! Handle a relay forward message with an unspecified address in the
   link address field.  Previously such a message would cause the
-  server to crash.  Thanks to a report from John Gibbons.  [ISC-Bugs #21992]
+  server to crash.  Thanks to a report from John Gibbins.  [ISC-Bugs #21992]
   CERT: VU#102047 CVE: CVE-2010-3611
 
 - ./configure on longer searches for -lcrypto to explicitly link against.
