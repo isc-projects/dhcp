@@ -37,6 +37,14 @@ BINDCONFIG=
 if test "$cross_compiling" = "yes"; then
 	BINDCONFIG="--host=$host"
 fi
+eval "set my_configure_args $ac_configure_args"
+shift
+for a
+do
+	case $a in
+		[[A-Z]]*) BINDCONFIG="$BINDCONFIG '$a'" ;;
+	esac
+done
 AC_SUBST(BINDCONFIG)
 AM_CONDITIONAL(CROSS_COMPILING, test "$cross_compiling" = "yes")
 
