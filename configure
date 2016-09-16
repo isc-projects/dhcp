@@ -4475,8 +4475,13 @@ BINDCONFIG=
 if test "$cross_compiling" = "yes"; then
 	BINDCONFIG="--host=$host"
 fi
+# Pass CFLAGS and co. $ac_configure_args looks like "'arg1' 'arg2' ..."
+# and as there can be a space inside an argument some magic is required.
+# This sets $1 ... $N to my_configure_args, arg1 ... argN
 eval "set my_configure_args $ac_configure_args"
+# remove my_configure_args, i.e., the guard against empty $ac_configure_args
 shift
+# iterate on arguments and copying 'arg' when it begins by an upper case
 for a
 do
 	case $a in
