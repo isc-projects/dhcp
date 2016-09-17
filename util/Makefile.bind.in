@@ -26,11 +26,12 @@ include ./bindvar.tmp
 
 bindsrcdir=bind-${version}
 
-bindconfig = --disable-kqueue --disable-epoll --disable-devpoll \
-	--without-openssl --without-libxml2 --enable-exportlib \
-	--with-gssapi=no --enable-threads=no @BINDCONFIG@ \
+bindconfig = --without-openssl --without-libxml2 \
+	--without-gssapi --disable-threads \
+	--enable-exportlib \
 	--with-export-includedir=${binddir}/include \
-	--with-export-libdir=${binddir}/lib
+	--with-export-libdir=${binddir}/lib \
+	@BINDIOMUX@ @BINDCONFIG@ --enable-full-report
 
 @BIND_ATF_FALSE@cleandirs = ./lib ./include
 @BIND_ATF_TRUE@cleandirs = ./lib ./include ./atf

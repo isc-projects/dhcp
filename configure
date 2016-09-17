@@ -629,6 +629,7 @@ LDAP_CFLAGS
 LDAP_LIBS
 BINDSRCDIR
 BINDDIR
+BINDIOMUX
 ac_prefix_program
 DISTCHECK_ATF_CONFIGURE_FLAG
 HAVE_ATF_FALSE
@@ -773,6 +774,10 @@ with_cli6_pid_file
 with_relay_pid_file
 with_relay6_pid_file
 with_randomdev
+enable_kqueue
+enable_epoll
+enable_devpoll
+with_bind_extra_config
 with_libbind
 with_ldap
 with_ldapcrypto
@@ -1437,6 +1442,9 @@ Optional Features:
   --enable-log-pid        Include PIDs in syslog messages (default is no).
   --enable-binary-leases  enable support for binary insertion of leases
                           (default is no)
+  --enable-kqueue         use BSD kqueue (default is no)
+  --enable-epoll          use Linux epoll (default is no)
+  --enable-devpoll        use /dev/poll (default is no)
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -1473,6 +1481,9 @@ Optional Packages:
                           File for dhcrelay6 process information (default is
                           LOCALSTATEDIR/run/dhcrelay6.pid)
   --with-randomdev=PATH   Path for random device (default is /dev/random)
+  --with-bind-extra-config
+                          configure bind librairies with some extra options
+                          (default is none)
   --with-libbind=PATH     bind includes and libraries are in PATH (default is
                           ./bind)
   --with-ldap             enable OpenLDAP support in dhcpd (default is no)
@@ -6721,6 +6732,57 @@ fi
 	fi
 	BINDCONFIG="$BINDCONFIG --with-randomdev=$use_randomdev"
 fi
+
+BINDIOMUX="--disable-kqueue --disable-epoll --disable-devpoll"
+# check kqueue/epoll/devpoll alternative to select
+# Check whether --enable-kqueue was given.
+if test "${enable_kqueue+set}" = set; then :
+  enableval=$enable_kqueue; want_kqueue="$enableval"
+else
+  want_kqueue="no"
+fi
+
+if test "$enableval" = "yes"; then
+	BINDIOMUX="--enable-kqueue"
+fi
+# Check whether --enable-epoll was given.
+if test "${enable_epoll+set}" = set; then :
+  enableval=$enable_epoll; want_epoll="$enableval"
+else
+  want_epoll="no"
+fi
+
+if test "$enableval" = "yes"; then
+	BINDIOMUX="--enable-epoll"
+fi
+# Check whether --enable-devpoll was given.
+if test "${enable_devpoll+set}" = set; then :
+  enableval=$enable_devpoll; want_devpoll="$enableval"
+else
+  want_devpoll="no"
+fi
+
+if test "$enableval" = "yes"; then
+	BINDIOMUX="--enable-devpoll"
+fi
+
+
+# general extra bind configure arguments
+
+# Check whether --with-bind-extra-config was given.
+if test "${with_bind_extra_config+set}" = set; then :
+  withval=$with_bind_extra_config; use_xbindconfig="$withval"
+else
+  use_xbindconfig=""
+fi
+
+case "$use_xbindconfig" in
+yes|no|'')
+	;;
+*)
+	BINDCONFIG="$BINDCONFIG $use_xbindconfig"
+	;;
+esac
 
 # see if there is a "sa_len" field in our interface information structure
 ac_fn_c_check_member "$LINENO" "struct sockaddr" "sa_len" "ac_cv_member_struct_sockaddr_sa_len" "#include <sys/socket.h>
