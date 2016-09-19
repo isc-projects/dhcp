@@ -66,6 +66,12 @@ by Eric Young (eay@cryptsoft.com).
   for code clarity.
   [ISC-Bugs #42834]
 
+- Added --enable-kqueue, --enable-epoll, --enable-devpoll and a more
+  general --with-bind-extra-config to pass extra options to the
+  embedded bind configure. Note we had mixed experiences with this
+  so it is at the user risk.
+  [Isc-Bugs #20890]
+
 			Changes since 4.3.0 (bug fixes)
 
 - Tidy up several small tickets.
