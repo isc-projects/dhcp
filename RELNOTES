@@ -70,7 +70,7 @@ by Eric Young (eay@cryptsoft.com).
   general --with-bind-extra-config to pass extra options to the
   embedded bind configure. Note we had mixed experiences with this
   so it is at the user risk.
-  [Isc-Bugs #20890]
+  [ISC-Bugs #20890]
 
 			Changes since 4.3.0 (bug fixes)
 
