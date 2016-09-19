@@ -679,38 +679,41 @@ AC_CHECK_MEMBER(struct tpacket_auxdata.tp_vlan_tci,
     [AC_DEFINE([VLAN_TCI_PRESENT], [1], [tpacket_auxdata.tp_vlan_tci present])]
     ,, [#include <linux/if_packet.h>])
 
+# bind/Makefile.in is not from automake so we need 2 sets of variables
 BINDDIR=
 BINDSRCDIR=
+BINDBIND=
+BINDVERSION=
 AC_ARG_WITH(libbind,
-	AS_HELP_STRING([--with-libbind=PATH],[bind includes and libraries are in PATH
-		        (default is ./bind)]),
+	AS_HELP_STRING([--with-libbind=PATH],[bind includes and libraries are in PATH]),
 	use_libbind="$withval", use_libbind="no")
 case "$use_libbind" in
 yes)
-	BINDDIR="\${top_srcdir}/bind"
-	BINDSRCDIR="\${top_srcdir}/bind"
+	AC_MSG_ERROR([PATH is required in --with-libbind=PATH])
 	;;
 no)
 	BINDDIR="\${top_srcdir}/bind"
 	BINDSRCDIR="\${top_srcdir}/bind"
+	if test ! -d "$srcdir/bind"; then
+		AC_MSG_ERROR([Where to find or build bind includes and libraries must be specified])
+	fi
+	if test ! -f "$srcdir/bind/version.tmp"; then
+		AC_MSG_ERROR([Cannot find $srcdir/bind/version.tmp])
+	fi
+	my_abs_srcdir=`cd $srcdir && pwd`
+	BINDBIND="${my_abs_srcdir}/bind"
+	. "$srcdir/bind/version.tmp"
+	BINDVERSION=${MAJORVER}.${MINORVER}.${PATCHVER}${RELEASETYPE}${RELEASEVER}
+	AC_CONFIG_FILES([$srcdir/bind/Makefile])
 	;;
 *)
 	BINDDIR="$use_libbind"
-	if test ! -d "$srcdir/bind"; then
-		# no bind directory, create it with a fake Makefile.in
-		# (AC_CONFIG_FILES and top Makefile refer to it so
-		# it must exits)
-		mkdir $srcdir/bind
-		cat > $srcdir/bind/Makefile.in << EOF
-# placeholder
-all check clean distclean distdir install uninstall:
-
-EOF
-	fi
 	;;
 esac
 AC_SUBST(BINDDIR)
 AC_SUBST(BINDSRCDIR)
+AC_SUBST(BINDBIND)
+AC_SUBST(BINDVERSION)
 
 # OpenLDAP support.
 AC_ARG_WITH(ldap,
@@ -805,7 +808,6 @@ AC_C_FLEXIBLE_ARRAY_MEMBER
 
 AC_CONFIG_FILES([
   Makefile
-  $srcdir/bind/Makefile
   client/Makefile
   client/tests/Makefile
   common/Makefile
@@ -828,16 +830,6 @@ elif test "$enable_dhcpv6" != "no"; then
 	DHCP_VERSIONS="DHCPv4 and DHCPv6"
 else
 	DHCP_VERSIONS="DHCPv4"
-fi
-
-(cd $srcdir
-    sh util/bindvar.sh
-    if test $? -ne 0; then
-        AC_MSG_ERROR([*** util/bindvar.sh failed])
-    fi
-)
-if test $? -ne 0; then
-    exit $?
 fi
 
 cat > config.report << END
