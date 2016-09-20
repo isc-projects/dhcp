@@ -27,7 +27,7 @@
 
 topdir=`pwd`
 binddir=$topdir/bind
-remote=--remote=cvs.isc.org:/proj/git/prod/bind9.git
+remote=--remote=repo.isc.org:/proj/git/prod/bind9.git
 
 case "${1:-}" in
 --remote=*)
@@ -100,8 +100,11 @@ esac
 if test -d bind/bind9/.git
 then
 	cp util/Makefile.git bind/Makefile.in
+	rm -rf bind/include bind/lib
 	cd bind/bind9
-	git checkout $BINDTAG && git pull
+	test -f Makefile && make distclean
+	git fetch
+	git checkout $BINDTAG && test -n "${noSNAP}" && git merge --ff-only
 else
 	# Delete all previous bind stuff
 	rm -rf bind
