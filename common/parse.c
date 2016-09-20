@@ -98,7 +98,7 @@ void skip_to_rbrace (cfile, brace_count)
 	enum dhcp_token token;
 	const char *val;
 
-#if defined (DEBUG_TOKEN)
+#if defined (DEBUG_TOKENS)
 	log_error("skip_to_rbrace: %d\n", brace_count);
 #endif
 	do {

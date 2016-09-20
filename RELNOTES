@@ -66,6 +66,11 @@ by Eric Young (eay@cryptsoft.com).
   for code clarity.
   [ISC-Bugs #42834]
 
+- Corrected a bug which could cause the server to sporadically crash while
+  loading lease files with the lease-id-format is set to "hex".  Our thanks
+  to Jay Ford, University of Iowa for reporting the issue.
+  [ISC-Bugs #43185]
+
 			Changes since 4.3.0 (bug fixes)
 
 - Tidy up several small tickets.
