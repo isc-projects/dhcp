@@ -52,6 +52,13 @@ ISC DHCP is open source software maintained by Internet Systems
 Consortium.  This product includes cryptographic software written
 by Eric Young (eay@cryptsoft.com).
 
+			Changes since 4.3.5b1
+
+- Corrected a bug which could cause the server to sporadically crash while
+  loading lease files with the lease-id-format is set to "hex".  Our thanks
+  to Jay Ford, University of Iowa for reporting the issue.
+  [ISC-Bugs #43185]
+
 			Changes since 4.3.4
 
 - Fixed util/bindvar.sh error handling.
@@ -60,11 +67,6 @@ by Eric Young (eay@cryptsoft.com).
 - Correct error message in relay to use remote id length instead
   of circuit id length.
   [ISC-Bugs #42556]
-
-- Add support for including an encapsulated option in a response
-  from the DHCPv6 server.  This allows the v6 FQDN option to be
-  returned in responses.
-  [ISC-Bugs #29246]
 
 - Add logic to test directory Makefiles to avoid copying Attfile(s)
   when building within the source tree.  This eliminates a noisy but
