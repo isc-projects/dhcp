@@ -666,6 +666,7 @@ yes|no|'')
 	;;
 *)
 	BINDCONFIG="$BINDCONFIG $use_xbindconfig"
+	AC_MSG_WARN([Most options to bind configure are not supported when used by ISC DHCP])
 	;;
 esac
 

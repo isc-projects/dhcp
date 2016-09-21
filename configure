@@ -6787,6 +6787,8 @@ yes|no|'')
 	;;
 *)
 	BINDCONFIG="$BINDCONFIG $use_xbindconfig"
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Most options to bind configure are not supported when used by ISC DHCP" >&5
+$as_echo "$as_me: WARNING: Most options to bind configure are not supported when used by ISC DHCP" >&2;}
 	;;
 esac
 
