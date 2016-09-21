@@ -308,7 +308,7 @@ elif test "$atf_path" != "no" ; then
         fi
 
         if test ! -x $ATF_BIN/atf-run  -o  ! -x $ATF_BIN/atf-report ; then
-            AC_MSG_WARN([atf-run,atf-report not found, assuming they are in your path])
+            AC_MSG_WARN([atf-run/atf-report not found, assuming they are in your path])
         fi
 
         AC_SUBST(ATF_CFLAGS)
@@ -643,6 +643,45 @@ else
 	fi
 	BINDCONFIG="$BINDCONFIG --with-randomdev=$use_randomdev"
 fi
+
+BINDIOMUX="--disable-kqueue --disable-epoll --disable-devpoll"
+# check kqueue/epoll/devpoll alternative to select
+AC_ARG_ENABLE(kqueue,
+	AS_HELP_STRING([--enable-kqueue],[use BSD kqueue (default is no)]),
+	want_kqueue="$enableval", want_kqueue="no")
+if test "$want_kqueue" = "yes"; then
+	BINDIOMUX="--enable-kqueue"
+	AC_MSG_WARN([--enable-kqueue is not supported: it may lead to issues such as server looping])
+fi
+AC_ARG_ENABLE(epoll,
+	AS_HELP_STRING([--enable-epoll],[use Linux epoll (default is no)]),
+	want_epoll="$enableval", want_epoll="no")
+if test "$want_epoll" = "yes"; then
+	BINDIOMUX="--enable-epoll"
+	AC_MSG_WARN([--enable-epoll is not supported: it may lead to issues such as server looping])
+fi
+AC_ARG_ENABLE(devpoll,
+	AS_HELP_STRING([--enable-devpoll],[use /dev/poll (default is no)]),
+	want_devpoll="$enableval", want_devpoll="no")
+if test "$want_devpoll" = "yes"; then
+	BINDIOMUX="--enable-devpoll"
+	AC_MSG_WARN([--enable-devpoll is not supported: it may lead to issues such as server looping])
+fi
+AC_SUBST(BINDIOMUX)
+
+# general extra bind configure arguments
+AC_ARG_WITH(bind-extra-config,
+	AS_HELP_STRING([--with-bind-extra-config],[configure bind librairies
+		       with some extra options (default is none)]),
+	use_xbindconfig="$withval", use_xbindconfig="")
+case "$use_xbindconfig" in
+yes|no|'')
+	;;
+*)
+	BINDCONFIG="$BINDCONFIG $use_xbindconfig"
+	AC_MSG_WARN([Most options to bind configure are not supported when used by ISC DHCP])
+	;;
+esac
 
 # see if there is a "sa_len" field in our interface information structure
 AC_CHECK_MEMBER(struct sockaddr.sa_len,
