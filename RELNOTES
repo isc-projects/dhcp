@@ -63,7 +63,8 @@ by Eric Young (eay@cryptsoft.com).
 - Removed an extraneous expression in omapi socket callback function. Prior
   to this change, the logic was techinically incorrect but other factors
   ensured the outcome itself was correct.  This change was made primarily
-  for code clarity.
+  for code clarity. Thanks to Ganesh Pinjala for bringing the issue to our
+  attention.
   [ISC-Bugs #42834]
 
 - Corrected a bug which could cause the server to sporadically crash while
