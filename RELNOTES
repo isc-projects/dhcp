@@ -71,6 +71,11 @@ by Eric Young (eay@cryptsoft.com).
   to Jay Ford, University of Iowa for reporting the issue.
   [ISC-Bugs #43185]
 
+- Pass configure arguments which begin with an upper case letter, e.g.
+  CFLAGS, to the embedded bind configure, so it is no longer required
+  to use environment variables to get the same effect.
+  [ISC-Bugs #35143]
+
 			Changes since 4.3.0 (bug fixes)
 
 - Tidy up several small tickets.
