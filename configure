@@ -5668,8 +5668,8 @@ fi
         fi
 
         if test ! -x $ATF_BIN/atf-run  -o  ! -x $ATF_BIN/atf-report ; then
-            { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: atf-run,atf-report not found, assuming they are in your path" >&5
-$as_echo "$as_me: WARNING: atf-run,atf-report not found, assuming they are in your path" >&2;}
+            { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: atf-run/atf-report not found, assuming they are in your path" >&5
+$as_echo "$as_me: WARNING: atf-run/atf-report not found, assuming they are in your path" >&2;}
         fi
 
 
@@ -6744,6 +6744,8 @@ fi
 
 if test "$want_kqueue" = "yes"; then
 	BINDIOMUX="--enable-kqueue"
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: --enable-kqueue is not supported: it can lead to some issue as server looping" >&5
+$as_echo "$as_me: WARNING: --enable-kqueue is not supported: it can lead to some issue as server looping" >&2;}
 fi
 # Check whether --enable-epoll was given.
 if test "${enable_epoll+set}" = set; then :
@@ -6754,6 +6756,8 @@ fi
 
 if test "$want_epoll" = "yes"; then
 	BINDIOMUX="--enable-epoll"
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: --enable-epoll is not supported: it can lead to some issue as server looping" >&5
+$as_echo "$as_me: WARNING: --enable-epoll is not supported: it can lead to some issue as server looping" >&2;}
 fi
 # Check whether --enable-devpoll was given.
 if test "${enable_devpoll+set}" = set; then :
@@ -6764,6 +6768,8 @@ fi
 
 if test "$want_devpoll" = "yes"; then
 	BINDIOMUX="--enable-devpoll"
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: --enable-devpoll is not supported: it can lead to some issue as server looping" >&5
+$as_echo "$as_me: WARNING: --enable-devpoll is not supported: it can lead to some issue as server looping" >&2;}
 fi
 
 
