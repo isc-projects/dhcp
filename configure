@@ -6742,7 +6742,7 @@ else
   want_kqueue="no"
 fi
 
-if test "$enableval" = "yes"; then
+if test "$want_kqueue" = "yes"; then
 	BINDIOMUX="--enable-kqueue"
 fi
 # Check whether --enable-epoll was given.
@@ -6752,7 +6752,7 @@ else
   want_epoll="no"
 fi
 
-if test "$enableval" = "yes"; then
+if test "$want_epoll" = "yes"; then
 	BINDIOMUX="--enable-epoll"
 fi
 # Check whether --enable-devpoll was given.
@@ -6762,7 +6762,7 @@ else
   want_devpoll="no"
 fi
 
-if test "$enableval" = "yes"; then
+if test "$want_devpoll" = "yes"; then
 	BINDIOMUX="--enable-devpoll"
 fi
 

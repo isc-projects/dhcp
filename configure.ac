@@ -636,19 +636,19 @@ BINDIOMUX="--disable-kqueue --disable-epoll --disable-devpoll"
 AC_ARG_ENABLE(kqueue,
 	AS_HELP_STRING([--enable-kqueue],[use BSD kqueue (default is no)]),
 	want_kqueue="$enableval", want_kqueue="no")
-if test "$enableval" = "yes"; then
+if test "$want_kqueue" = "yes"; then
 	BINDIOMUX="--enable-kqueue"
 fi
 AC_ARG_ENABLE(epoll,
 	AS_HELP_STRING([--enable-epoll],[use Linux epoll (default is no)]),
 	want_epoll="$enableval", want_epoll="no")
-if test "$enableval" = "yes"; then
+if test "$want_epoll" = "yes"; then
 	BINDIOMUX="--enable-epoll"
 fi
 AC_ARG_ENABLE(devpoll,
 	AS_HELP_STRING([--enable-devpoll],[use /dev/poll (default is no)]),
 	want_devpoll="$enableval", want_devpoll="no")
-if test "$enableval" = "yes"; then
+if test "$want_devpoll" = "yes"; then
 	BINDIOMUX="--enable-devpoll"
 fi
 AC_SUBST(BINDIOMUX)
