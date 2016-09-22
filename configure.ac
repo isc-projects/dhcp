@@ -707,6 +707,15 @@ no)
 	AC_CONFIG_FILES([$srcdir/bind/Makefile])
 	;;
 *)
+	if test ! -d "$use_libbind"; then
+		AC_MSG_ERROR([Cannot find bind directory at $use_libbind])
+	fi
+	if test ! -d "$use_libbind/include"; then
+		AC_MSG_ERROR([Cannot find bind includes at $use_libbind/include])
+	fi
+	if test	! -d "$use_libbind/lib"; then
+		AC_MSG_ERROR([Cannot find bind libraries at $use_libbind/lib])
+	fi
 	BINDDIR="$use_libbind"
 	;;
 esac

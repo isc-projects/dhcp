@@ -6857,6 +6857,15 @@ no)
 
 	;;
 *)
+	if test ! -d "$use_libbind"; then
+		as_fn_error $? "Cannot find bind directory at $use_libbind" "$LINENO" 5
+	fi
+	if test ! -d "$use_libbind/include"; then
+		as_fn_error $? "Cannot find bind includes at $use_libbind/include" "$LINENO" 5
+	fi
+	if test	! -d "$use_libbind/lib"; then
+		as_fn_error $? "Cannot find bind libraries at $use_libbind/lib" "$LINENO" 5
+	fi
 	BINDDIR="$use_libbind"
 	;;
 esac
