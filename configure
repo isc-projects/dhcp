@@ -627,6 +627,8 @@ LTLIBOBJS
 LIBOBJS
 LDAP_CFLAGS
 LDAP_LIBS
+BINDVERSION
+BINDBIND
 BINDSRCDIR
 BINDDIR
 BINDIOMUX
@@ -1484,8 +1486,7 @@ Optional Packages:
   --with-bind-extra-config
                           configure bind librairies with some extra options
                           (default is none)
-  --with-libbind=PATH     bind includes and libraries are in PATH (default is
-                          ./bind)
+  --with-libbind=PATH     bind includes and libraries are in PATH
   --with-ldap             enable OpenLDAP support in dhcpd (default is no)
   --with-ldapcrypto       enable OpenLDAP crypto support in dhcpd (default is
                           no)
@@ -6905,8 +6906,11 @@ $as_echo "#define VLAN_TCI_PRESENT 1" >>confdefs.h
 fi
 
 
+# bind/Makefile.in is not from automake so we need 2 sets of variables
 BINDDIR=
 BINDSRCDIR=
+BINDBIND=
+BINDVERSION=
 
 # Check whether --with-libbind was given.
 if test "${with_libbind+set}" = set; then :
@@ -6917,28 +6921,39 @@ fi
 
 case "$use_libbind" in
 yes)
-	BINDDIR="\${top_srcdir}/bind"
-	BINDSRCDIR="\${top_srcdir}/bind"
+	as_fn_error $? "PATH is required in --with-libbind=PATH" "$LINENO" 5
 	;;
 no)
 	BINDDIR="\${top_srcdir}/bind"
 	BINDSRCDIR="\${top_srcdir}/bind"
+	if test ! -d "$srcdir/bind"; then
+		as_fn_error $? "Where to find or build bind includes and libraries must be specified" "$LINENO" 5
+	fi
+	if test ! -f "$srcdir/bind/version.tmp"; then
+		as_fn_error $? "Cannot find $srcdir/bind/version.tmp" "$LINENO" 5
+	fi
+	my_abs_srcdir=`cd $srcdir && pwd`
+	BINDBIND="${my_abs_srcdir}/bind"
+	. "$srcdir/bind/version.tmp"
+	BINDVERSION=${MAJORVER}.${MINORVER}.${PATCHVER}${RELEASETYPE}${RELEASEVER}
+	ac_config_files="$ac_config_files $srcdir/bind/Makefile"
+
 	;;
 *)
-	BINDDIR="$use_libbind"
-	if test ! -d "$srcdir/bind"; then
-		# no bind directory, create it with a fake Makefile.in
-		# (AC_CONFIG_FILES and top Makefile refer to it so
-		# it must exits)
-		mkdir $srcdir/bind
-		cat > $srcdir/bind/Makefile.in << EOF
-# placeholder
-all check clean distclean distdir install uninstall:
-
-EOF
+	if test ! -d "$use_libbind"; then
+		as_fn_error $? "Cannot find bind directory at $use_libbind" "$LINENO" 5
 	fi
+	if test ! -d "$use_libbind/include"; then
+		as_fn_error $? "Cannot find bind includes at $use_libbind/include" "$LINENO" 5
+	fi
+	if test	! -d "$use_libbind/lib"; then
+		as_fn_error $? "Cannot find bind libraries at $use_libbind/lib" "$LINENO" 5
+	fi
+	BINDDIR="$use_libbind"
 	;;
 esac
+
+
 
 
 
@@ -7323,7 +7338,7 @@ $as_echo "#define FLEXIBLE_ARRAY_MEMBER /**/" >>confdefs.h
   fi
 
 
-ac_config_files="$ac_config_files Makefile $srcdir/bind/Makefile client/Makefile client/tests/Makefile common/Makefile common/tests/Makefile dhcpctl/Makefile includes/Makefile omapip/Makefile relay/Makefile server/Makefile tests/Makefile tests/unittest.sh server/tests/Makefile doc/devel/doxyfile"
+ac_config_files="$ac_config_files Makefile client/Makefile client/tests/Makefile common/Makefile common/tests/Makefile dhcpctl/Makefile includes/Makefile omapip/Makefile relay/Makefile server/Makefile tests/Makefile tests/unittest.sh server/tests/Makefile doc/devel/doxyfile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -8069,8 +8084,8 @@ do
   case $ac_config_target in
     "depfiles") CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
     "includes/config.h") CONFIG_HEADERS="$CONFIG_HEADERS includes/config.h" ;;
-    "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "$srcdir/bind/Makefile") CONFIG_FILES="$CONFIG_FILES $srcdir/bind/Makefile" ;;
+    "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "client/Makefile") CONFIG_FILES="$CONFIG_FILES client/Makefile" ;;
     "client/tests/Makefile") CONFIG_FILES="$CONFIG_FILES client/tests/Makefile" ;;
     "common/Makefile") CONFIG_FILES="$CONFIG_FILES common/Makefile" ;;
@@ -8778,16 +8793,6 @@ elif test "$enable_dhcpv6" != "no"; then
 	DHCP_VERSIONS="DHCPv4 and DHCPv6"
 else
 	DHCP_VERSIONS="DHCPv4"
-fi
-
-(cd $srcdir
-    sh util/bindvar.sh
-    if test $? -ne 0; then
-        as_fn_error $? "*** util/bindvar.sh failed" "$LINENO" 5
-    fi
-)
-if test $? -ne 0; then
-    exit $?
 fi
 
 cat > config.report << END

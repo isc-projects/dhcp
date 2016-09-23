@@ -22,7 +22,7 @@ EXTRA_DIST = RELNOTES LICENSE \
 	     doc/examples/dhclient-dhcpv6.conf doc/examples/dhcpd-dhcpv6.conf \
 	     doc/devel/arch.dox doc/devel/atf.dox doc/devel/contrib.dox \
 	     doc/devel/debug.dox doc/devel/isc-logo.jpg doc/devel/mainpage.dox \
-	     doc/devel/omapi.dox doc/devel/qa.dox util/bindvar.sh \
+	     doc/devel/omapi.dox doc/devel/qa.dox \
 	     bind/Makefile.in bind/bind.tar.gz bind/version.tmp \
 	     common/tests/Atffile server/tests/Atffile
 

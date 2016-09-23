@@ -15,15 +15,8 @@
 
 # Configure and build the bind libraries for use by DHCP
 
-include ./version.tmp
-version=${MAJORVER}.${MINORVER}.${PATCHVER}${RELEASETYPE}${RELEASEVER}
-
-# bindvar.tmp is constructed by configure, it has the paths for bind
-# if GMAKE is blank the shell script couldn't find a gmake to use.
-# binddir=
-# GMAKE=
-include ./bindvar.tmp
-
+binddir=@BINDBIND@
+version=@BINDVERSION@
 bindsrcdir=bind-${version}
 
 bindconfig = --without-openssl --without-libxml2 \
@@ -48,11 +41,6 @@ bind1:
 		gunzip -c bind.tar.gz | tar xf - ;          \
 	fi
 
-	@if test -z "${GMAKE}"; then                        \
-		echo "unable to find gmake" 1>&2 ;          \
-		exit 1;                                     \
-	fi
-
 # Configure the export libraries
 # Currently disable the epoll, devpoll and kqueue options as they
 # don't interact well with the DHCP code.
@@ -75,7 +63,7 @@ atf:
 	else							      \
 		echo Building ATF support ;			      \
 		(cd ${bindsrcdir}/unit;				      \
-		 MAKE=${GMAKE} ${GMAKE} atf > ${binddir}/build.log ;  \
+		 $(MAKE) atf > ${binddir}/build.log ;		      \
 		 cp -rp atf ${binddir}) ;			      \
 	fi
 
@@ -91,11 +79,11 @@ bind2-noguest:
 		echo Building BIND Export libraries - this takes some time. ;\
 		(cd ${bindsrcdir}/lib/export ;                               \
 		  echo building in `pwd` ;                                   \
-		  MAKE=${GMAKE} ${GMAKE} >> ${binddir}/build.log) ;          \
+		  $(MAKE) >> ${binddir}/build.log) ;			     \
                                                                              \
 		echo Installing BIND Export libraries to ${binddir}. ;       \
 		(cd ${bindsrcdir}/lib/export ;                               \
-		  MAKE=${GMAKE} ${GMAKE} install > ${binddir}/install.log) ; \
+		  $(MAKE) install > ${binddir}/install.log) ;		     \
 	fi
 
 bind2-hostgen:
@@ -105,16 +93,16 @@ bind2-hostgen:
 		echo Bind export libraries already installed ;               \
 	else                                                                 \
 		echo Building BIND Export libraries - this takes some time. ;\
-		(cd ${bindsrcdir}/lib/export/dns ; \
-		 echo building gen using ${BUILD_CC} in `pwd` ; \
-		 MAKE=${GMAKE} ${GMAKE} CC=${BUILD_CC} CFLAGS=${BUILD_CFLAGS} CPPFLAGS=${BUILD_CPPFLAGS} LDFLAGS=${BUILD_LDFLAGS} LIBS=${BUILD_LIBS} gen >> ${binddir}/build.log) ; \
+		(cd ${bindsrcdir}/lib/export/dns ;			     \
+		 echo building gen using ${BUILD_CC} in `pwd` ;		     \
+		 $(MAKE) CC=${BUILD_CC} CFLAGS=${BUILD_CFLAGS} CPPFLAGS=${BUILD_CPPFLAGS} LDFLAGS=${BUILD_LDFLAGS} LIBS=${BUILD_LIBS} gen >> ${binddir}/build.log) ; \
 		(cd ${bindsrcdir}/lib/export ;                               \
 		  echo building in `pwd` ;                                   \
-		  MAKE=${GMAKE} ${GMAKE} >> ${binddir}/build.log) ;          \
+		  $(MAKE) >> ${binddir}/build.log) ;			     \
                                                                              \
 		echo Installing BIND Export libraries to ${binddir}. ;       \
 		(cd ${bindsrcdir}/lib/export ;                               \
-		  MAKE=${GMAKE} ${GMAKE} install > ${binddir}/install.log) ; \
+		  $(MAKE) install > ${binddir}/install.log) ;		     \
 	fi
 
 clean:
