@@ -63,8 +63,30 @@ by Eric Young (eay@cryptsoft.com).
 - Removed an extraneous expression in omapi socket callback function. Prior
   to this change, the logic was techinically incorrect but other factors
   ensured the outcome itself was correct.  This change was made primarily
-  for code clarity.
+  for code clarity. Thanks to Ganesh Pinjala for bringing the issue to our
+  attention.
   [ISC-Bugs #42834]
+
+- Corrected a bug which could cause the server to sporadically crash while
+  loading lease files with the lease-id-format is set to "hex".  Our thanks
+  to Jay Ford, University of Iowa for reporting the issue.
+  [ISC-Bugs #43185]
+
+- Pass configure arguments which begin with an upper case letter, e.g.
+  CFLAGS, to the embedded bind configure, so it is no longer required
+  to use environment variables to get the same effect.
+  [ISC-Bugs #35143]
+
+- Added --enable-kqueue, --enable-epoll, --enable-devpoll and a more
+  general --with-bind-extra-config to pass extra options to the
+  embedded bind configure. Note we had mixed experiences with this
+  so it is at the user risk, i.e., they are NOT SUPPORTED yet.
+  [ISC-Bugs #20890]
+
+- Changed the way the embedded bind Makefile is updated by configure.
+  The only user visible side effect is that --with-libbind now requires
+  either "no" or an (absolute) path, i.e. "yes" is no longer valid.
+  [ISC-Bugs #43227]
 
 			Changes since 4.3.0 (bug fixes)
 

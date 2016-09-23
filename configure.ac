@@ -37,6 +37,19 @@ BINDCONFIG=
 if test "$cross_compiling" = "yes"; then
 	BINDCONFIG="--host=$host"
 fi
+# Pass CFLAGS and co. $ac_configure_args looks like "'arg1' 'arg2' ..."
+# and as there can be a space inside an argument some magic is required.
+# This sets $1 ... $N to my_configure_args, arg1 ... argN
+eval "set my_configure_args $ac_configure_args"
+# remove my_configure_args, i.e., the guard against empty $ac_configure_args
+shift
+# iterate on arguments and copying 'arg' when it begins by an upper case
+for a
+do
+	case $a in
+		[[A-Z]]*) BINDCONFIG="$BINDCONFIG '$a'" ;;
+	esac
+done
 AC_SUBST(BINDCONFIG)
 AM_CONDITIONAL(CROSS_COMPILING, test "$cross_compiling" = "yes")
 
@@ -295,7 +308,7 @@ elif test "$atf_path" != "no" ; then
         fi
 
         if test ! -x $ATF_BIN/atf-run  -o  ! -x $ATF_BIN/atf-report ; then
-            AC_MSG_WARN([atf-run,atf-report not found, assuming they are in your path])
+            AC_MSG_WARN([atf-run/atf-report not found, assuming they are in your path])
         fi
 
         AC_SUBST(ATF_CFLAGS)
@@ -631,6 +644,45 @@ else
 	BINDCONFIG="$BINDCONFIG --with-randomdev=$use_randomdev"
 fi
 
+BINDIOMUX="--disable-kqueue --disable-epoll --disable-devpoll"
+# check kqueue/epoll/devpoll alternative to select
+AC_ARG_ENABLE(kqueue,
+	AS_HELP_STRING([--enable-kqueue],[use BSD kqueue (default is no)]),
+	want_kqueue="$enableval", want_kqueue="no")
+if test "$want_kqueue" = "yes"; then
+	BINDIOMUX="--enable-kqueue"
+	AC_MSG_WARN([--enable-kqueue is not supported: it may lead to issues such as server looping])
+fi
+AC_ARG_ENABLE(epoll,
+	AS_HELP_STRING([--enable-epoll],[use Linux epoll (default is no)]),
+	want_epoll="$enableval", want_epoll="no")
+if test "$want_epoll" = "yes"; then
+	BINDIOMUX="--enable-epoll"
+	AC_MSG_WARN([--enable-epoll is not supported: it may lead to issues such as server looping])
+fi
+AC_ARG_ENABLE(devpoll,
+	AS_HELP_STRING([--enable-devpoll],[use /dev/poll (default is no)]),
+	want_devpoll="$enableval", want_devpoll="no")
+if test "$want_devpoll" = "yes"; then
+	BINDIOMUX="--enable-devpoll"
+	AC_MSG_WARN([--enable-devpoll is not supported: it may lead to issues such as server looping])
+fi
+AC_SUBST(BINDIOMUX)
+
+# general extra bind configure arguments
+AC_ARG_WITH(bind-extra-config,
+	AS_HELP_STRING([--with-bind-extra-config],[configure bind librairies
+		       with some extra options (default is none)]),
+	use_xbindconfig="$withval", use_xbindconfig="")
+case "$use_xbindconfig" in
+yes|no|'')
+	;;
+*)
+	BINDCONFIG="$BINDCONFIG $use_xbindconfig"
+	AC_MSG_WARN([Most options to bind configure are not supported when used by ISC DHCP])
+	;;
+esac
+
 # see if there is a "sa_len" field in our interface information structure
 AC_CHECK_MEMBER(struct sockaddr.sa_len,
 	AC_DEFINE([HAVE_SA_LEN], [],
@@ -679,38 +731,55 @@ AC_CHECK_MEMBER(struct tpacket_auxdata.tp_vlan_tci,
     [AC_DEFINE([VLAN_TCI_PRESENT], [1], [tpacket_auxdata.tp_vlan_tci present])]
     ,, [#include <linux/if_packet.h>])
 
+# bind/Makefile.in is not from automake so we need 2 sets of variables
 BINDDIR=
 BINDSRCDIR=
+BINDBIND=
+BINDBUILD=
 AC_ARG_WITH(libbind,
-	AS_HELP_STRING([--with-libbind=PATH],[bind includes and libraries are in PATH
-		        (default is ./bind)]),
+	AS_HELP_STRING([--with-libbind=PATH],[bind includes and libraries are in PATH]),
 	use_libbind="$withval", use_libbind="no")
 case "$use_libbind" in
 yes)
-	BINDDIR="\${top_srcdir}/bind"
-	BINDSRCDIR="\${top_srcdir}/bind"
+	AC_MSG_ERROR([PATH is required in --with-libbind=PATH])
 	;;
 no)
 	BINDDIR="\${top_srcdir}/bind"
 	BINDSRCDIR="\${top_srcdir}/bind"
+	my_abs_srcdir=`cd $srcdir && pwd`
+	BINDBIND="${my_abs_srcdir}/bind"
+	if test ! -d "$srcdir/bind"; then
+		AC_MSG_ERROR([Where to find or build bind includes and libraries must be specified])
+	fi
+	if test -d "$srcdir/bind/bind9"; then
+		BINDBUILD="${my_abs_srcdir}/bind/bind9"
+	else
+		if test ! -f "$srcdir/bind/version.tmp"; then
+			AC_MSG_ERROR([Cannot find $srcdir/bind/version.tmp])
+		fi
+		. "$srcdir/bind/version.tmp"
+		bindversion=${MAJORVER}.${MINORVER}.${PATCHVER}${RELEASETYPE}${RELEASEVER}
+		BINDBUILD="${my_abs_srcdir}/bind/bind-$bindversion"
+	fi
+	AC_CONFIG_FILES([$srcdir/bind/Makefile])
 	;;
 *)
-	BINDDIR="$use_libbind"
-	if test ! -d "$srcdir/bind"; then
-		# no bind directory, create it with a fake Makefile.in
-		# (AC_CONFIG_FILES and top Makefile refer to it so
-		# it must exits)
-		mkdir $srcdir/bind
-		cat > $srcdir/bind/Makefile.in << EOF
-# placeholder
-all check clean distclean distdir install uninstall:
-
-EOF
+	if test ! -d "$use_libbind"; then
+		AC_MSG_ERROR([Cannot find bind directory at $use_libbind])
 	fi
+	if test ! -d "$use_libbind/include"; then
+		AC_MSG_ERROR([Cannot find bind includes at $use_libbind/include])
+	fi
+	if test	! -d "$use_libbind/lib"; then
+		AC_MSG_ERROR([Cannot find bind libraries at $use_libbind/lib])
+	fi
+	BINDDIR="$use_libbind"
 	;;
 esac
 AC_SUBST(BINDDIR)
 AC_SUBST(BINDSRCDIR)
+AC_SUBST(BINDBIND)
+AC_SUBST(BINDBUILD)
 
 # OpenLDAP support.
 AC_ARG_WITH(ldap,
@@ -805,7 +874,6 @@ AC_C_FLEXIBLE_ARRAY_MEMBER
 
 AC_CONFIG_FILES([
   Makefile
-  $srcdir/bind/Makefile
   client/Makefile
   client/tests/Makefile
   common/Makefile
@@ -828,16 +896,6 @@ elif test "$enable_dhcpv6" != "no"; then
 	DHCP_VERSIONS="DHCPv4 and DHCPv6"
 else
 	DHCP_VERSIONS="DHCPv4"
-fi
-
-(cd $srcdir
-    sh util/bindvar.sh
-    if test $? -ne 0; then
-        AC_MSG_ERROR([*** util/bindvar.sh failed])
-    fi
-)
-if test $? -ne 0; then
-    exit $?
 fi
 
 cat > config.report << END

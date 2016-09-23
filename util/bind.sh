@@ -99,7 +99,7 @@ esac
 
 if test -d bind/bind9/.git
 then
-	cp util/Makefile.git bind/Makefile.in
+	cp util/Makefile.bind.in bind/Makefile.in
 	rm -rf bind/include bind/lib
 	cd bind/bind9
 	test -f Makefile && make distclean

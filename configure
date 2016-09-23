@@ -627,8 +627,11 @@ LTLIBOBJS
 LIBOBJS
 LDAP_CFLAGS
 LDAP_LIBS
+BINDBUILD
+BINDBIND
 BINDSRCDIR
 BINDDIR
+BINDIOMUX
 ac_prefix_program
 DISTCHECK_ATF_CONFIGURE_FLAG
 HAVE_ATF_FALSE
@@ -773,6 +776,10 @@ with_cli6_pid_file
 with_relay_pid_file
 with_relay6_pid_file
 with_randomdev
+enable_kqueue
+enable_epoll
+enable_devpoll
+with_bind_extra_config
 with_libbind
 with_ldap
 with_ldapcrypto
@@ -1437,6 +1444,9 @@ Optional Features:
   --enable-log-pid        Include PIDs in syslog messages (default is no).
   --enable-binary-leases  enable support for binary insertion of leases
                           (default is no)
+  --enable-kqueue         use BSD kqueue (default is no)
+  --enable-epoll          use Linux epoll (default is no)
+  --enable-devpoll        use /dev/poll (default is no)
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -1473,8 +1483,10 @@ Optional Packages:
                           File for dhcrelay6 process information (default is
                           LOCALSTATEDIR/run/dhcrelay6.pid)
   --with-randomdev=PATH   Path for random device (default is /dev/random)
-  --with-libbind=PATH     bind includes and libraries are in PATH (default is
-                          ./bind)
+  --with-bind-extra-config
+                          configure bind librairies with some extra options
+                          (default is none)
+  --with-libbind=PATH     bind includes and libraries are in PATH
   --with-ldap             enable OpenLDAP support in dhcpd (default is no)
   --with-ldapcrypto       enable OpenLDAP crypto support in dhcpd (default is
                           no)
@@ -4475,6 +4487,19 @@ BINDCONFIG=
 if test "$cross_compiling" = "yes"; then
 	BINDCONFIG="--host=$host"
 fi
+# Pass CFLAGS and co. $ac_configure_args looks like "'arg1' 'arg2' ..."
+# and as there can be a space inside an argument some magic is required.
+# This sets $1 ... $N to my_configure_args, arg1 ... argN
+eval "set my_configure_args $ac_configure_args"
+# remove my_configure_args, i.e., the guard against empty $ac_configure_args
+shift
+# iterate on arguments and copying 'arg' when it begins by an upper case
+for a
+do
+	case $a in
+		[A-Z]*) BINDCONFIG="$BINDCONFIG '$a'" ;;
+	esac
+done
 
  if test "$cross_compiling" = "yes"; then
   CROSS_COMPILING_TRUE=
@@ -5657,8 +5682,8 @@ fi
         fi
 
         if test ! -x $ATF_BIN/atf-run  -o  ! -x $ATF_BIN/atf-report ; then
-            { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: atf-run,atf-report not found, assuming they are in your path" >&5
-$as_echo "$as_me: WARNING: atf-run,atf-report not found, assuming they are in your path" >&2;}
+            { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: atf-run/atf-report not found, assuming they are in your path" >&5
+$as_echo "$as_me: WARNING: atf-run/atf-report not found, assuming they are in your path" >&2;}
         fi
 
 
@@ -6722,6 +6747,65 @@ fi
 	BINDCONFIG="$BINDCONFIG --with-randomdev=$use_randomdev"
 fi
 
+BINDIOMUX="--disable-kqueue --disable-epoll --disable-devpoll"
+# check kqueue/epoll/devpoll alternative to select
+# Check whether --enable-kqueue was given.
+if test "${enable_kqueue+set}" = set; then :
+  enableval=$enable_kqueue; want_kqueue="$enableval"
+else
+  want_kqueue="no"
+fi
+
+if test "$want_kqueue" = "yes"; then
+	BINDIOMUX="--enable-kqueue"
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: --enable-kqueue is not supported: it may lead to issues such as server looping" >&5
+$as_echo "$as_me: WARNING: --enable-kqueue is not supported: it may lead to issues such as server looping" >&2;}
+fi
+# Check whether --enable-epoll was given.
+if test "${enable_epoll+set}" = set; then :
+  enableval=$enable_epoll; want_epoll="$enableval"
+else
+  want_epoll="no"
+fi
+
+if test "$want_epoll" = "yes"; then
+	BINDIOMUX="--enable-epoll"
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: --enable-epoll is not supported: it may lead to issues such as server looping" >&5
+$as_echo "$as_me: WARNING: --enable-epoll is not supported: it may lead to issues such as server looping" >&2;}
+fi
+# Check whether --enable-devpoll was given.
+if test "${enable_devpoll+set}" = set; then :
+  enableval=$enable_devpoll; want_devpoll="$enableval"
+else
+  want_devpoll="no"
+fi
+
+if test "$want_devpoll" = "yes"; then
+	BINDIOMUX="--enable-devpoll"
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: --enable-devpoll is not supported: it may lead to issues such as server looping" >&5
+$as_echo "$as_me: WARNING: --enable-devpoll is not supported: it may lead to issues such as server looping" >&2;}
+fi
+
+
+# general extra bind configure arguments
+
+# Check whether --with-bind-extra-config was given.
+if test "${with_bind_extra_config+set}" = set; then :
+  withval=$with_bind_extra_config; use_xbindconfig="$withval"
+else
+  use_xbindconfig=""
+fi
+
+case "$use_xbindconfig" in
+yes|no|'')
+	;;
+*)
+	BINDCONFIG="$BINDCONFIG $use_xbindconfig"
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Most options to bind configure are not supported when used by ISC DHCP" >&5
+$as_echo "$as_me: WARNING: Most options to bind configure are not supported when used by ISC DHCP" >&2;}
+	;;
+esac
+
 # see if there is a "sa_len" field in our interface information structure
 ac_fn_c_check_member "$LINENO" "struct sockaddr" "sa_len" "ac_cv_member_struct_sockaddr_sa_len" "#include <sys/socket.h>
 "
@@ -6822,8 +6906,11 @@ $as_echo "#define VLAN_TCI_PRESENT 1" >>confdefs.h
 fi
 
 
+# bind/Makefile.in is not from automake so we need 2 sets of variables
 BINDDIR=
 BINDSRCDIR=
+BINDBIND=
+BINDBUILD=
 
 # Check whether --with-libbind was given.
 if test "${with_libbind+set}" = set; then :
@@ -6834,28 +6921,44 @@ fi
 
 case "$use_libbind" in
 yes)
-	BINDDIR="\${top_srcdir}/bind"
-	BINDSRCDIR="\${top_srcdir}/bind"
+	as_fn_error $? "PATH is required in --with-libbind=PATH" "$LINENO" 5
 	;;
 no)
 	BINDDIR="\${top_srcdir}/bind"
 	BINDSRCDIR="\${top_srcdir}/bind"
+	my_abs_srcdir=`cd $srcdir && pwd`
+	BINDBIND="${my_abs_srcdir}/bind"
+	if test ! -d "$srcdir/bind"; then
+		as_fn_error $? "Where to find or build bind includes and libraries must be specified" "$LINENO" 5
+	fi
+	if test -d "$srcdir/bind/bind9"; then
+		BINDBUILD="${my_abs_srcdir}/bind/bind9"
+	else
+		if test ! -f "$srcdir/bind/version.tmp"; then
+			as_fn_error $? "Cannot find $srcdir/bind/version.tmp" "$LINENO" 5
+		fi
+		. "$srcdir/bind/version.tmp"
+		bindversion=${MAJORVER}.${MINORVER}.${PATCHVER}${RELEASETYPE}${RELEASEVER}
+		BINDBUILD="${my_abs_srcdir}/bind/bind-$bindversion"
+	fi
+	ac_config_files="$ac_config_files $srcdir/bind/Makefile"
+
 	;;
 *)
-	BINDDIR="$use_libbind"
-	if test ! -d "$srcdir/bind"; then
-		# no bind directory, create it with a fake Makefile.in
-		# (AC_CONFIG_FILES and top Makefile refer to it so
-		# it must exits)
-		mkdir $srcdir/bind
-		cat > $srcdir/bind/Makefile.in << EOF
-# placeholder
-all check clean distclean distdir install uninstall:
-
-EOF
+	if test ! -d "$use_libbind"; then
+		as_fn_error $? "Cannot find bind directory at $use_libbind" "$LINENO" 5
 	fi
+	if test ! -d "$use_libbind/include"; then
+		as_fn_error $? "Cannot find bind includes at $use_libbind/include" "$LINENO" 5
+	fi
+	if test	! -d "$use_libbind/lib"; then
+		as_fn_error $? "Cannot find bind libraries at $use_libbind/lib" "$LINENO" 5
+	fi
+	BINDDIR="$use_libbind"
 	;;
 esac
+
+
 
 
 
@@ -7240,7 +7343,7 @@ $as_echo "#define FLEXIBLE_ARRAY_MEMBER /**/" >>confdefs.h
   fi
 
 
-ac_config_files="$ac_config_files Makefile $srcdir/bind/Makefile client/Makefile client/tests/Makefile common/Makefile common/tests/Makefile dhcpctl/Makefile includes/Makefile omapip/Makefile relay/Makefile server/Makefile tests/Makefile tests/unittest.sh server/tests/Makefile doc/devel/doxyfile"
+ac_config_files="$ac_config_files Makefile client/Makefile client/tests/Makefile common/Makefile common/tests/Makefile dhcpctl/Makefile includes/Makefile omapip/Makefile relay/Makefile server/Makefile tests/Makefile tests/unittest.sh server/tests/Makefile doc/devel/doxyfile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -7986,8 +8089,8 @@ do
   case $ac_config_target in
     "depfiles") CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
     "includes/config.h") CONFIG_HEADERS="$CONFIG_HEADERS includes/config.h" ;;
-    "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "$srcdir/bind/Makefile") CONFIG_FILES="$CONFIG_FILES $srcdir/bind/Makefile" ;;
+    "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "client/Makefile") CONFIG_FILES="$CONFIG_FILES client/Makefile" ;;
     "client/tests/Makefile") CONFIG_FILES="$CONFIG_FILES client/tests/Makefile" ;;
     "common/Makefile") CONFIG_FILES="$CONFIG_FILES common/Makefile" ;;
@@ -8695,16 +8798,6 @@ elif test "$enable_dhcpv6" != "no"; then
 	DHCP_VERSIONS="DHCPv4 and DHCPv6"
 else
 	DHCP_VERSIONS="DHCPv4"
-fi
-
-(cd $srcdir
-    sh util/bindvar.sh
-    if test $? -ne 0; then
-        as_fn_error $? "*** util/bindvar.sh failed" "$LINENO" 5
-    fi
-)
-if test $? -ne 0; then
-    exit $?
 fi
 
 cat > config.report << END

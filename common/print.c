@@ -383,15 +383,27 @@ void print_hex_only (len, data, limit, buf)
 	unsigned limit;
 	char *buf;
 {
-	unsigned i;
+	char *bufptr = buf;
+	int byte = 0;
 
-	if ((buf == NULL) || (limit < 3))
+	if (data == NULL || bufptr == NULL || limit == 0) {
 		return;
-
-	for (i = 0; (i < limit / 3) && (i < len); i++) {
-		sprintf(&buf[i*3], "%02x:", data[i]);
 	}
-	buf[(i * 3) - 1] = 0;
+
+	if (((len == 0) || ((len * 3) > limit))) {
+		*bufptr = 0x0;
+		return;
+	}
+
+	for ( ; byte < len; ++byte) {
+		if (byte > 0) {
+			*bufptr++ = ':';
+		}
+
+		sprintf(bufptr, "%02x", data[byte]);
+		bufptr += 2;
+	}
+
 	return;
 }
 
