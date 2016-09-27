@@ -670,8 +670,11 @@ lc_delete_all(struct leasechain *lc) {
 	}
 
 	/* and then get rid of the list itself */
-	dfree(lc->list, MDL);
-	lc->list = NULL;
+	if (lc->list != NULL) {
+		dfree(lc->list, MDL);
+		lc->list = NULL;
+	}
+
 	lc->total = 0;
 	lc->nelem = 0;
 }

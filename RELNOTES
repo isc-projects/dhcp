@@ -88,6 +88,12 @@ by Eric Young (eay@cryptsoft.com).
   either "no" or an (absolute) path, i.e. "yes" is no longer valid.
   [ISC-Bugs #43227]
 
+- Eliminated a noisy, but otherwise harmless debug log statment that may
+  appear during server startup when building with --enable-binary-leases
+  and configuring multiple pools in a shared network.  Thanks to Fernando
+  Soto from BlueCat Networks for reporting the issue and supplying a patch.
+  [ISC-Bugs #43262]
+
 			Changes since 4.3.0 (bug fixes)
 
 - Tidy up several small tickets.
