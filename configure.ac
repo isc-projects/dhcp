@@ -1,4 +1,4 @@
-AC_INIT([DHCP],[4.3.5b1],[dhcp-users@isc.org])
+AC_INIT([DHCP],[4.3.5],[dhcp-users@isc.org])
 
 # we specify "foreign" to avoid having to have the GNU mandated files,
 # like AUTHORS, COPYING, and such
