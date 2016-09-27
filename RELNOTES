@@ -59,6 +59,12 @@ by Eric Young (eay@cryptsoft.com).
   to Jay Ford, University of Iowa for reporting the issue.
   [ISC-Bugs #43185]
 
+- Eliminated a noisy, but otherwise harmless debug log statment that may
+  appear during server startup when building with --enable-binary-leases
+  and configuring multiple pools in a shared network.  Thanks to Fernando
+  Soto from BlueCat Networks for reporting the issue and supplying a patch.
+  [ISC-Bugs #43262]
+
 			Changes since 4.3.4
 
 - Fixed util/bindvar.sh error handling.
