@@ -104,7 +104,8 @@ then
 	cd bind/bind9
 	test -f Makefile && make distclean
 	git fetch
-	git checkout $BINDTAG && test -n "${noSNAP}" && git merge --ff-only
+	git checkout $BINDTAG && test -n "${noSNAP}" && \
+	    git merge --ff-only HEAD
 else
 	# Delete all previous bind stuff
 	rm -rf bind
