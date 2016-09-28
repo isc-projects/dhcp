@@ -103,6 +103,10 @@ by Eric Young (eay@cryptsoft.com).
   bind/bind9 and then invoke the util/bind.sh script as usual.
   [ISC-Bugs #43236]
 
+- Use the embedded bind libraries where they are built (vs where they
+  are installed).
+  [ISC-Bugs #39319]
+
 			Changes since 4.3.0 (bug fixes)
 
 - Tidy up several small tickets.

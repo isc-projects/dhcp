@@ -731,11 +731,14 @@ AC_CHECK_MEMBER(struct tpacket_auxdata.tp_vlan_tci,
     [AC_DEFINE([VLAN_TCI_PRESENT], [1], [tpacket_auxdata.tp_vlan_tci present])]
     ,, [#include <linux/if_packet.h>])
 
-# bind/Makefile.in is not from automake so we need 2 sets of variables
+# bind/Makefile.in is not from automake so we need 2 variables for bind dir
+BINDSUBDIR=
 BINDDIR=
 BINDSRCDIR=
-BINDBIND=
-BINDBUILD=
+BINDLIBIRSDIR=
+BINDLIBDNSDIR=
+BINDLIBISCCFGDIR=
+BINDLIBISCDIR=
 AC_ARG_WITH(libbind,
 	AS_HELP_STRING([--with-libbind=PATH],[bind includes and libraries are in PATH]),
 	use_libbind="$withval", use_libbind="no")
@@ -744,24 +747,28 @@ yes)
 	AC_MSG_ERROR([PATH is required in --with-libbind=PATH])
 	;;
 no)
-	BINDDIR="\${top_srcdir}/bind"
-	BINDSRCDIR="\${top_srcdir}/bind"
+	BINDSUBDIR="\${top_srcdir}/bind"
 	my_abs_srcdir=`cd $srcdir && pwd`
-	BINDBIND="${my_abs_srcdir}/bind"
+	BINDDIR="${my_abs_srcdir}/bind"
 	if test ! -d "$srcdir/bind"; then
 		AC_MSG_ERROR([Where to find or build bind includes and libraries must be specified])
 	fi
 	if test -d "$srcdir/bind/bind9"; then
-		BINDBUILD="${my_abs_srcdir}/bind/bind9"
+		BINDSRCDIR="${my_abs_srcdir}/bind/bind9"
 	else
 		if test ! -f "$srcdir/bind/version.tmp"; then
 			AC_MSG_ERROR([Cannot find $srcdir/bind/version.tmp])
 		fi
 		. "$srcdir/bind/version.tmp"
 		bindversion=${MAJORVER}.${MINORVER}.${PATCHVER}${RELEASETYPE}${RELEASEVER}
-		BINDBUILD="${my_abs_srcdir}/bind/bind-$bindversion"
+		BINDSRCDIR="${my_abs_srcdir}/bind/bind-$bindversion"
 	fi
 	AC_CONFIG_FILES([$srcdir/bind/Makefile])
+
+	BINDLIBIRSDIR="$BINDSRCDIR/lib/export/irs"
+	BINDLIBDNSDIR="$BINDSRCDIR/lib/export/dns"
+	BINDLIBISCCFGDIR="$BINDSRCDIR/lib/export/isccfg"
+	BINDLIBISCDIR="$BINDSRCDIR/lib/export/isc"
 	;;
 *)
 	if test ! -d "$use_libbind"; then
@@ -774,12 +781,19 @@ no)
 		AC_MSG_ERROR([Cannot find bind libraries at $use_libbind/lib])
 	fi
 	BINDDIR="$use_libbind"
+	BINDLIBIRSDIR="$BINDDIR/lib"
+	BINDLIBDNSDIR="$BINDDIR/lib"
+	BINDLIBISCCFGDIR="$BINDDIR/lib"
+	BINDLIBISCDIR="$BINDDIR/lib"	
 	;;
 esac
+AC_SUBST(BINDSUBDIR)
 AC_SUBST(BINDDIR)
 AC_SUBST(BINDSRCDIR)
-AC_SUBST(BINDBIND)
-AC_SUBST(BINDBUILD)
+AC_SUBST(BINDLIBIRSDIR)
+AC_SUBST(BINDLIBDNSDIR)
+AC_SUBST(BINDLIBISCCFGDIR)
+AC_SUBST(BINDLIBISCDIR)
 
 # OpenLDAP support.
 AC_ARG_WITH(ldap,

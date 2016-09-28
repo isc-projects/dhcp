@@ -1,7 +1,5 @@
 SUBDIRS = .
 
-BINDLIBDIR = @BINDDIR@/lib
-
 AM_CPPFLAGS = $(ATF_CFLAGS) -DUNIT_TEST -I$(top_srcdir)/includes
 AM_CPPFLAGS += -I@BINDDIR@/include -I$(top_srcdir)
 AM_CPPFLAGS += -DLOCALSTATEDIR='"."'
@@ -17,10 +15,13 @@ info:
 
 DHCPSRC = ../clparse.c ../dhc6.c ../dhclient.c
 
-DHCPLIBS = $(top_builddir)/common/libdhcp.a $(top_builddir)/omapip/libomapi.a    \
-          $(top_builddir)/dhcpctl/libdhcpctl.a $(BINDLIBDIR)/libirs.a \
-	  $(BINDLIBDIR)/libdns.a $(BINDLIBDIR)/libisccfg.a \
-	  $(BINDLIBDIR)/libisc.a
+DHCPLIBS = $(top_builddir)/common/libdhcp.a \
+	  $(top_builddir)/omapip/libomapi.a    \
+          $(top_builddir)/dhcpctl/libdhcpctl.a \
+	  @BINDLIBIRSDIR@/libirs.a \
+	  @BINDLIBDNSDIR@/libdns.a \
+	  @BINDLIBISCCFGDIR@/libisccfg.a \
+	  @BINDLIBISCDIR@/libisc.a
 
 ATF_TESTS =
 if HAVE_ATF

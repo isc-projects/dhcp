@@ -15,8 +15,8 @@
 
 # Configure and build the bind libraries for use by DHCP
 
-binddir=@BINDBIND@
-bindsrcdir=@BINDBUILD@
+binddir=@BINDDIR@
+bindsrcdir=@BINDSRCDIR@
 
 bindconfig = --without-openssl --without-libxml2 \
 	--without-gssapi --disable-threads \

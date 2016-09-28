@@ -245,7 +245,13 @@ AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
 BINDCONFIG = @BINDCONFIG@
 BINDDIR = @BINDDIR@
+BINDIOMUX = @BINDIOMUX@
+BINDLIBDNSDIR = @BINDLIBDNSDIR@
+BINDLIBIRSDIR = @BINDLIBIRSDIR@
+BINDLIBISCCFGDIR = @BINDLIBISCCFGDIR@
+BINDLIBISCDIR = @BINDLIBISCDIR@
 BINDSRCDIR = @BINDSRCDIR@
+BINDSUBDIR = @BINDSUBDIR@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
@@ -366,7 +372,7 @@ EXTRA_DIST = RELNOTES LICENSE \
 	     bind/Makefile.in bind/bind.tar.gz bind/version.tmp \
 	     common/tests/Atffile server/tests/Atffile
 
-SUBDIRS = @BINDSRCDIR@ includes tests common omapip client dhcpctl relay server
+SUBDIRS = @BINDSUBDIR@ includes tests common omapip client dhcpctl relay server
 nobase_include_HEADERS = dhcpctl/dhcpctl.h
 
 #

@@ -627,10 +627,13 @@ LTLIBOBJS
 LIBOBJS
 LDAP_CFLAGS
 LDAP_LIBS
-BINDBUILD
-BINDBIND
+BINDLIBISCDIR
+BINDLIBISCCFGDIR
+BINDLIBDNSDIR
+BINDLIBIRSDIR
 BINDSRCDIR
 BINDDIR
+BINDSUBDIR
 BINDIOMUX
 ac_prefix_program
 DISTCHECK_ATF_CONFIGURE_FLAG
@@ -6906,11 +6909,14 @@ $as_echo "#define VLAN_TCI_PRESENT 1" >>confdefs.h
 fi
 
 
-# bind/Makefile.in is not from automake so we need 2 sets of variables
+# bind/Makefile.in is not from automake so we need 2 variables for bind dir
+BINDSUBDIR=
 BINDDIR=
 BINDSRCDIR=
-BINDBIND=
-BINDBUILD=
+BINDLIBIRSDIR=
+BINDLIBDNSDIR=
+BINDLIBISCCFGDIR=
+BINDLIBISCDIR=
 
 # Check whether --with-libbind was given.
 if test "${with_libbind+set}" = set; then :
@@ -6924,25 +6930,29 @@ yes)
 	as_fn_error $? "PATH is required in --with-libbind=PATH" "$LINENO" 5
 	;;
 no)
-	BINDDIR="\${top_srcdir}/bind"
-	BINDSRCDIR="\${top_srcdir}/bind"
+	BINDSUBDIR="\${top_srcdir}/bind"
 	my_abs_srcdir=`cd $srcdir && pwd`
-	BINDBIND="${my_abs_srcdir}/bind"
+	BINDDIR="${my_abs_srcdir}/bind"
 	if test ! -d "$srcdir/bind"; then
 		as_fn_error $? "Where to find or build bind includes and libraries must be specified" "$LINENO" 5
 	fi
 	if test -d "$srcdir/bind/bind9"; then
-		BINDBUILD="${my_abs_srcdir}/bind/bind9"
+		BINDSRCDIR="${my_abs_srcdir}/bind/bind9"
 	else
 		if test ! -f "$srcdir/bind/version.tmp"; then
 			as_fn_error $? "Cannot find $srcdir/bind/version.tmp" "$LINENO" 5
 		fi
 		. "$srcdir/bind/version.tmp"
 		bindversion=${MAJORVER}.${MINORVER}.${PATCHVER}${RELEASETYPE}${RELEASEVER}
-		BINDBUILD="${my_abs_srcdir}/bind/bind-$bindversion"
+		BINDSRCDIR="${my_abs_srcdir}/bind/bind-$bindversion"
 	fi
 	ac_config_files="$ac_config_files $srcdir/bind/Makefile"
 
+
+	BINDLIBIRSDIR="$BINDSRCDIR/lib/export/irs"
+	BINDLIBDNSDIR="$BINDSRCDIR/lib/export/dns"
+	BINDLIBISCCFGDIR="$BINDSRCDIR/lib/export/isccfg"
+	BINDLIBISCDIR="$BINDSRCDIR/lib/export/isc"
 	;;
 *)
 	if test ! -d "$use_libbind"; then
@@ -6955,8 +6965,15 @@ no)
 		as_fn_error $? "Cannot find bind libraries at $use_libbind/lib" "$LINENO" 5
 	fi
 	BINDDIR="$use_libbind"
+	BINDLIBIRSDIR="$BINDDIR/lib"
+	BINDLIBDNSDIR="$BINDDIR/lib"
+	BINDLIBISCCFGDIR="$BINDDIR/lib"
+	BINDLIBISCDIR="$BINDDIR/lib"
 	;;
 esac
+
+
+
 
 
 
