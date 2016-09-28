@@ -735,7 +735,7 @@ AC_CHECK_MEMBER(struct tpacket_auxdata.tp_vlan_tci,
 BINDDIR=
 BINDSRCDIR=
 BINDBIND=
-BINDVERSION=
+BINDBUILD=
 AC_ARG_WITH(libbind,
 	AS_HELP_STRING([--with-libbind=PATH],[bind includes and libraries are in PATH]),
 	use_libbind="$withval", use_libbind="no")
@@ -746,16 +746,21 @@ yes)
 no)
 	BINDDIR="\${top_srcdir}/bind"
 	BINDSRCDIR="\${top_srcdir}/bind"
+	my_abs_srcdir=`cd $srcdir && pwd`
+	BINDBIND="${my_abs_srcdir}/bind"
 	if test ! -d "$srcdir/bind"; then
 		AC_MSG_ERROR([Where to find or build bind includes and libraries must be specified])
 	fi
-	if test ! -f "$srcdir/bind/version.tmp"; then
-		AC_MSG_ERROR([Cannot find $srcdir/bind/version.tmp])
+	if test -d "$srcdir/bind/bind9"; then
+		BINDBUILD="${my_abs_srcdir}/bind/bind9"
+	else
+		if test ! -f "$srcdir/bind/version.tmp"; then
+			AC_MSG_ERROR([Cannot find $srcdir/bind/version.tmp])
+		fi
+		. "$srcdir/bind/version.tmp"
+		bindversion=${MAJORVER}.${MINORVER}.${PATCHVER}${RELEASETYPE}${RELEASEVER}
+		BINDBUILD="${my_abs_srcdir}/bind/bind-$bindversion"
 	fi
-	my_abs_srcdir=`cd $srcdir && pwd`
-	BINDBIND="${my_abs_srcdir}/bind"
-	. "$srcdir/bind/version.tmp"
-	BINDVERSION=${MAJORVER}.${MINORVER}.${PATCHVER}${RELEASETYPE}${RELEASEVER}
 	AC_CONFIG_FILES([$srcdir/bind/Makefile])
 	;;
 *)
@@ -774,7 +779,7 @@ esac
 AC_SUBST(BINDDIR)
 AC_SUBST(BINDSRCDIR)
 AC_SUBST(BINDBIND)
-AC_SUBST(BINDVERSION)
+AC_SUBST(BINDBUILD)
 
 # OpenLDAP support.
 AC_ARG_WITH(ldap,

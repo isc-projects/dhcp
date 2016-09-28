@@ -94,6 +94,15 @@ by Eric Young (eay@cryptsoft.com).
   Soto from BlueCat Networks for reporting the issue and supplying a patch.
   [ISC-Bugs #43262]
 
+- Added the support for git repositories in the util/bind.sh script.
+  When you build ISC DHCP from a git repo, i.e., without a "bind"
+  directory populated as in the release distribution file, you may now
+  create the bind directory, change to it and clone the private
+  (repo.isc.org/proj/git/prod/bind9.git) or the public
+  (https://source.isc.org/git/bind9.git) git repository into
+  bind/bind9 and then invoke the util/bind.sh script as usual.
+  [ISC-Bugs #43236]
+
 			Changes since 4.3.0 (bug fixes)
 
 - Tidy up several small tickets.

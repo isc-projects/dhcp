@@ -627,7 +627,7 @@ LTLIBOBJS
 LIBOBJS
 LDAP_CFLAGS
 LDAP_LIBS
-BINDVERSION
+BINDBUILD
 BINDBIND
 BINDSRCDIR
 BINDDIR
@@ -6910,7 +6910,7 @@ fi
 BINDDIR=
 BINDSRCDIR=
 BINDBIND=
-BINDVERSION=
+BINDBUILD=
 
 # Check whether --with-libbind was given.
 if test "${with_libbind+set}" = set; then :
@@ -6926,16 +6926,21 @@ yes)
 no)
 	BINDDIR="\${top_srcdir}/bind"
 	BINDSRCDIR="\${top_srcdir}/bind"
+	my_abs_srcdir=`cd $srcdir && pwd`
+	BINDBIND="${my_abs_srcdir}/bind"
 	if test ! -d "$srcdir/bind"; then
 		as_fn_error $? "Where to find or build bind includes and libraries must be specified" "$LINENO" 5
 	fi
-	if test ! -f "$srcdir/bind/version.tmp"; then
-		as_fn_error $? "Cannot find $srcdir/bind/version.tmp" "$LINENO" 5
+	if test -d "$srcdir/bind/bind9"; then
+		BINDBUILD="${my_abs_srcdir}/bind/bind9"
+	else
+		if test ! -f "$srcdir/bind/version.tmp"; then
+			as_fn_error $? "Cannot find $srcdir/bind/version.tmp" "$LINENO" 5
+		fi
+		. "$srcdir/bind/version.tmp"
+		bindversion=${MAJORVER}.${MINORVER}.${PATCHVER}${RELEASETYPE}${RELEASEVER}
+		BINDBUILD="${my_abs_srcdir}/bind/bind-$bindversion"
 	fi
-	my_abs_srcdir=`cd $srcdir && pwd`
-	BINDBIND="${my_abs_srcdir}/bind"
-	. "$srcdir/bind/version.tmp"
-	BINDVERSION=${MAJORVER}.${MINORVER}.${PATCHVER}${RELEASETYPE}${RELEASEVER}
 	ac_config_files="$ac_config_files $srcdir/bind/Makefile"
 
 	;;

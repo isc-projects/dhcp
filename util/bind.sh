@@ -27,7 +27,7 @@
 
 topdir=`pwd`
 binddir=$topdir/bind
-remote=--remote=cvs.isc.org:/proj/git/prod/bind9.git
+remote=--remote=repo.isc.org:/proj/git/prod/bind9.git
 
 case "${1:-}" in
 --remote=*)
@@ -97,34 +97,44 @@ case $# in
        ;;
 esac
 
-# Delete all previous bind stuff
-rm -rf bind
+if test -d bind/bind9/.git
+then
+	cp util/Makefile.bind.in bind/Makefile.in
+	rm -rf bind/include bind/lib
+	cd bind/bind9
+	test -f Makefile && make distclean
+	git fetch
+	git checkout $BINDTAG && test -n "${noSNAP}" && \
+	    git merge --ff-only HEAD
+else
+	# Delete all previous bind stuff
+	rm -rf bind
 
-# Make and move to our directory for all things bind
-mkdir $binddir
-cp util/Makefile.bind.in bind/Makefile.in
-cd $binddir
+	# Make and move to our directory for all things bind
+	mkdir $binddir
+	cp util/Makefile.bind.in bind/Makefile.in
+	cd $binddir
 
-# Get the bind version file and move it to version.tmp
-git archive --format tar $remote $BINDTAG version | tar xf -
-mv version version.tmp
+	# Get the bind version file and move it to version.tmp
+	git archive --format tar $remote $BINDTAG version | tar xf -
+	mv version version.tmp
 
-# Get the bind release kit shell script
-git archive --format tar $remote master:util/ | tar xf - kit.sh
+	# Get the bind release kit shell script
+	git archive --format tar $remote master:util/ | tar xf - kit.sh
 
-# Create the bind tarball, which has the side effect of
-# setting up the bind directory we will use for building
-# the export libraries
-echo Creating tarball for $BINDTAG
-sh kit.sh $remote $SNAP $BINDTAG $binddir
+	# Create the bind tarball, which has the side effect of
+	# setting up the bind directory we will use for building
+	# the export libraries
+	echo Creating tarball for $BINDTAG
+	sh kit.sh $remote $SNAP $BINDTAG $binddir
 
-. ./version.tmp
+	. ./version.tmp
 
-version=${MAJORVER}.${MINORVER}.${PATCHVER}${RELEASETYPE}${RELEASEVER}
-bindsrcdir=bind-$version
-mm=${MAJORVER}.${MINORVER}
+	version=${MAJORVER}.${MINORVER}.${PATCHVER}${RELEASETYPE}${RELEASEVER}
+	bindsrcdir=bind-$version
+	mm=${MAJORVER}.${MINORVER}
 
-# move the tar file to a known place for use by the make dist command
-echo Moving tar file to bind.tar.gz for distribution
-mv bind-${mm}*.tar.gz bind.tar.gz
-
+	# move the tar file to a known place for use by the make dist command
+	echo Moving tar file to bind.tar.gz for distribution
+	mv bind-${mm}*.tar.gz bind.tar.gz
+fi
