@@ -23,9 +23,14 @@ EXTRA_DIST = RELNOTES LICENSE \
 	     doc/devel/arch.dox doc/devel/atf.dox doc/devel/contrib.dox \
 	     doc/devel/debug.dox doc/devel/isc-logo.jpg doc/devel/mainpage.dox \
 	     doc/devel/omapi.dox doc/devel/qa.dox \
-	     bind/Makefile.in bind/bind.tar.gz bind/version.tmp \
 	     common/tests/Atffile server/tests/Atffile
 
+if HAVE_BINDDIR
+EXTRA_DIST += bind/Makefile.in bind/bind.tar.gz bind/version.tmp
+endif
+
+# Use an autoconf substitution vs an automake conditional here
+# to fool automake when the bind directory does not exist.
 SUBDIRS = @BINDSUBDIR@ includes tests common omapip client dhcpctl relay server
 
 nobase_include_HEADERS = dhcpctl/dhcpctl.h
@@ -34,10 +39,13 @@ nobase_include_HEADERS = dhcpctl/dhcpctl.h
 # distcheck tuning
 #
 
-DISTCHECK_CONFIGURE_FLAGS = @DISTCHECK_ATF_CONFIGURE_FLAG@
+DISTCHECK_CONFIGURE_FLAGS =  @DISTCHECK_ATF_CONFIGURE_FLAG@
+DISTCHECK_CONFIGURE_FLAGS += @DISTCHECK_LIBBIND_CONFIGURE_FLAG@
 
 distcheck-hook:
+if HAVE_BINDDIR
 	chmod u+w $(distdir)/bind
+endif
 
 distclean-local:
 	rm -f config.report
