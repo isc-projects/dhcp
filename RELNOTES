@@ -101,6 +101,8 @@ by Eric Young (eay@cryptsoft.com).
   (repo.isc.org/proj/git/prod/bind9.git) or the public
   (https://source.isc.org/git/bind9.git) git repository into
   bind/bind9 and then invoke the util/bind.sh script as usual.
+  Note this option is incompatible with "make dist" (and make "distcheck")
+  because no bind/bind.tar.gz nor bind/version.tmp files are available.
   [ISC-Bugs #43236]
 
 - Use the embedded bind libraries where they are built (vs where they
@@ -110,6 +112,10 @@ by Eric Young (eay@cryptsoft.com).
 - Use last version (9.11) of plain embedded bind libraries in place of
   older (9.9) version of export bind libraries.
   [ISC-Bugs #43215]
+
+- Made "make distcheck" to work with external bind libraries (aka
+  configure --with-libbind).
+  [ISC-Bugs #43285]
 
 			Changes since 4.3.0 (bug fixes)
 
