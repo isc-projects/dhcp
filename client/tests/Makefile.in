@@ -225,7 +225,13 @@ AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
 BINDCONFIG = @BINDCONFIG@
 BINDDIR = @BINDDIR@
+BINDIOMUX = @BINDIOMUX@
+BINDLIBDNSDIR = @BINDLIBDNSDIR@
+BINDLIBIRSDIR = @BINDLIBIRSDIR@
+BINDLIBISCCFGDIR = @BINDLIBISCCFGDIR@
+BINDLIBISCDIR = @BINDLIBISCDIR@
 BINDSRCDIR = @BINDSRCDIR@
+BINDSUBDIR = @BINDSUBDIR@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
@@ -323,16 +329,18 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 SUBDIRS = .
-BINDLIBDIR = @BINDDIR@/lib
 AM_CPPFLAGS = $(ATF_CFLAGS) -DUNIT_TEST -I$(top_srcdir)/includes \
 	-I@BINDDIR@/include -I$(top_srcdir) -DLOCALSTATEDIR='"."' \
 	-DCLIENT_PATH='"."'
 EXTRA_DIST = Atffile duid0_test.txt duid1_test.txt duid2_test.txt duid3_test.txt
 DHCPSRC = ../clparse.c ../dhc6.c ../dhclient.c
-DHCPLIBS = $(top_builddir)/common/libdhcp.a $(top_builddir)/omapip/libomapi.a    \
-          $(top_builddir)/dhcpctl/libdhcpctl.a $(BINDLIBDIR)/libirs.a \
-	  $(BINDLIBDIR)/libdns.a $(BINDLIBDIR)/libisccfg.a \
-	  $(BINDLIBDIR)/libisc.a
+DHCPLIBS = $(top_builddir)/common/libdhcp.a \
+	  $(top_builddir)/omapip/libomapi.a    \
+          $(top_builddir)/dhcpctl/libdhcpctl.a \
+	  @BINDLIBIRSDIR@/libirs.a \
+	  @BINDLIBDNSDIR@/libdns.a \
+	  @BINDLIBISCCFGDIR@/libisccfg.a \
+	  @BINDLIBISCDIR@/libisc.a
 
 ATF_TESTS = $(am__append_1)
 @HAVE_ATF_TRUE@duid_unittests_SOURCES = $(DHCPSRC) duid_unittest.c

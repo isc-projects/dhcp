@@ -26,7 +26,7 @@ EXTRA_DIST = RELNOTES LICENSE \
 	     bind/Makefile.in bind/bind.tar.gz bind/version.tmp \
 	     common/tests/Atffile server/tests/Atffile
 
-SUBDIRS = @BINDSRCDIR@ includes tests common omapip client dhcpctl relay server
+SUBDIRS = @BINDSUBDIR@ includes tests common omapip client dhcpctl relay server
 
 nobase_include_HEADERS = dhcpctl/dhcpctl.h
 

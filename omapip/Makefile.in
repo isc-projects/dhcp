@@ -148,9 +148,9 @@ libomapi_a_OBJECTS = $(am_libomapi_a_OBJECTS)
 PROGRAMS = $(noinst_PROGRAMS)
 am_svtest_OBJECTS = test.$(OBJEXT)
 svtest_OBJECTS = $(am_svtest_OBJECTS)
-svtest_DEPENDENCIES = libomapi.a $(BINDLIBDIR)/libirs.a \
-	$(BINDLIBDIR)/libdns.a $(BINDLIBDIR)/libisccfg.a \
-	$(BINDLIBDIR)/libisc.a
+svtest_DEPENDENCIES = libomapi.a @BINDLIBIRSDIR@/libirs.a \
+	@BINDLIBDNSDIR@/libdns.a @BINDLIBISCCFGDIR@/libisccfg.a \
+	@BINDLIBISCDIR@/libisc.a
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -223,7 +223,13 @@ AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
 BINDCONFIG = @BINDCONFIG@
 BINDDIR = @BINDDIR@
+BINDIOMUX = @BINDIOMUX@
+BINDLIBDNSDIR = @BINDLIBDNSDIR@
+BINDLIBIRSDIR = @BINDLIBIRSDIR@
+BINDLIBISCCFGDIR = @BINDLIBISCCFGDIR@
+BINDLIBISCDIR = @BINDLIBISCDIR@
 BINDSRCDIR = @BINDSRCDIR@
+BINDSUBDIR = @BINDSUBDIR@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
@@ -320,7 +326,6 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-BINDLIBDIR = @BINDDIR@/lib
 lib_LIBRARIES = libomapi.a
 libomapi_a_SOURCES = protocol.c buffer.c alloc.c result.c connection.c \
 		     errwarn.c listener.c dispatch.c generic.c support.c \
@@ -330,8 +335,11 @@ libomapi_a_SOURCES = protocol.c buffer.c alloc.c result.c connection.c \
 man_MANS = omapi.3
 EXTRA_DIST = $(man_MANS)
 svtest_SOURCES = test.c
-svtest_LDADD = libomapi.a $(BINDLIBDIR)/libirs.a $(BINDLIBDIR)/libdns.a \
-		$(BINDLIBDIR)/libisccfg.a $(BINDLIBDIR)/libisc.a
+svtest_LDADD = libomapi.a \
+	       @BINDLIBIRSDIR@/libirs.a \
+	       @BINDLIBDNSDIR@/libdns.a \
+	       @BINDLIBISCCFGDIR@/libisccfg.a \
+	       @BINDLIBISCDIR@/libisc.a
 
 all: all-am
 
