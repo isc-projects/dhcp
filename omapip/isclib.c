@@ -22,7 +22,7 @@
  */
 
 /*Trying to figure out what we need to define to get things to work.
-  It looks like we want/need the export library but need the fdwatchcommand
+  It looks like we want/need the library but need the fdwatchcommand
   which may be a problem */
 
 #include "dhcpd.h"
@@ -194,6 +194,11 @@ dhcp_context_create(int flags,
 		 * options, so set the sigal action to be ignore.  This allows
 		 * broken connections to fail gracefully with EPIPE on writes */
 		handle_signal(SIGPIPE, SIG_IGN);
+
+		/* Reset handlers installed by isc_app_ctxstart()
+		 * to default for control-c and kill */
+		handle_signal(SIGINT, SIG_DFL);
+		handle_signal(SIGTERM, SIG_DFL);
 
 		result = isc_taskmgr_createinctx(dhcp_gbl_ctx.mctx,
 						 dhcp_gbl_ctx.actx,
