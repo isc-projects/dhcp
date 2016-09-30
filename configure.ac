@@ -51,7 +51,6 @@ do
 	esac
 done
 AC_SUBST(BINDCONFIG)
-AM_CONDITIONAL(CROSS_COMPILING, test "$cross_compiling" = "yes")
 
 # POSIX doesn't include the IPv6 Advanced Socket API and glibc hides
 # parts of the IPv6 Advanced Socket API as a result.  This is stupid
@@ -765,10 +764,10 @@ no)
 	fi
 	AC_CONFIG_FILES([$srcdir/bind/Makefile])
 
-	BINDLIBIRSDIR="$BINDSRCDIR/lib/export/irs"
-	BINDLIBDNSDIR="$BINDSRCDIR/lib/export/dns"
-	BINDLIBISCCFGDIR="$BINDSRCDIR/lib/export/isccfg"
-	BINDLIBISCDIR="$BINDSRCDIR/lib/export/isc"
+	BINDLIBIRSDIR="$BINDSRCDIR/lib/irs"
+	BINDLIBDNSDIR="$BINDSRCDIR/lib/dns"
+	BINDLIBISCCFGDIR="$BINDSRCDIR/lib/isccfg"
+	BINDLIBISCDIR="$BINDSRCDIR/lib/isc"
 	;;
 *)
 	if test ! -d "$use_libbind"; then

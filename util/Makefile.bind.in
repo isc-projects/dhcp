@@ -18,15 +18,13 @@
 binddir=@BINDDIR@
 bindsrcdir=@BINDSRCDIR@
 
-bindconfig = --without-openssl --without-libxml2 \
+bindconfig = --without-openssl --without-libxml2 --without-libjson \
 	--without-gssapi --disable-threads \
-	--enable-exportlib \
-	--with-export-includedir=${binddir}/include \
-	--with-export-libdir=${binddir}/lib \
+	--prefix=${binddir} \
 	@BINDIOMUX@ @BINDCONFIG@ --enable-full-report
 
-@BIND_ATF_FALSE@cleandirs = ./lib ./include
-@BIND_ATF_TRUE@cleandirs = ./lib ./include ./atf
+@BIND_ATF_FALSE@cleandirs = ./lib ./include ./share
+@BIND_ATF_TRUE@cleandirs = ./lib ./include /share ./atf
 cleanfiles = ./configure.log ./build.log ./install.log
 
 @BIND_ATF_FALSE@all: bind1 bind2
@@ -40,16 +38,16 @@ bind1:
 		gunzip -c bind.tar.gz | tar xf - ;          \
 	fi
 
-# Configure the export libraries
+# Configure the libraries
 # Currently disable the epoll, devpoll and kqueue options as they
 # don't interact well with the DHCP code.
 # If the top-level Bind Makefile exists we skip the configuration step
 # as we assume it's done and won't change.  Doing a make clean will
 # reset things if necessary.
 	@if test -f ${bindsrcdir}/Makefile ; then                       \
-		echo Bind export libraries already configured ;         \
+		echo Bind libraries already configured ;                \
 	else                                                            \
-		echo Configuring BIND Export libraries for DHCP. ;      \
+		echo Configuring BIND libraries for DHCP. ;             \
 		rm -rf ${cleandirs} ${cleanfiles} ;                     \
 		(cd ${bindsrcdir} &&                                    \
                  ./configure ${bindconfig} > ${binddir}/configure.log); \
@@ -66,46 +64,24 @@ atf:
 		 cp -rp atf ${binddir}) ;			      \
 	fi
 
-@CROSS_COMPILING_FALSE@bind2: bind2-noguest
-@CROSS_COMPILING_TRUE@bind2: bind2-hostgen
-
-bind2-noguest:
-# Build and install the export libraries
+bind2:
+# Build and install the libraries
 # No need to do anything if we already have something installed.
-	@if test -d ${binddir}/lib ; then                                    \
-		echo Bind export libraries already installed ;               \
-	else                                                                 \
-		echo Building BIND Export libraries - this takes some time. ;\
-		(cd ${bindsrcdir}/lib/export ;                               \
-		  echo building in `pwd` ;                                   \
-		  $(MAKE) >> ${binddir}/build.log) ;			     \
-                                                                             \
-		echo Installing BIND Export libraries to ${binddir}. ;       \
-		(cd ${bindsrcdir}/lib/export ;                               \
-		  $(MAKE) install > ${binddir}/install.log) ;		     \
-	fi
-
-bind2-hostgen:
-# Build and install the export libraries
-# No need to do anything if we already have something installed.
-	@if test -d ${binddir}/lib ; then                                    \
-		echo Bind export libraries already installed ;               \
-	else                                                                 \
-		echo Building BIND Export libraries - this takes some time. ;\
-		(cd ${bindsrcdir}/lib/export/dns ;			     \
-		 echo building gen using ${BUILD_CC} in `pwd` ;		     \
-		 $(MAKE) CC=${BUILD_CC} CFLAGS=${BUILD_CFLAGS} CPPFLAGS=${BUILD_CPPFLAGS} LDFLAGS=${BUILD_LDFLAGS} LIBS=${BUILD_LIBS} gen >> ${binddir}/build.log) ; \
-		(cd ${bindsrcdir}/lib/export ;                               \
-		  echo building in `pwd` ;                                   \
-		  $(MAKE) >> ${binddir}/build.log) ;			     \
-                                                                             \
-		echo Installing BIND Export libraries to ${binddir}. ;       \
-		(cd ${bindsrcdir}/lib/export ;                               \
-		  $(MAKE) install > ${binddir}/install.log) ;		     \
+	@if test -d ${binddir}/lib ; then                              \
+		echo Bind libraries already installed ;                \
+	else                                                           \
+		echo Building BIND libraries - this takes some time. ; \
+		(cd ${bindsrcdir}/lib ;                                \
+		  echo building in `pwd` ;                             \
+		  $(MAKE) >> ${binddir}/build.log) ;		       \
+                                                                       \
+		echo Installing BIND libraries to ${binddir}. ;        \
+		(cd ${bindsrcdir}/lib ;                                \
+		  $(MAKE) install > ${binddir}/install.log) ;	       \
 	fi
 
 clean:
-	@echo Cleaning BIND export library.
+	@echo Cleaning BIND library.
 	rm -rf ${bindsrcdir} ${cleandirs} ${cleanfiles}
 
 # Include the following so that this Makefile is happy when the parent

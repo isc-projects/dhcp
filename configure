@@ -651,8 +651,6 @@ RANLIB
 EGREP
 GREP
 CPP
-CROSS_COMPILING_FALSE
-CROSS_COMPILING_TRUE
 BINDCONFIG
 am__fastdepCC_FALSE
 am__fastdepCC_TRUE
@@ -4504,14 +4502,6 @@ do
 	esac
 done
 
- if test "$cross_compiling" = "yes"; then
-  CROSS_COMPILING_TRUE=
-  CROSS_COMPILING_FALSE='#'
-else
-  CROSS_COMPILING_TRUE='#'
-  CROSS_COMPILING_FALSE=
-fi
-
 
 # POSIX doesn't include the IPv6 Advanced Socket API and glibc hides
 # parts of the IPv6 Advanced Socket API as a result.  This is stupid
@@ -6949,10 +6939,10 @@ no)
 	ac_config_files="$ac_config_files $srcdir/bind/Makefile"
 
 
-	BINDLIBIRSDIR="$BINDSRCDIR/lib/export/irs"
-	BINDLIBDNSDIR="$BINDSRCDIR/lib/export/dns"
-	BINDLIBISCCFGDIR="$BINDSRCDIR/lib/export/isccfg"
-	BINDLIBISCDIR="$BINDSRCDIR/lib/export/isc"
+	BINDLIBIRSDIR="$BINDSRCDIR/lib/irs"
+	BINDLIBDNSDIR="$BINDSRCDIR/lib/dns"
+	BINDLIBISCCFGDIR="$BINDSRCDIR/lib/isccfg"
+	BINDLIBISCDIR="$BINDSRCDIR/lib/isc"
 	;;
 *)
 	if test ! -d "$use_libbind"; then
@@ -7497,10 +7487,6 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${am__fastdepCC_TRUE}" && test -z "${am__fastdepCC_FALSE}"; then
   as_fn_error $? "conditional \"am__fastdepCC\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
-if test -z "${CROSS_COMPILING_TRUE}" && test -z "${CROSS_COMPILING_FALSE}"; then
-  as_fn_error $? "conditional \"CROSS_COMPILING\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 

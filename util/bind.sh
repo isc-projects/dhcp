@@ -51,9 +51,8 @@ case $# in
 	###
 	v4_2) noSNAP=snapshot BINDTAG=v9_9 ;;
 	v4_3) noSNAP=snapshot BINDTAG=v9_9 ;;
-	### change to using the head of v9_9 until we upgrade DHCP
-	### to use shared libraries
-	HEAD|v[0-9]_[0-9].*) noSNAP=snapshot BINDTAG=v9_9 ;;
+	v4_4) noSNAP=snapshot BINDTAG=v9_11 ;;
+	HEAD|v[0-9]_[0-9].*) noSNAP=snapshot BINDTAG=v9_11 ;;
 	### HEAD|v[0-9]_[0-9].*) noSNAP=snapshot BINDTAG=HEAD ;;
 	###
 	### For ease of use, this records the sticky tag of versions
@@ -124,7 +123,7 @@ else
 
 	# Create the bind tarball, which has the side effect of
 	# setting up the bind directory we will use for building
-	# the export libraries
+	# the libraries
 	echo Creating tarball for $BINDTAG
 	sh kit.sh $remote $SNAP $BINDTAG $binddir
 
