@@ -220,6 +220,7 @@ main(int argc, char **argv) {
 	char pbuf [20];
 #ifndef DEBUG
 	int daemon = 1;
+	int dfd[2] = { -1, -1 };
 #endif
 	int quiet = 0;
 	char *server = (char *)0;
@@ -269,6 +270,68 @@ main(int argc, char **argv) {
         else if (fd != -1)
                 close(fd);
 
+	/* Parse arguments changing daemon */
+	for (i = 1; i < argc; i++) {
+		if (!strcmp (argv [i], "-f")) {
+#ifndef DEBUG
+			daemon = 0;
+#endif
+		} else if (!strcmp (argv [i], "-d")) {
+#ifndef DEBUG
+			daemon = 0;
+#endif
+		} else if (!strcmp (argv [i], "-t")) {
+#ifndef DEBUG
+			daemon = 0;
+#endif
+		} else if (!strcmp (argv [i], "-T")) {
+#ifndef DEBUG
+			daemon = 0;
+#endif
+		} else if (!strcmp (argv [i], "--version")) {
+			const char vstring[] = "isc-dhcpd-";
+			IGNORE_RET(write(STDERR_FILENO, vstring,
+					 strlen(vstring)));
+			IGNORE_RET(write(STDERR_FILENO,
+					 PACKAGE_VERSION,
+					 strlen(PACKAGE_VERSION)));
+			IGNORE_RET(write(STDERR_FILENO, "\n", 1));
+			exit (0);
+#ifdef TRACING
+		} else if (!strcmp (argv [i], "-play")) {
+#ifndef DEBUG
+			daemon = 0;
+#endif
+#endif
+		}
+	}
+
+#ifndef DEBUG
+	/* When not forbidden prepare to become a daemon */
+	if (daemon) {
+		if (pipe(dfd) == -1)
+			log_fatal("Can't get pipe: %m");
+		if ((pid = fork ()) < 0)
+			log_fatal("Can't fork daemon: %m");
+		if (pid != 0) {
+			/* Parent: wait for the child to start */
+			int n;
+
+			(void) close(dfd[1]);
+			do {
+				char buf;
+
+				n = read(dfd[0], &buf, 1);
+				if (n == 1)
+					_exit((int)buf);
+			} while (n == -1 && errno == EINTR);
+			_exit(1);
+		}
+		/* Child */
+		(void) close(dfd[0]);
+	}
+#endif
+
 	/* Set up the isc and dns library managers */
 	status = dhcp_context_create(DHCP_CONTEXT_PRE_DB,
 				     NULL, NULL);
@@ -304,11 +367,11 @@ main(int argc, char **argv) {
 			       ntohs (local_port));
 		} else if (!strcmp (argv [i], "-f")) {
 #ifndef DEBUG
-			daemon = 0;
+			/* daemon = 0; */
 #endif
 		} else if (!strcmp (argv [i], "-d")) {
 #ifndef DEBUG
-			daemon = 0;
+			/* daemon = 0; */
 #endif
 			log_perror = -1;
 		} else if (!strcmp (argv [i], "-s")) {
@@ -349,14 +412,14 @@ main(int argc, char **argv) {
                 } else if (!strcmp (argv [i], "-t")) {
 			/* test configurations only */
 #ifndef DEBUG
-			daemon = 0;
+			/* daemon = 0; */
 #endif
 			cftest = 1;
 			log_perror = -1;
                 } else if (!strcmp (argv [i], "-T")) {
 			/* test configurations and lease file only */
 #ifndef DEBUG
-			daemon = 0;
+			/* daemon = 0; */
 #endif
 			cftest = 1;
 			lftest = 1;
@@ -391,15 +454,6 @@ main(int argc, char **argv) {
 			dhcpv4_over_dhcpv6 = 1;
 #endif /* DHCP4o6 */
 #endif /* DHCPv6 */
-		} else if (!strcmp (argv [i], "--version")) {
-			const char vstring[] = "isc-dhcpd-";
-			IGNORE_RET(write(STDERR_FILENO, vstring,
-					 strlen(vstring)));
-			IGNORE_RET(write(STDERR_FILENO,
-					 PACKAGE_VERSION,
-					 strlen(PACKAGE_VERSION)));
-			IGNORE_RET(write(STDERR_FILENO, "\n", 1));
-			exit (0);
 #if defined (TRACING)
 		} else if (!strcmp (argv [i], "-tf")) {
 			if (++i == argc)
@@ -845,14 +899,6 @@ main(int argc, char **argv) {
 #endif /* DHCPv6 */
 
 #ifndef DEBUG
-	if (daemon) {
-		/* First part of becoming a daemon... */
-		if ((pid = fork ()) < 0)
-			log_fatal ("Can't fork daemon: %m");
-		else if (pid)
-			exit (0);
-	}
- 
 	/*
 	 * Second part of dealing with pid files.  Now
 	 * that we have forked we can write our pid if
@@ -894,6 +940,15 @@ main(int argc, char **argv) {
 		log_perror = 0;
 
 	if (daemon) {
+		if (dfd[0] != -1 && dfd[1] != -1) {
+			char buf = 0;
+
+			if (write(dfd[1], &buf, 1) != 1)
+				log_fatal("write to parent: %m");
+			(void) close(dfd[1]);
+			dfd[0] = dfd[1] = -1;
+		}
+
 		/* Become session leader and get pid... */
 		(void) setsid();
 

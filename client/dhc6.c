@@ -1500,7 +1500,7 @@ start_init6(struct client_state *client)
 	add_timeout(&tv, do_init6, client, NULL, NULL);
 
 	if (nowait)
-		go_daemon();
+		detach();
 }
 
 /*
@@ -1544,7 +1544,7 @@ start_info_request6(struct client_state *client)
 	add_timeout(&tv, do_info_request6, client, NULL, NULL);
 
 	if (nowait)
-		go_daemon();
+		detach();
 }
 
 /*
@@ -1871,7 +1871,7 @@ do_init6(void *input)
 		}
 		/* Stop if and only if this is the last client. */
 		if (stopping_finished())
-			exit(2);
+			finish(2);
 		return;
 	}
 
@@ -2176,7 +2176,7 @@ do_info_request6(void *input)
 	      case CHK_TIM_ALLOC_FAILURE:
 		return;
 	      case CHK_TIM_MRD_EXCEEDED:
-		exit(2);
+		finish(2);
 	      case CHK_TIM_SUCCESS:
 		break;
 	}
@@ -2418,7 +2418,7 @@ do_release6(void *input)
 	dhc6_lease_destroy(&client->active_lease, MDL);
 	client->active_lease = NULL;
 	if (stopping_finished())
-		exit(0);
+		finish(0);
 }
 
 /* status_log() just puts a status code into displayable form and logs it
@@ -4224,7 +4224,7 @@ reply_handler(struct packet *packet, struct client_state *client)
 		client->active_lease = NULL;
 		/* We should never wait for nothing!? */
 		if (stopping_finished())
-			exit(0);
+			finish(0);
 		return;
 	}
 
@@ -4840,7 +4840,7 @@ start_bound(struct client_state *client)
 		dhcp4o6_start();
 #endif
 
-	go_daemon();
+	detach();
 
 	if (client->old_lease != NULL) {
 		dhc6_lease_destroy(&client->old_lease, MDL);
@@ -5323,7 +5323,7 @@ dhc6_check_irt(struct client_state *client)
 #ifdef DHCP4o6
 		if (!dhcpv4_over_dhcpv6)
 #endif
-		exit(0);
+		finish(0);
 	}
 
 	oc = lookup_option(&dhcpv6_universe, client->active_lease->options,
@@ -5382,7 +5382,7 @@ start_informed(struct client_state *client)
 		dhcp4o6_start();
 #endif
 
-	go_daemon();
+	detach();
 
 	if (client->old_lease != NULL) {
 		dhc6_lease_destroy(&client->old_lease, MDL);
