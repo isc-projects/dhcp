@@ -185,21 +185,6 @@ dhcp_context_create(int flags,
 		if (result != ISC_R_SUCCESS)
 			goto cleanup;
 
-		result = isc_app_ctxstart(dhcp_gbl_ctx.actx);
-		if (result != ISC_R_SUCCESS)
-			return (result);
-		dhcp_gbl_ctx.actx_started = ISC_TRUE;
-
-		/* Not all OSs support suppressing SIGPIPE through socket
-		 * options, so set the sigal action to be ignore.  This allows
-		 * broken connections to fail gracefully with EPIPE on writes */
-		handle_signal(SIGPIPE, SIG_IGN);
-
-		/* Reset handlers installed by isc_app_ctxstart()
-		 * to default for control-c and kill */
-		handle_signal(SIGINT, SIG_DFL);
-		handle_signal(SIGTERM, SIG_DFL);
-
 		result = isc_taskmgr_createinctx(dhcp_gbl_ctx.mctx,
 						 dhcp_gbl_ctx.actx,
 						 1, 0,
@@ -222,6 +207,21 @@ dhcp_context_create(int flags,
 		result = isc_task_create(dhcp_gbl_ctx.taskmgr, 0, &dhcp_gbl_ctx.task);
 		if (result != ISC_R_SUCCESS)
 			goto cleanup;
+
+		result = isc_app_ctxstart(dhcp_gbl_ctx.actx);
+		if (result != ISC_R_SUCCESS)
+			return (result);
+		dhcp_gbl_ctx.actx_started = ISC_TRUE;
+
+		/* Not all OSs support suppressing SIGPIPE through socket
+		 * options, so set the sigal action to be ignore.  This allows
+		 * broken connections to fail gracefully with EPIPE on writes */
+		handle_signal(SIGPIPE, SIG_IGN);
+
+		/* Reset handlers installed by isc_app_ctxstart()
+		 * to default for control-c and kill */
+		handle_signal(SIGINT, SIG_DFL);
+		handle_signal(SIGTERM, SIG_DFL);
 	}
 
 #if defined (NSUPDATE)
