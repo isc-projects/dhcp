@@ -627,6 +627,9 @@ LTLIBOBJS
 LIBOBJS
 LDAP_CFLAGS
 LDAP_LIBS
+HAVE_BINDDIR_FALSE
+HAVE_BINDDIR_TRUE
+DISTCHECK_LIBBIND_CONFIGURE_FLAG
 BINDLIBISCDIR
 BINDLIBISCCFGDIR
 BINDLIBDNSDIR
@@ -6907,6 +6910,7 @@ BINDLIBIRSDIR=
 BINDLIBDNSDIR=
 BINDLIBISCCFGDIR=
 BINDLIBISCDIR=
+DISTCHECK_LIBBIND_CONFIGURE_FLAG=
 
 # Check whether --with-libbind was given.
 if test "${with_libbind+set}" = set; then :
@@ -6959,6 +6963,7 @@ no)
 	BINDLIBDNSDIR="$BINDDIR/lib"
 	BINDLIBISCCFGDIR="$BINDDIR/lib"
 	BINDLIBISCDIR="$BINDDIR/lib"
+	DISTCHECK_LIBBIND_CONFIGURE_FLAG="--with-libbind=$use_libbind"
 	;;
 esac
 
@@ -6967,6 +6972,15 @@ esac
 
 
 
+
+
+ if test "$use_libbind" = "no"; then
+  HAVE_BINDDIR_TRUE=
+  HAVE_BINDDIR_FALSE='#'
+else
+  HAVE_BINDDIR_TRUE='#'
+  HAVE_BINDDIR_FALSE=
+fi
 
 
 # OpenLDAP support.
@@ -7496,6 +7510,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${HAVE_ATF_TRUE}" && test -z "${HAVE_ATF_FALSE}"; then
   as_fn_error $? "conditional \"HAVE_ATF\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${HAVE_BINDDIR_TRUE}" && test -z "${HAVE_BINDDIR_FALSE}"; then
+  as_fn_error $? "conditional \"HAVE_BINDDIR\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 
