@@ -113,7 +113,7 @@ by Eric Young (eay@cryptsoft.com).
   older (9.9) version of export bind libraries.
   [ISC-Bugs #43215]
 
-- Made "make distcheck" to work with external bind libraries (aka
+- Using "make distcheck" now works with external bind libraries (aka
   configure --with-libbind).
   [ISC-Bugs #43285]
 
