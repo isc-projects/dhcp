@@ -117,6 +117,15 @@ by Eric Young (eay@cryptsoft.com).
   configure --with-libbind).
   [ISC-Bugs #43285]
 
+- The server now allows the client identifier (option 61) to own leases
+  in more than one subnet concurrently. Prior to this the server would
+  incorrectly release an existing lease in one subnet prior to assigning
+  a lease in another subnet. Note that the prior behavior can be still
+  be achieved by enabling one-lease-per-client. Thanks to both David Zych at
+  the University of Illinois and Norm Proffitt of Infoblox for reporting
+  the issue; and Norm for suggesting a solution.
+  [ISC-Bugs #41358]
+
 			Changes since 4.3.0 (bug fixes)
 
 - Tidy up several small tickets.
