@@ -27,15 +27,17 @@ bindconfig = --without-openssl --without-libxml2 --without-libjson \
 @BIND_ATF_TRUE@cleandirs = ./lib ./include /share ./atf
 cleanfiles = ./configure.log ./build.log ./install.log
 
+bindlibs = isc dns isccfg irs
+
 @BIND_ATF_FALSE@all: bind1 bind2
 @BIND_ATF_TRUE@all: bind1 atf bind2
 
 bind1:
 # Extract the source from the tarball, if it hasn't been already.
-	@if test -d ${bindsrcdir} ; then                    \
-		echo ${bindsrcdir} already unpacked... ;    \
-	else                                                \
-		gunzip -c bind.tar.gz | tar xf - ;          \
+	@if test -d ${bindsrcdir} ; then                  \
+		echo ${bindsrcdir} already unpacked... ;  \
+	else                                              \
+		gunzip -c bind.tar.gz | tar xf - ;        \
 	fi
 
 # Configure the libraries
@@ -55,13 +57,13 @@ bind1:
 
 atf:
 # Build and copy the ATF support if not yet installed.
-	@if test -d ./atf ; then				      \
-		echo ATF support already installed ;		      \
-	else							      \
-		echo Building ATF support ;			      \
-		(cd ${bindsrcdir}/unit;				      \
-		 $(MAKE) atf > ${binddir}/build.log ;		      \
-		 cp -rp atf ${binddir}) ;			      \
+	@if test -d ./atf ; then                      \
+		echo ATF support already installed ;  \
+	else                                          \
+		echo Building ATF support ;           \
+		(cd ${bindsrcdir}/unit;               \
+		 $(MAKE) atf > ${binddir}/build.log ; \
+		 cp -rp atf ${binddir}) ;             \
 	fi
 
 bind2:
@@ -71,13 +73,17 @@ bind2:
 		echo Bind libraries already installed ;                \
 	else                                                           \
 		echo Building BIND libraries - this takes some time. ; \
-		(cd ${bindsrcdir}/lib ;                                \
-		  echo building in `pwd` ;                             \
-		  $(MAKE) >> ${binddir}/build.log) ;		       \
-                                                                       \
+		for libdir in ${bindlibs} ; do                         \
+		 (cd ${bindsrcdir}/lib/$$libdir ;                      \
+		  echo Building $$libdir library in `pwd` ;            \
+		  $(MAKE) >> ${binddir}/build.log) ;                   \
+		done ;                                                 \
+		                                                       \
 		echo Installing BIND libraries to ${binddir}. ;        \
-		(cd ${bindsrcdir}/lib ;                                \
-		  $(MAKE) install > ${binddir}/install.log) ;	       \
+		for libdir in ${bindlibs} ; do                         \
+		 (cd ${bindsrcdir}/lib/$$libdir ;                      \
+		  $(MAKE) install >> ${binddir}/install.log) ;         \
+		done ;                                                 \
 	fi
 
 clean:
