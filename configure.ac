@@ -798,6 +798,13 @@ AC_SUBST(BINDLIBISCDIR)
 AC_SUBST(DISTCHECK_LIBBIND_CONFIGURE_FLAG)
 AM_CONDITIONAL(HAVE_BINDDIR, test "$use_libbind" = "no")
 
+AC_ARG_ENABLE(bind_install,
+	AS_HELP_STRING([--enable-bind-install],[install bind includes and libraries (default is no).]))
+if test "$enable_bind_install" = "yes" -a "$use_libbind" != "no"; then
+	AC_MSG_WARN([--enable-bind-install does nothing when --with-libbind is set])
+fi
+AM_CONDITIONAL(INSTALL_BIND, test "$enable_bind_install" = "yes")
+
 # OpenLDAP support.
 AC_ARG_WITH(ldap,
     AS_HELP_STRING([--with-ldap],[enable OpenLDAP support in dhcpd (default is no)]),

@@ -627,6 +627,8 @@ LTLIBOBJS
 LIBOBJS
 LDAP_CFLAGS
 LDAP_LIBS
+INSTALL_BIND_FALSE
+INSTALL_BIND_TRUE
 HAVE_BINDDIR_FALSE
 HAVE_BINDDIR_TRUE
 DISTCHECK_LIBBIND_CONFIGURE_FLAG
@@ -785,6 +787,7 @@ enable_epoll
 enable_devpoll
 with_bind_extra_config
 with_libbind
+enable_bind_install
 with_ldap
 with_ldapcrypto
 with_ldap_gssapi
@@ -1451,6 +1454,7 @@ Optional Features:
   --enable-kqueue         use BSD kqueue (default is no)
   --enable-epoll          use Linux epoll (default is no)
   --enable-devpoll        use /dev/poll (default is no)
+  --enable-bind-install   install bind includes and libraries (default is no).
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -6983,6 +6987,24 @@ else
 fi
 
 
+# Check whether --enable-bind_install was given.
+if test "${enable_bind_install+set}" = set; then :
+  enableval=$enable_bind_install;
+fi
+
+if test "$enable_bind_install" = "yes" -a "$use_libbind" != "no"; then
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: --enable-bind-install does nothing when --with-libbind is set" >&5
+$as_echo "$as_me: WARNING: --enable-bind-install does nothing when --with-libbind is set" >&2;}
+fi
+ if test "$enable_bind_install" = "yes"; then
+  INSTALL_BIND_TRUE=
+  INSTALL_BIND_FALSE='#'
+else
+  INSTALL_BIND_TRUE='#'
+  INSTALL_BIND_FALSE=
+fi
+
+
 # OpenLDAP support.
 
 # Check whether --with-ldap was given.
@@ -7514,6 +7536,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${HAVE_BINDDIR_TRUE}" && test -z "${HAVE_BINDDIR_FALSE}"; then
   as_fn_error $? "conditional \"HAVE_BINDDIR\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${INSTALL_BIND_TRUE}" && test -z "${INSTALL_BIND_FALSE}"; then
+  as_fn_error $? "conditional \"INSTALL_BIND\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 
