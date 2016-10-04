@@ -3466,6 +3466,7 @@ int find_lease (struct lease **lp,
 	 * preference, so the first one is the best one.
 	 */
 	while (uid_lease) {
+		isc_boolean_t do_release = !packet->raw->ciaddr.s_addr;
 #if defined (DEBUG_FIND_LEASE)
 		log_info ("trying next lease matching client id: %s",
 			  piaddr (uid_lease -> ip_addr));
@@ -3490,6 +3491,9 @@ int find_lease (struct lease **lp,
 			log_info ("wrong network segment: %s",
 				  piaddr (uid_lease -> ip_addr));
 #endif
+			/* Allow multiple leases using the same UID
+			   on different subnetworks. */
+			do_release = ISC_FALSE;
 			goto n_uid;
 		}
 
@@ -3505,7 +3509,7 @@ int find_lease (struct lease **lp,
 			if (uid_lease -> n_uid)
 				lease_reference (&next,
 						 uid_lease -> n_uid, MDL);
-			if (!packet -> raw -> ciaddr.s_addr)
+			if (do_release)
 				release_lease (uid_lease, packet);
 			lease_dereference (&uid_lease, MDL);
 			if (next) {
