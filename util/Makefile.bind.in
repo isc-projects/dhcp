@@ -18,16 +18,20 @@
 binddir=@BINDDIR@
 bindsrcdir=@BINDSRCDIR@
 
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+
 bindconfig = --without-openssl --without-libxml2 --without-libjson \
 	--without-gssapi --disable-threads \
-	--prefix=${binddir} \
+	--includedir=@includedir@ --libdir=@libdir@ \
 	@BINDIOMUX@ @BINDCONFIG@ --enable-full-report
 
-@BIND_ATF_FALSE@cleandirs = ./lib ./include ./share
-@BIND_ATF_TRUE@cleandirs = ./lib ./include /share ./atf
+@BIND_ATF_FALSE@cleandirs = ./lib ./include
+@BIND_ATF_TRUE@cleandirs = ./lib ./include ./atf
 cleanfiles = ./configure.log ./build.log ./install.log
 
 bindlibs = isc dns isccfg irs
+installdirs = includedir=${binddir}/include libdir=${binddir}/lib
 
 @BIND_ATF_FALSE@all: bind1 bind2
 @BIND_ATF_TRUE@all: bind1 atf bind2
@@ -82,7 +86,8 @@ bind2:
 		echo Installing BIND libraries to ${binddir}. ;        \
 		for libdir in ${bindlibs} ; do                         \
 		 (cd ${bindsrcdir}/lib/$$libdir ;                      \
-		  $(MAKE) install >> ${binddir}/install.log) ;         \
+		  $(MAKE) ${installdirs} install >>                    \
+		   ${binddir}/install.log) ;                           \
 		done ;                                                 \
 	fi
 
