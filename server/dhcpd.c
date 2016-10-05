@@ -135,6 +135,44 @@ static void omapi_listener_start (void *foo)
 
 #ifndef UNIT_TEST
 
+#define DHCPD_USAGE0 \
+"[-p <UDP port #>] [-f] [-d] [-q] [-t|-T]\n"
+
+#ifdef DHCPv6
+#ifdef DHCP4o6
+#define DHCPD_USAGE1 \
+"             [-4|-6] [-4o6 <port>]\n" \
+"             [-cf config-file] [-lf lease-file]\n"
+#else /* DHCP4o6 */
+#define DHCPD_USAGE1 \
+"             [-4|-6] [-cf config-file] [-lf lease-file]\n"
+#endif /* DHCP4o6 */
+#else /* !DHCPv6 */
+#define DHCPD_USAGE1 \
+"             [-cf config-file] [-lf lease-file]\n"
+#endif /* DHCPv6 */
+
+#if defined (PARANOIA)
+#define DHCPD_USAGEP \
+"             [-user user] [-group group] [-chroot dir]\n"
+#else
+#define DHCPD_USAGEP ""
+#endif /* PARANOIA */
+
+#if defined (TRACING)
+#define DHCPD_USAGET \
+"             [-tf trace-output-file]\n" \
+"             [-play trace-input-file]\n"
+#else
+#define DHCPD_USAGET ""
+#endif /* TRACING */
+
+#define DHCPD_USAGEC \
+"             [-pf pid-file] [--no-pid] [-s server]\n" \
+"             [if0 [...ifN]]"
+
+#define DHCPD_USAGEH "{--version|--help|-h}"
+
 /*!
  *
  * \brief Print the generic usage message
@@ -164,28 +202,15 @@ usage(const char *sfmt, const char *sarg) {
 		log_error(sfmt, sarg);
 #endif
 
-	log_fatal("Usage: %s [-p <UDP port #>] [-f] [-d] [-q] [-t|-T]\n"
-#ifdef DHCPv6
-#ifdef DHCP4o6
-		  "             [-4|-6] [-4o6 <port>]\n"
-		  "             [-cf config-file] [-lf lease-file]\n"
-#else /* DHCP4o6 */
-		  "             [-4|-6] [-cf config-file] [-lf lease-file]\n"
-#endif /* DHCP4o6 */
-#else /* !DHCPv6 */
-		  "             [-cf config-file] [-lf lease-file]\n"
-#endif /* DHCPv6 */
-#if defined (PARANOIA)
-		   /* meld into the following string */
-		  "             [-user user] [-group group] [-chroot dir]\n"
-#endif /* PARANOIA */
-#if defined (TRACING)
-		  "             [-tf trace-output-file]\n"
-		  "             [-play trace-input-file]\n"
-#endif /* TRACING */
-		  "             [-pf pid-file] [--no-pid] [-s server]\n"
-		  "             [if0 [...ifN]]",
-		  isc_file_basename(progname));
+	log_fatal("Usage: %s %s%s%s%s%s\n       %s %s",
+		  isc_file_basename(progname),
+		  DHCPD_USAGE0,
+		  DHCPD_USAGE1,
+		  DHCPD_USAGEP,
+		  DHCPD_USAGET,
+		  DHCPD_USAGEC,
+		  isc_file_basename(progname),
+		  DHCPD_USAGEH);
 }
 
 /* Note: If we add unit tests to test setup_chroot it will
@@ -297,6 +322,34 @@ main(int argc, char **argv) {
 					 strlen(PACKAGE_VERSION)));
 			IGNORE_RET(write(STDERR_FILENO, "\n", 1));
 			exit (0);
+		} else if (!strcmp(argv[i], "--help") ||
+			   !strcmp(argv[i], "-h")) {
+			const char *pname = isc_file_basename(progname);
+			IGNORE_RET(write(STDERR_FILENO, "Usage: ", 7));
+			IGNORE_RET(write(STDERR_FILENO, pname, strlen(pname)));
+			IGNORE_RET(write(STDERR_FILENO, " ", 1));
+			IGNORE_RET(write(STDERR_FILENO, DHCPD_USAGE0,
+					 strlen(DHCPD_USAGE0)));
+			IGNORE_RET(write(STDERR_FILENO, DHCPD_USAGE1,
+					 strlen(DHCPD_USAGE1)));
+#if defined (PARANOIA)
+			IGNORE_RET(write(STDERR_FILENO, DHCPD_USAGEP,
+					 strlen(DHCPD_USAGEP)));
+#endif
+#if defined (TRACING)
+			IGNORE_RET(write(STDERR_FILENO, DHCPD_USAGET,
+					 strlen(DHCPD_USAGET)));
+#endif
+			IGNORE_RET(write(STDERR_FILENO, DHCPD_USAGEC,
+					 strlen(DHCPD_USAGEC)));
+			IGNORE_RET(write(STDERR_FILENO, "\n", 1));
+			IGNORE_RET(write(STDERR_FILENO, "       ", 7));
+			IGNORE_RET(write(STDERR_FILENO, pname, strlen(pname)));
+			IGNORE_RET(write(STDERR_FILENO, " ", 1));
+			IGNORE_RET(write(STDERR_FILENO, DHCPD_USAGEH,
+					 strlen(DHCPD_USAGEH)));
+			IGNORE_RET(write(STDERR_FILENO, "\n", 1));
+			exit(0);
 #ifdef TRACING
 		} else if (!strcmp (argv [i], "-play")) {
 #ifndef DEBUG

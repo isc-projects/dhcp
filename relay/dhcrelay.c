@@ -167,8 +167,9 @@ char *progname;
 "                     [-s <subscriber-id>]\n" \
 "                     -l lower0 [ ... -l lowerN]\n" \
 "                     -u upper0 [ ... -u upperN]\n" \
-"       lower (client link): [address%%]interface[#index]\n" \
-"       upper (server link): [address%%]interface"
+"           lower (client link): [address%%]interface[#index]\n" \
+"           upper (server link): [address%%]interface\n\n" \
+"       %s {--version|--help|-h}"
 #else
 #define DHCRELAY_USAGE \
 "Usage: %s [-d] [-q] [-a] [-D] [-A <length>] [-c <hops>] [-p <port>]\n" \
@@ -178,7 +179,8 @@ char *progname;
 "                [-iu interface0 [ ... -iu interfaceN]\n" \
 "                [-id interface0 [ ... -id interfaceN]\n" \
 "                [-U interface]\n" \
-"                server0 [ ... serverN]\n\n"
+"                server0 [ ... serverN]\n\n" \
+"       %s {--version|--help|-h}"
 #endif
 
 /*!
@@ -216,6 +218,7 @@ usage(const char *sfmt, const char *sarg) {
 #ifdef DHCPv6
 		  isc_file_basename(progname),
 #endif
+		  isc_file_basename(progname),
 		  isc_file_basename(progname));
 }
 
@@ -272,6 +275,7 @@ main(int argc, char **argv) {
 #ifdef DHCPv6
 				 isc_file_basename(progname),
 #endif
+				 isc_file_basename(progname),
 				 isc_file_basename(progname));
 			exit(0);
 		}

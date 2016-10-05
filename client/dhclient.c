@@ -150,6 +150,28 @@ static const char use_noarg[] = "No argument for command: %s";
 static const char use_v6command[] = "Command not used for DHCPv4: %s";
 #endif
 
+#ifdef DHCPv6
+#ifdef DHCP4o6
+#define DHCLIENT_USAGE0 \
+"[-4|-6] [-SNTPRI1dvrxi] [-nw] -4o6 <port>]\n" \
+"                [-p <port>] [-D LL|LLT] \n"
+#else /* DHCP4o6 */
+#define DHCLIENT_USAGE0 \
+"[-4|-6] [-SNTPRI1dvrxi] [-nw] [-p <port>] [-D LL|LLT] \n"
+#endif
+#else /* DHCPv6 */
+#define DHCLIENT_USAGE0 \
+"[-I1dvrxi] [-nw] [-p <port>] [-D LL|LLT] \n"
+#endif
+
+#define DHCLIENT_USAGEC \
+"                [-s server-addr] [-cf config-file]\n" \
+"                [-df duid-file] [-lf lease-file]\n" \
+"                [-pf pid-file] [--no-pid] [-e VAR=val]\n" \
+"                [-sf script-file] [interface]*"
+
+#define DHCLIENT_USAGEH "{--version|--help|-h}"
+
 static void
 usage(const char *sfmt, const char *sarg)
 {
@@ -164,22 +186,12 @@ usage(const char *sfmt, const char *sarg)
 		log_error(sfmt, sarg);
 #endif
 
-	log_fatal("Usage: %s "
-#ifdef DHCPv6
-#ifdef DHCP4o6
-		  "[-4|-6] [-SNTPRI1dvrxi] [-nw] -4o6 <port>]\n"
-		  "                [-p <port>] [-D LL|LLT] \n"
-#else /* DHCP4o6 */
-		  "[-4|-6] [-SNTPRI1dvrxi] [-nw] [-p <port>] [-D LL|LLT] \n"
-#endif
-#else /* DHCPv6 */
-		  "[-I1dvrxi] [-nw] [-p <port>] [-D LL|LLT] \n"
-#endif /* DHCPv6 */
-		  "                [-s server-addr] [-cf config-file]\n"
-		  "                [-df duid-file] [-lf lease-file]\n"
-		  "                [-pf pid-file] [--no-pid] [-e VAR=val]\n"
-		  "                [-sf script-file] [interface]*",
-		  isc_file_basename(progname));
+	log_fatal("Usage: %s %s%s\n       %s %s", 
+		  isc_file_basename(progname),
+		  DHCLIENT_USAGE0,
+		  DHCLIENT_USAGEC,
+		  isc_file_basename(progname),
+		  DHCLIENT_USAGEH);
 }
 
 int
@@ -252,6 +264,24 @@ main(int argc, char **argv) {
 			IGNORE_RET(write(STDERR_FILENO,
 					 PACKAGE_VERSION,
 					 strlen(PACKAGE_VERSION)));
+			IGNORE_RET(write(STDERR_FILENO, "\n", 1));
+			exit(0);
+		} else if (!strcmp(argv[i], "--help") ||
+			   !strcmp(argv[i], "-h")) {
+			const char *pname = isc_file_basename(progname);
+			IGNORE_RET(write(STDERR_FILENO, "Usage: ", 7));
+			IGNORE_RET(write(STDERR_FILENO, pname, strlen(pname)));
+			IGNORE_RET(write(STDERR_FILENO, " ", 1));
+			IGNORE_RET(write(STDERR_FILENO, DHCLIENT_USAGE0,
+					 strlen(DHCLIENT_USAGE0)));
+			IGNORE_RET(write(STDERR_FILENO, DHCLIENT_USAGEC,
+					 strlen(DHCLIENT_USAGEC)));
+			IGNORE_RET(write(STDERR_FILENO, "\n", 1));
+			IGNORE_RET(write(STDERR_FILENO, "       ", 7));
+			IGNORE_RET(write(STDERR_FILENO, pname, strlen(pname)));
+			IGNORE_RET(write(STDERR_FILENO, " ", 1));
+			IGNORE_RET(write(STDERR_FILENO, DHCLIENT_USAGEH,
+					 strlen(DHCLIENT_USAGEH)));
 			IGNORE_RET(write(STDERR_FILENO, "\n", 1));
 			exit(0);
 		}
