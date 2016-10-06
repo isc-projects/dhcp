@@ -629,6 +629,7 @@ LDAP_CFLAGS
 LDAP_LIBS
 BINDLT
 A
+DHLIBS
 INSTALL_BIND_FALSE
 INSTALL_BIND_TRUE
 HAVE_BINDDIR_FALSE
@@ -7032,20 +7033,26 @@ if test "${enable_libtool+set}" = set; then :
   enableval=$enable_libtool; want_libtool="$enableval"
 fi
 
-if test "$want_libtool" = "yes"; then
+
+
 if test "$want_libtool" = "yes"; then
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: legacy configure is used but libtool is enabled. Trying to recover..." >&5
 $as_echo "$as_me: WARNING: legacy configure is used but libtool is enabled. Trying to recover..." >&2;}
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: legacy configure is used but libtool is enabled. Trying to recover..." >&5
-$as_echo "$as_me: WARNING: legacy configure is used but libtool is enabled. Trying to recover..." >&2;}
-	cd $srcdir; exec ./re-conf $ac_configure_args
-	cd $srcdir; exec ./re-conf $ac_configure_args
-	as_fn_error $? "Recovering failed" "$LINENO" 5
+	# dequote $ac_configure_args
+	eval "set my_configure_args $ac_configure_args"
+	shift
+	re_configure_args=
+	for a; do
+		re_configure_args="$re_configure_args $a"
+	done
+	cd $srcdir; exec ./re-conf $re_configure_args
 	as_fn_error $? "Recovering failed" "$LINENO" 5
 fi
-fi
+
+DHLIBS=LIBRARIES
 A=a
-A=a
+
+
 
 
 

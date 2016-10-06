@@ -1,5 +1,5 @@
 bin_PROGRAMS = omshell
-lib_LIBRARIES = libdhcpctl.@A@
+lib_@DHLIBS@ = libdhcpctl.@A@
 noinst_PROGRAMS = cltest
 man_MANS = omshell.1 dhcpctl.3
 EXTRA_DIST = $(man_MANS)
@@ -11,7 +11,7 @@ omshell_LDADD = libdhcpctl.@A@ ../common/libdhcp.@A@ ../omapip/libomapi.@A@ \
 	        @BINDLIBISCCFGDIR@/libisccfg.@A@ \
 		@BINDLIBISCDIR@/libisc.@A@
 
-libdhcpctl_a_SOURCES = dhcpctl.c callback.c remote.c
+libdhcpctl_@A@_SOURCES = dhcpctl.c callback.c remote.c
 
 cltest_SOURCES = cltest.c
 cltest_LDADD = libdhcpctl.@A@ ../common/libdhcp.@A@ ../omapip/libomapi.@A@ \

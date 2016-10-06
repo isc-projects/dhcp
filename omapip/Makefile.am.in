@@ -1,4 +1,4 @@
-lib_LIBRARIES = libomapi.@A@
+lib_@DHLIBS@ = libomapi.@A@
 noinst_PROGRAMS = svtest
 
 libomapi_@A@_SOURCES = protocol.c buffer.c alloc.c result.c connection.c \

@@ -118,7 +118,6 @@ foreach $line (<STDIN>) {
 	    $escaped += 1;
 	    next;
 	} else {
-	    print $line. "\n";
 	    $included += 1;
 	}
     }

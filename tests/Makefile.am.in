@@ -28,6 +28,6 @@ EXTRA_DIST = failover/dhcp-1.cf failover/dhcp-2.cf failover/new-failover \
 
 AM_CPPFLAGS = -I..
 
-check_LIBRARIES = libt_api.@A@
+check_@DHLIBS@ = libt_api.@A@
 libt_api_@A@_SOURCES = t_api.c t_api_dhcp.c
 

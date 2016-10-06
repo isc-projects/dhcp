@@ -825,18 +825,25 @@ BINDLT=
 AC_ARG_ENABLE(libtool,
 	AS_HELP_STRING([--enable-libtool],[use GNU libtool for dynamic shared libraries (default is $default_libtool).]),
 	want_libtool="$enableval")
-if test "$want_libtool" = "yes"; then
+
+
 if test "$want_libtool" = "yes"; then
 	AC_MSG_WARN([legacy configure is used but libtool is enabled. Trying to recover...])
-	AC_MSG_WARN([legacy configure is used but libtool is enabled. Trying to recover...])
-	cd $srcdir; exec ./re-conf $ac_configure_args
-	cd $srcdir; exec ./re-conf $ac_configure_args
-	AC_MSG_ERROR([Recovering failed])
+	# dequote $ac_configure_args
+	eval "set my_configure_args $ac_configure_args"
+	shift
+	re_configure_args=
+	for a; do
+		re_configure_args="$re_configure_args $a"
+	done
+	cd $srcdir; exec ./re-conf $re_configure_args
 	AC_MSG_ERROR([Recovering failed])
 fi
-fi
+
+DHLIBS=LIBRARIES
 A=a
-A=a
+
+AC_SUBST(DHLIBS)
 AC_SUBST(A)
 AC_SUBST(BINDLT)
 

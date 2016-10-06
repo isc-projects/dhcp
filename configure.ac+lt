@@ -62,7 +62,6 @@ AC_SUBST(BINDCONFIG)
 # Use this to define _GNU_SOURCE to pull in the IPv6 Advanced Socket API.
 AC_USE_SYSTEM_EXTENSIONS
 
-AC_PROG_RANLIB
 
 AC_PATH_PROG(AR, ar)
 AC_SUBST(AR)
@@ -829,11 +828,17 @@ BINDLT=
 AC_ARG_ENABLE(libtool,
 	AS_HELP_STRING([--enable-libtool],[use GNU libtool for dynamic shared libraries (default is $default_libtool).]),
 	want_libtool="$enableval")
+
 if test "$want_libtool" = "no"; then
 	AC_MSG_ERROR([libtool configure is used but libtool is disabled?])
 fi
+
+DHLIBS=LTLIBRARIES
 A=la
 BINDLT=--with-libtool
+
+
+AC_SUBST(DHLIBS)
 AC_SUBST(A)
 AC_SUBST(BINDLT)
 
