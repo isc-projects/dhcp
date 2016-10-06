@@ -77,6 +77,9 @@ int missing_circuit_id = 0;	/* Circuit ID option in matching RAI option
 				   was missing. */
 int max_hop_count = 10;		/* Maximum hop count */
 
+int no_daemon = 0;
+int dfd[2] = { -1, -1 };
+
 #ifdef DHCPv6
 	/* Force use of DHCPv6 interface-id option. */
 isc_boolean_t use_if_id = ISC_FALSE;
@@ -164,8 +167,9 @@ char *progname;
 "                     [-s <subscriber-id>]\n" \
 "                     -l lower0 [ ... -l lowerN]\n" \
 "                     -u upper0 [ ... -u upperN]\n" \
-"       lower (client link): [address%%]interface[#index]\n" \
-"       upper (server link): [address%%]interface"
+"           lower (client link): [address%%]interface[#index]\n" \
+"           upper (server link): [address%%]interface\n\n" \
+"       %s {--version|--help|-h}"
 #else
 #define DHCRELAY_USAGE \
 "Usage: %s [-d] [-q] [-a] [-D] [-A <length>] [-c <hops>] [-p <port>]\n" \
@@ -175,7 +179,8 @@ char *progname;
 "                [-iu interface0 [ ... -iu interfaceN]\n" \
 "                [-id interface0 [ ... -id interfaceN]\n" \
 "                [-U interface]\n" \
-"                server0 [ ... serverN]\n\n"
+"                server0 [ ... serverN]\n\n" \
+"       %s {--version|--help|-h}"
 #endif
 
 /*!
@@ -213,6 +218,7 @@ usage(const char *sfmt, const char *sarg) {
 #ifdef DHCPv6
 		  isc_file_basename(progname),
 #endif
+		  isc_file_basename(progname),
 		  isc_file_basename(progname));
 }
 
@@ -223,7 +229,7 @@ main(int argc, char **argv) {
 	struct server_list *sp = NULL;
 	char *service_local = NULL, *service_remote = NULL;
 	u_int16_t port_local = 0, port_remote = 0;
-	int no_daemon = 0, quiet = 0;
+	int quiet = 0;
 	int fd;
 	int i;
 #ifdef DHCPv6
@@ -255,6 +261,51 @@ main(int argc, char **argv) {
 #if !defined(DEBUG)
 	setlogmask(LOG_UPTO(LOG_INFO));
 #endif	
+
+	/* Parse arguments changing no_daemon */
+	for (i = 1; i < argc; i++) {
+		if (!strcmp(argv[i], "-d")) {
+			no_daemon = 1;
+		} else if (!strcmp(argv[i], "--version")) {
+			log_info("isc-dhcrelay-%s", PACKAGE_VERSION);
+			exit(0);
+		} else if (!strcmp(argv[i], "--help") ||
+			   !strcmp(argv[i], "-h")) {
+			log_info(DHCRELAY_USAGE,
+#ifdef DHCPv6
+				 isc_file_basename(progname),
+#endif
+				 isc_file_basename(progname),
+				 isc_file_basename(progname));
+			exit(0);
+		}
+	}
+	/* When not forbidden prepare to become a daemon */
+	if (!no_daemon) {
+		int pid;
+
+		if (pipe(dfd) == -1)
+			log_fatal("Can't get pipe: %m");
+		if ((pid = fork ()) < 0)
+			log_fatal("Can't fork daemon: %m");
+		if (pid != 0) {
+			/* Parent: wait for the child to start */
+			int n;
+
+			(void) close(dfd[1]);
+			do {
+				char buf;
+
+				n = read(dfd[0], &buf, 1);
+				if (n == 1)
+					_exit(0);
+			} while (n == -1 && errno == EINTR);
+			_exit(1);
+		}
+		/* Child */
+		(void) close(dfd[0]);
+	}
+
 
 	/* Set up the isc and dns library managers */
 	status = dhcp_context_create(DHCP_CONTEXT_PRE_DB | DHCP_CONTEXT_POST_DB,
@@ -288,7 +339,7 @@ main(int argc, char **argv) {
 			local_family = AF_INET6;
 #endif
 		} else if (!strcmp(argv[i], "-d")) {
-			no_daemon = 1;
+			/* no_daemon = 1; */
 		} else if (!strcmp(argv[i], "-q")) {
 			quiet = 1;
 			quiet_interface_discovery = 1;
@@ -481,17 +532,6 @@ main(int argc, char **argv) {
 			no_dhcrelay_pid = ISC_TRUE;
 		} else if (!strcmp(argv[i], "--no-pid")) {
 			no_pid_file = ISC_TRUE;
-		} else if (!strcmp(argv[i], "--version")) {
-			log_info("isc-dhcrelay-%s", PACKAGE_VERSION);
-			exit(0);
-		} else if (!strcmp(argv[i], "--help") ||
-			   !strcmp(argv[i], "-h")) {
-			log_info(DHCRELAY_USAGE,
-#ifdef DHCPv6
-				 isc_file_basename(progname),
-#endif
-				 isc_file_basename(progname));
-			exit(0);
  		} else if (argv[i][0] == '-') {
 			usage("Unknown command: %s", argv[i]);
  		} else {
@@ -647,17 +687,21 @@ main(int argc, char **argv) {
 
 	/* Become a daemon... */
 	if (!no_daemon) {
-		int pid;
+		char buf = 0;
 		FILE *pf;
 		int pfdesc;
 
 		log_perror = 0;
 
-		if ((pid = fork()) < 0)
-			log_fatal("Can't fork daemon: %m");
-		else if (pid)
-			exit(0);
+		/* Signal parent we started successfully. */
+		if (dfd[0] != -1 && dfd[1] != -1) {
+			if (write(dfd[1], &buf, 1) != 1)
+				log_fatal("write to parent: %m");
+			(void) close(dfd[1]);
+			dfd[0] = dfd[1] = -1;
+		}
 
+		/* Create the pid file. */
 		if (no_pid_file == ISC_FALSE) {
 			pfdesc = open(path_dhcrelay_pid,
 				      O_CREAT | O_TRUNC | O_WRONLY, 0644);
@@ -1865,12 +1909,19 @@ parse_allow_deny(struct option_cache **oc, struct parse *p, int i) {
 isc_result_t
 dhcp_set_control_state(control_object_state_t oldstate,
 		       control_object_state_t newstate) {
+	char buf = 0;
+
 	if (newstate != server_shutdown)
 		return ISC_R_SUCCESS;
 
 	if (no_pid_file == ISC_FALSE)
 		(void) unlink(path_dhcrelay_pid);
 
+	if (!no_daemon && dfd[0] != -1 && dfd[1] != -1) {
+		IGNORE_RET(write(dfd[1], &buf, 1));
+		(void) close(dfd[1]);
+		dfd[0] = dfd[1] = -1;
+	}
 	exit(0);
 }
 

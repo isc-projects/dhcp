@@ -84,6 +84,7 @@ u_int16_t remote_port = 0;
 int dhcp4o6_state = -1; /* -1 = stopped, 0 = polling, 1 = started */
 #endif
 int no_daemon = 0;
+int dfd[2] = { -1, -1 };
 struct string_list *client_env = NULL;
 int client_env_count = 0;
 int onetry = 0;
@@ -149,6 +150,28 @@ static const char use_noarg[] = "No argument for command: %s";
 static const char use_v6command[] = "Command not used for DHCPv4: %s";
 #endif
 
+#ifdef DHCPv6
+#ifdef DHCP4o6
+#define DHCLIENT_USAGE0 \
+"[-4|-6] [-SNTPRI1dvrxi] [-nw] -4o6 <port>]\n" \
+"                [-p <port>] [-D LL|LLT] \n"
+#else /* DHCP4o6 */
+#define DHCLIENT_USAGE0 \
+"[-4|-6] [-SNTPRI1dvrxi] [-nw] [-p <port>] [-D LL|LLT] \n"
+#endif
+#else /* DHCPv6 */
+#define DHCLIENT_USAGE0 \
+"[-I1dvrxi] [-nw] [-p <port>] [-D LL|LLT] \n"
+#endif
+
+#define DHCLIENT_USAGEC \
+"                [-s server-addr] [-cf config-file]\n" \
+"                [-df duid-file] [-lf lease-file]\n" \
+"                [-pf pid-file] [--no-pid] [-e VAR=val]\n" \
+"                [-sf script-file] [interface]*"
+
+#define DHCLIENT_USAGEH "{--version|--help|-h}"
+
 static void
 usage(const char *sfmt, const char *sarg)
 {
@@ -163,22 +186,12 @@ usage(const char *sfmt, const char *sarg)
 		log_error(sfmt, sarg);
 #endif
 
-	log_fatal("Usage: %s "
-#ifdef DHCPv6
-#ifdef DHCP4o6
-		  "[-4|-6] [-SNTPRI1dvrxi] [-nw] -4o6 <port>]\n"
-		  "                [-p <port>] [-D LL|LLT] \n"
-#else /* DHCP4o6 */
-		  "[-4|-6] [-SNTPRI1dvrxi] [-nw] [-p <port>] [-D LL|LLT] \n"
-#endif
-#else /* DHCPv6 */
-		  "[-I1dvrxi] [-nw] [-p <port>] [-D LL|LLT] \n"
-#endif /* DHCPv6 */
-		  "                [-s server-addr] [-cf config-file]\n"
-		  "                [-df duid-file] [-lf lease-file]\n"
-		  "                [-pf pid-file] [--no-pid] [-e VAR=val]\n"
-		  "                [-sf script-file] [interface]*",
-		  isc_file_basename(progname));
+	log_fatal("Usage: %s %s%s\n       %s %s", 
+		  isc_file_basename(progname),
+		  DHCLIENT_USAGE0,
+		  DHCLIENT_USAGEC,
+		  isc_file_basename(progname),
+		  DHCLIENT_USAGEH);
 }
 
 int
@@ -236,6 +249,69 @@ main(int argc, char **argv) {
 	setlogmask(LOG_UPTO(LOG_INFO));
 #endif
 
+	/* Parse arguments changing no_daemon */
+	for (i = 1; i < argc; i++) {
+		if (!strcmp(argv[i], "-r")) {
+			no_daemon = 1;
+		} else if (!strcmp(argv[i], "-x")) {
+			no_daemon = 0;
+		} else if (!strcmp(argv[i], "-d")) {
+			no_daemon = 1;
+		} else if (!strcmp(argv[i], "--version")) {
+			const char vstring[] = "isc-dhclient-";
+			IGNORE_RET(write(STDERR_FILENO, vstring,
+					 strlen(vstring)));
+			IGNORE_RET(write(STDERR_FILENO,
+					 PACKAGE_VERSION,
+					 strlen(PACKAGE_VERSION)));
+			IGNORE_RET(write(STDERR_FILENO, "\n", 1));
+			exit(0);
+		} else if (!strcmp(argv[i], "--help") ||
+			   !strcmp(argv[i], "-h")) {
+			const char *pname = isc_file_basename(progname);
+			IGNORE_RET(write(STDERR_FILENO, "Usage: ", 7));
+			IGNORE_RET(write(STDERR_FILENO, pname, strlen(pname)));
+			IGNORE_RET(write(STDERR_FILENO, " ", 1));
+			IGNORE_RET(write(STDERR_FILENO, DHCLIENT_USAGE0,
+					 strlen(DHCLIENT_USAGE0)));
+			IGNORE_RET(write(STDERR_FILENO, DHCLIENT_USAGEC,
+					 strlen(DHCLIENT_USAGEC)));
+			IGNORE_RET(write(STDERR_FILENO, "\n", 1));
+			IGNORE_RET(write(STDERR_FILENO, "       ", 7));
+			IGNORE_RET(write(STDERR_FILENO, pname, strlen(pname)));
+			IGNORE_RET(write(STDERR_FILENO, " ", 1));
+			IGNORE_RET(write(STDERR_FILENO, DHCLIENT_USAGEH,
+					 strlen(DHCLIENT_USAGEH)));
+			IGNORE_RET(write(STDERR_FILENO, "\n", 1));
+			exit(0);
+		}
+	}
+	/* When not forbidden prepare to become a daemon */
+	if (!no_daemon) {
+		int pid;
+
+		if (pipe(dfd) == -1)
+			log_fatal("Can't get pipe: %m");
+		if ((pid = fork ()) < 0)
+			log_fatal("Can't fork daemon: %m");
+		if (pid != 0) {
+			/* Parent: wait for the child to start */
+			int n;
+
+			(void) close(dfd[1]);
+			do {
+				char buf;
+
+				n = read(dfd[0], &buf, 1);
+				if (n == 1)
+					_exit((int)buf);
+			} while (n == -1 && errno == EINTR);
+			_exit(1);
+		}
+		/* Child */
+		(void) close(dfd[0]);
+	}
+
 	/* Set up the isc and dns library managers */
 	status = dhcp_context_create(DHCP_CONTEXT_PRE_DB | DHCP_CONTEXT_POST_DB,
 				     NULL, NULL);
@@ -260,7 +336,7 @@ main(int argc, char **argv) {
 	for (i = 1; i < argc; i++) {
 		if (!strcmp(argv[i], "-r")) {
 			release_mode = 1;
-			no_daemon = 1;
+			/* no_daemon = 1; */
 #ifdef DHCPv6
 		} else if (!strcmp(argv[i], "-4")) {
 			if (local_family_set && local_family != AF_INET)
@@ -288,7 +364,7 @@ main(int argc, char **argv) {
 #endif /* DHCPv6 */
 		} else if (!strcmp(argv[i], "-x")) { /* eXit, no release */
 			release_mode = 0;
-			no_daemon = 0;
+			/* no_daemon = 0; */
 			exit_mode = 1;
 		} else if (!strcmp(argv[i], "-p")) {
 			if (++i == argc)
@@ -297,7 +373,7 @@ main(int argc, char **argv) {
 			log_debug("binding to user-specified port %d",
 				  ntohs(local_port));
 		} else if (!strcmp(argv[i], "-d")) {
-			no_daemon = 1;
+			/* no_daemon = 1; */
 			quiet = 0;
 		} else if (!strcmp(argv[i], "-pf")) {
 			if (++i == argc)
@@ -422,15 +498,6 @@ main(int argc, char **argv) {
 			std_dhcid = 1;
 		} else if (!strcmp(argv[i], "-v")) {
 			quiet = 0;
-		} else if (!strcmp(argv[i], "--version")) {
-			const char vstring[] = "isc-dhclient-";
-			IGNORE_RET(write(STDERR_FILENO, vstring,
-					 strlen(vstring)));
-			IGNORE_RET(write(STDERR_FILENO,
-					 PACKAGE_VERSION,
-					 strlen(PACKAGE_VERSION)));
-			IGNORE_RET(write(STDERR_FILENO, "\n", 1));
-			exit(0);
 		} else if (argv[i][0] == '-') {
 			usage("Unknown command: %s", argv[i]);
 		} else if (interfaces_requested < 0) {
@@ -613,7 +680,7 @@ main(int argc, char **argv) {
 		if (release_mode || (wanted_ia_na > 0) ||
 		    wanted_ia_ta || wanted_ia_pd ||
 		    (interfaces_requested != 1)) {
-			usage("Stateless commnad: %s incompatibile with "
+			usage("Stateless command: %s incompatibile with "
 			      "other commands", "-S");
 		}
 #if defined(DHCPv6) && defined(DHCP4o6)
@@ -621,7 +688,7 @@ main(int argc, char **argv) {
 #else
 		run_stateless(exit_mode, 0);
 #endif
-		return 0;
+		finish(0);
 	}
 
 	/* Discover all the network interfaces. */
@@ -663,7 +730,7 @@ main(int argc, char **argv) {
 		if (!persist) {
 			/* Nothing more to do. */
 			log_info("No broadcast interfaces found - exiting.");
-			exit(0);
+			finish(0);
 		}
 	} else if (!release_mode && !exit_mode) {
 		/* Call the script with the list of interfaces. */
@@ -800,16 +867,16 @@ main(int argc, char **argv) {
 	}
 
 	if (exit_mode)
-		return 0;
+		finish(0);
 	if (release_mode) {
 #ifndef DHCPv6
-		return 0;
+		finish(0);
 #else
 		if ((local_family == AF_INET6) || dhcpv4_over_dhcpv6) {
 			if (onetry)
-				return 0;
+				finish(0);
 		} else
-			return 0;
+			finish(0);
 #endif /* DHCPv6 */
 	}
 
@@ -852,7 +919,7 @@ main(int argc, char **argv) {
 	/* If we're not supposed to wait before getting the address,
 	   don't. */
 	if (nowait)
-		go_daemon();
+		detach();
 
 	/* If we're not going to daemonize, write the pid file
 	   now. */
@@ -963,7 +1030,7 @@ void run_stateless(int exit_mode, u_int16_t port)
 	/* If we're not supposed to wait before getting the address,
 	   don't. */
 	if (nowait)
-		go_daemon();
+		detach();
 
 	/* If we're not going to daemonize, write the pid file
 	   now. */
@@ -1404,7 +1471,7 @@ void bind_lease (client)
 			if (!quiet)
 				log_info("Unable to obtain a lease on first "
 					 "try (declined).  Exiting.");
-			exit(2);
+			finish(2);
 		} else {
 			state_init(client);
 			return;
@@ -1433,7 +1500,7 @@ void bind_lease (client)
 	      (long)(client->active->renewal - cur_time));
 	client->state = S_BOUND;
 	reinitialize_interfaces();
-	go_daemon();
+	detach();
 #if defined (NSUPDATE)
 	if (client->config->do_forward_update)
 		dhclient_schedule_updates(client, &client->active->address, 1);
@@ -2373,7 +2440,7 @@ void state_panic (cpp)
 				state_bound (client);
 			    }
 			    reinitialize_interfaces ();
-			    go_daemon ();
+			    detach ();
 			    return;
 			}
 		}
@@ -2413,7 +2480,7 @@ void state_panic (cpp)
 		if (!quiet)
 			log_info ("Unable to obtain a lease on first try.%s",
 				  "  Exiting.");
-		exit (2);
+		finish(2);
 	}
 
 	log_info ("No working leases in persistent database - sleeping.");
@@ -2427,7 +2494,7 @@ void state_panic (cpp)
 	tv.tv_usec = ((tv.tv_sec - cur_tv.tv_sec) > 1) ?
 			random() % 1000000 : cur_tv.tv_usec;
 	add_timeout(&tv, state_init, client, 0, 0);
-	go_daemon ();
+	detach ();
 }
 
 void send_request (cpp)
@@ -4200,10 +4267,20 @@ int dhcp_option_ev_name (buf, buflen, option)
 	return 1;
 }
 
-void go_daemon ()
+void finish (char ret)
 {
-	static int state = 0;
-	int pid;
+	if (no_daemon || dfd[0] == -1 || dfd[1] == -1)
+		exit((int)ret);
+	if (write(dfd[1], &ret, 1) != 1)
+		log_fatal("write to parent: %m");
+	(void) close(dfd[1]);
+	dfd[0] = dfd[1] = -1;
+	exit((int)ret);
+}
+
+void detach ()
+{
+	char buf = 0;
 
 	/* Don't become a daemon if the user requested otherwise. */
 	if (no_daemon) {
@@ -4212,18 +4289,18 @@ void go_daemon ()
 	}
 
 	/* Only do it once. */
-	if (state)
+	if (dfd[0] == -1 || dfd[1] == -1)
 		return;
-	state = 1;
+
+	/* Signal parent we started successfully. */
+	if (write(dfd[1], &buf, 1) != 1)
+		log_fatal("write to parent: %m");
+	(void) close(dfd[1]);
+	dfd[0] = dfd[1] = -1;
 
 	/* Stop logging to stderr... */
 	log_perror = 0;
 
-	/* Become a daemon... */
-	if ((pid = fork ()) < 0)
-		log_fatal ("Can't fork daemon: %m");
-	else if (pid)
-		exit (0);
 	/* Become session leader and get pid... */
 	(void) setsid ();
 
@@ -4240,6 +4317,7 @@ void go_daemon ()
 	write_client_pid_file ();
 
 	IGNORE_RET (chdir("/"));
+
 }
 
 void write_client_pid_file ()
@@ -4376,7 +4454,7 @@ void do_release(client)
 
 #if defined(DHCPv6) && defined(DHCP4o6)
 	if (dhcpv4_over_dhcpv6)
-		exit(0);
+		finish(0);
 #endif
 }
 
@@ -4507,7 +4585,7 @@ static void shutdown_exit (void *foo)
 	/* get rid of the pid if we can */
 	if (no_pid_file == ISC_FALSE)
 		(void) unlink(path_dhclient_pid);
-	exit (0);
+	finish(0);
 }
 
 #if defined (NSUPDATE)

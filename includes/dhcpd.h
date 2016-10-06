@@ -2975,7 +2975,8 @@ void client_envadd (struct client_state *,
 	__attribute__((__format__(__printf__,4,5)));
 
 struct client_lease *packet_to_lease (struct packet *, struct client_state *);
-void go_daemon (void);
+void finish (char);
+void detach (void);
 void write_client_pid_file (void);
 void client_location_changed (void);
 void do_release (struct client_state *);

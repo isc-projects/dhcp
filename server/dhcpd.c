@@ -135,6 +135,44 @@ static void omapi_listener_start (void *foo)
 
 #ifndef UNIT_TEST
 
+#define DHCPD_USAGE0 \
+"[-p <UDP port #>] [-f] [-d] [-q] [-t|-T]\n"
+
+#ifdef DHCPv6
+#ifdef DHCP4o6
+#define DHCPD_USAGE1 \
+"             [-4|-6] [-4o6 <port>]\n" \
+"             [-cf config-file] [-lf lease-file]\n"
+#else /* DHCP4o6 */
+#define DHCPD_USAGE1 \
+"             [-4|-6] [-cf config-file] [-lf lease-file]\n"
+#endif /* DHCP4o6 */
+#else /* !DHCPv6 */
+#define DHCPD_USAGE1 \
+"             [-cf config-file] [-lf lease-file]\n"
+#endif /* DHCPv6 */
+
+#if defined (PARANOIA)
+#define DHCPD_USAGEP \
+"             [-user user] [-group group] [-chroot dir]\n"
+#else
+#define DHCPD_USAGEP ""
+#endif /* PARANOIA */
+
+#if defined (TRACING)
+#define DHCPD_USAGET \
+"             [-tf trace-output-file]\n" \
+"             [-play trace-input-file]\n"
+#else
+#define DHCPD_USAGET ""
+#endif /* TRACING */
+
+#define DHCPD_USAGEC \
+"             [-pf pid-file] [--no-pid] [-s server]\n" \
+"             [if0 [...ifN]]"
+
+#define DHCPD_USAGEH "{--version|--help|-h}"
+
 /*!
  *
  * \brief Print the generic usage message
@@ -164,28 +202,15 @@ usage(const char *sfmt, const char *sarg) {
 		log_error(sfmt, sarg);
 #endif
 
-	log_fatal("Usage: %s [-p <UDP port #>] [-f] [-d] [-q] [-t|-T]\n"
-#ifdef DHCPv6
-#ifdef DHCP4o6
-		  "             [-4|-6] [-4o6 <port>]\n"
-		  "             [-cf config-file] [-lf lease-file]\n"
-#else /* DHCP4o6 */
-		  "             [-4|-6] [-cf config-file] [-lf lease-file]\n"
-#endif /* DHCP4o6 */
-#else /* !DHCPv6 */
-		  "             [-cf config-file] [-lf lease-file]\n"
-#endif /* DHCPv6 */
-#if defined (PARANOIA)
-		   /* meld into the following string */
-		  "             [-user user] [-group group] [-chroot dir]\n"
-#endif /* PARANOIA */
-#if defined (TRACING)
-		  "             [-tf trace-output-file]\n"
-		  "             [-play trace-input-file]\n"
-#endif /* TRACING */
-		  "             [-pf pid-file] [--no-pid] [-s server]\n"
-		  "             [if0 [...ifN]]",
-		  isc_file_basename(progname));
+	log_fatal("Usage: %s %s%s%s%s%s\n       %s %s",
+		  isc_file_basename(progname),
+		  DHCPD_USAGE0,
+		  DHCPD_USAGE1,
+		  DHCPD_USAGEP,
+		  DHCPD_USAGET,
+		  DHCPD_USAGEC,
+		  isc_file_basename(progname),
+		  DHCPD_USAGEH);
 }
 
 /* Note: If we add unit tests to test setup_chroot it will
@@ -220,6 +245,7 @@ main(int argc, char **argv) {
 	char pbuf [20];
 #ifndef DEBUG
 	int daemon = 1;
+	int dfd[2] = { -1, -1 };
 #endif
 	int quiet = 0;
 	char *server = (char *)0;
@@ -269,6 +295,96 @@ main(int argc, char **argv) {
         else if (fd != -1)
                 close(fd);
 
+	/* Parse arguments changing daemon */
+	for (i = 1; i < argc; i++) {
+		if (!strcmp (argv [i], "-f")) {
+#ifndef DEBUG
+			daemon = 0;
+#endif
+		} else if (!strcmp (argv [i], "-d")) {
+#ifndef DEBUG
+			daemon = 0;
+#endif
+		} else if (!strcmp (argv [i], "-t")) {
+#ifndef DEBUG
+			daemon = 0;
+#endif
+		} else if (!strcmp (argv [i], "-T")) {
+#ifndef DEBUG
+			daemon = 0;
+#endif
+		} else if (!strcmp (argv [i], "--version")) {
+			const char vstring[] = "isc-dhcpd-";
+			IGNORE_RET(write(STDERR_FILENO, vstring,
+					 strlen(vstring)));
+			IGNORE_RET(write(STDERR_FILENO,
+					 PACKAGE_VERSION,
+					 strlen(PACKAGE_VERSION)));
+			IGNORE_RET(write(STDERR_FILENO, "\n", 1));
+			exit (0);
+		} else if (!strcmp(argv[i], "--help") ||
+			   !strcmp(argv[i], "-h")) {
+			const char *pname = isc_file_basename(progname);
+			IGNORE_RET(write(STDERR_FILENO, "Usage: ", 7));
+			IGNORE_RET(write(STDERR_FILENO, pname, strlen(pname)));
+			IGNORE_RET(write(STDERR_FILENO, " ", 1));
+			IGNORE_RET(write(STDERR_FILENO, DHCPD_USAGE0,
+					 strlen(DHCPD_USAGE0)));
+			IGNORE_RET(write(STDERR_FILENO, DHCPD_USAGE1,
+					 strlen(DHCPD_USAGE1)));
+#if defined (PARANOIA)
+			IGNORE_RET(write(STDERR_FILENO, DHCPD_USAGEP,
+					 strlen(DHCPD_USAGEP)));
+#endif
+#if defined (TRACING)
+			IGNORE_RET(write(STDERR_FILENO, DHCPD_USAGET,
+					 strlen(DHCPD_USAGET)));
+#endif
+			IGNORE_RET(write(STDERR_FILENO, DHCPD_USAGEC,
+					 strlen(DHCPD_USAGEC)));
+			IGNORE_RET(write(STDERR_FILENO, "\n", 1));
+			IGNORE_RET(write(STDERR_FILENO, "       ", 7));
+			IGNORE_RET(write(STDERR_FILENO, pname, strlen(pname)));
+			IGNORE_RET(write(STDERR_FILENO, " ", 1));
+			IGNORE_RET(write(STDERR_FILENO, DHCPD_USAGEH,
+					 strlen(DHCPD_USAGEH)));
+			IGNORE_RET(write(STDERR_FILENO, "\n", 1));
+			exit(0);
+#ifdef TRACING
+		} else if (!strcmp (argv [i], "-play")) {
+#ifndef DEBUG
+			daemon = 0;
+#endif
+#endif
+		}
+	}
+
+#ifndef DEBUG
+	/* When not forbidden prepare to become a daemon */
+	if (daemon) {
+		if (pipe(dfd) == -1)
+			log_fatal("Can't get pipe: %m");
+		if ((pid = fork ()) < 0)
+			log_fatal("Can't fork daemon: %m");
+		if (pid != 0) {
+			/* Parent: wait for the child to start */
+			int n;
+
+			(void) close(dfd[1]);
+			do {
+				char buf;
+
+				n = read(dfd[0], &buf, 1);
+				if (n == 1)
+					_exit((int)buf);
+			} while (n == -1 && errno == EINTR);
+			_exit(1);
+		}
+		/* Child */
+		(void) close(dfd[0]);
+	}
+#endif
+
 	/* Set up the isc and dns library managers */
 	status = dhcp_context_create(DHCP_CONTEXT_PRE_DB,
 				     NULL, NULL);
@@ -304,11 +420,11 @@ main(int argc, char **argv) {
 			       ntohs (local_port));
 		} else if (!strcmp (argv [i], "-f")) {
 #ifndef DEBUG
-			daemon = 0;
+			/* daemon = 0; */
 #endif
 		} else if (!strcmp (argv [i], "-d")) {
 #ifndef DEBUG
-			daemon = 0;
+			/* daemon = 0; */
 #endif
 			log_perror = -1;
 		} else if (!strcmp (argv [i], "-s")) {
@@ -349,14 +465,14 @@ main(int argc, char **argv) {
                 } else if (!strcmp (argv [i], "-t")) {
 			/* test configurations only */
 #ifndef DEBUG
-			daemon = 0;
+			/* daemon = 0; */
 #endif
 			cftest = 1;
 			log_perror = -1;
                 } else if (!strcmp (argv [i], "-T")) {
 			/* test configurations and lease file only */
 #ifndef DEBUG
-			daemon = 0;
+			/* daemon = 0; */
 #endif
 			cftest = 1;
 			lftest = 1;
@@ -391,15 +507,6 @@ main(int argc, char **argv) {
 			dhcpv4_over_dhcpv6 = 1;
 #endif /* DHCP4o6 */
 #endif /* DHCPv6 */
-		} else if (!strcmp (argv [i], "--version")) {
-			const char vstring[] = "isc-dhcpd-";
-			IGNORE_RET(write(STDERR_FILENO, vstring,
-					 strlen(vstring)));
-			IGNORE_RET(write(STDERR_FILENO,
-					 PACKAGE_VERSION,
-					 strlen(PACKAGE_VERSION)));
-			IGNORE_RET(write(STDERR_FILENO, "\n", 1));
-			exit (0);
 #if defined (TRACING)
 		} else if (!strcmp (argv [i], "-tf")) {
 			if (++i == argc)
@@ -845,14 +952,6 @@ main(int argc, char **argv) {
 #endif /* DHCPv6 */
 
 #ifndef DEBUG
-	if (daemon) {
-		/* First part of becoming a daemon... */
-		if ((pid = fork ()) < 0)
-			log_fatal ("Can't fork daemon: %m");
-		else if (pid)
-			exit (0);
-	}
- 
 	/*
 	 * Second part of dealing with pid files.  Now
 	 * that we have forked we can write our pid if
@@ -894,6 +993,15 @@ main(int argc, char **argv) {
 		log_perror = 0;
 
 	if (daemon) {
+		if (dfd[0] != -1 && dfd[1] != -1) {
+			char buf = 0;
+
+			if (write(dfd[1], &buf, 1) != 1)
+				log_fatal("write to parent: %m");
+			(void) close(dfd[1]);
+			dfd[0] = dfd[1] = -1;
+		}
+
 		/* Become session leader and get pid... */
 		(void) setsid();
 
