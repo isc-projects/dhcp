@@ -117,9 +117,9 @@ am_dhcpd_OBJECTS = dhcpd-dhcpd.$(OBJEXT) dhcpd-dhcp.$(OBJEXT) \
 dhcpd_OBJECTS = $(am_dhcpd_OBJECTS)
 am__DEPENDENCIES_1 =
 dhcpd_DEPENDENCIES = ../common/libdhcp.@A@ ../omapip/libomapi.@A@ \
-	../dhcpctl/libdhcpctl.@A@ $(BINDLIBDIR)/libirs.@A@ \
-	$(BINDLIBDIR)/libdns.@A@ $(BINDLIBDIR)/libisccfg.@A@ \
-	$(BINDLIBDIR)/libisc.@A@ $(am__DEPENDENCIES_1)
+	../dhcpctl/libdhcpctl.@A@ $(BINDLIBIRSDIR)/libirs.@A@ \
+	$(BINDLIBDNSDIR)/libdns.@A@ $(BINDLIBISCCFGDIR)/libisccfg.@A@ \
+	$(BINDLIBISCDIR)/libisc.@A@ $(am__DEPENDENCIES_1)
 dhcpd_LINK = $(CCLD) $(dhcpd_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
@@ -286,8 +286,10 @@ CPPFLAGS = @CPPFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
+DHLIBS = @DHLIBS@
 DISTCHECK_ATF_CONFIGURE_FLAG = @DISTCHECK_ATF_CONFIGURE_FLAG@
 DISTCHECK_LIBBIND_CONFIGURE_FLAG = @DISTCHECK_LIBBIND_CONFIGURE_FLAG@
+DISTCHECK_LIBTOOL_CONFIGURE_FLAG = @DISTCHECK_LIBTOOL_CONFIGURE_FLAG@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
@@ -317,6 +319,7 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
+Q = @Q@
 RANLIB = @RANLIB@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
@@ -381,7 +384,6 @@ top_srcdir = @top_srcdir@
 # directory. That eliminates any discrepancies between tested code and
 # production code. Sadly, we are not there yet.
 SUBDIRS = . tests
-BINDLIBDIR = @BINDDIR@/lib
 AM_CPPFLAGS = -I.. -DLOCALSTATEDIR='"@localstatedir@"'
 dist_sysconf_DATA = dhcpd.conf.example
 dhcpd_SOURCES = dhcpd.c dhcp.c bootp.c confpars.c db.c class.c failover.c \
@@ -390,9 +392,11 @@ dhcpd_SOURCES = dhcpd.c dhcp.c bootp.c confpars.c db.c class.c failover.c \
 
 dhcpd_CFLAGS = $(LDAP_CFLAGS)
 dhcpd_LDADD = ../common/libdhcp.@A@ ../omapip/libomapi.@A@ \
-	      ../dhcpctl/libdhcpctl.@A@ $(BINDLIBDIR)/libirs.@A@ \
-	      $(BINDLIBDIR)/libdns.@A@ $(BINDLIBDIR)/libisccfg.@A@ \
-	      $(BINDLIBDIR)/libisc.@A@ $(LDAP_LIBS)
+	      ../dhcpctl/libdhcpctl.@A@ \
+	      $(BINDLIBIRSDIR)/libirs.@A@ \
+	      $(BINDLIBDNSDIR)/libdns.@A@ \
+	      $(BINDLIBISCCFGDIR)/libisccfg.@A@ \
+	      $(BINDLIBISCDIR)/libisc.@A@ $(LDAP_LIBS)
 
 man_MANS = dhcpd.8 dhcpd.conf.5 dhcpd.leases.5
 EXTRA_DIST = $(man_MANS)
@@ -503,17 +507,15 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dhcpd-stables.Po@am__quote@
 
 .c.o:
-@am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
-@am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
-@am__fastdepCC_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ $<
 
 .c.obj:
-@am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.obj$$||'`;\
-@am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ `$(CYGPATH_W) '$<'` &&\
-@am__fastdepCC_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ `$(CYGPATH_W) '$<'`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`

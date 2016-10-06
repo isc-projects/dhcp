@@ -4,8 +4,6 @@
 # production code. Sadly, we are not there yet.
 SUBDIRS = . tests
 
-BINDLIBDIR = @BINDDIR@/lib
-
 AM_CPPFLAGS = -I.. -DLOCALSTATEDIR='"@localstatedir@"'
 
 dist_sysconf_DATA = dhcpd.conf.example
@@ -16,9 +14,11 @@ dhcpd_SOURCES = dhcpd.c dhcp.c bootp.c confpars.c db.c class.c failover.c \
 
 dhcpd_CFLAGS = $(LDAP_CFLAGS)
 dhcpd_LDADD = ../common/libdhcp.@A@ ../omapip/libomapi.@A@ \
-	      ../dhcpctl/libdhcpctl.@A@ $(BINDLIBDIR)/libirs.@A@ \
-	      $(BINDLIBDIR)/libdns.@A@ $(BINDLIBDIR)/libisccfg.@A@ \
-	      $(BINDLIBDIR)/libisc.@A@ $(LDAP_LIBS)
+	      ../dhcpctl/libdhcpctl.@A@ \
+	      $(BINDLIBIRSDIR)/libirs.@A@ \
+	      $(BINDLIBDNSDIR)/libdns.@A@ \
+	      $(BINDLIBISCCFGDIR)/libisccfg.@A@ \
+	      $(BINDLIBISCDIR)/libisc.@A@ $(LDAP_LIBS)
 
 man_MANS = dhcpd.8 dhcpd.conf.5 dhcpd.leases.5
 EXTRA_DIST = $(man_MANS)

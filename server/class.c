@@ -29,13 +29,6 @@
 
 #include "dhcpd.h"
 
-struct collection default_collection = {
-	(struct collection *)0,
-	"default",
-	(struct class *)0,
-};
-
-struct collection *collections = &default_collection;
 struct executable_statement *default_classification_rules;
 
 int have_billing_classes;

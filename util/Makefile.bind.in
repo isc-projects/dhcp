@@ -30,7 +30,8 @@ bindconfig = --without-openssl --without-libxml2 --without-libjson \
 @BIND_ATF_TRUE@cleandirs = ./lib ./include ./atf
 cleanfiles = ./configure.log ./build.log ./install.log
 
-bindlibs = isc dns isccfg irs
+# isccfg depends on isccc?!
+bindlibs = isc dns isccc isccfg irs
 installdirs = includedir=${binddir}/include libdir=${binddir}/lib
 
 @BIND_ATF_FALSE@all: bind1 bind2

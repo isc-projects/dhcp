@@ -99,7 +99,7 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 DIST_COMMON = $(srcdir)/Makefile.am $(am__DIST_COMMON)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/includes/config.h
-CONFIG_CLEAN_FILES =
+CONFIG_CLEAN_FILES = Makefile.am
 CONFIG_CLEAN_VPATH_FILES =
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
@@ -145,15 +145,15 @@ PROGRAMS = $(bin_PROGRAMS) $(noinst_PROGRAMS)
 am_cltest_OBJECTS = cltest.$(OBJEXT)
 cltest_OBJECTS = $(am_cltest_OBJECTS)
 cltest_DEPENDENCIES = libdhcpctl.a ../common/libdhcp.a \
-	../omapip/libomapi.a @BINDLIBIRSDIR@/libirs.a \
-	@BINDLIBDNSDIR@/libdns.a @BINDLIBISCCFGDIR@/libisccfg.a \
-	@BINDLIBISCDIR@/libisc.a
+	../omapip/libomapi.a $(BINDLIBIRSDIR)/libirs.a \
+	$(BINDLIBDNSDIR)/libdns.a $(BINDLIBISCCFGDIR)/libisccfg.a \
+	$(BINDLIBISCDIR)/libisc.a
 am_omshell_OBJECTS = omshell.$(OBJEXT)
 omshell_OBJECTS = $(am_omshell_OBJECTS)
 omshell_DEPENDENCIES = libdhcpctl.a ../common/libdhcp.a \
-	../omapip/libomapi.a @BINDLIBIRSDIR@/libirs.a \
-	@BINDLIBDNSDIR@/libdns.a @BINDLIBISCCFGDIR@/libisccfg.a \
-	@BINDLIBISCDIR@/libisc.a
+	../omapip/libomapi.a $(BINDLIBIRSDIR)/libirs.a \
+	$(BINDLIBDNSDIR)/libdns.a $(BINDLIBISCCFGDIR)/libisccfg.a \
+	$(BINDLIBISCDIR)/libisc.a
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -213,8 +213,10 @@ am__define_uniq_tagged_files = \
   done | $(am__uniquify_input)`
 ETAGS = etags
 CTAGS = ctags
-am__DIST_COMMON = $(srcdir)/Makefile.in $(top_srcdir)/depcomp
+am__DIST_COMMON = $(srcdir)/Makefile.am.in $(srcdir)/Makefile.in \
+	$(top_srcdir)/depcomp
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
+A = @A@
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
 AM_DEFAULT_VERBOSITY = @AM_DEFAULT_VERBOSITY@
@@ -233,6 +235,7 @@ BINDLIBDNSDIR = @BINDLIBDNSDIR@
 BINDLIBIRSDIR = @BINDLIBIRSDIR@
 BINDLIBISCCFGDIR = @BINDLIBISCCFGDIR@
 BINDLIBISCDIR = @BINDLIBISCDIR@
+BINDLT = @BINDLT@
 BINDSRCDIR = @BINDSRCDIR@
 BINDSUBDIR = @BINDSUBDIR@
 CC = @CC@
@@ -243,8 +246,10 @@ CPPFLAGS = @CPPFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
+DHLIBS = @DHLIBS@
 DISTCHECK_ATF_CONFIGURE_FLAG = @DISTCHECK_ATF_CONFIGURE_FLAG@
 DISTCHECK_LIBBIND_CONFIGURE_FLAG = @DISTCHECK_LIBBIND_CONFIGURE_FLAG@
+DISTCHECK_LIBTOOL_CONFIGURE_FLAG = @DISTCHECK_LIBTOOL_CONFIGURE_FLAG@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
@@ -274,6 +279,7 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
+Q = @Q@
 RANLIB = @RANLIB@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
@@ -337,18 +343,18 @@ man_MANS = omshell.1 dhcpctl.3
 EXTRA_DIST = $(man_MANS)
 omshell_SOURCES = omshell.c
 omshell_LDADD = libdhcpctl.a ../common/libdhcp.a ../omapip/libomapi.a \
-		@BINDLIBIRSDIR@/libirs.a \
-		@BINDLIBDNSDIR@/libdns.a \
-	        @BINDLIBISCCFGDIR@/libisccfg.a \
-		@BINDLIBISCDIR@/libisc.a
+		$(BINDLIBIRSDIR)/libirs.a \
+		$(BINDLIBDNSDIR)/libdns.a \
+	        $(BINDLIBISCCFGDIR)/libisccfg.a \
+		$(BINDLIBISCDIR)/libisc.a
 
 libdhcpctl_a_SOURCES = dhcpctl.c callback.c remote.c
 cltest_SOURCES = cltest.c
 cltest_LDADD = libdhcpctl.a ../common/libdhcp.a ../omapip/libomapi.a \
-	       @BINDLIBIRSDIR@/libirs.a \
-	       @BINDLIBDNSDIR@/libdns.a \
-	       @BINDLIBISCCFGDIR@/libisccfg.a \
-	       @BINDLIBISCDIR@/libisc.a
+	       $(BINDLIBIRSDIR)/libirs.a \
+	       $(BINDLIBDNSDIR)/libdns.a \
+	       $(BINDLIBISCCFGDIR)/libisccfg.a \
+	       $(BINDLIBISCDIR)/libisc.a
 
 all: all-am
 
@@ -383,6 +389,8 @@ $(top_srcdir)/configure: @MAINTAINER_MODE_TRUE@ $(am__configure_deps)
 $(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
+Makefile.am: $(top_builddir)/config.status $(srcdir)/Makefile.am.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 install-libLIBRARIES: $(lib_LIBRARIES)
 	@$(NORMAL_INSTALL)
 	@list='$(lib_LIBRARIES)'; test -n "$(libdir)" || list=; \

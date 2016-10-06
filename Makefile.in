@@ -101,10 +101,7 @@ am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
  configure.lineno config.status.lineno
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/includes/config.h
-CONFIG_CLEAN_FILES = common/Makefile.am common/Makefile \
-	dhcpctl/Makefile.am dhcpctl/Makefile omapip/Makefile.am \
-	omapip/Makefile tests/Makefile.am tests/Makefile \
-	tests/unittest.sh doc/devel/doxyfile
+CONFIG_CLEAN_FILES = doc/devel/doxyfile
 CONFIG_CLEAN_VPATH_FILES =
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -192,17 +189,8 @@ CTAGS = ctags
 CSCOPE = cscope
 DIST_SUBDIRS = $(SUBDIRS)
 am__DIST_COMMON = $(srcdir)/Makefile.in \
-	$(top_srcdir)/common/Makefile.am.in \
-	$(top_srcdir)/common/Makefile.in \
-	$(top_srcdir)/dhcpctl/Makefile.am.in \
-	$(top_srcdir)/dhcpctl/Makefile.in \
-	$(top_srcdir)/doc/devel/doxyfile.in \
-	$(top_srcdir)/omapip/Makefile.am.in \
-	$(top_srcdir)/omapip/Makefile.in \
-	$(top_srcdir)/tests/Makefile.am.in \
-	$(top_srcdir)/tests/Makefile.in \
-	$(top_srcdir)/tests/unittest.sh.in README compile config.guess \
-	config.sub depcomp install-sh missing
+	$(top_srcdir)/doc/devel/doxyfile.in README compile \
+	config.guess config.sub depcomp install-sh missing
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 distdir = $(PACKAGE)-$(VERSION)
 top_distdir = $(distdir)
@@ -275,8 +263,10 @@ CPPFLAGS = @CPPFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
+DHLIBS = @DHLIBS@
 DISTCHECK_ATF_CONFIGURE_FLAG = @DISTCHECK_ATF_CONFIGURE_FLAG@
 DISTCHECK_LIBBIND_CONFIGURE_FLAG = @DISTCHECK_LIBBIND_CONFIGURE_FLAG@
+DISTCHECK_LIBTOOL_CONFIGURE_FLAG = @DISTCHECK_LIBTOOL_CONFIGURE_FLAG@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
@@ -306,6 +296,7 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
+Q = @Q@
 RANLIB = @RANLIB@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
@@ -402,7 +393,8 @@ nobase_include_HEADERS = dhcpctl/dhcpctl.h
 # distcheck tuning
 #
 DISTCHECK_CONFIGURE_FLAGS = @DISTCHECK_ATF_CONFIGURE_FLAG@ \
-	@DISTCHECK_LIBBIND_CONFIGURE_FLAG@ $(am__empty)
+	@DISTCHECK_LIBBIND_CONFIGURE_FLAG@ \
+	@DISTCHECK_LIBTOOL_CONFIGURE_FLAG@ $(am__empty)
 all: all-recursive
 
 .SUFFIXES:
@@ -430,24 +422,6 @@ $(top_srcdir)/configure: @MAINTAINER_MODE_TRUE@ $(am__configure_deps)
 $(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ $(am__aclocal_m4_deps)
 	$(am__cd) $(srcdir) && $(ACLOCAL) $(ACLOCAL_AMFLAGS)
 $(am__aclocal_m4_deps):
-common/Makefile.am: $(top_builddir)/config.status $(top_srcdir)/common/Makefile.am.in
-	cd $(top_builddir) && $(SHELL) ./config.status $@
-common/Makefile: $(top_builddir)/config.status $(top_srcdir)/common/Makefile.in
-	cd $(top_builddir) && $(SHELL) ./config.status $@
-dhcpctl/Makefile.am: $(top_builddir)/config.status $(top_srcdir)/dhcpctl/Makefile.am.in
-	cd $(top_builddir) && $(SHELL) ./config.status $@
-dhcpctl/Makefile: $(top_builddir)/config.status $(top_srcdir)/dhcpctl/Makefile.in
-	cd $(top_builddir) && $(SHELL) ./config.status $@
-omapip/Makefile.am: $(top_builddir)/config.status $(top_srcdir)/omapip/Makefile.am.in
-	cd $(top_builddir) && $(SHELL) ./config.status $@
-omapip/Makefile: $(top_builddir)/config.status $(top_srcdir)/omapip/Makefile.in
-	cd $(top_builddir) && $(SHELL) ./config.status $@
-tests/Makefile.am: $(top_builddir)/config.status $(top_srcdir)/tests/Makefile.am.in
-	cd $(top_builddir) && $(SHELL) ./config.status $@
-tests/Makefile: $(top_builddir)/config.status $(top_srcdir)/tests/Makefile.in
-	cd $(top_builddir) && $(SHELL) ./config.status $@
-tests/unittest.sh: $(top_builddir)/config.status $(top_srcdir)/tests/unittest.sh.in
-	cd $(top_builddir) && $(SHELL) ./config.status $@
 doc/devel/doxyfile: $(top_builddir)/config.status $(top_srcdir)/doc/devel/doxyfile.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
 install-nobase_includeHEADERS: $(nobase_include_HEADERS)

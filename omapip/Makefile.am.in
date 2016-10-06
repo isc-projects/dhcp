@@ -1,3 +1,8 @@
+BINDLIBIRSDIR=@Q@BINDLIBIRSDIR@Q@
+BINDLIBDNSDIR=@Q@BINDLIBDNSDIR@Q@
+BINDLIBISCCFGDIR=@Q@BINDLIBISCCFGDIR@Q@
+BINDLIBISCDIR=@Q@BINDLIBISCDIR@Q@
+
 lib_@DHLIBS@ = libomapi.@A@
 noinst_PROGRAMS = svtest
 
@@ -11,7 +16,7 @@ EXTRA_DIST = $(man_MANS)
 
 svtest_SOURCES = test.c
 svtest_LDADD = libomapi.@A@ \
-	       @BINDLIBIRSDIR@/libirs.@A@ \
-	       @BINDLIBDNSDIR@/libdns.@A@ \
-	       @BINDLIBISCCFGDIR@/libisccfg.@A@ \
-	       @BINDLIBISCDIR@/libisc.@A@
+	       $(BINDLIBIRSDIR)/libirs.@A@ \
+	       $(BINDLIBDNSDIR)/libdns.@A@ \
+	       $(BINDLIBISCCFGDIR)/libisccfg.@A@ \
+	       $(BINDLIBISCDIR)/libisc.@A@

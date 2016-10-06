@@ -42,7 +42,6 @@ OMAPI_OBJECT_ALLOC (shared_network, struct shared_network,
 OMAPI_OBJECT_ALLOC (group_object, struct group_object, dhcp_type_group)
 OMAPI_OBJECT_ALLOC (dhcp_control, dhcp_control_object_t, dhcp_type_control)
 
-omapi_object_type_t *dhcp_type_interface;
 omapi_object_type_t *dhcp_type_group;
 omapi_object_type_t *dhcp_type_shared_network;
 omapi_object_type_t *dhcp_type_subnet;

@@ -627,11 +627,13 @@ LTLIBOBJS
 LIBOBJS
 LDAP_CFLAGS
 LDAP_LIBS
+INSTALL_BIND_FALSE
+INSTALL_BIND_TRUE
+Q
+DISTCHECK_LIBTOOL_CONFIGURE_FLAG
 BINDLT
 A
 DHLIBS
-INSTALL_BIND_FALSE
-INSTALL_BIND_TRUE
 HAVE_BINDDIR_FALSE
 HAVE_BINDDIR_TRUE
 DISTCHECK_LIBBIND_CONFIGURE_FLAG
@@ -790,8 +792,8 @@ enable_epoll
 enable_devpoll
 with_bind_extra_config
 with_libbind
-enable_bind_install
 enable_libtool
+enable_bind_install
 with_ldap
 with_ldapcrypto
 with_ldap_gssapi
@@ -1458,9 +1460,10 @@ Optional Features:
   --enable-kqueue         use BSD kqueue (default is no)
   --enable-epoll          use Linux epoll (default is no)
   --enable-devpoll        use /dev/poll (default is no)
-  --enable-bind-install   install bind includes and libraries (default is no).
   --enable-libtool        use GNU libtool for dynamic shared libraries
-                          (default is $default_libtool).
+                          (default is $want_libtool).
+  --enable-bind-install   install bind includes and libraries (default is
+                          $want_install_bind).
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -6994,24 +6997,6 @@ else
 fi
 
 
-# Check whether --enable-bind_install was given.
-if test "${enable_bind_install+set}" = set; then :
-  enableval=$enable_bind_install;
-fi
-
-if test "$enable_bind_install" = "yes" -a "$use_libbind" != "no"; then
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: --enable-bind-install does nothing when --with-libbind is set" >&5
-$as_echo "$as_me: WARNING: --enable-bind-install does nothing when --with-libbind is set" >&2;}
-fi
- if test "$enable_bind_install" = "yes"; then
-  INSTALL_BIND_TRUE=
-  INSTALL_BIND_FALSE='#'
-else
-  INSTALL_BIND_TRUE='#'
-  INSTALL_BIND_FALSE=
-fi
-
-
 #
 # GNU libtool support
 #
@@ -7028,6 +7013,7 @@ esac
 want_libtool="no"
 
 BINDLT=
+DISTCHECK_LIBTOOL_CONFIGURE_FLAG=
 # Check whether --enable-libtool was given.
 if test "${enable_libtool+set}" = set; then :
   enableval=$enable_libtool; want_libtool="$enableval"
@@ -7054,6 +7040,43 @@ A=a
 
 
 
+
+
+
+# quoting in Makefile.am.in
+Q=@
+
+
+# install bind includes and libraries
+
+want_install_bind="no"
+if test "$want_libtool" = "yes"; then
+	want_install_bind="yes"
+fi
+if test "$use_libbind" != "no"; then
+	want_install_bind="no"
+fi
+# Check whether --enable-bind_install was given.
+if test "${enable_bind_install+set}" = set; then :
+  enableval=$enable_bind_install; want_install_bind="$enableval"
+fi
+
+if test "$want_install_bind" = "yes"; then
+        if test "$use_libbind" != "no"; then
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: --enable-bind-install does nothing when --with-libbind is set" >&5
+$as_echo "$as_me: WARNING: --enable-bind-install does nothing when --with-libbind is set" >&2;}
+	fi
+elif test "$want_libtool" = "yes" -a "$use_libbind" = "no"; then
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: embedded dynamic bind libraries must be installed" >&5
+$as_echo "$as_me: WARNING: embedded dynamic bind libraries must be installed" >&2;}
+fi
+ if test "$want_install_bind" = "yes"; then
+  INSTALL_BIND_TRUE=
+  INSTALL_BIND_FALSE='#'
+else
+  INSTALL_BIND_TRUE='#'
+  INSTALL_BIND_FALSE=
+fi
 
 
 # OpenLDAP support.
