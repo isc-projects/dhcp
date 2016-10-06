@@ -776,10 +776,15 @@ no)
 	if test ! -d "$use_libbind"; then
 		AC_MSG_ERROR([Cannot find bind directory at $use_libbind])
 	fi
-	if test ! -d "$use_libbind/include"; then
+	if test ! -d "$use_libbind/include" -o \
+	        ! -f "$use_libbind/include/isc/buffer.h"
+	then
 		AC_MSG_ERROR([Cannot find bind includes at $use_libbind/include])
 	fi
-	if test	! -d "$use_libbind/lib"; then
+	if test	! -d "$use_libbind/lib" -o \
+	        \( ! -f "$use_libbind/lib/libisc.a" -a \
+		   ! -f	"$use_libbind/lib/libisc.la" \)
+	then
 		AC_MSG_ERROR([Cannot find bind libraries at $use_libbind/lib])
 	fi
 	BINDDIR="$use_libbind"
@@ -820,8 +825,22 @@ want_libtool="yes"
 BINDLT=
 DISTCHECK_LIBTOOL_CONFIGURE_FLAG=
 AC_ARG_ENABLE(libtool,
-	AS_HELP_STRING([--enable-libtool],[use GNU libtool for dynamic shared libraries (default is $want_libtool).]),
+	AS_HELP_STRING([--enable-libtool],
+[use GNU libtool for dynamic shared libraries (default is yes).]),
 	want_libtool="$enableval")
+
+if test "$use_libbind" != "no"; then
+	if test "$want_libtool" = "yes" -a \
+	        ! -f "$use_libbind/lib/libisc.la"
+	then
+		AC_MSG_ERROR([Cannot find dynamic libraries at $use_libbind/lib])
+	fi
+	if test "$want_libtool" = "no" -a \
+	        ! -f "$use_libbind/lib/libisc.a"
+	then
+		AC_MSG_ERROR([Cannot find static libraries at $use_libbind/lib])
+	fi
+fi
 
 if test "$want_libtool" = "no"; then
 	AC_MSG_ERROR([libtool configure is used but libtool is disabled?])
@@ -853,7 +872,8 @@ if test "$use_libbind" != "no"; then
 	want_install_bind="no"
 fi
 AC_ARG_ENABLE(bind_install,
-	AS_HELP_STRING([--enable-bind-install],[install bind includes and libraries (default is $want_install_bind).]),
+	AS_HELP_STRING([--enable-bind-install],
+[install bind includes and libraries.]),
 	want_install_bind="$enableval")
 if test "$want_install_bind" = "yes"; then
         if test "$use_libbind" != "no"; then

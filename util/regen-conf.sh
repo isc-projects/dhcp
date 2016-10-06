@@ -14,9 +14,7 @@
 # OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 
-# called by the legacy configure when libtool is enabled
-
-cp configure.ac+lt configure.ac
-autoreconf -i
-echo Reconfiguring with $*
-./configure $*
+perl util/lt.pl with < configure.ac-base > configure.ac+lt
+perl util/lt.pl without < configure.ac-base > configure.ac-lt
+cp -p configure.ac-lt configure.ac
+autoconf

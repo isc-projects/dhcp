@@ -775,10 +775,15 @@ no)
 	if test ! -d "$use_libbind"; then
 		AC_MSG_ERROR([Cannot find bind directory at $use_libbind])
 	fi
-	if test ! -d "$use_libbind/include"; then
+	if test ! -d "$use_libbind/include" -o \
+	        ! -f "$use_libbind/include/isc/buffer.h"
+	then
 		AC_MSG_ERROR([Cannot find bind includes at $use_libbind/include])
 	fi
-	if test	! -d "$use_libbind/lib"; then
+	if test	! -d "$use_libbind/lib" -o \
+	        \( ! -f "$use_libbind/lib/libisc.a" -a \
+		   ! -f	"$use_libbind/lib/libisc.la" \)
+	then
 		AC_MSG_ERROR([Cannot find bind libraries at $use_libbind/lib])
 	fi
 	BINDDIR="$use_libbind"
@@ -817,20 +822,30 @@ want_libtool="no"
 BINDLT=
 DISTCHECK_LIBTOOL_CONFIGURE_FLAG=
 AC_ARG_ENABLE(libtool,
-	AS_HELP_STRING([--enable-libtool],[use GNU libtool for dynamic shared libraries (default is $want_libtool).]),
+	AS_HELP_STRING([--enable-libtool],
+[use GNU libtool for dynamic shared libraries (default is no).]),
 	want_libtool="$enableval")
+
+if test "$use_libbind" != "no"; then
+	if test "$want_libtool" = "yes" -a \
+	        ! -f "$use_libbind/lib/libisc.la"
+	then
+		AC_MSG_ERROR([Cannot find dynamic libraries at $use_libbind/lib])
+	fi
+	if test "$want_libtool" = "no" -a \
+	        ! -f "$use_libbind/lib/libisc.a"
+	then
+		AC_MSG_ERROR([Cannot find static libraries at $use_libbind/lib])
+	fi
+fi
 
 
 if test "$want_libtool" = "yes"; then
 	AC_MSG_WARN([legacy configure is used but libtool is enabled. Trying to recover...])
-	# dequote $ac_configure_args
+	# expand $ac_configure_args
 	eval "set my_configure_args $ac_configure_args"
 	shift
-	re_configure_args=
-	for a; do
-		re_configure_args="$re_configure_args $a"
-	done
-	cd $srcdir; exec ./re-conf $re_configure_args
+	cd $srcdir; exec ./config+lt "$@"
 	AC_MSG_ERROR([Recovering failed])
 fi
 
@@ -856,7 +871,8 @@ if test "$use_libbind" != "no"; then
 	want_install_bind="no"
 fi
 AC_ARG_ENABLE(bind_install,
-	AS_HELP_STRING([--enable-bind-install],[install bind includes and libraries (default is $want_install_bind).]),
+	AS_HELP_STRING([--enable-bind-install],
+[install bind includes and libraries (default is no).]),
 	want_install_bind="$enableval")
 if test "$want_install_bind" = "yes"; then
         if test "$use_libbind" != "no"; then
