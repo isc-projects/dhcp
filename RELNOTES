@@ -120,8 +120,9 @@ by Eric Young (eay@cryptsoft.com).
 - Added --enable-bind-install to install embedded bind includes and
   libraries. Default is to not install them (it was the previous
   behavior). If you'd like to change the includedir and/or libdir
-  installation directories you must pass them using the
-  --with-bind-extra-config configuration arguments.
+  installation directories to something different than for ISC DHCP
+  you must pass them using the --with-bind-extra-config configuration
+  arguments.
   [ISC-Bugs #39318]
 
 			Changes since 4.3.0 (bug fixes)
