@@ -18,24 +18,30 @@
 binddir=@BINDDIR@
 bindsrcdir=@BINDSRCDIR@
 
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+
 bindconfig = --without-openssl --without-libxml2 --without-libjson \
 	--without-gssapi --disable-threads \
-	--prefix=${binddir} \
+	--includedir=@includedir@ --libdir=@libdir@ \
 	@BINDIOMUX@ @BINDCONFIG@ --enable-full-report
 
-@BIND_ATF_FALSE@cleandirs = ./lib ./include ./share
-@BIND_ATF_TRUE@cleandirs = ./lib ./include /share ./atf
+@BIND_ATF_FALSE@cleandirs = ./lib ./include
+@BIND_ATF_TRUE@cleandirs = ./lib ./include ./atf
 cleanfiles = ./configure.log ./build.log ./install.log
+
+bindlibs = isc dns isccfg irs
+installdirs = includedir=${binddir}/include libdir=${binddir}/lib
 
 @BIND_ATF_FALSE@all: bind1 bind2
 @BIND_ATF_TRUE@all: bind1 atf bind2
 
 bind1:
 # Extract the source from the tarball, if it hasn't been already.
-	@if test -d ${bindsrcdir} ; then                    \
-		echo ${bindsrcdir} already unpacked... ;    \
-	else                                                \
-		gunzip -c bind.tar.gz | tar xf - ;          \
+	@if test -d ${bindsrcdir} ; then                  \
+		echo ${bindsrcdir} already unpacked... ;  \
+	else                                              \
+		gunzip -c bind.tar.gz | tar xf - ;        \
 	fi
 
 # Configure the libraries
@@ -55,13 +61,13 @@ bind1:
 
 atf:
 # Build and copy the ATF support if not yet installed.
-	@if test -d ./atf ; then				      \
-		echo ATF support already installed ;		      \
-	else							      \
-		echo Building ATF support ;			      \
-		(cd ${bindsrcdir}/unit;				      \
-		 $(MAKE) atf > ${binddir}/build.log ;		      \
-		 cp -rp atf ${binddir}) ;			      \
+	@if test -d ./atf ; then                      \
+		echo ATF support already installed ;  \
+	else                                          \
+		echo Building ATF support ;           \
+		(cd ${bindsrcdir}/unit;               \
+		 $(MAKE) atf > ${binddir}/build.log ; \
+		 cp -rp atf ${binddir}) ;             \
 	fi
 
 bind2:
@@ -71,21 +77,42 @@ bind2:
 		echo Bind libraries already installed ;                \
 	else                                                           \
 		echo Building BIND libraries - this takes some time. ; \
-		(cd ${bindsrcdir}/lib ;                                \
-		  echo building in `pwd` ;                             \
-		  $(MAKE) >> ${binddir}/build.log) ;		       \
-                                                                       \
+		for libdir in ${bindlibs} ; do                         \
+		 (cd ${bindsrcdir}/lib/$$libdir ;                      \
+		  echo Building $$libdir library in `pwd` ;            \
+		  $(MAKE) >> ${binddir}/build.log) ;                   \
+		done ;                                                 \
+		                                                       \
 		echo Installing BIND libraries to ${binddir}. ;        \
-		(cd ${bindsrcdir}/lib ;                                \
-		  $(MAKE) install > ${binddir}/install.log) ;	       \
+		for libdir in ${bindlibs} ; do                         \
+		 (cd ${bindsrcdir}/lib/$$libdir ;                      \
+		  $(MAKE) ${installdirs} install >>                    \
+		   ${binddir}/install.log) ;                           \
+		done ;                                                 \
 	fi
 
 clean:
 	@echo Cleaning BIND library.
 	rm -rf ${bindsrcdir} ${cleandirs} ${cleanfiles}
 
+@INSTALL_BIND_FALSE@install:
+@INSTALL_BIND_TRUE@install: install-bind
+@INSTALL_BIND_FALSE@uninstall:
+@INSTALL_BIND_TRUE@uninstall: uninstall-bind
+
+install-bind: all
+	@for libdir in ${bindlibs} ; do   \
+	 (cd ${bindsrcdir}/lib/$$libdir ; \
+	  $(MAKE) install) ;              \
+	 done
+
+uninstall-bind: all
+	@for libdir in ${bindlibs} ; do   \
+	 (cd ${bindsrcdir}/lib/$$libdir ; \
+	  $(MAKE) uninstall) ;            \
+	 done
+
 # Include the following so that this Makefile is happy when the parent
 # tries to use them.
 
-check distdir distclean dvi install installcheck uninstall:
-
+check distdir distclean dvi installcheck:
