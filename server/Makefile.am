@@ -15,10 +15,10 @@ dhcpd_SOURCES = dhcpd.c dhcp.c bootp.c confpars.c db.c class.c failover.c \
 		dhcpv6.c mdb6.c ldap.c ldap_casa.c leasechain.c ldap_krb_helper.c
 
 dhcpd_CFLAGS = $(LDAP_CFLAGS)
-dhcpd_LDADD = ../common/libdhcp.a ../omapip/libomapi.a \
-	      ../dhcpctl/libdhcpctl.a $(BINDLIBDIR)/libirs.a \
-	      $(BINDLIBDIR)/libdns.a $(BINDLIBDIR)/libisccfg.a \
-	      $(BINDLIBDIR)/libisc.a $(LDAP_LIBS)
+dhcpd_LDADD = ../common/libdhcp.@A@ ../omapip/libomapi.@A@ \
+	      ../dhcpctl/libdhcpctl.@A@ $(BINDLIBDIR)/libirs.@A@ \
+	      $(BINDLIBDIR)/libdns.@A@ $(BINDLIBDIR)/libisccfg.@A@ \
+	      $(BINDLIBDIR)/libisc.@A@ $(LDAP_LIBS)
 
 man_MANS = dhcpd.8 dhcpd.conf.5 dhcpd.leases.5
 EXTRA_DIST = $(man_MANS)

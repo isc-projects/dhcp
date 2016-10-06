@@ -4,9 +4,14 @@
 Makefile:
 
 #
+# for libtool
+#
+ACLOCAL_AMFLAGS = -I m4
+
+#
 # We have a lot of files that we want shipped with the distribution.
 #
-EXTRA_DIST = RELNOTES LICENSE \
+EXTRA_DIST = RELNOTES LICENSE configure.ac+lt re-conf \
 	     contrib/3.0b1-lease-convert contrib/dhclient-tz-exithook.sh \
 	     contrib/dhcp.spec contrib/sethostname.sh contrib/solaris.init \
 	     contrib/ms2isc/Registry.pm contrib/ms2isc/ms2isc.pl \

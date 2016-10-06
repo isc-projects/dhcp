@@ -1,5 +1,9 @@
 AC_INIT([DHCP],[4.4.0-dev],[dhcp-users@isc.org])
 
+@BEGIN WITH LIBTOOL
+# for libtool
+AC_CONFIG_MACRO_DIR([m4])
+@END WITH LIBTOOL
 
 # we specify "foreign" to avoid having to have the GNU mandated files,
 # like AUTHORS, COPYING, and such
@@ -820,23 +824,30 @@ case "$build_os" in
 esac
 
 want_libtool="no"
+@BEGIN WITH LIBTOOL
+LT_INIT
+want_libtool="yes"
+@END WITH LIBTOOL
 
 BINDLT=
 AC_ARG_ENABLE(libtool,
 	AS_HELP_STRING([--enable-libtool],[use GNU libtool for dynamic shared libraries (default is $default_libtool).]),
 	want_libtool="$enableval")
-if test "$want_libtool" = "yes"; then
+@BEGIN WITH LIBTOOL
+if test "$want_libtool" = "no"; then
+	AC_MSG_ERROR([libtool configure is used but libtool is disabled?])
+fi
+A=la
+BINDLT=--with-libtool
+@END WITH LIBTOOL
+@BEGIN WITHOUT LIBTOOL
 if test "$want_libtool" = "yes"; then
 	AC_MSG_WARN([legacy configure is used but libtool is enabled. Trying to recover...])
-	AC_MSG_WARN([legacy configure is used but libtool is enabled. Trying to recover...])
-	cd $srcdir; exec ./re-conf $ac_configure_args
 	cd $srcdir; exec ./re-conf $ac_configure_args
 	AC_MSG_ERROR([Recovering failed])
-	AC_MSG_ERROR([Recovering failed])
-fi
 fi
 A=a
-A=a
+@END WITHOUT LIBTOOL
 AC_SUBST(A)
 AC_SUBST(BINDLT)
 
@@ -953,6 +964,12 @@ AC_CONFIG_FILES([
 ])
 AC_OUTPUT
 
+@BEGIN WITH LIBTOOL
+AC_MSG_NOTICE([postconfig: run automake in $srcdir])
+(cd $srcdir; automake)
+AC_MSG_NOTICE([postconfig: rerun config.status])
+sh ./config.status
+@END WITH LIBTOOL
 
 if test "$enable_dhcpv4o6" = "yes"; then
 	DHCP_VERSIONS="DHCPv4, DHCPv6 and DHCPv4-over-DHCPv6"

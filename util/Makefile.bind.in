@@ -24,7 +24,7 @@ exec_prefix = @exec_prefix@
 bindconfig = --without-openssl --without-libxml2 --without-libjson \
 	--without-gssapi --disable-threads \
 	--includedir=@includedir@ --libdir=@libdir@ \
-	@BINDIOMUX@ @BINDCONFIG@ --enable-full-report
+	@BINDLT@ @BINDIOMUX@ @BINDCONFIG@ --enable-full-report
 
 @BIND_ATF_FALSE@cleandirs = ./lib ./include
 @BIND_ATF_TRUE@cleandirs = ./lib ./include ./atf

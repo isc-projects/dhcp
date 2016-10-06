@@ -19,10 +19,13 @@ DHCPSRC = ../dhcp.c ../bootp.c ../confpars.c ../db.c ../class.c      \
           ../ddns.c ../dhcpleasequery.c ../dhcpv6.c ../mdb6.c        \
           ../ldap.c ../ldap_casa.c ../dhcpd.c ../leasechain.c
 
-DHCPLIBS = $(top_builddir)/common/libdhcp.a $(top_builddir)/omapip/libomapi.a \
-          $(top_builddir)/dhcpctl/libdhcpctl.a $(BINDLIBDIR)/libirs.a \
-	  $(BINDLIBDIR)/libdns.a $(BINDLIBDIR)/libisccfg.a \
-	  $(BINDLIBDIR)/libisc.a
+DHCPLIBS = $(top_builddir)/common/libdhcp.@A@ \
+	  $(top_builddir)/omapip/libomapi.@A@ \
+          $(top_builddir)/dhcpctl/libdhcpctl.@A@ \
+	  $(BINDLIBDIR)/libirs.@A@ \
+	  $(BINDLIBDIR)/libdns.@A@ \
+	  $(BINDLIBDIR)/libisccfg.@A@ \
+	  $(BINDLIBDIR)/libisc.@A@
 
 ATF_TESTS =
 if HAVE_ATF

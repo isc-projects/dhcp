@@ -110,12 +110,14 @@ am__dhcpd_unittests_SOURCES_DIST = ../dhcp.c ../bootp.c ../confpars.c \
 	../stables.c ../salloc.c ../ddns.c ../dhcpleasequery.c \
 	../dhcpv6.c ../mdb6.c ../ldap.c ../ldap_casa.c ../dhcpd.c \
 	../leasechain.c simple_unittest.c
-am__objects_1 = dhcp.$(OBJEXT) bootp.$(OBJEXT) confpars.$(OBJEXT) \
-	db.$(OBJEXT) class.$(OBJEXT) failover.$(OBJEXT) \
-	omapi.$(OBJEXT) mdb.$(OBJEXT) stables.$(OBJEXT) \
-	salloc.$(OBJEXT) ddns.$(OBJEXT) dhcpleasequery.$(OBJEXT) \
-	dhcpv6.$(OBJEXT) mdb6.$(OBJEXT) ldap.$(OBJEXT) \
-	ldap_casa.$(OBJEXT) dhcpd.$(OBJEXT) leasechain.$(OBJEXT)
+am__dirstamp = $(am__leading_dot)dirstamp
+am__objects_1 = ../dhcp.$(OBJEXT) ../bootp.$(OBJEXT) \
+	../confpars.$(OBJEXT) ../db.$(OBJEXT) ../class.$(OBJEXT) \
+	../failover.$(OBJEXT) ../omapi.$(OBJEXT) ../mdb.$(OBJEXT) \
+	../stables.$(OBJEXT) ../salloc.$(OBJEXT) ../ddns.$(OBJEXT) \
+	../dhcpleasequery.$(OBJEXT) ../dhcpv6.$(OBJEXT) \
+	../mdb6.$(OBJEXT) ../ldap.$(OBJEXT) ../ldap_casa.$(OBJEXT) \
+	../dhcpd.$(OBJEXT) ../leasechain.$(OBJEXT)
 @HAVE_ATF_TRUE@am_dhcpd_unittests_OBJECTS = $(am__objects_1) \
 @HAVE_ATF_TRUE@	simple_unittest.$(OBJEXT)
 dhcpd_unittests_OBJECTS = $(am_dhcpd_unittests_OBJECTS)
@@ -180,10 +182,6 @@ DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/includes
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
 am__mv = mv -f
-AM_V_lt = $(am__v_lt_@AM_V@)
-am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
-am__v_lt_0 = --silent
-am__v_lt_1 = 
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 AM_V_CC = $(am__v_CC_@AM_V@)
@@ -272,6 +270,7 @@ am__relativize = \
     dir1=`echo "$$dir1" | sed -e "$$sed_rest"`; \
   done; \
   reldir="$$dir2"
+A = @A@
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
 AM_DEFAULT_VERBOSITY = @AM_DEFAULT_VERBOSITY@
@@ -290,6 +289,7 @@ BINDLIBDNSDIR = @BINDLIBDNSDIR@
 BINDLIBIRSDIR = @BINDLIBIRSDIR@
 BINDLIBISCCFGDIR = @BINDLIBISCCFGDIR@
 BINDLIBISCDIR = @BINDLIBISCDIR@
+BINDLT = @BINDLT@
 BINDSRCDIR = @BINDSRCDIR@
 BINDSUBDIR = @BINDSUBDIR@
 CC = @CC@
@@ -399,10 +399,13 @@ DHCPSRC = ../dhcp.c ../bootp.c ../confpars.c ../db.c ../class.c      \
           ../ddns.c ../dhcpleasequery.c ../dhcpv6.c ../mdb6.c        \
           ../ldap.c ../ldap_casa.c ../dhcpd.c ../leasechain.c
 
-DHCPLIBS = $(top_builddir)/common/libdhcp.a $(top_builddir)/omapip/libomapi.a \
-          $(top_builddir)/dhcpctl/libdhcpctl.a $(BINDLIBDIR)/libirs.a \
-	  $(BINDLIBDIR)/libdns.a $(BINDLIBDIR)/libisccfg.a \
-	  $(BINDLIBDIR)/libisc.a
+DHCPLIBS = $(top_builddir)/common/libdhcp.@A@ \
+	  $(top_builddir)/omapip/libomapi.@A@ \
+          $(top_builddir)/dhcpctl/libdhcpctl.@A@ \
+	  $(BINDLIBDIR)/libirs.@A@ \
+	  $(BINDLIBDIR)/libdns.@A@ \
+	  $(BINDLIBDIR)/libisccfg.@A@ \
+	  $(BINDLIBDIR)/libisc.@A@
 
 ATF_TESTS = $(am__append_1)
 @HAVE_ATF_TRUE@dhcpd_unittests_SOURCES = $(DHCPSRC) simple_unittest.c
@@ -454,6 +457,33 @@ $(am__aclocal_m4_deps):
 
 clean-checkPROGRAMS:
 	-test -z "$(check_PROGRAMS)" || rm -f $(check_PROGRAMS)
+../$(am__dirstamp):
+	@$(MKDIR_P) ..
+	@: > ../$(am__dirstamp)
+../$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) ../$(DEPDIR)
+	@: > ../$(DEPDIR)/$(am__dirstamp)
+../dhcp.$(OBJEXT): ../$(am__dirstamp) ../$(DEPDIR)/$(am__dirstamp)
+../bootp.$(OBJEXT): ../$(am__dirstamp) ../$(DEPDIR)/$(am__dirstamp)
+../confpars.$(OBJEXT): ../$(am__dirstamp) ../$(DEPDIR)/$(am__dirstamp)
+../db.$(OBJEXT): ../$(am__dirstamp) ../$(DEPDIR)/$(am__dirstamp)
+../class.$(OBJEXT): ../$(am__dirstamp) ../$(DEPDIR)/$(am__dirstamp)
+../failover.$(OBJEXT): ../$(am__dirstamp) ../$(DEPDIR)/$(am__dirstamp)
+../omapi.$(OBJEXT): ../$(am__dirstamp) ../$(DEPDIR)/$(am__dirstamp)
+../mdb.$(OBJEXT): ../$(am__dirstamp) ../$(DEPDIR)/$(am__dirstamp)
+../stables.$(OBJEXT): ../$(am__dirstamp) ../$(DEPDIR)/$(am__dirstamp)
+../salloc.$(OBJEXT): ../$(am__dirstamp) ../$(DEPDIR)/$(am__dirstamp)
+../ddns.$(OBJEXT): ../$(am__dirstamp) ../$(DEPDIR)/$(am__dirstamp)
+../dhcpleasequery.$(OBJEXT): ../$(am__dirstamp) \
+	../$(DEPDIR)/$(am__dirstamp)
+../dhcpv6.$(OBJEXT): ../$(am__dirstamp) ../$(DEPDIR)/$(am__dirstamp)
+../mdb6.$(OBJEXT): ../$(am__dirstamp) ../$(DEPDIR)/$(am__dirstamp)
+../ldap.$(OBJEXT): ../$(am__dirstamp) ../$(DEPDIR)/$(am__dirstamp)
+../ldap_casa.$(OBJEXT): ../$(am__dirstamp) \
+	../$(DEPDIR)/$(am__dirstamp)
+../dhcpd.$(OBJEXT): ../$(am__dirstamp) ../$(DEPDIR)/$(am__dirstamp)
+../leasechain.$(OBJEXT): ../$(am__dirstamp) \
+	../$(DEPDIR)/$(am__dirstamp)
 
 dhcpd_unittests$(EXEEXT): $(dhcpd_unittests_OBJECTS) $(dhcpd_unittests_DEPENDENCIES) $(EXTRA_dhcpd_unittests_DEPENDENCIES) 
 	@rm -f dhcpd_unittests$(EXEEXT)
@@ -477,299 +507,50 @@ load_bal_unittests$(EXEEXT): $(load_bal_unittests_OBJECTS) $(load_bal_unittests_
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
+	-rm -f ../*.$(OBJEXT)
 
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/bootp.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/class.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/confpars.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/db.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ddns.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dhcp.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dhcpd.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dhcpleasequery.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dhcpv6.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/failover.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@../$(DEPDIR)/bootp.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@../$(DEPDIR)/class.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@../$(DEPDIR)/confpars.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@../$(DEPDIR)/db.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@../$(DEPDIR)/ddns.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@../$(DEPDIR)/dhcp.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@../$(DEPDIR)/dhcpd.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@../$(DEPDIR)/dhcpleasequery.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@../$(DEPDIR)/dhcpv6.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@../$(DEPDIR)/failover.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@../$(DEPDIR)/ldap.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@../$(DEPDIR)/ldap_casa.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@../$(DEPDIR)/leasechain.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@../$(DEPDIR)/mdb.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@../$(DEPDIR)/mdb6.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@../$(DEPDIR)/omapi.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@../$(DEPDIR)/salloc.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@../$(DEPDIR)/stables.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hash_unittest.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ldap.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ldap_casa.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/leasechain.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/leaseq_unittest.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/load_bal_unittest.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mdb.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mdb6.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mdb6_unittest.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/omapi.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/salloc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/simple_unittest.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stables.Po@am__quote@
 
 .c.o:
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
+@am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
+@am__fastdepCC_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ $<
 
 .c.obj:
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ `$(CYGPATH_W) '$<'`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.obj$$||'`;\
+@am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ `$(CYGPATH_W) '$<'` &&\
+@am__fastdepCC_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
-
-dhcp.o: ../dhcp.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT dhcp.o -MD -MP -MF $(DEPDIR)/dhcp.Tpo -c -o dhcp.o `test -f '../dhcp.c' || echo '$(srcdir)/'`../dhcp.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/dhcp.Tpo $(DEPDIR)/dhcp.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../dhcp.c' object='dhcp.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o dhcp.o `test -f '../dhcp.c' || echo '$(srcdir)/'`../dhcp.c
-
-dhcp.obj: ../dhcp.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT dhcp.obj -MD -MP -MF $(DEPDIR)/dhcp.Tpo -c -o dhcp.obj `if test -f '../dhcp.c'; then $(CYGPATH_W) '../dhcp.c'; else $(CYGPATH_W) '$(srcdir)/../dhcp.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/dhcp.Tpo $(DEPDIR)/dhcp.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../dhcp.c' object='dhcp.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o dhcp.obj `if test -f '../dhcp.c'; then $(CYGPATH_W) '../dhcp.c'; else $(CYGPATH_W) '$(srcdir)/../dhcp.c'; fi`
-
-bootp.o: ../bootp.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT bootp.o -MD -MP -MF $(DEPDIR)/bootp.Tpo -c -o bootp.o `test -f '../bootp.c' || echo '$(srcdir)/'`../bootp.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/bootp.Tpo $(DEPDIR)/bootp.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../bootp.c' object='bootp.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o bootp.o `test -f '../bootp.c' || echo '$(srcdir)/'`../bootp.c
-
-bootp.obj: ../bootp.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT bootp.obj -MD -MP -MF $(DEPDIR)/bootp.Tpo -c -o bootp.obj `if test -f '../bootp.c'; then $(CYGPATH_W) '../bootp.c'; else $(CYGPATH_W) '$(srcdir)/../bootp.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/bootp.Tpo $(DEPDIR)/bootp.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../bootp.c' object='bootp.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o bootp.obj `if test -f '../bootp.c'; then $(CYGPATH_W) '../bootp.c'; else $(CYGPATH_W) '$(srcdir)/../bootp.c'; fi`
-
-confpars.o: ../confpars.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT confpars.o -MD -MP -MF $(DEPDIR)/confpars.Tpo -c -o confpars.o `test -f '../confpars.c' || echo '$(srcdir)/'`../confpars.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/confpars.Tpo $(DEPDIR)/confpars.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../confpars.c' object='confpars.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o confpars.o `test -f '../confpars.c' || echo '$(srcdir)/'`../confpars.c
-
-confpars.obj: ../confpars.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT confpars.obj -MD -MP -MF $(DEPDIR)/confpars.Tpo -c -o confpars.obj `if test -f '../confpars.c'; then $(CYGPATH_W) '../confpars.c'; else $(CYGPATH_W) '$(srcdir)/../confpars.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/confpars.Tpo $(DEPDIR)/confpars.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../confpars.c' object='confpars.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o confpars.obj `if test -f '../confpars.c'; then $(CYGPATH_W) '../confpars.c'; else $(CYGPATH_W) '$(srcdir)/../confpars.c'; fi`
-
-db.o: ../db.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT db.o -MD -MP -MF $(DEPDIR)/db.Tpo -c -o db.o `test -f '../db.c' || echo '$(srcdir)/'`../db.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/db.Tpo $(DEPDIR)/db.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../db.c' object='db.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o db.o `test -f '../db.c' || echo '$(srcdir)/'`../db.c
-
-db.obj: ../db.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT db.obj -MD -MP -MF $(DEPDIR)/db.Tpo -c -o db.obj `if test -f '../db.c'; then $(CYGPATH_W) '../db.c'; else $(CYGPATH_W) '$(srcdir)/../db.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/db.Tpo $(DEPDIR)/db.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../db.c' object='db.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o db.obj `if test -f '../db.c'; then $(CYGPATH_W) '../db.c'; else $(CYGPATH_W) '$(srcdir)/../db.c'; fi`
-
-class.o: ../class.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT class.o -MD -MP -MF $(DEPDIR)/class.Tpo -c -o class.o `test -f '../class.c' || echo '$(srcdir)/'`../class.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/class.Tpo $(DEPDIR)/class.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../class.c' object='class.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o class.o `test -f '../class.c' || echo '$(srcdir)/'`../class.c
-
-class.obj: ../class.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT class.obj -MD -MP -MF $(DEPDIR)/class.Tpo -c -o class.obj `if test -f '../class.c'; then $(CYGPATH_W) '../class.c'; else $(CYGPATH_W) '$(srcdir)/../class.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/class.Tpo $(DEPDIR)/class.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../class.c' object='class.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o class.obj `if test -f '../class.c'; then $(CYGPATH_W) '../class.c'; else $(CYGPATH_W) '$(srcdir)/../class.c'; fi`
-
-failover.o: ../failover.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT failover.o -MD -MP -MF $(DEPDIR)/failover.Tpo -c -o failover.o `test -f '../failover.c' || echo '$(srcdir)/'`../failover.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/failover.Tpo $(DEPDIR)/failover.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../failover.c' object='failover.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o failover.o `test -f '../failover.c' || echo '$(srcdir)/'`../failover.c
-
-failover.obj: ../failover.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT failover.obj -MD -MP -MF $(DEPDIR)/failover.Tpo -c -o failover.obj `if test -f '../failover.c'; then $(CYGPATH_W) '../failover.c'; else $(CYGPATH_W) '$(srcdir)/../failover.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/failover.Tpo $(DEPDIR)/failover.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../failover.c' object='failover.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o failover.obj `if test -f '../failover.c'; then $(CYGPATH_W) '../failover.c'; else $(CYGPATH_W) '$(srcdir)/../failover.c'; fi`
-
-omapi.o: ../omapi.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT omapi.o -MD -MP -MF $(DEPDIR)/omapi.Tpo -c -o omapi.o `test -f '../omapi.c' || echo '$(srcdir)/'`../omapi.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/omapi.Tpo $(DEPDIR)/omapi.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../omapi.c' object='omapi.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o omapi.o `test -f '../omapi.c' || echo '$(srcdir)/'`../omapi.c
-
-omapi.obj: ../omapi.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT omapi.obj -MD -MP -MF $(DEPDIR)/omapi.Tpo -c -o omapi.obj `if test -f '../omapi.c'; then $(CYGPATH_W) '../omapi.c'; else $(CYGPATH_W) '$(srcdir)/../omapi.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/omapi.Tpo $(DEPDIR)/omapi.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../omapi.c' object='omapi.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o omapi.obj `if test -f '../omapi.c'; then $(CYGPATH_W) '../omapi.c'; else $(CYGPATH_W) '$(srcdir)/../omapi.c'; fi`
-
-mdb.o: ../mdb.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT mdb.o -MD -MP -MF $(DEPDIR)/mdb.Tpo -c -o mdb.o `test -f '../mdb.c' || echo '$(srcdir)/'`../mdb.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/mdb.Tpo $(DEPDIR)/mdb.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../mdb.c' object='mdb.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o mdb.o `test -f '../mdb.c' || echo '$(srcdir)/'`../mdb.c
-
-mdb.obj: ../mdb.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT mdb.obj -MD -MP -MF $(DEPDIR)/mdb.Tpo -c -o mdb.obj `if test -f '../mdb.c'; then $(CYGPATH_W) '../mdb.c'; else $(CYGPATH_W) '$(srcdir)/../mdb.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/mdb.Tpo $(DEPDIR)/mdb.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../mdb.c' object='mdb.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o mdb.obj `if test -f '../mdb.c'; then $(CYGPATH_W) '../mdb.c'; else $(CYGPATH_W) '$(srcdir)/../mdb.c'; fi`
-
-stables.o: ../stables.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT stables.o -MD -MP -MF $(DEPDIR)/stables.Tpo -c -o stables.o `test -f '../stables.c' || echo '$(srcdir)/'`../stables.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/stables.Tpo $(DEPDIR)/stables.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../stables.c' object='stables.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o stables.o `test -f '../stables.c' || echo '$(srcdir)/'`../stables.c
-
-stables.obj: ../stables.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT stables.obj -MD -MP -MF $(DEPDIR)/stables.Tpo -c -o stables.obj `if test -f '../stables.c'; then $(CYGPATH_W) '../stables.c'; else $(CYGPATH_W) '$(srcdir)/../stables.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/stables.Tpo $(DEPDIR)/stables.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../stables.c' object='stables.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o stables.obj `if test -f '../stables.c'; then $(CYGPATH_W) '../stables.c'; else $(CYGPATH_W) '$(srcdir)/../stables.c'; fi`
-
-salloc.o: ../salloc.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT salloc.o -MD -MP -MF $(DEPDIR)/salloc.Tpo -c -o salloc.o `test -f '../salloc.c' || echo '$(srcdir)/'`../salloc.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/salloc.Tpo $(DEPDIR)/salloc.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../salloc.c' object='salloc.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o salloc.o `test -f '../salloc.c' || echo '$(srcdir)/'`../salloc.c
-
-salloc.obj: ../salloc.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT salloc.obj -MD -MP -MF $(DEPDIR)/salloc.Tpo -c -o salloc.obj `if test -f '../salloc.c'; then $(CYGPATH_W) '../salloc.c'; else $(CYGPATH_W) '$(srcdir)/../salloc.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/salloc.Tpo $(DEPDIR)/salloc.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../salloc.c' object='salloc.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o salloc.obj `if test -f '../salloc.c'; then $(CYGPATH_W) '../salloc.c'; else $(CYGPATH_W) '$(srcdir)/../salloc.c'; fi`
-
-ddns.o: ../ddns.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ddns.o -MD -MP -MF $(DEPDIR)/ddns.Tpo -c -o ddns.o `test -f '../ddns.c' || echo '$(srcdir)/'`../ddns.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ddns.Tpo $(DEPDIR)/ddns.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../ddns.c' object='ddns.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ddns.o `test -f '../ddns.c' || echo '$(srcdir)/'`../ddns.c
-
-ddns.obj: ../ddns.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ddns.obj -MD -MP -MF $(DEPDIR)/ddns.Tpo -c -o ddns.obj `if test -f '../ddns.c'; then $(CYGPATH_W) '../ddns.c'; else $(CYGPATH_W) '$(srcdir)/../ddns.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ddns.Tpo $(DEPDIR)/ddns.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../ddns.c' object='ddns.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ddns.obj `if test -f '../ddns.c'; then $(CYGPATH_W) '../ddns.c'; else $(CYGPATH_W) '$(srcdir)/../ddns.c'; fi`
-
-dhcpleasequery.o: ../dhcpleasequery.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT dhcpleasequery.o -MD -MP -MF $(DEPDIR)/dhcpleasequery.Tpo -c -o dhcpleasequery.o `test -f '../dhcpleasequery.c' || echo '$(srcdir)/'`../dhcpleasequery.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/dhcpleasequery.Tpo $(DEPDIR)/dhcpleasequery.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../dhcpleasequery.c' object='dhcpleasequery.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o dhcpleasequery.o `test -f '../dhcpleasequery.c' || echo '$(srcdir)/'`../dhcpleasequery.c
-
-dhcpleasequery.obj: ../dhcpleasequery.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT dhcpleasequery.obj -MD -MP -MF $(DEPDIR)/dhcpleasequery.Tpo -c -o dhcpleasequery.obj `if test -f '../dhcpleasequery.c'; then $(CYGPATH_W) '../dhcpleasequery.c'; else $(CYGPATH_W) '$(srcdir)/../dhcpleasequery.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/dhcpleasequery.Tpo $(DEPDIR)/dhcpleasequery.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../dhcpleasequery.c' object='dhcpleasequery.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o dhcpleasequery.obj `if test -f '../dhcpleasequery.c'; then $(CYGPATH_W) '../dhcpleasequery.c'; else $(CYGPATH_W) '$(srcdir)/../dhcpleasequery.c'; fi`
-
-dhcpv6.o: ../dhcpv6.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT dhcpv6.o -MD -MP -MF $(DEPDIR)/dhcpv6.Tpo -c -o dhcpv6.o `test -f '../dhcpv6.c' || echo '$(srcdir)/'`../dhcpv6.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/dhcpv6.Tpo $(DEPDIR)/dhcpv6.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../dhcpv6.c' object='dhcpv6.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o dhcpv6.o `test -f '../dhcpv6.c' || echo '$(srcdir)/'`../dhcpv6.c
-
-dhcpv6.obj: ../dhcpv6.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT dhcpv6.obj -MD -MP -MF $(DEPDIR)/dhcpv6.Tpo -c -o dhcpv6.obj `if test -f '../dhcpv6.c'; then $(CYGPATH_W) '../dhcpv6.c'; else $(CYGPATH_W) '$(srcdir)/../dhcpv6.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/dhcpv6.Tpo $(DEPDIR)/dhcpv6.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../dhcpv6.c' object='dhcpv6.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o dhcpv6.obj `if test -f '../dhcpv6.c'; then $(CYGPATH_W) '../dhcpv6.c'; else $(CYGPATH_W) '$(srcdir)/../dhcpv6.c'; fi`
-
-mdb6.o: ../mdb6.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT mdb6.o -MD -MP -MF $(DEPDIR)/mdb6.Tpo -c -o mdb6.o `test -f '../mdb6.c' || echo '$(srcdir)/'`../mdb6.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/mdb6.Tpo $(DEPDIR)/mdb6.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../mdb6.c' object='mdb6.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o mdb6.o `test -f '../mdb6.c' || echo '$(srcdir)/'`../mdb6.c
-
-mdb6.obj: ../mdb6.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT mdb6.obj -MD -MP -MF $(DEPDIR)/mdb6.Tpo -c -o mdb6.obj `if test -f '../mdb6.c'; then $(CYGPATH_W) '../mdb6.c'; else $(CYGPATH_W) '$(srcdir)/../mdb6.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/mdb6.Tpo $(DEPDIR)/mdb6.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../mdb6.c' object='mdb6.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o mdb6.obj `if test -f '../mdb6.c'; then $(CYGPATH_W) '../mdb6.c'; else $(CYGPATH_W) '$(srcdir)/../mdb6.c'; fi`
-
-ldap.o: ../ldap.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ldap.o -MD -MP -MF $(DEPDIR)/ldap.Tpo -c -o ldap.o `test -f '../ldap.c' || echo '$(srcdir)/'`../ldap.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ldap.Tpo $(DEPDIR)/ldap.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../ldap.c' object='ldap.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ldap.o `test -f '../ldap.c' || echo '$(srcdir)/'`../ldap.c
-
-ldap.obj: ../ldap.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ldap.obj -MD -MP -MF $(DEPDIR)/ldap.Tpo -c -o ldap.obj `if test -f '../ldap.c'; then $(CYGPATH_W) '../ldap.c'; else $(CYGPATH_W) '$(srcdir)/../ldap.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ldap.Tpo $(DEPDIR)/ldap.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../ldap.c' object='ldap.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ldap.obj `if test -f '../ldap.c'; then $(CYGPATH_W) '../ldap.c'; else $(CYGPATH_W) '$(srcdir)/../ldap.c'; fi`
-
-ldap_casa.o: ../ldap_casa.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ldap_casa.o -MD -MP -MF $(DEPDIR)/ldap_casa.Tpo -c -o ldap_casa.o `test -f '../ldap_casa.c' || echo '$(srcdir)/'`../ldap_casa.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ldap_casa.Tpo $(DEPDIR)/ldap_casa.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../ldap_casa.c' object='ldap_casa.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ldap_casa.o `test -f '../ldap_casa.c' || echo '$(srcdir)/'`../ldap_casa.c
-
-ldap_casa.obj: ../ldap_casa.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ldap_casa.obj -MD -MP -MF $(DEPDIR)/ldap_casa.Tpo -c -o ldap_casa.obj `if test -f '../ldap_casa.c'; then $(CYGPATH_W) '../ldap_casa.c'; else $(CYGPATH_W) '$(srcdir)/../ldap_casa.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ldap_casa.Tpo $(DEPDIR)/ldap_casa.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../ldap_casa.c' object='ldap_casa.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ldap_casa.obj `if test -f '../ldap_casa.c'; then $(CYGPATH_W) '../ldap_casa.c'; else $(CYGPATH_W) '$(srcdir)/../ldap_casa.c'; fi`
-
-dhcpd.o: ../dhcpd.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT dhcpd.o -MD -MP -MF $(DEPDIR)/dhcpd.Tpo -c -o dhcpd.o `test -f '../dhcpd.c' || echo '$(srcdir)/'`../dhcpd.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/dhcpd.Tpo $(DEPDIR)/dhcpd.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../dhcpd.c' object='dhcpd.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o dhcpd.o `test -f '../dhcpd.c' || echo '$(srcdir)/'`../dhcpd.c
-
-dhcpd.obj: ../dhcpd.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT dhcpd.obj -MD -MP -MF $(DEPDIR)/dhcpd.Tpo -c -o dhcpd.obj `if test -f '../dhcpd.c'; then $(CYGPATH_W) '../dhcpd.c'; else $(CYGPATH_W) '$(srcdir)/../dhcpd.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/dhcpd.Tpo $(DEPDIR)/dhcpd.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../dhcpd.c' object='dhcpd.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o dhcpd.obj `if test -f '../dhcpd.c'; then $(CYGPATH_W) '../dhcpd.c'; else $(CYGPATH_W) '$(srcdir)/../dhcpd.c'; fi`
-
-leasechain.o: ../leasechain.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT leasechain.o -MD -MP -MF $(DEPDIR)/leasechain.Tpo -c -o leasechain.o `test -f '../leasechain.c' || echo '$(srcdir)/'`../leasechain.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/leasechain.Tpo $(DEPDIR)/leasechain.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../leasechain.c' object='leasechain.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o leasechain.o `test -f '../leasechain.c' || echo '$(srcdir)/'`../leasechain.c
-
-leasechain.obj: ../leasechain.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT leasechain.obj -MD -MP -MF $(DEPDIR)/leasechain.Tpo -c -o leasechain.obj `if test -f '../leasechain.c'; then $(CYGPATH_W) '../leasechain.c'; else $(CYGPATH_W) '$(srcdir)/../leasechain.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/leasechain.Tpo $(DEPDIR)/leasechain.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../leasechain.c' object='leasechain.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o leasechain.obj `if test -f '../leasechain.c'; then $(CYGPATH_W) '../leasechain.c'; else $(CYGPATH_W) '$(srcdir)/../leasechain.c'; fi`
 
 # This directory's subdirectories are mostly independent; you can cd
 # into them and run 'make' without going through this Makefile.
@@ -957,6 +738,8 @@ clean-generic:
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
+	-rm -f ../$(DEPDIR)/$(am__dirstamp)
+	-rm -f ../$(am__dirstamp)
 
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
@@ -967,7 +750,7 @@ clean: clean-recursive
 clean-am: clean-checkPROGRAMS clean-generic mostlyclean-am
 
 distclean: distclean-recursive
-	-rm -rf ./$(DEPDIR)
+	-rm -rf ../$(DEPDIR) ./$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-local distclean-tags
@@ -1011,7 +794,7 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-recursive
-	-rm -rf ./$(DEPDIR)
+	-rm -rf ../$(DEPDIR) ./$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

@@ -101,7 +101,10 @@ am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
  configure.lineno config.status.lineno
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/includes/config.h
-CONFIG_CLEAN_FILES = doc/devel/doxyfile
+CONFIG_CLEAN_FILES = common/Makefile.am common/Makefile \
+	dhcpctl/Makefile.am dhcpctl/Makefile omapip/Makefile.am \
+	omapip/Makefile tests/Makefile.am tests/Makefile \
+	tests/unittest.sh doc/devel/doxyfile
 CONFIG_CLEAN_VPATH_FILES =
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -189,8 +192,17 @@ CTAGS = ctags
 CSCOPE = cscope
 DIST_SUBDIRS = $(SUBDIRS)
 am__DIST_COMMON = $(srcdir)/Makefile.in \
-	$(top_srcdir)/doc/devel/doxyfile.in README compile \
-	config.guess config.sub depcomp install-sh missing
+	$(top_srcdir)/common/Makefile.am.in \
+	$(top_srcdir)/common/Makefile.in \
+	$(top_srcdir)/dhcpctl/Makefile.am.in \
+	$(top_srcdir)/dhcpctl/Makefile.in \
+	$(top_srcdir)/doc/devel/doxyfile.in \
+	$(top_srcdir)/omapip/Makefile.am.in \
+	$(top_srcdir)/omapip/Makefile.in \
+	$(top_srcdir)/tests/Makefile.am.in \
+	$(top_srcdir)/tests/Makefile.in \
+	$(top_srcdir)/tests/unittest.sh.in README compile config.guess \
+	config.sub depcomp install-sh missing
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 distdir = $(PACKAGE)-$(VERSION)
 top_distdir = $(distdir)
@@ -233,6 +245,7 @@ distuninstallcheck_listfiles = find . -type f -print
 am__distuninstallcheck_listfiles = $(distuninstallcheck_listfiles) \
   | sed 's|^\./|$(prefix)/|' | grep -v '$(infodir)/dir$$'
 distcleancheck_listfiles = find . -type f -print
+A = @A@
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
 AM_DEFAULT_VERBOSITY = @AM_DEFAULT_VERBOSITY@
@@ -251,6 +264,7 @@ BINDLIBDNSDIR = @BINDLIBDNSDIR@
 BINDLIBIRSDIR = @BINDLIBIRSDIR@
 BINDLIBISCCFGDIR = @BINDLIBISCCFGDIR@
 BINDLIBISCDIR = @BINDLIBISCDIR@
+BINDLT = @BINDLT@
 BINDSRCDIR = @BINDSRCDIR@
 BINDSUBDIR = @BINDSUBDIR@
 CC = @CC@
@@ -352,11 +366,16 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 
 #
+# for libtool
+#
+ACLOCAL_AMFLAGS = -I m4
+
+#
 # We have a lot of files that we want shipped with the distribution.
 #
-EXTRA_DIST = RELNOTES LICENSE contrib/3.0b1-lease-convert \
-	contrib/dhclient-tz-exithook.sh contrib/dhcp.spec \
-	contrib/sethostname.sh contrib/solaris.init \
+EXTRA_DIST = RELNOTES LICENSE configure.ac+lt re-conf \
+	contrib/3.0b1-lease-convert contrib/dhclient-tz-exithook.sh \
+	contrib/dhcp.spec contrib/sethostname.sh contrib/solaris.init \
 	contrib/ms2isc/Registry.pm contrib/ms2isc/ms2isc.pl \
 	contrib/ms2isc/readme.txt contrib/ldap/dhcpd-conf-to-ldap \
 	contrib/ldap/dhcp.schema contrib/ldap/README.ldap \
@@ -411,6 +430,24 @@ $(top_srcdir)/configure: @MAINTAINER_MODE_TRUE@ $(am__configure_deps)
 $(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ $(am__aclocal_m4_deps)
 	$(am__cd) $(srcdir) && $(ACLOCAL) $(ACLOCAL_AMFLAGS)
 $(am__aclocal_m4_deps):
+common/Makefile.am: $(top_builddir)/config.status $(top_srcdir)/common/Makefile.am.in
+	cd $(top_builddir) && $(SHELL) ./config.status $@
+common/Makefile: $(top_builddir)/config.status $(top_srcdir)/common/Makefile.in
+	cd $(top_builddir) && $(SHELL) ./config.status $@
+dhcpctl/Makefile.am: $(top_builddir)/config.status $(top_srcdir)/dhcpctl/Makefile.am.in
+	cd $(top_builddir) && $(SHELL) ./config.status $@
+dhcpctl/Makefile: $(top_builddir)/config.status $(top_srcdir)/dhcpctl/Makefile.in
+	cd $(top_builddir) && $(SHELL) ./config.status $@
+omapip/Makefile.am: $(top_builddir)/config.status $(top_srcdir)/omapip/Makefile.am.in
+	cd $(top_builddir) && $(SHELL) ./config.status $@
+omapip/Makefile: $(top_builddir)/config.status $(top_srcdir)/omapip/Makefile.in
+	cd $(top_builddir) && $(SHELL) ./config.status $@
+tests/Makefile.am: $(top_builddir)/config.status $(top_srcdir)/tests/Makefile.am.in
+	cd $(top_builddir) && $(SHELL) ./config.status $@
+tests/Makefile: $(top_builddir)/config.status $(top_srcdir)/tests/Makefile.in
+	cd $(top_builddir) && $(SHELL) ./config.status $@
+tests/unittest.sh: $(top_builddir)/config.status $(top_srcdir)/tests/unittest.sh.in
+	cd $(top_builddir) && $(SHELL) ./config.status $@
 doc/devel/doxyfile: $(top_builddir)/config.status $(top_srcdir)/doc/devel/doxyfile.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
 install-nobase_includeHEADERS: $(nobase_include_HEADERS)

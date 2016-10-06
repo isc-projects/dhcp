@@ -627,6 +627,8 @@ LTLIBOBJS
 LIBOBJS
 LDAP_CFLAGS
 LDAP_LIBS
+BINDLT
+A
 INSTALL_BIND_FALSE
 INSTALL_BIND_TRUE
 HAVE_BINDDIR_FALSE
@@ -788,6 +790,7 @@ enable_devpoll
 with_bind_extra_config
 with_libbind
 enable_bind_install
+enable_libtool
 with_ldap
 with_ldapcrypto
 with_ldap_gssapi
@@ -1455,6 +1458,8 @@ Optional Features:
   --enable-epoll          use Linux epoll (default is no)
   --enable-devpoll        use /dev/poll (default is no)
   --enable-bind-install   install bind includes and libraries (default is no).
+  --enable-libtool        use GNU libtool for dynamic shared libraries
+                          (default is $default_libtool).
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -2718,6 +2723,7 @@ ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
 
 
 
@@ -7005,6 +7011,44 @@ else
 fi
 
 
+#
+# GNU libtool support
+#
+case "$build_os" in
+	sunos*)
+		# Just set the maximum command line length for sunos
+		# as it otherwise takes a exceptionally long time to
+		# work it out. Required for libtool.
+
+		lt_cv_sys_max_cmd_len=4096
+		;;
+esac
+
+want_libtool="no"
+
+BINDLT=
+# Check whether --enable-libtool was given.
+if test "${enable_libtool+set}" = set; then :
+  enableval=$enable_libtool; want_libtool="$enableval"
+fi
+
+if test "$want_libtool" = "yes"; then
+if test "$want_libtool" = "yes"; then
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: legacy configure is used but libtool is enabled. Trying to recover..." >&5
+$as_echo "$as_me: WARNING: legacy configure is used but libtool is enabled. Trying to recover..." >&2;}
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: legacy configure is used but libtool is enabled. Trying to recover..." >&5
+$as_echo "$as_me: WARNING: legacy configure is used but libtool is enabled. Trying to recover..." >&2;}
+	cd $srcdir; exec ./re-conf $ac_configure_args
+	cd $srcdir; exec ./re-conf $ac_configure_args
+	as_fn_error $? "Recovering failed" "$LINENO" 5
+	as_fn_error $? "Recovering failed" "$LINENO" 5
+fi
+fi
+A=a
+A=a
+
+
+
 # OpenLDAP support.
 
 # Check whether --with-ldap was given.
@@ -7386,7 +7430,7 @@ $as_echo "#define FLEXIBLE_ARRAY_MEMBER /**/" >>confdefs.h
   fi
 
 
-ac_config_files="$ac_config_files Makefile client/Makefile client/tests/Makefile common/Makefile common/tests/Makefile dhcpctl/Makefile includes/Makefile omapip/Makefile relay/Makefile server/Makefile tests/Makefile tests/unittest.sh server/tests/Makefile doc/devel/doxyfile"
+ac_config_files="$ac_config_files Makefile client/Makefile client/tests/Makefile common/Makefile.am common/Makefile common/tests/Makefile dhcpctl/Makefile.am dhcpctl/Makefile includes/Makefile omapip/Makefile.am omapip/Makefile relay/Makefile server/Makefile tests/Makefile.am tests/Makefile tests/unittest.sh server/tests/Makefile doc/devel/doxyfile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -8140,13 +8184,17 @@ do
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "client/Makefile") CONFIG_FILES="$CONFIG_FILES client/Makefile" ;;
     "client/tests/Makefile") CONFIG_FILES="$CONFIG_FILES client/tests/Makefile" ;;
+    "common/Makefile.am") CONFIG_FILES="$CONFIG_FILES common/Makefile.am" ;;
     "common/Makefile") CONFIG_FILES="$CONFIG_FILES common/Makefile" ;;
     "common/tests/Makefile") CONFIG_FILES="$CONFIG_FILES common/tests/Makefile" ;;
+    "dhcpctl/Makefile.am") CONFIG_FILES="$CONFIG_FILES dhcpctl/Makefile.am" ;;
     "dhcpctl/Makefile") CONFIG_FILES="$CONFIG_FILES dhcpctl/Makefile" ;;
     "includes/Makefile") CONFIG_FILES="$CONFIG_FILES includes/Makefile" ;;
+    "omapip/Makefile.am") CONFIG_FILES="$CONFIG_FILES omapip/Makefile.am" ;;
     "omapip/Makefile") CONFIG_FILES="$CONFIG_FILES omapip/Makefile" ;;
     "relay/Makefile") CONFIG_FILES="$CONFIG_FILES relay/Makefile" ;;
     "server/Makefile") CONFIG_FILES="$CONFIG_FILES server/Makefile" ;;
+    "tests/Makefile.am") CONFIG_FILES="$CONFIG_FILES tests/Makefile.am" ;;
     "tests/Makefile") CONFIG_FILES="$CONFIG_FILES tests/Makefile" ;;
     "tests/unittest.sh") CONFIG_FILES="$CONFIG_FILES tests/unittest.sh" ;;
     "server/tests/Makefile") CONFIG_FILES="$CONFIG_FILES server/tests/Makefile" ;;
@@ -8837,6 +8885,7 @@ if test -n "$ac_unrecognized_opts" && test "$enable_option_checking" != no; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: unrecognized options: $ac_unrecognized_opts" >&5
 $as_echo "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
 fi
+
 
 
 if test "$enable_dhcpv4o6" = "yes"; then

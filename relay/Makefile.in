@@ -103,9 +103,7 @@ am__installdirs = "$(DESTDIR)$(sbindir)" "$(DESTDIR)$(man8dir)"
 PROGRAMS = $(sbin_PROGRAMS)
 am_dhcrelay_OBJECTS = dhcrelay.$(OBJEXT)
 dhcrelay_OBJECTS = $(am_dhcrelay_OBJECTS)
-dhcrelay_DEPENDENCIES = ../common/libdhcp.a ../omapip/libomapi.a \
-	@BINDLIBIRSDIR@/libirs.a @BINDLIBDNSDIR@/libdns.a \
-	@BINDLIBISCCFGDIR@/libisccfg.a @BINDLIBISCDIR@/libisc.a
+dhcrelay_DEPENDENCIES = ../common/libdhcp.@A@ ../omapip/libomapi.@A@
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -192,6 +190,7 @@ ETAGS = etags
 CTAGS = ctags
 am__DIST_COMMON = $(srcdir)/Makefile.in $(top_srcdir)/depcomp
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
+A = @A@
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
 AM_DEFAULT_VERBOSITY = @AM_DEFAULT_VERBOSITY@
@@ -210,6 +209,7 @@ BINDLIBDNSDIR = @BINDLIBDNSDIR@
 BINDLIBIRSDIR = @BINDLIBIRSDIR@
 BINDLIBISCCFGDIR = @BINDLIBISCCFGDIR@
 BINDLIBISCDIR = @BINDLIBISCDIR@
+BINDLT = @BINDLT@
 BINDSRCDIR = @BINDSRCDIR@
 BINDSUBDIR = @BINDSUBDIR@
 CC = @CC@
@@ -311,11 +311,11 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CPPFLAGS = -DLOCALSTATEDIR='"@localstatedir@"'
 dhcrelay_SOURCES = dhcrelay.c
-dhcrelay_LDADD = ../common/libdhcp.a ../omapip/libomapi.a \
-		 @BINDLIBIRSDIR@/libirs.a \
-		 @BINDLIBDNSDIR@/libdns.a \
-		 @BINDLIBISCCFGDIR@/libisccfg.a \
-		 @BINDLIBISCDIR@/libisc.a
+dhcrelay_LDADD = ../common/libdhcp.@A@ ../omapip/libomapi.@A@ \
+		 @BINDLIBIRSDIR@/libirs.@A@ \
+		 @BINDLIBDNSDIR@/libdns.@A@ \
+		 @BINDLIBISCCFGDIR@/libisccfg.@A@ \
+		 @BINDLIBISCDIR@/libisc.@A@
 
 man_MANS = dhcrelay.8
 EXTRA_DIST = $(man_MANS)
@@ -408,15 +408,17 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dhcrelay.Po@am__quote@
 
 .c.o:
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
+@am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
+@am__fastdepCC_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ $<
 
 .c.obj:
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ `$(CYGPATH_W) '$<'`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.obj$$||'`;\
+@am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ `$(CYGPATH_W) '$<'` &&\
+@am__fastdepCC_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`

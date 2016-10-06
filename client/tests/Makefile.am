@@ -15,13 +15,13 @@ info:
 
 DHCPSRC = ../clparse.c ../dhc6.c ../dhclient.c
 
-DHCPLIBS = $(top_builddir)/common/libdhcp.a \
-	  $(top_builddir)/omapip/libomapi.a    \
-          $(top_builddir)/dhcpctl/libdhcpctl.a \
-	  @BINDLIBIRSDIR@/libirs.a \
-	  @BINDLIBDNSDIR@/libdns.a \
-	  @BINDLIBISCCFGDIR@/libisccfg.a \
-	  @BINDLIBISCDIR@/libisc.a
+DHCPLIBS = $(top_builddir)/common/libdhcp.@A@ \
+	  $(top_builddir)/omapip/libomapi.@A@    \
+          $(top_builddir)/dhcpctl/libdhcpctl.@A@ \
+	  @BINDLIBIRSDIR@/libirs.@A@ \
+	  @BINDLIBDNSDIR@/libdns.@A@ \
+	  @BINDLIBISCCFGDIR@/libisccfg.@A@ \
+	  @BINDLIBISCDIR@/libisc.@A@
 
 ATF_TESTS =
 if HAVE_ATF

@@ -116,10 +116,10 @@ am_dhcpd_OBJECTS = dhcpd-dhcpd.$(OBJEXT) dhcpd-dhcp.$(OBJEXT) \
 	dhcpd-ldap_krb_helper.$(OBJEXT)
 dhcpd_OBJECTS = $(am_dhcpd_OBJECTS)
 am__DEPENDENCIES_1 =
-dhcpd_DEPENDENCIES = ../common/libdhcp.a ../omapip/libomapi.a \
-	../dhcpctl/libdhcpctl.a $(BINDLIBDIR)/libirs.a \
-	$(BINDLIBDIR)/libdns.a $(BINDLIBDIR)/libisccfg.a \
-	$(BINDLIBDIR)/libisc.a $(am__DEPENDENCIES_1)
+dhcpd_DEPENDENCIES = ../common/libdhcp.@A@ ../omapip/libomapi.@A@ \
+	../dhcpctl/libdhcpctl.@A@ $(BINDLIBDIR)/libirs.@A@ \
+	$(BINDLIBDIR)/libdns.@A@ $(BINDLIBDIR)/libisccfg.@A@ \
+	$(BINDLIBDIR)/libisc.@A@ $(am__DEPENDENCIES_1)
 dhcpd_LINK = $(CCLD) $(dhcpd_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
@@ -256,6 +256,7 @@ am__relativize = \
     dir1=`echo "$$dir1" | sed -e "$$sed_rest"`; \
   done; \
   reldir="$$dir2"
+A = @A@
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
 AM_DEFAULT_VERBOSITY = @AM_DEFAULT_VERBOSITY@
@@ -274,6 +275,7 @@ BINDLIBDNSDIR = @BINDLIBDNSDIR@
 BINDLIBIRSDIR = @BINDLIBIRSDIR@
 BINDLIBISCCFGDIR = @BINDLIBISCCFGDIR@
 BINDLIBISCDIR = @BINDLIBISCDIR@
+BINDLT = @BINDLT@
 BINDSRCDIR = @BINDSRCDIR@
 BINDSUBDIR = @BINDSUBDIR@
 CC = @CC@
@@ -387,10 +389,10 @@ dhcpd_SOURCES = dhcpd.c dhcp.c bootp.c confpars.c db.c class.c failover.c \
 		dhcpv6.c mdb6.c ldap.c ldap_casa.c leasechain.c ldap_krb_helper.c
 
 dhcpd_CFLAGS = $(LDAP_CFLAGS)
-dhcpd_LDADD = ../common/libdhcp.a ../omapip/libomapi.a \
-	      ../dhcpctl/libdhcpctl.a $(BINDLIBDIR)/libirs.a \
-	      $(BINDLIBDIR)/libdns.a $(BINDLIBDIR)/libisccfg.a \
-	      $(BINDLIBDIR)/libisc.a $(LDAP_LIBS)
+dhcpd_LDADD = ../common/libdhcp.@A@ ../omapip/libomapi.@A@ \
+	      ../dhcpctl/libdhcpctl.@A@ $(BINDLIBDIR)/libirs.@A@ \
+	      $(BINDLIBDIR)/libdns.@A@ $(BINDLIBDIR)/libisccfg.@A@ \
+	      $(BINDLIBDIR)/libisc.@A@ $(LDAP_LIBS)
 
 man_MANS = dhcpd.8 dhcpd.conf.5 dhcpd.leases.5
 EXTRA_DIST = $(man_MANS)
@@ -501,15 +503,17 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dhcpd-stables.Po@am__quote@
 
 .c.o:
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
+@am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
+@am__fastdepCC_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ $<
 
 .c.obj:
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ `$(CYGPATH_W) '$<'`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.obj$$||'`;\
+@am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ `$(CYGPATH_W) '$<'` &&\
+@am__fastdepCC_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
