@@ -163,6 +163,28 @@ You can get a list of these by typing:
 
 	./configure --help
 
+If you want to use dynamic shared libraries automake, autoconf
+(aka GNU autotools) and libtool must be available. The DHCP
+distribution provides 3 configure.ac* files: the -lt version
+has no libtool support and was copied to the configure.ac
+standard file in the distribution. To enable libtool support
+you should perform these steps:
+
+	cp configure.ac+lt configure.ac
+	autoreconf -i
+
+after you can use the regenerated configure as usual
+(with libtool support (--enable-libtool) on by default):
+
+	./configure
+
+For compatibility (and people who don't read this documentation)
+the --enable-libtool configuration file is supported even by
+the distributed configure (and off by default). The previous
+steps are performed and the regenerated configure called with
+almost the same parameters (this "almost" makes the use of
+this feature not recommended).
+
 			 DYNAMIC DNS UPDATES
 
 A fully-featured implementation of dynamic DNS updates is included in
