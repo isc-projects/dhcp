@@ -1,3 +1,4 @@
+*.lo
 *.o
 bind
 doc/html
@@ -17,8 +18,8 @@ config.status
 dhcpctl/cltest
 dhcpctl/omshell
 doc/devel/doxyfile
-dst/libdst.a
 includes/stamp-h1
+.libs
 libtool
 ltmain.sh
 omapip/svtest
@@ -31,4 +32,5 @@ server/tests/leaseq_unittests
 server/tests/load_bal_unittests
 server/tests/test-suite.log
 tests/libt_api.a
+tests/libt_api.la
 tests/unittest.sh
