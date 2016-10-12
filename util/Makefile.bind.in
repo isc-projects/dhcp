@@ -86,7 +86,7 @@ bind2:
 		echo Installing BIND libraries to ${binddir}. ;        \
 		for libdir in ${bindlibs} ; do                         \
 		 (cd ${bindsrcdir}/lib/$$libdir ;                      \
-		  export MAKEDEFS="${installdirs}";                    \
+		  MAKEDEFS="${installdirs}"; export MAKEDEFS;          \
 		  $(MAKE) ${installdirs} install >>                    \
 		   ${binddir}/install.log) ;                           \
 		done ;                                                 \
