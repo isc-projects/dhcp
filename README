@@ -185,6 +185,11 @@ steps are performed and the regenerated configure called with
 almost the same parameters (this "almost" makes the use of
 this feature not recommended).
 
+Note you can't go back from with libtool support to without libtool
+support by restoring configure.ac and rerun autoreconf. If you
+want or need to restore the without libtool support state the
+required way is to simply restore the whole distribution.
+
 			 DYNAMIC DNS UPDATES
 
 A fully-featured implementation of dynamic DNS updates is included in
