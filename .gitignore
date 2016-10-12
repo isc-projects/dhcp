@@ -19,6 +19,8 @@ dhcpctl/omshell
 doc/devel/doxyfile
 dst/libdst.a
 includes/stamp-h1
+libtool
+ltmain.sh
 omapip/svtest
 relay/dhcrelay
 server/dhcpd
