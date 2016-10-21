@@ -24,13 +24,14 @@ exec_prefix = @exec_prefix@
 bindconfig = --without-openssl --without-libxml2 --without-libjson \
 	--without-gssapi --disable-threads \
 	--includedir=@includedir@ --libdir=@libdir@ \
-	@BINDIOMUX@ @BINDCONFIG@ --enable-full-report
+	@BINDLT@ @BINDIOMUX@ @BINDCONFIG@ --enable-full-report
 
 @BIND_ATF_FALSE@cleandirs = ./lib ./include
 @BIND_ATF_TRUE@cleandirs = ./lib ./include ./atf
 cleanfiles = ./configure.log ./build.log ./install.log
 
-bindlibs = isc dns isccfg irs
+# isccfg depends on isccc?!
+bindlibs = isc dns isccc isccfg irs
 installdirs = includedir=${binddir}/include libdir=${binddir}/lib
 
 @BIND_ATF_FALSE@all: bind1 bind2
@@ -98,8 +99,6 @@ clean:
 
 @INSTALL_BIND_FALSE@install:
 @INSTALL_BIND_TRUE@install: install-bind
-@INSTALL_BIND_FALSE@uninstall:
-@INSTALL_BIND_TRUE@uninstall: uninstall-bind
 
 install-bind: all
 	@for libdir in ${bindlibs} ; do   \
@@ -107,13 +106,7 @@ install-bind: all
 	  $(MAKE) install) ;              \
 	 done
 
-uninstall-bind: all
-	@for libdir in ${bindlibs} ; do   \
-	 (cd ${bindsrcdir}/lib/$$libdir ; \
-	  $(MAKE) uninstall) ;            \
-	 done
-
 # Include the following so that this Makefile is happy when the parent
 # tries to use them.
 
-check distdir distclean dvi installcheck:
+check distdir distclean dvi installcheck uninstall:

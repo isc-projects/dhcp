@@ -1,5 +1,9 @@
 AC_INIT([DHCP],[4.4.0-dev],[dhcp-users@isc.org])
 
+@BEGIN WITH LIBTOOL
+# for libtool
+AC_CONFIG_MACRO_DIR([m4])
+@END WITH LIBTOOL
 
 # we specify "foreign" to avoid having to have the GNU mandated files,
 # like AUTHORS, COPYING, and such
@@ -60,7 +64,9 @@ AC_SUBST(BINDCONFIG)
 # Use this to define _GNU_SOURCE to pull in the IPv6 Advanced Socket API.
 AC_USE_SYSTEM_EXTENSIONS
 
+@BEGIN WITHOUT LIBTOOL
 AC_PROG_RANLIB
+@END WITHOUT LIBTOOL
 
 AC_PATH_PROG(AR, ar)
 AC_SUBST(AR)
@@ -613,16 +619,6 @@ AC_CHECK_FUNCS(strlcat)
 # For HP/UX we need -lipv6 for if_nametoindex, perhaps others.
 AC_SEARCH_LIBS(if_nametoindex, [ipv6])
 
-# For some Solaris nanosleep is found by BIND in librt
-have_nanosleep="no"
-AC_CHECK_FUNC(nanosleep, have_nanosleep="yes")
-if test "$have_nanosleep" = "no"; then
-	AC_CHECK_LIB(rt, nanosleep, have_nanosleep="rt")
-fi
-if test "$have_nanosleep" = "rt"; then
-	LIBS="-lrt $LIBS"
-fi
-
 # check for /dev/random (declares HAVE_DEV_RANDOM)
 AC_MSG_CHECKING(for random device)
 AC_ARG_WITH(randomdev,
@@ -828,12 +824,21 @@ case "$build_os" in
 esac
 
 want_libtool="no"
+@BEGIN WITH LIBTOOL
+LT_INIT
+want_libtool="yes"
+@END WITH LIBTOOL
 
 BINDLT=
 DISTCHECK_LIBTOOL_CONFIGURE_FLAG=
 AC_ARG_ENABLE(libtool,
 	AS_HELP_STRING([--enable-libtool],
+@BEGIN WITH LIBTOOL
+[use GNU libtool for dynamic shared libraries (default is yes).]),
+@END WITH LIBTOOL
+@BEGIN WITHOUT LIBTOOL
 [use GNU libtool for dynamic shared libraries (default is no).]),
+@END WITHOUT LIBTOOL
 	want_libtool="$enableval")
 
 if test "$use_libbind" != "no"; then
@@ -849,7 +854,19 @@ if test "$use_libbind" != "no"; then
 	fi
 fi
 
+@BEGIN WITH LIBTOOL
+if test "$want_libtool" = "no"; then
+	AC_MSG_ERROR([libtool configure is used but libtool is disabled?])
+fi
 
+DHLIBS=LTLIBRARIES
+A=la
+BINDLT="--with-libtool --disable-symtable"
+# BIND does not provide uninstall
+DISTCHECK_LIBTOOL_CONFIGURE_FLAG="--enable-libtool --disable-bind-install"
+@END WITH LIBTOOL
+
+@BEGIN WITHOUT LIBTOOL
 if test "$want_libtool" = "yes"; then
 	AC_MSG_WARN([legacy configure is used but libtool is enabled. Trying to recover...])
 	# expand $ac_configure_args
@@ -861,6 +878,7 @@ fi
 
 DHLIBS=LIBRARIES
 A=a
+@END WITHOUT LIBTOOL
 
 AC_SUBST(DHLIBS)
 AC_SUBST(A)
@@ -874,6 +892,9 @@ AC_SUBST(Q)
 # install bind includes and libraries
 
 want_install_bind="no"
+@BEGIN WITH LIBTOOL
+want_install_bind="yes"
+@END WITH LIBTOOL
 if test "$want_libtool" = "yes"; then
 	want_install_bind="yes"
 fi
@@ -882,7 +903,12 @@ if test "$use_libbind" != "no"; then
 fi
 AC_ARG_ENABLE(bind_install,
 	AS_HELP_STRING([--enable-bind-install],
+@BEGIN WITH LIBTOOL
+[install bind includes and libraries.]),
+@END WITH LIBTOOL
+@BEGIN WITHOUT LIBTOOL
 [install bind includes and libraries (default is no).]),
+@END WITHOUT LIBTOOL
 	want_install_bind="$enableval")
 if test "$want_install_bind" = "yes"; then
         if test "$use_libbind" != "no"; then
@@ -1006,6 +1032,12 @@ AC_CONFIG_FILES([
 ])
 AC_OUTPUT
 
+@BEGIN WITH LIBTOOL
+AC_MSG_NOTICE([postconfig: run automake in $srcdir])
+(cd $srcdir; automake)
+AC_MSG_NOTICE([postconfig: rerun config.status])
+sh ./config.status
+@END WITH LIBTOOL
 
 if test "$enable_dhcpv4o6" = "yes"; then
 	DHCP_VERSIONS="DHCPv4, DHCPv6 and DHCPv4-over-DHCPv6"

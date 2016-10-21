@@ -13,10 +13,10 @@ dhclient_SOURCES = clparse.c dhclient.c dhc6.c \
 		   scripts/bsdos scripts/freebsd scripts/linux scripts/macos \
 		   scripts/netbsd scripts/nextstep scripts/openbsd \
 		   scripts/solaris scripts/openwrt
-dhclient_LDADD = ../common/libdhcp.a ../omapip/libomapi.a \
-		 @BINDLIBIRSDIR@/libirs.a \
-		 @BINDLIBDNSDIR@/libdns.a \
-		 @BINDLIBISCCFGDIR@/libisccfg.a \
-		 @BINDLIBISCDIR@/libisc.a
+dhclient_LDADD = ../common/libdhcp.@A@ ../omapip/libomapi.@A@ \
+		 @BINDLIBIRSDIR@/libirs.@A@ \
+		 @BINDLIBDNSDIR@/libdns.@A@ \
+		 @BINDLIBISCCFGDIR@/libisccfg.@A@ \
+		 @BINDLIBISCDIR@/libisc.@A@
 man_MANS = dhclient.8 dhclient-script.8 dhclient.conf.5 dhclient.leases.5
 EXTRA_DIST = $(man_MANS)

@@ -108,8 +108,11 @@ am__objects_1 = clparse.$(OBJEXT) dhc6.$(OBJEXT) dhclient.$(OBJEXT)
 @HAVE_ATF_TRUE@	duid_unittest.$(OBJEXT)
 duid_unittests_OBJECTS = $(am_duid_unittests_OBJECTS)
 am__DEPENDENCIES_1 =
+am__DEPENDENCIES_2 = $(top_builddir)/common/libdhcp.@A@ \
+	$(top_builddir)/omapip/libomapi.@A@ \
+	$(top_builddir)/dhcpctl/libdhcpctl.@A@
 @HAVE_ATF_TRUE@duid_unittests_DEPENDENCIES = $(am__DEPENDENCIES_1) \
-@HAVE_ATF_TRUE@	$(DHCPLIBS)
+@HAVE_ATF_TRUE@	$(am__DEPENDENCIES_2)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -212,6 +215,7 @@ am__relativize = \
     dir1=`echo "$$dir1" | sed -e "$$sed_rest"`; \
   done; \
   reldir="$$dir2"
+A = @A@
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
 AM_DEFAULT_VERBOSITY = @AM_DEFAULT_VERBOSITY@
@@ -230,6 +234,7 @@ BINDLIBDNSDIR = @BINDLIBDNSDIR@
 BINDLIBIRSDIR = @BINDLIBIRSDIR@
 BINDLIBISCCFGDIR = @BINDLIBISCCFGDIR@
 BINDLIBISCDIR = @BINDLIBISCDIR@
+BINDLT = @BINDLT@
 BINDSRCDIR = @BINDSRCDIR@
 BINDSUBDIR = @BINDSUBDIR@
 CC = @CC@
@@ -240,8 +245,10 @@ CPPFLAGS = @CPPFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
+DHLIBS = @DHLIBS@
 DISTCHECK_ATF_CONFIGURE_FLAG = @DISTCHECK_ATF_CONFIGURE_FLAG@
 DISTCHECK_LIBBIND_CONFIGURE_FLAG = @DISTCHECK_LIBBIND_CONFIGURE_FLAG@
+DISTCHECK_LIBTOOL_CONFIGURE_FLAG = @DISTCHECK_LIBTOOL_CONFIGURE_FLAG@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
@@ -271,6 +278,7 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
+Q = @Q@
 RANLIB = @RANLIB@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
@@ -335,13 +343,13 @@ AM_CPPFLAGS = $(ATF_CFLAGS) -DUNIT_TEST -I$(top_srcdir)/includes \
 	-DCLIENT_PATH='"."'
 EXTRA_DIST = Atffile duid0_test.txt duid1_test.txt duid2_test.txt duid3_test.txt
 DHCPSRC = ../clparse.c ../dhc6.c ../dhclient.c
-DHCPLIBS = $(top_builddir)/common/libdhcp.a \
-	  $(top_builddir)/omapip/libomapi.a    \
-          $(top_builddir)/dhcpctl/libdhcpctl.a \
-	  @BINDLIBIRSDIR@/libirs.a \
-	  @BINDLIBDNSDIR@/libdns.a \
-	  @BINDLIBISCCFGDIR@/libisccfg.a \
-	  @BINDLIBISCDIR@/libisc.a
+DHCPLIBS = $(top_builddir)/common/libdhcp.@A@ \
+	  $(top_builddir)/omapip/libomapi.@A@    \
+          $(top_builddir)/dhcpctl/libdhcpctl.@A@ \
+	  @BINDLIBIRSDIR@/libirs.@A@ \
+	  @BINDLIBDNSDIR@/libdns.@A@ \
+	  @BINDLIBISCCFGDIR@/libisccfg.@A@ \
+	  @BINDLIBISCDIR@/libisc.@A@
 
 ATF_TESTS = $(am__append_1)
 @HAVE_ATF_TRUE@duid_unittests_SOURCES = $(DHCPSRC) duid_unittest.c

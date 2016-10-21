@@ -38,6 +38,36 @@
 #include <stdarg.h>
 #include "omapip/result.h"
 #include "dhcpctl.h"
+#include "dhcpd.h"
+
+/* Fixups */
+isc_result_t find_class (struct class **c, const char *n, const char *f, int l)
+{
+	return 0;
+}
+int parse_allow_deny (struct option_cache **oc, struct parse *cfile, int flag)
+{
+	return 0;
+}
+void dhcp (struct packet *packet) { }
+void bootp (struct packet *packet) { }
+
+#ifdef DHCPv6
+/* XXX: should we warn or something here? */
+void dhcpv6(struct packet *packet) { }
+#endif /* DHCPv6 */
+
+int check_collection (struct packet *p, struct lease *l, struct collection *c)
+{
+	return 0;
+}
+void classify (struct packet *packet, struct class *class) { }
+
+isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
+				     control_object_state_t newstate)
+{
+	return ISC_R_SUCCESS;
+}
 
 int main (int, char **);
 

@@ -107,9 +107,7 @@ PROGRAMS = $(sbin_PROGRAMS)
 am_dhclient_OBJECTS = clparse.$(OBJEXT) dhclient.$(OBJEXT) \
 	dhc6.$(OBJEXT)
 dhclient_OBJECTS = $(am_dhclient_OBJECTS)
-dhclient_DEPENDENCIES = ../common/libdhcp.a ../omapip/libomapi.a \
-	@BINDLIBIRSDIR@/libirs.a @BINDLIBDNSDIR@/libdns.a \
-	@BINDLIBISCCFGDIR@/libisccfg.a @BINDLIBISCDIR@/libisc.a
+dhclient_DEPENDENCIES = ../common/libdhcp.@A@ ../omapip/libomapi.@A@
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -240,6 +238,7 @@ am__relativize = \
     dir1=`echo "$$dir1" | sed -e "$$sed_rest"`; \
   done; \
   reldir="$$dir2"
+A = @A@
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
 AM_DEFAULT_VERBOSITY = @AM_DEFAULT_VERBOSITY@
@@ -258,6 +257,7 @@ BINDLIBDNSDIR = @BINDLIBDNSDIR@
 BINDLIBIRSDIR = @BINDLIBIRSDIR@
 BINDLIBISCCFGDIR = @BINDLIBISCCFGDIR@
 BINDLIBISCDIR = @BINDLIBISCDIR@
+BINDLT = @BINDLT@
 BINDSRCDIR = @BINDSRCDIR@
 BINDSUBDIR = @BINDSUBDIR@
 CC = @CC@
@@ -268,8 +268,10 @@ CPPFLAGS = @CPPFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
+DHLIBS = @DHLIBS@
 DISTCHECK_ATF_CONFIGURE_FLAG = @DISTCHECK_ATF_CONFIGURE_FLAG@
 DISTCHECK_LIBBIND_CONFIGURE_FLAG = @DISTCHECK_LIBBIND_CONFIGURE_FLAG@
+DISTCHECK_LIBTOOL_CONFIGURE_FLAG = @DISTCHECK_LIBTOOL_CONFIGURE_FLAG@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
@@ -299,6 +301,7 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
+Q = @Q@
 RANLIB = @RANLIB@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
@@ -371,11 +374,11 @@ dhclient_SOURCES = clparse.c dhclient.c dhc6.c \
 		   scripts/netbsd scripts/nextstep scripts/openbsd \
 		   scripts/solaris scripts/openwrt
 
-dhclient_LDADD = ../common/libdhcp.a ../omapip/libomapi.a \
-		 @BINDLIBIRSDIR@/libirs.a \
-		 @BINDLIBDNSDIR@/libdns.a \
-		 @BINDLIBISCCFGDIR@/libisccfg.a \
-		 @BINDLIBISCDIR@/libisc.a
+dhclient_LDADD = ../common/libdhcp.@A@ ../omapip/libomapi.@A@ \
+		 @BINDLIBIRSDIR@/libirs.@A@ \
+		 @BINDLIBDNSDIR@/libdns.@A@ \
+		 @BINDLIBISCCFGDIR@/libisccfg.@A@ \
+		 @BINDLIBISCDIR@/libisc.@A@
 
 man_MANS = dhclient.8 dhclient-script.8 dhclient.conf.5 dhclient.leases.5
 EXTRA_DIST = $(man_MANS)

@@ -110,44 +110,28 @@ am__alloc_unittest_SOURCES_DIST = test_alloc.c \
 alloc_unittest_OBJECTS = $(am_alloc_unittest_OBJECTS)
 am__DEPENDENCIES_1 =
 @HAVE_ATF_TRUE@alloc_unittest_DEPENDENCIES = $(am__DEPENDENCIES_1) \
-@HAVE_ATF_TRUE@	../libdhcp.a ../../omapip/libomapi.a \
-@HAVE_ATF_TRUE@	@BINDLIBIRSDIR@/libirs.a \
-@HAVE_ATF_TRUE@	@BINDLIBDNSDIR@/libdns.a \
-@HAVE_ATF_TRUE@	@BINDLIBISCCFGDIR@/libisccfg.a \
-@HAVE_ATF_TRUE@	@BINDLIBISCDIR@/libisc.a
+@HAVE_ATF_TRUE@	../libdhcp.@A@ ../../omapip/libomapi.@A@
 am__dns_unittest_SOURCES_DIST = dns_unittest.c \
 	$(top_srcdir)/tests/t_api_dhcp.c
 @HAVE_ATF_TRUE@am_dns_unittest_OBJECTS = dns_unittest.$(OBJEXT) \
 @HAVE_ATF_TRUE@	t_api_dhcp.$(OBJEXT)
 dns_unittest_OBJECTS = $(am_dns_unittest_OBJECTS)
 @HAVE_ATF_TRUE@dns_unittest_DEPENDENCIES = $(am__DEPENDENCIES_1) \
-@HAVE_ATF_TRUE@	../libdhcp.a ../../omapip/libomapi.a \
-@HAVE_ATF_TRUE@	@BINDLIBIRSDIR@/libirs.a \
-@HAVE_ATF_TRUE@	@BINDLIBDNSDIR@/libdns.a \
-@HAVE_ATF_TRUE@	@BINDLIBISCCFGDIR@/libisccfg.a \
-@HAVE_ATF_TRUE@	@BINDLIBISCDIR@/libisc.a
+@HAVE_ATF_TRUE@	../libdhcp.@A@ ../../omapip/libomapi.@A@
 am__misc_unittest_SOURCES_DIST = misc_unittest.c \
 	$(top_srcdir)/tests/t_api_dhcp.c
 @HAVE_ATF_TRUE@am_misc_unittest_OBJECTS = misc_unittest.$(OBJEXT) \
 @HAVE_ATF_TRUE@	t_api_dhcp.$(OBJEXT)
 misc_unittest_OBJECTS = $(am_misc_unittest_OBJECTS)
 @HAVE_ATF_TRUE@misc_unittest_DEPENDENCIES = $(am__DEPENDENCIES_1) \
-@HAVE_ATF_TRUE@	../libdhcp.a ../../omapip/libomapi.a \
-@HAVE_ATF_TRUE@	@BINDLIBIRSDIR@/libirs.a \
-@HAVE_ATF_TRUE@	@BINDLIBDNSDIR@/libdns.a \
-@HAVE_ATF_TRUE@	@BINDLIBISCCFGDIR@/libisccfg.a \
-@HAVE_ATF_TRUE@	@BINDLIBISCDIR@/libisc.a
+@HAVE_ATF_TRUE@	../libdhcp.@A@ ../../omapip/libomapi.@A@
 am__ns_name_unittest_SOURCES_DIST = ns_name_test.c \
 	$(top_srcdir)/tests/t_api_dhcp.c
 @HAVE_ATF_TRUE@am_ns_name_unittest_OBJECTS = ns_name_test.$(OBJEXT) \
 @HAVE_ATF_TRUE@	t_api_dhcp.$(OBJEXT)
 ns_name_unittest_OBJECTS = $(am_ns_name_unittest_OBJECTS)
 @HAVE_ATF_TRUE@ns_name_unittest_DEPENDENCIES = $(am__DEPENDENCIES_1) \
-@HAVE_ATF_TRUE@	../libdhcp.a ../../omapip/libomapi.a \
-@HAVE_ATF_TRUE@	@BINDLIBIRSDIR@/libirs.a \
-@HAVE_ATF_TRUE@	@BINDLIBDNSDIR@/libdns.a \
-@HAVE_ATF_TRUE@	@BINDLIBISCCFGDIR@/libisccfg.a \
-@HAVE_ATF_TRUE@	@BINDLIBISCDIR@/libisc.a
+@HAVE_ATF_TRUE@	../libdhcp.@A@ ../../omapip/libomapi.@A@
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -254,6 +238,7 @@ am__relativize = \
     dir1=`echo "$$dir1" | sed -e "$$sed_rest"`; \
   done; \
   reldir="$$dir2"
+A = @A@
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
 AM_DEFAULT_VERBOSITY = @AM_DEFAULT_VERBOSITY@
@@ -272,6 +257,7 @@ BINDLIBDNSDIR = @BINDLIBDNSDIR@
 BINDLIBIRSDIR = @BINDLIBIRSDIR@
 BINDLIBISCCFGDIR = @BINDLIBISCCFGDIR@
 BINDLIBISCDIR = @BINDLIBISCDIR@
+BINDLT = @BINDLT@
 BINDSRCDIR = @BINDSRCDIR@
 BINDSUBDIR = @BINDSUBDIR@
 CC = @CC@
@@ -282,8 +268,10 @@ CPPFLAGS = @CPPFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
+DHLIBS = @DHLIBS@
 DISTCHECK_ATF_CONFIGURE_FLAG = @DISTCHECK_ATF_CONFIGURE_FLAG@
 DISTCHECK_LIBBIND_CONFIGURE_FLAG = @DISTCHECK_LIBBIND_CONFIGURE_FLAG@
+DISTCHECK_LIBTOOL_CONFIGURE_FLAG = @DISTCHECK_LIBTOOL_CONFIGURE_FLAG@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
@@ -313,6 +301,7 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
+Q = @Q@
 RANLIB = @RANLIB@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
@@ -376,33 +365,33 @@ AM_CPPFLAGS = $(ATF_CFLAGS) -I$(top_srcdir)/includes
 EXTRA_DIST = Atffile
 ATF_TESTS = $(am__append_1)
 @HAVE_ATF_TRUE@alloc_unittest_SOURCES = test_alloc.c $(top_srcdir)/tests/t_api_dhcp.c
-@HAVE_ATF_TRUE@alloc_unittest_LDADD = $(ATF_LDFLAGS) ../libdhcp.a \
-@HAVE_ATF_TRUE@	../../omapip/libomapi.a \
-@HAVE_ATF_TRUE@	@BINDLIBIRSDIR@/libirs.a \
-@HAVE_ATF_TRUE@	@BINDLIBDNSDIR@/libdns.a \
-@HAVE_ATF_TRUE@	@BINDLIBISCCFGDIR@/libisccfg.a \
-@HAVE_ATF_TRUE@	@BINDLIBISCDIR@/libisc.a
+@HAVE_ATF_TRUE@alloc_unittest_LDADD = $(ATF_LDFLAGS) ../libdhcp.@A@ \
+@HAVE_ATF_TRUE@	../../omapip/libomapi.@A@ \
+@HAVE_ATF_TRUE@	@BINDLIBIRSDIR@/libirs.@A@ \
+@HAVE_ATF_TRUE@	@BINDLIBDNSDIR@/libdns.@A@ \
+@HAVE_ATF_TRUE@	@BINDLIBISCCFGDIR@/libisccfg.@A@ \
+@HAVE_ATF_TRUE@	@BINDLIBISCDIR@/libisc.@A@
 @HAVE_ATF_TRUE@dns_unittest_SOURCES = dns_unittest.c $(top_srcdir)/tests/t_api_dhcp.c
-@HAVE_ATF_TRUE@dns_unittest_LDADD = $(ATF_LDFLAGS) ../libdhcp.a \
-@HAVE_ATF_TRUE@	../../omapip/libomapi.a \
-@HAVE_ATF_TRUE@	@BINDLIBIRSDIR@/libirs.a \
-@HAVE_ATF_TRUE@	@BINDLIBDNSDIR@/libdns.a \
-@HAVE_ATF_TRUE@	@BINDLIBISCCFGDIR@/libisccfg.a \
-@HAVE_ATF_TRUE@	@BINDLIBISCDIR@/libisc.a
+@HAVE_ATF_TRUE@dns_unittest_LDADD = $(ATF_LDFLAGS) ../libdhcp.@A@ \
+@HAVE_ATF_TRUE@	../../omapip/libomapi.@A@ \
+@HAVE_ATF_TRUE@	@BINDLIBIRSDIR@/libirs.@A@ \
+@HAVE_ATF_TRUE@	@BINDLIBDNSDIR@/libdns.@A@ \
+@HAVE_ATF_TRUE@	@BINDLIBISCCFGDIR@/libisccfg.@A@ \
+@HAVE_ATF_TRUE@	@BINDLIBISCDIR@/libisc.@A@
 @HAVE_ATF_TRUE@misc_unittest_SOURCES = misc_unittest.c $(top_srcdir)/tests/t_api_dhcp.c
-@HAVE_ATF_TRUE@misc_unittest_LDADD = $(ATF_LDFLAGS) ../libdhcp.a \
-@HAVE_ATF_TRUE@	../../omapip/libomapi.a \
-@HAVE_ATF_TRUE@	@BINDLIBIRSDIR@/libirs.a \
-@HAVE_ATF_TRUE@	@BINDLIBDNSDIR@/libdns.a \
-@HAVE_ATF_TRUE@	@BINDLIBISCCFGDIR@/libisccfg.a \
-@HAVE_ATF_TRUE@	@BINDLIBISCDIR@/libisc.a
+@HAVE_ATF_TRUE@misc_unittest_LDADD = $(ATF_LDFLAGS) ../libdhcp.@A@ \
+@HAVE_ATF_TRUE@	../../omapip/libomapi.@A@ \
+@HAVE_ATF_TRUE@	@BINDLIBIRSDIR@/libirs.@A@ \
+@HAVE_ATF_TRUE@	@BINDLIBDNSDIR@/libdns.@A@ \
+@HAVE_ATF_TRUE@	@BINDLIBISCCFGDIR@/libisccfg.@A@ \
+@HAVE_ATF_TRUE@	@BINDLIBISCDIR@/libisc.@A@
 @HAVE_ATF_TRUE@ns_name_unittest_SOURCES = ns_name_test.c $(top_srcdir)/tests/t_api_dhcp.c
-@HAVE_ATF_TRUE@ns_name_unittest_LDADD = $(ATF_LDFLAGS) ../libdhcp.a \
-@HAVE_ATF_TRUE@	../../omapip/libomapi.a \
-@HAVE_ATF_TRUE@	@BINDLIBIRSDIR@/libirs.a \
-@HAVE_ATF_TRUE@	@BINDLIBDNSDIR@/libdns.a \
-@HAVE_ATF_TRUE@	@BINDLIBISCCFGDIR@/libisccfg.a \
-@HAVE_ATF_TRUE@	@BINDLIBISCDIR@/libisc.a
+@HAVE_ATF_TRUE@ns_name_unittest_LDADD = $(ATF_LDFLAGS) ../libdhcp.@A@ \
+@HAVE_ATF_TRUE@	../../omapip/libomapi.@A@ \
+@HAVE_ATF_TRUE@	@BINDLIBIRSDIR@/libirs.@A@ \
+@HAVE_ATF_TRUE@	@BINDLIBDNSDIR@/libdns.@A@ \
+@HAVE_ATF_TRUE@	@BINDLIBISCCFGDIR@/libisccfg.@A@ \
+@HAVE_ATF_TRUE@	@BINDLIBISCDIR@/libisc.@A@
 all: all-recursive
 
 .SUFFIXES:

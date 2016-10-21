@@ -116,10 +116,10 @@ am_dhcpd_OBJECTS = dhcpd-dhcpd.$(OBJEXT) dhcpd-dhcp.$(OBJEXT) \
 	dhcpd-ldap_krb_helper.$(OBJEXT)
 dhcpd_OBJECTS = $(am_dhcpd_OBJECTS)
 am__DEPENDENCIES_1 =
-dhcpd_DEPENDENCIES = ../common/libdhcp.a ../omapip/libomapi.a \
-	../dhcpctl/libdhcpctl.a $(BINDLIBDIR)/libirs.a \
-	$(BINDLIBDIR)/libdns.a $(BINDLIBDIR)/libisccfg.a \
-	$(BINDLIBDIR)/libisc.a $(am__DEPENDENCIES_1)
+dhcpd_DEPENDENCIES = ../common/libdhcp.@A@ ../omapip/libomapi.@A@ \
+	../dhcpctl/libdhcpctl.@A@ $(BINDLIBIRSDIR)/libirs.@A@ \
+	$(BINDLIBDNSDIR)/libdns.@A@ $(BINDLIBISCCFGDIR)/libisccfg.@A@ \
+	$(BINDLIBISCDIR)/libisc.@A@ $(am__DEPENDENCIES_1)
 dhcpd_LINK = $(CCLD) $(dhcpd_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
@@ -256,6 +256,7 @@ am__relativize = \
     dir1=`echo "$$dir1" | sed -e "$$sed_rest"`; \
   done; \
   reldir="$$dir2"
+A = @A@
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
 AM_DEFAULT_VERBOSITY = @AM_DEFAULT_VERBOSITY@
@@ -274,6 +275,7 @@ BINDLIBDNSDIR = @BINDLIBDNSDIR@
 BINDLIBIRSDIR = @BINDLIBIRSDIR@
 BINDLIBISCCFGDIR = @BINDLIBISCCFGDIR@
 BINDLIBISCDIR = @BINDLIBISCDIR@
+BINDLT = @BINDLT@
 BINDSRCDIR = @BINDSRCDIR@
 BINDSUBDIR = @BINDSUBDIR@
 CC = @CC@
@@ -284,8 +286,10 @@ CPPFLAGS = @CPPFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
+DHLIBS = @DHLIBS@
 DISTCHECK_ATF_CONFIGURE_FLAG = @DISTCHECK_ATF_CONFIGURE_FLAG@
 DISTCHECK_LIBBIND_CONFIGURE_FLAG = @DISTCHECK_LIBBIND_CONFIGURE_FLAG@
+DISTCHECK_LIBTOOL_CONFIGURE_FLAG = @DISTCHECK_LIBTOOL_CONFIGURE_FLAG@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
@@ -315,6 +319,7 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
+Q = @Q@
 RANLIB = @RANLIB@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
@@ -379,7 +384,6 @@ top_srcdir = @top_srcdir@
 # directory. That eliminates any discrepancies between tested code and
 # production code. Sadly, we are not there yet.
 SUBDIRS = . tests
-BINDLIBDIR = @BINDDIR@/lib
 AM_CPPFLAGS = -I.. -DLOCALSTATEDIR='"@localstatedir@"'
 dist_sysconf_DATA = dhcpd.conf.example
 dhcpd_SOURCES = dhcpd.c dhcp.c bootp.c confpars.c db.c class.c failover.c \
@@ -387,10 +391,12 @@ dhcpd_SOURCES = dhcpd.c dhcp.c bootp.c confpars.c db.c class.c failover.c \
 		dhcpv6.c mdb6.c ldap.c ldap_casa.c leasechain.c ldap_krb_helper.c
 
 dhcpd_CFLAGS = $(LDAP_CFLAGS)
-dhcpd_LDADD = ../common/libdhcp.a ../omapip/libomapi.a \
-	      ../dhcpctl/libdhcpctl.a $(BINDLIBDIR)/libirs.a \
-	      $(BINDLIBDIR)/libdns.a $(BINDLIBDIR)/libisccfg.a \
-	      $(BINDLIBDIR)/libisc.a $(LDAP_LIBS)
+dhcpd_LDADD = ../common/libdhcp.@A@ ../omapip/libomapi.@A@ \
+	      ../dhcpctl/libdhcpctl.@A@ \
+	      $(BINDLIBIRSDIR)/libirs.@A@ \
+	      $(BINDLIBDNSDIR)/libdns.@A@ \
+	      $(BINDLIBISCCFGDIR)/libisccfg.@A@ \
+	      $(BINDLIBISCDIR)/libisc.@A@ $(LDAP_LIBS)
 
 man_MANS = dhcpd.8 dhcpd.conf.5 dhcpd.leases.5
 EXTRA_DIST = $(man_MANS)

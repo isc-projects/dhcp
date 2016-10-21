@@ -57,6 +57,9 @@ uid_t set_uid = 0;
 gid_t set_gid = 0;
 #endif /* PARANOIA */
 
+struct class unknown_class;
+struct class known_class;
+
 struct iaddr server_identifier;
 int server_identifier_matched;
 

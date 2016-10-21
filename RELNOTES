@@ -134,6 +134,12 @@ by Eric Young (eay@cryptsoft.com).
   arguments.
   [ISC-Bugs #39318]
 
+- Added support of dynamic shared libraries with libtool. A new
+  --enable-libtool configuration parameter is available but
+  should not be used directly: *please* read the build configuration
+  section in the README file for the recommended procedure.
+  [ISC-Bugs #29402]
+
 			Changes since 4.3.0 (bug fixes)
 
 - Tidy up several small tickets.

@@ -233,6 +233,7 @@ distuninstallcheck_listfiles = find . -type f -print
 am__distuninstallcheck_listfiles = $(distuninstallcheck_listfiles) \
   | sed 's|^\./|$(prefix)/|' | grep -v '$(infodir)/dir$$'
 distcleancheck_listfiles = find . -type f -print
+A = @A@
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
 AM_DEFAULT_VERBOSITY = @AM_DEFAULT_VERBOSITY@
@@ -251,6 +252,7 @@ BINDLIBDNSDIR = @BINDLIBDNSDIR@
 BINDLIBIRSDIR = @BINDLIBIRSDIR@
 BINDLIBISCCFGDIR = @BINDLIBISCCFGDIR@
 BINDLIBISCDIR = @BINDLIBISCDIR@
+BINDLT = @BINDLT@
 BINDSRCDIR = @BINDSRCDIR@
 BINDSUBDIR = @BINDSUBDIR@
 CC = @CC@
@@ -261,8 +263,10 @@ CPPFLAGS = @CPPFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
+DHLIBS = @DHLIBS@
 DISTCHECK_ATF_CONFIGURE_FLAG = @DISTCHECK_ATF_CONFIGURE_FLAG@
 DISTCHECK_LIBBIND_CONFIGURE_FLAG = @DISTCHECK_LIBBIND_CONFIGURE_FLAG@
+DISTCHECK_LIBTOOL_CONFIGURE_FLAG = @DISTCHECK_LIBTOOL_CONFIGURE_FLAG@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
@@ -292,6 +296,7 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
+Q = @Q@
 RANLIB = @RANLIB@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
@@ -352,11 +357,16 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 
 #
+# for libtool
+#
+ACLOCAL_AMFLAGS = -I m4
+
+#
 # We have a lot of files that we want shipped with the distribution.
 #
-EXTRA_DIST = RELNOTES LICENSE contrib/3.0b1-lease-convert \
-	contrib/dhclient-tz-exithook.sh contrib/dhcp.spec \
-	contrib/sethostname.sh contrib/solaris.init \
+EXTRA_DIST = RELNOTES LICENSE configure.ac+lt config+lt \
+	contrib/3.0b1-lease-convert contrib/dhclient-tz-exithook.sh \
+	contrib/dhcp.spec contrib/sethostname.sh contrib/solaris.init \
 	contrib/ms2isc/Registry.pm contrib/ms2isc/ms2isc.pl \
 	contrib/ms2isc/readme.txt contrib/ldap/dhcpd-conf-to-ldap \
 	contrib/ldap/dhcp.schema contrib/ldap/README.ldap \
@@ -383,7 +393,8 @@ nobase_include_HEADERS = dhcpctl/dhcpctl.h
 # distcheck tuning
 #
 DISTCHECK_CONFIGURE_FLAGS = @DISTCHECK_ATF_CONFIGURE_FLAG@ \
-	@DISTCHECK_LIBBIND_CONFIGURE_FLAG@ $(am__empty)
+	@DISTCHECK_LIBBIND_CONFIGURE_FLAG@ \
+	@DISTCHECK_LIBTOOL_CONFIGURE_FLAG@ $(am__empty)
 all: all-recursive
 
 .SUFFIXES:

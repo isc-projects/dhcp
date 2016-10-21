@@ -3169,10 +3169,10 @@ int inet_aton (const char *, struct in_addr *);
 
 /* class.c */
 extern int have_billing_classes;
-struct class unknown_class;
-struct class known_class;
-struct collection default_collection;
-struct collection *collections;
+extern struct class unknown_class;
+extern struct class known_class;
+extern struct collection default_collection;
+extern struct collection *collections;
 extern struct executable_statement *default_classification_rules;
 
 void classification_setup (void);
