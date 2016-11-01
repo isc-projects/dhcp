@@ -1085,6 +1085,7 @@ void dhcpinform (packet, ms_nulltp)
 #if defined (DEBUG_INFORM_HOST)
 	int h_w_fixed_addr = 0;
 #endif
+	struct lease* cip_lease = NULL;
 
 	/* The client should set ciaddr to its IP address, but apparently
 	   it's common for clients not to do this, so we'll use their IP
@@ -1231,11 +1232,23 @@ void dhcpinform (packet, ms_nulltp)
 
 	maybe_return_agent_options(packet, options);
 
-	/* Execute statements in scope starting with the subnet scope. */
+	/* If we have ciaddr, find its lease so we can find its pool. */
+	if (zeroed_ciaddr == ISC_FALSE) {
+		find_lease_by_ip_addr (&cip_lease, cip, MDL);
+	}
+
+	/* Execute statements starting at the pool scope if we can
+	 * otherwise the subnet scope is a far as we can go. */
 	execute_statements_in_scope(NULL, packet, NULL, NULL,
 				    packet->options, options,
-				    &global_scope, subnet->group,
+				    &global_scope,
+				    (cip_lease != NULL &&
+				     cip_lease->pool != NULL ?
+				     cip_lease->pool->group : subnet->group),
 				    NULL, NULL);
+	if (cip_lease) {
+		lease_dereference (&cip_lease, MDL);
+	}
  		
 	/* Execute statements in the class scopes. */
 	for (i = packet->class_count; i > 0; i--) {

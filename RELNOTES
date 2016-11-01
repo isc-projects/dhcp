@@ -140,6 +140,12 @@ by Eric Young (eay@cryptsoft.com).
   section in the README file for the recommended procedure.
   [ISC-Bugs #29402]
 
+- When replying to a DHCPINFORM, the server will now include options specified
+  at the pool scope, provided the ciaddr field of the DHCPINFORM is populated.
+  Prior to this the server only evaluated options down to the subnet scope.
+  Thanks to Fernando Soto at BlueCat Networks for reporting the issue.
+  [ISC-Bugs #43219]
+
 			Changes since 4.3.0 (bug fixes)
 
 - Tidy up several small tickets.
