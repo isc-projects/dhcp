@@ -56,6 +56,12 @@ void bootp (struct packet *packet) { }
 #ifdef DHCPv6
 /* XXX: should we warn or something here? */
 void dhcpv6(struct packet *packet) { }
+#ifdef DHCP4o6
+isc_result_t dhcpv4o6_handler(omapi_object_t *h)
+{
+	return ISC_R_NOTIMPLEMENTED;
+}
+#endif /* DHCP4o6 */
 #endif /* DHCPv6 */
 
 int check_collection (struct packet *p, struct lease *l, struct collection *c)

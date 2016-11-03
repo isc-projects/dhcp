@@ -19,6 +19,11 @@ dhcpv6(struct packet *packet) {
 }
 
 isc_result_t
+dhcpv4o6_handler(omapi_object_t *h) {
+	return ISC_R_NOTIMPLEMENTED;
+}
+
+isc_result_t
 dhcp_set_control_state(control_object_state_t old, control_object_state_t new) {
 	return ISC_R_NOTIMPLEMENTED;
 }

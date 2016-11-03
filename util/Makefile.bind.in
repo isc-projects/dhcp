@@ -74,23 +74,23 @@ atf:
 bind2:
 # Build and install the libraries
 # No need to do anything if we already have something installed.
-	@if test -d ${binddir}/lib ; then                              \
-		echo Bind libraries already installed ;                \
-	else                                                           \
-		echo Building BIND libraries - this takes some time. ; \
-		for libdir in ${bindlibs} ; do                         \
-		 (cd ${bindsrcdir}/lib/$$libdir ;                      \
-		  echo Building $$libdir library in `pwd` ;            \
-		  $(MAKE) >> ${binddir}/build.log) ;                   \
-		done ;                                                 \
-		                                                       \
-		echo Installing BIND libraries to ${binddir}. ;        \
-		for libdir in ${bindlibs} ; do                         \
-		 (cd ${bindsrcdir}/lib/$$libdir ;                      \
-		  MAKEDEFS="${installdirs}"; export MAKEDEFS;          \
-		  $(MAKE) ${installdirs} install >>                    \
-		   ${binddir}/install.log) ;                           \
-		done ;                                                 \
+	@if test -d ${binddir}/lib ; then                                 \
+		echo Bind libraries already installed ;                   \
+	else                                                              \
+		echo Building BIND libraries - this takes some time. ;    \
+		for libdir in ${bindlibs} ; do                            \
+		 (cd ${bindsrcdir}/lib/$$libdir ;                         \
+		  echo Building $$libdir library in `pwd` ;               \
+		  $(MAKE) >> ${binddir}/build.log) ;                      \
+		done ;                                                    \
+		                                                          \
+		echo Installing BIND libraries to ${binddir}. ;           \
+		for libdir in ${bindlibs} ; do                            \
+		 (cd ${bindsrcdir}/lib/$$libdir ;                         \
+		  MAKEDEFS="${installdirs}"; export MAKEDEFS;             \
+		  $(MAKE) ${installdirs} LIBTOOL_MODE_INSTALL= install >> \
+		   ${binddir}/install.log) ;                              \
+		done ;                                                    \
 	fi
 
 clean:

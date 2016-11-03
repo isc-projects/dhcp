@@ -1886,6 +1886,13 @@ dhcp(struct packet *packet) {
 	return;
 }
 
+#if defined(DHCPv6) && defined(DHCP4o6)
+isc_result_t dhcpv4o6_handler(omapi_object_t *h)
+{
+	return ISC_R_NOTIMPLEMENTED;
+}
+#endif
+
 void
 classify(struct packet *p, struct class *c) {
 	return;
