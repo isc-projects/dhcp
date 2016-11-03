@@ -18,5 +18,9 @@
 
 cp configure.ac+lt configure.ac
 autoreconf -i
+if test $? -ne 0; then
+    echo autoreconf failed
+    exit $?
+fi
 echo Reconfiguring with "$@"
 ./configure "$@"
