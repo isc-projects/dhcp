@@ -976,6 +976,11 @@ by Eric Young (eay@cryptsoft.com).
 - Clean up some memory references in the vendor-class construct.
   [ISC-Bugs #42984]
 
+- The configure script for use with libtool now catches a failure to 
+  execute autoreconf. Prior to this, autoreconf failures would go undetected
+  causing the legacy configure script to loop when run with --enable-libtool.
+  [ISC-Bugs #43546]
+
 			Changes since 4.2.0 (new features)
 
 - If a client renews before 'dhcp-cache-threshold' percent of its lease
