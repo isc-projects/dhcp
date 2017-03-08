@@ -940,6 +940,16 @@ by Eric Young (eay@cryptsoft.com).
   and our website for directions on bug submissions.
   [ISC-Bugs #24789]
 
+- The linux interface discovery code has been modified to use getifaddrs() 
+  as is done for BSD and OS-X.  Prior to this the code would only recognize
+  the first address on an interface and thereby omit vlans.
+  Thanks to Jiri Popelka at Redhat, Marius Tomaschewski at Suse, and Wei
+  Kong at Novell, who all submitted patches.
+  [ISC-Bugs #28761]
+  [ISC-Bugs #31992]
+  [ISC-Bugs #25428]
+  [ISC-Bugs #31940]
+
 			Changes since 4.2.0 (new features)
 
 - If a client renews before 'dhcp-cache-threshold' percent of its lease
