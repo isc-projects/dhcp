@@ -79,6 +79,16 @@ by Eric Young (eay@cryptsoft.com).
   "Run out of memory." on the standard error and exists with status 1.
   [ISC-Bugs #32744]
 
+- The linux interface discovery code has been modified to use getifaddrs() 
+  as is done for BSD and OS-X.  Prior to this the code would only recognize
+  the first address on an interface and thereby omit vlans.
+  Thanks to Jiri Popelka at Redhat, Marius Tomaschewski at Suse, and Wei
+  Kong at Novell, who all submitted patches.
+  [ISC-Bugs #28761]
+  [ISC-Bugs #31992]
+  [ISC-Bugs #25428]
+  [ISC-Bugs #31940]
+
 			Changes since 4.1-ESV-R14b1
 - None
 
