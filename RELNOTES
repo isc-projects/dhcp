@@ -981,6 +981,10 @@ by Eric Young (eay@cryptsoft.com).
   causing the legacy configure script to loop when run with --enable-libtool.
   [ISC-Bugs #43546]
 
+- When memory allocation fails in a repeated way the process writes
+  "Run out of memory." on the standard error and exists with status 1.
+  [ISC-Bugs #32744]
+
 			Changes since 4.2.0 (new features)
 
 - If a client renews before 'dhcp-cache-threshold' percent of its lease

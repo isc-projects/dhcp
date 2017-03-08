@@ -52,6 +52,9 @@ int rc_history_count;
 static void print_rc_hist_entry (int);
 #endif
 
+static int dmalloc_failures;
+static char out_of_memory[] = "Run out of memory.";
+
 void *
 dmalloc(size_t size, const char *file, int line) {
 	unsigned char *foo;
@@ -69,8 +72,21 @@ dmalloc(size_t size, const char *file, int line) {
 
 	foo = malloc(len);
 
-	if (!foo)
+	if (!foo) {
+		dmalloc_failures++;
+		if (dmalloc_failures > 10) {
+			/* In case log_fatal() returns here */
+			IGNORE_RET(write(STDERR_FILENO,
+					 out_of_memory,
+					 strlen(out_of_memory)));
+			IGNORE_RET(write(STDERR_FILENO, "\n", 1));
+			exit(1);
+		} else if (dmalloc_failures >= 10) {
+			/* Something went wrong beyond repair. */
+			log_fatal("Fatal error: out of memory.");
+		}
 		return NULL;
+	}
 	bar = (void *)(foo + DMDOFFSET);
 	memset (bar, 0, size);
 
