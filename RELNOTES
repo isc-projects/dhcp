@@ -69,6 +69,10 @@ by Eric Young (eay@cryptsoft.com).
   Thanks to Fernando Soto at BlueCat Networks for reporting the issue.
   [ISC-Bugs #43219]
 
+- When memory allocation fails in a repeated way the process writes
+  "Run out of memory." on the standard error and exists with status 1.
+  [ISC-Bugs #32744]
+
 			Changes since 4.3.5b1
 
 - Corrected a bug which could cause the server to sporadically crash while
