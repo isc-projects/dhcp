@@ -3,7 +3,7 @@
    DHCP Protocol engine. */
 
 /*
- * Copyright (c) 2004-2016 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2017 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -1085,7 +1085,6 @@ void dhcpinform (packet, ms_nulltp)
 #if defined (DEBUG_INFORM_HOST)
 	int h_w_fixed_addr = 0;
 #endif
-	struct lease* cip_lease = NULL;
 
 	/* The client should set ciaddr to its IP address, but apparently
 	   it's common for clients not to do this, so we'll use their IP
@@ -1232,22 +1231,32 @@ void dhcpinform (packet, ms_nulltp)
 
 	maybe_return_agent_options(packet, options);
 
-	/* If we have ciaddr, find its lease so we can find its pool. */
-	if (zeroed_ciaddr == ISC_FALSE) {
-		find_lease_by_ip_addr (&cip_lease, cip, MDL);
-	}
-
-	/* Execute statements starting at the pool scope if we can
-	 * otherwise the subnet scope is a far as we can go. */
+	/* Execute statements network statements starting at the subnet level */
 	execute_statements_in_scope(NULL, packet, NULL, NULL,
 				    packet->options, options,
-				    &global_scope,
-				    (cip_lease != NULL &&
-				     cip_lease->pool != NULL ?
-				     cip_lease->pool->group : subnet->group),
+				    &global_scope, subnet->group,
 				    NULL, NULL);
-	if (cip_lease) {
-		lease_dereference (&cip_lease, MDL);
+
+	/* If we have ciaddr, find its lease so we can find its pool. */
+	if (zeroed_ciaddr == ISC_FALSE) {
+		struct lease* cip_lease = NULL;
+
+		find_lease_by_ip_addr (&cip_lease, cip, MDL);
+	
+		/* Overlay with pool options if ciaddr mapped to a lease. */	
+		if (cip_lease) {
+		 	if (cip_lease->pool && cip_lease->pool->group) {
+				execute_statements_in_scope(
+					NULL, packet, NULL, NULL,
+				    	packet->options, options,
+				    	&global_scope,
+				     	cip_lease->pool->group,
+					cip_lease->pool->shared_network->group,
+					NULL);
+			}
+
+			lease_dereference (&cip_lease, MDL);
+		}
 	}
  		
 	/* Execute statements in the class scopes. */
