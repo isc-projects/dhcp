@@ -62,6 +62,9 @@ isc_result_t omapi_generic_set_value (omapi_object_t *h,
 	   the generic object, and if so, replace the current value
 	   with the new one. */
 	for (i = 0; i < g -> nvalues; i++) {
+		if (!g -> values[i])
+			continue;
+
 		if (!omapi_data_string_cmp (name, g -> values [i] -> name)) {
 			/* There's an inconsistency here: the standard
 			   behaviour of a set_values method when
