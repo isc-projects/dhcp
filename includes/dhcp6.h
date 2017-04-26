@@ -277,3 +277,6 @@ struct dhcpv4_over_dhcpv6_packet {
 #define IRT_DEFAULT	86400
 #define IRT_MINIMUM	600
 
+#define EUI_64_ID_LEN 12  /* 2 for duid-type, 2 for hardware type, 8 for ID */
+#define IAID_LEN 4
+

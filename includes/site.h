@@ -318,6 +318,13 @@
    allow at one time.  A value of 0 means there is no limit.*/
 #define MAX_FD_VALUE 200
 
+/* Enable EUI-64 Address assignment policy.  Instructs the server
+ * to use EUI-64 addressing instead of dynamic address allocation
+ * for IA_NA pools, if the parameter use-eui-64 is true for the
+ * pool.  Can be at all scopes down to the pool level.  Not
+ * supported by the configure script. */
+/* #define EUI_64 */
+
 /* Include definitions for various options.  In general these
    should be left as is, but if you have already defined one
    of these and prefer your definition you can comment the 

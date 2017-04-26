@@ -3,7 +3,7 @@
    Definitions for dhcpd... */
 
 /*
- * Copyright (c) 2004-2016 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2017 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -799,6 +799,9 @@ struct lease_state {
 #define SV_PREFIX_LEN_MODE		87
 #define SV_DHCPV6_SET_TEE_TIMES		88
 #define SV_ABANDON_LEASE_TIME		89
+#ifdef EUI_64
+#define SV_USE_EUI_64			90
+#endif
 
 #if !defined (DEFAULT_PING_TIMEOUT)
 # define DEFAULT_PING_TIMEOUT 1
@@ -1717,6 +1720,9 @@ struct ipv6_pond {
 	int logged;			/* already logged a message */
 	isc_uint64_t low_threshold;	/* low threshold to restart logging */
 	int jumbo_range;
+#ifdef EUI_64
+	int use_eui_64;		/* use EUI-64 address assignment when true */
+#endif
 };
 
 /*
@@ -2900,6 +2906,9 @@ char *piaddrmask(struct iaddr *, struct iaddr *);
 char *piaddrcidr(const struct iaddr *, unsigned int);
 u_int16_t validate_port(char *);
 u_int16_t validate_port_pair(char *);
+#if defined(DHCPv6)
+const char *pin6_addr (const struct in6_addr*);
+#endif
 
 /* dhclient.c */
 extern int nowait;
@@ -3748,6 +3757,15 @@ isc_result_t create_lease6(struct ipv6_pool *pool,
 			   unsigned int *attempts,
 			   const struct data_string *uid,
 			   time_t soft_lifetime_end_time);
+#ifdef EUI_64
+int valid_eui_64_duid(const struct data_string* uid, int duid_beg);
+int valid_for_eui_64_pool(struct ipv6_pool*, struct data_string* uid,
+                          int duid_beg, struct in6_addr* ia_addr);
+isc_result_t create_lease6_eui_64(struct ipv6_pool *pool,
+				  struct iasubopt **addr,
+				  const struct data_string *iaid_uid,
+				  time_t soft_lifetime_end_time);
+#endif
 isc_result_t add_lease6(struct ipv6_pool *pool,
 			struct iasubopt *lease,
 			time_t valid_lifetime_end_time);

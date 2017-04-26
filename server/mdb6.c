@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2016 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2007-2017 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -851,6 +851,80 @@ build_address6(struct in6_addr *addr,
 		str[8] &= ~0x02;
 }
 
+#ifdef EUI_64
+int
+valid_eui_64_duid(const struct data_string* uid, int offset) {
+	if (uid->len == (offset + EUI_64_ID_LEN)) {
+		const unsigned char* duid = uid->data + offset;
+		return (((duid[0] == 0x00 && duid[1] == 0x03)  &&
+			(duid[2] == 0x00 && duid[3] == 0x1b)));
+	}
+
+    return(0);
+}
+
+
+/*
+ * Create an EUI-64 address 
+ */
+static isc_result_t
+build_address6_eui_64(struct in6_addr *addr,
+		      const struct in6_addr *net_start_addr, int net_bits,
+		      const struct data_string *iaid_duid, int duid_beg) {
+
+	if (net_bits != 64) {
+		log_error("build_address_eui_64: network is not 64 bits");
+		return (ISC_R_FAILURE);
+	}
+
+	if (valid_eui_64_duid(iaid_duid, duid_beg)) {
+		const unsigned char *duid = iaid_duid->data + duid_beg;
+
+		/* copy network prefix to the high 64 bits */
+		memcpy(addr->s6_addr, net_start_addr->s6_addr, 8);
+
+		/* copy Link-layer address to low 64 bits */
+		memcpy(addr->s6_addr + 8, duid + 4, 8);
+
+		/* RFC-3315 Any address assigned by a server that is based
+		 * on an EUI-64 identifier MUST include an interface identifier
+		 * with the "u" (universal/local) and "g" (individual/group)
+		 * bits of the interface identifier set appropriately, as
+		 * indicated in section 2.5.1 of RFC 2373 [5]. */
+		addr->s6_addr[8] |= 0x02;
+		return (ISC_R_SUCCESS);
+	}
+
+	log_error("build_address_eui_64: iaid_duid not a valid EUI-64: %s",
+		  print_hex_1(iaid_duid->len, iaid_duid->data, 60));
+	return (ISC_R_FAILURE);
+}
+
+int
+valid_for_eui_64_pool(struct ipv6_pool* pool, struct data_string* uid,
+		      int duid_beg, struct in6_addr* ia_addr) {
+        struct in6_addr test_addr;
+	/* If it's not an EUI-64 pool bail */
+        if (!pool->ipv6_pond->use_eui_64) {
+                return (0);
+        }
+
+        if (!valid_eui_64_duid(uid, duid_beg)) {
+                /* Dynamic lease in a now eui_64 pond, toss it*/
+                return (0);
+        }
+
+        /*  Call build_address6_eui_64() and compare it's result to
+	 *  this lease and see if they match. */
+        memset (&test_addr, 0, sizeof(test_addr));
+        build_address6_eui_64(&test_addr, &pool->start_addr, pool->bits,
+                              uid, duid_beg);
+
+        return (!memcmp(ia_addr, &test_addr, sizeof(test_addr)));
+}
+#endif
+
+
 /* 
  * Create a temporary address by a variant of RFC 4941 algo.
  * Note: this should not be used for prefixes shorter than 64 bits.
@@ -1079,6 +1153,107 @@ create_lease6(struct ipv6_pool *pool, struct iasubopt **addr,
 	return result;
 }
 
+#ifdef EUI_64
+/*!
+ * \brief Assign an EUI-64 address from a pool for a given iaid-duid
+ *
+ *  \param pool - pool from which the address is assigned
+ *  \param iaddr - pointer to the iasubopt to contain the assigned address is
+ *  \param uid - data_string containing the iaid-duid tuple
+ *  \param soft_lifetime_end_time - lifetime of the lease for a solicit?
+ *
+ *  \return status indicating success or nature of the failure
+*/
+isc_result_t
+create_lease6_eui_64(struct ipv6_pool *pool, struct iasubopt **addr,
+	      const struct data_string *uid,
+	      time_t soft_lifetime_end_time) {
+	struct in6_addr tmp;
+	struct iasubopt *test_iaaddr;
+	struct iasubopt *iaaddr;
+	isc_result_t result;
+	static isc_boolean_t init_resiid = ISC_FALSE;
+
+	/*  Fill the reserved IIDs.  */
+	if (!init_resiid) {
+		memset(&rtany, 0, 16);
+		memset(&resany, 0, 8);
+		resany.s6_addr[8] = 0xfd;
+		memset(&resany.s6_addr[9], 0xff, 6);
+		init_resiid = ISC_TRUE;
+	}
+
+	/* Pool must be IA_NA */
+	if (pool->pool_type != D6O_IA_NA) {
+		log_error("create_lease6_eui_64: pool type is not IA_NA.");
+		return (DHCP_R_INVALIDARG);
+	}
+
+	/* Attempt to build the address */
+	if (build_address6_eui_64 (&tmp, &pool->start_addr, pool->bits,
+				   uid, IAID_LEN) != ISC_R_SUCCESS) {
+		log_error("create_lease6_eui_64: build_address6_eui_64 failed");
+		return (ISC_R_FAILURE);
+	}
+
+	/* Avoid reserved interface IDs. (cf. RFC 5453) */
+	if ((memcmp(&tmp.s6_addr[8], &rtany.s6_addr[8], 8) == 0)  ||
+	    ((memcmp(&tmp.s6_addr[8], &resany.s6_addr[8], 7) == 0) &&
+	    ((tmp.s6_addr[15] & 0x80) == 0x80))) {
+		log_error("create_lease6_eui_64: "
+			  "address conflicts with reserved IID");
+		return (ISC_R_FAILURE);
+	}
+
+	/* If this address is not in use, we're happy with it */
+	test_iaaddr = NULL;
+	if (iasubopt_hash_lookup(&test_iaaddr, pool->leases,
+				  &tmp, sizeof(tmp), MDL) != 0) {
+
+		/* See if it's ours. Static leases won't have an ia */
+		int ours = 0;
+		if (!test_iaaddr->ia) {
+			log_error("create_lease6_eui_64: "
+				  "address  %s is assigned to static lease",
+				  pin6_addr(&test_iaaddr->addr));
+		} else {
+			/* Not sure if this can actually happen */
+			struct data_string* found = &test_iaaddr->ia->iaid_duid;
+			ours = ((found->len == uid->len) &&
+				(!memcmp(found->data, uid->data, uid->len)));
+			log_error("create_lease6_eui_64: "
+				  "address  %s belongs to %s",
+				  pin6_addr(&test_iaaddr->addr),
+				  print_hex_1(found->len, found->data, 60));
+		}
+
+		iasubopt_dereference(&test_iaaddr, MDL);
+		if (!ours) {
+			/* Cant' use it */
+			return (ISC_R_FAILURE);
+		}
+	}
+
+	/* We're happy with the address, create an IAADDR to hold it. */
+	iaaddr = NULL;
+	result = iasubopt_allocate(&iaaddr, MDL);
+	if (result != ISC_R_SUCCESS) {
+		log_error("create_lease6_eui_64: could not allocate iasubop");
+		return result;
+	}
+	iaaddr->plen = 0;
+	memcpy(&iaaddr->addr, &tmp, sizeof(iaaddr->addr));
+
+	/* Add the lease to the pool and the reply */
+	result = add_lease6(pool, iaaddr, soft_lifetime_end_time);
+	if (result == ISC_R_SUCCESS) {
+		iasubopt_reference(addr, iaaddr, MDL);
+	}
+
+	iasubopt_dereference(&iaaddr, MDL);
+	return result;
+}
+#endif
 
 /*!
  *
@@ -2494,6 +2669,56 @@ ipv6_pond_dereference(struct ipv6_pond **pond, const char *file, int line) {
 	return ISC_R_SUCCESS;
 }
 
+#ifdef EUI_64
+/*
+ * Enables/disables EUI-64 address assignment for a pond
+ *
+ * Excecutes statements down to the pond's scope and sets the pond's
+ * use_eui_64 flag accordingly. In addition it iterates over the
+ * pond's pools ensuring they are all /64.  Anything else is deemed
+ * invalid for EUI-64.  It returns the number of invalid pools
+ * detected.  This is done post-parsing as use-eui-64 can be set
+ * down to the pool scope and we can't reliably do it until the
+ * entire configuration has been parsed.
+ */
+int
+set_eui_64(struct ipv6_pond *pond) {
+	int invalid_cnt = 0;
+	struct option_state* options = NULL;
+	struct option_cache *oc = NULL;
+	option_state_allocate(&options, MDL);
+	execute_statements_in_scope(NULL, NULL, NULL, NULL, NULL, options,
+				    &global_scope, pond->group, NULL, NULL);
+
+	pond->use_eui_64 =
+		((oc = lookup_option(&server_universe, options, SV_USE_EUI_64))
+		 &&
+		 (evaluate_boolean_option_cache (NULL, NULL, NULL, NULL,
+						 options, NULL, &global_scope,
+						 oc, MDL)));
+	if (pond->use_eui_64) {
+		// Check all pools are valid
+		int i = 0;
+		struct ipv6_pool* p;
+		while((p = pond->ipv6_pools[i++]) != NULL) {
+			if (p->bits != 64) {
+				log_error("Pool %s/%d cannot use EUI-64,"
+					  " prefix must 64",
+					  pin6_addr(&p->start_addr), p->bits);
+				invalid_cnt++;
+			} else {
+				log_debug("Pool: %s/%d - will use EUI-64",
+					  pin6_addr(&p->start_addr), p->bits);
+			}
+		}
+	}
+
+        /* Don't need the options anymore. */
+        option_state_dereference(&options, MDL);
+	return (invalid_cnt);
+}
+#endif
+
 /*
  * Emits a log for each pond that has been flagged as being a "jumbo range"
  * A pond is considered a "jumbo range" when the total number of elements
@@ -2510,11 +2735,18 @@ void
 report_jumbo_ranges() {
 	struct shared_network* s;
 	char log_buf[1084];
+#ifdef EUI_64
+	int invalid_cnt = 0;
+#endif
 
 	/* Loop thru all the networks looking for jumbo range ponds */
 	for (s = shared_networks; s; s = s -> next) {
 		struct ipv6_pond* pond = s->ipv6_pond;
 		while (pond) {
+#ifdef EUI_64
+			/* while we're here, set the pond's use_eui_64 flag */
+			invalid_cnt += set_eui_64(pond);
+#endif
 			/* if its a jumbo and has pools(sanity check) */
 			if (pond->jumbo_range == 1 && (pond->ipv6_pools)) {
 				struct ipv6_pool* pool;
@@ -2557,7 +2789,15 @@ report_jumbo_ranges() {
 			}
 			pond = pond->next;
 		}
+
 	}
+
+#ifdef EUI_64
+	if (invalid_cnt) {
+		log_fatal ("%d pool(s) are invalid for EUI-64 use",
+			   invalid_cnt);
+	}
+#endif
 }
 
 
@@ -2775,6 +3015,5 @@ find_hosts6(struct host_decl** host, struct packet* packet,
                 || find_hosts_by_option(host, packet, packet->options, MDL)
                 || find_hosts_by_duid_chaddr(host, client_id));
 }
-
 
 /* unittest moved to server/tests/mdb6_unittest.c */

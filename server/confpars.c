@@ -3,7 +3,7 @@
    Parser for dhcpd config file... */
 
 /*
- * Copyright (c) 2004-2016 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2017 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -5101,6 +5101,17 @@ parse_ia_na_declaration(struct parse *cfile) {
 			iasubopt_dereference(&iaaddr, MDL);
 			continue;
 		}
+#ifdef EUI_64
+		if ((pool->ipv6_pond->use_eui_64) &&
+		    (!valid_for_eui_64_pool(pool, &ia->iaid_duid, IAID_LEN,
+					    &iaaddr->addr))) {
+			log_error("Non EUI-64 lease in EUI-64 pool: %s"
+				  " discarding it",
+				  pin6_addr(&iaaddr->addr));
+			iasubopt_dereference(&iaaddr, MDL);
+			continue;
+		}
+#endif
 
 		/* remove old information */
 		if (cleanup_lease6(ia_na_active, pool,

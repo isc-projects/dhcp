@@ -1,6 +1,6 @@
 .\"	dhcpd.conf.5
 .\"
-.\" Copyright (c) 2004-2016 by Internet Systems Consortium, Inc. ("ISC")
+.\" Copyright (c) 2004-2017 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
@@ -344,7 +344,7 @@ which case the server will send a DHCPNAK even though it doesn't know
 about the address.
 .PP
 There may be a host declaration matching the client's identification.
-If that host declaration contains a fixed-address declaration that 
+If that host declaration contains a fixed-address declaration that
 lists an IP address that is valid for the network segment to which the
 client is connected.  In this case, the DHCP server will never do
 dynamic address allocation.  In this case, the client is \fIrequired\fR
@@ -557,7 +557,7 @@ include "/etc/dhcpd.master";
 .PP
 The statements in the peer declaration are as follows:
 .PP
-The 
+The
 .I primary
 and
 .I secondary
@@ -570,7 +570,7 @@ This determines whether the server is primary or secondary, as
 described earlier under DHCP FAILOVER.
 .RE
 .PP
-The 
+The
 .I address
 statement
 .RS 0.25i
@@ -583,7 +583,7 @@ value to use for the DHCP Failover Protocol server identifier.  Because this
 value is used as an identifier, it may not be omitted.
 .RE
 .PP
-The 
+The
 .I peer address
 statement
 .RS 0.25i
@@ -595,7 +595,7 @@ which the server should connect to reach its failover peer for failover
 messages.
 .RE
 .PP
-The 
+The
 .I port
 statement
 .RS 0.25i
@@ -608,7 +608,7 @@ may be omitted, in which case the IANA assigned port number 647 will be
 used by default.
 .RE
 .PP
-The 
+The
 .I peer port
 statement
 .RS 0.25i
@@ -652,7 +652,7 @@ to say what a good value for this is, but 10 seems to work.  This
 parameter must be specified.
 .RE
 .PP
-The 
+The
 .I mclt
 statement
 .RS 0.25i
@@ -671,7 +671,7 @@ probably reasonable, but again bear in mind that we have no real
 operational experience with this.
 .RE
 .PP
-The 
+The
 .I split
 statement
 .RS 0.25i
@@ -693,7 +693,7 @@ a value of 0 makes the secondary responsible for all clients and a value
 of 256 makes the primary responsible for all clients.
 .RE
 .PP
-The 
+The
 .I hba
 statement
 .RS 0.25i
@@ -711,7 +711,7 @@ for such fine-grained control, however.  An example hba statement:
 .fi
 .PP
 This is equivalent to a \fBsplit 128;\fR statement, and identical.  The
-following two examples are also equivalent to a \fBsplit\fR of 128, but 
+following two examples are also equivalent to a \fBsplit\fR of 128, but
 are not identical:
 .PP
 .nf
@@ -733,7 +733,7 @@ cases, the fine-grained control that \fBhba\fR offers isn't necessary, and
 \fBsplit\fR should be used.
 .RE
 .PP
-The 
+The
 .I load balance max seconds
 statement
 .RS 0.25i
@@ -1178,7 +1178,7 @@ the FQDN Option, that implies to the client that it should perform its
 own updates if it chooses to do so.  With \fIdeny client-updates;\fR, a
 response is sent which indicates the client may not perform updates.
 .PP
-Both the standard and interim options also include a method to 
+Both the standard and interim options also include a method to
 allow more than one DHCP server to update the DNS database without
 accidentally deleting A records that shouldn\'t be deleted nor failing
 to add A records that should be added.  For the standard option the
@@ -1298,7 +1298,7 @@ Note that the zone declarations have to correspond to authority
 records in your name server - in the above example, there must be an
 SOA record for "example.org." and for "17.10.10.in-addr.arpa.".  For
 example, if there were a subdomain "foo.example.org" with no separate
-SOA, you could not write a zone declaration for "foo.example.org."  
+SOA, you could not write a zone declaration for "foo.example.org."
 Also keep in mind that zone names in your DHCP configuration should end in a
 "."; this is the preferred syntax.  If you do not end your zone name in a
 ".", the DHCP server will figure it out.  Also note that in the DHCP
@@ -1382,7 +1382,7 @@ The \fIinclude\fR statement is used to read in a named file, and process
 the contents of that file as though it were entered in place of the
 include statement.
 .PP
-.B The 
+.B The
 .I shared-network
 .B statement
 .PP
@@ -1412,7 +1412,7 @@ shared network.  The name may have the syntax of a valid domain name
 (although it will never be used as such), or it may be any arbitrary
 name, enclosed in quotes.
 .PP
-.B The 
+.B The
 .I subnet
 .B statement
 .PP
@@ -1433,7 +1433,7 @@ declaration.
 The
 .I subnet-number
 should be an IP address or domain name which resolves to the subnet
-number of the subnet being described.  The 
+number of the subnet being described.  The
 .I netmask
 should be an IP address or domain name which resolves to the subnet mask
 of the subnet being described.  The subnet number, together with the
@@ -1446,7 +1446,7 @@ subnet-mask option statement be used in each subnet declaration to set
 the desired subnet mask, since any subnet-mask option statement will
 override the subnet mask declared in the subnet statement.
 .PP
-.B The 
+.B The
 .I subnet6
 .B statement
 .PP
@@ -1461,7 +1461,7 @@ The \fIsubnet6\fR statement is used to provide dhcpd with enough
 information to tell whether or not an IPv6 address is on that subnet6.
 It may also be used to provide subnet-specific parameters and to
 specify what addresses may be dynamically allocated to clients booting
-on that subnet. 
+on that subnet.
 .PP
 The
 .I subnet6-number
@@ -1497,8 +1497,8 @@ single address, \fIhigh-address\fR can be omitted.
 .PP
 For any IPv6 subnet6 on which addresses will be assigned dynamically, there
 must be at least one \fIrange6\fR statement. The \fIrange6\fR statement
-can either be the lowest and highest IPv6 addresses in a \fIrange6\fR, or 
-use CIDR notation, specified as ip6-address/bits. All IP addresses 
+can either be the lowest and highest IPv6 addresses in a \fIrange6\fR, or
+use CIDR notation, specified as ip6-address/bits. All IP addresses
 in the \fIrange6\fR should be in the subnet6 in which the
 \fIrange6\fR statement is declared.
 .PP
@@ -1507,7 +1507,7 @@ for temporary (RFC 4941) addresses. A new address per prefix in the shared
 network is computed at each request with an IA_TA option. Release and Confirm
 ignores temporary addresses.
 .PP
-Any IPv6 addresses given to hosts with \fIfixed-address6\fR are excluded 
+Any IPv6 addresses given to hosts with \fIfixed-address6\fR are excluded
 from the \fIrange6\fR, as are IPv6 addresses on the server itself.
 .PP
 .PP
@@ -1561,7 +1561,7 @@ address.  For multiple addresses specify multiple
 statements.
 .PP
 If client-specific boot parameters must change based on the network
-to which the client is attached, then multiple 
+to which the client is attached, then multiple
 .B host
 declarations should be used.  The
 .B host
@@ -1792,8 +1792,8 @@ the documentation under the heading THE DNS UPDATE SCHEME for details.
 .PP
 The \fBleasequery\fR flag tells the DHCP server whether or not to
 answer DHCPLEASEQUERY packets. The answer to a DHCPLEASEQUERY packet
-includes information about a specific lease, such as when it was 
-issued and when it will expire. By default, the server will not 
+includes information about a specific lease, such as when it was
+issued and when it will expire. By default, the server will not
 respond to these packets.
 .SH ALLOW AND DENY WITHIN POOL DECLARATIONS
 .PP
@@ -2098,7 +2098,7 @@ to use different DNS update styles for different clients. The default
 is \fBnone\fR.
 .RE
 .PP
-.B The  
+.B The
 .I ddns-updates
 .B statement
 .RS 0.25i
@@ -2162,8 +2162,8 @@ in order to minimize problems with existing configuration files we have
 left it disabled by default.
 .RE
 .PP
-The 
-.I dhcp-cache-threshold 
+The
+.I dhcp-cache-threshold
 statement
 .RS 0.25i
 .PP
@@ -2399,7 +2399,7 @@ done for all addresses in the current scope.  By default, or if
 \fIflag\fR is false, no lookups are done.
 .RE
 .PP
-The 
+The
 .I hardware
 statement
 .RS 0.25i
@@ -2426,7 +2426,7 @@ separated by colons.  The \fIhardware\fR statement may also be used
 for DHCP clients.
 .RE
 .PP
-The 
+The
 .I host-identifier option
 statement
 .RS 0.25i
@@ -2441,9 +2441,9 @@ This identifies a DHCPv6 client in a
 .I host
 statement.
 .I option-name
-is any option, and 
+is any option, and
 .I option-data
-is the value for the option that the client will send. The 
+is the value for the option that the client will send. The
 .I option-data
 must be a constant value.  In the v6relopts case the additional number
 is the relay to examine for the specified option name and value.  The
@@ -2453,7 +2453,7 @@ are larger than the maximum number of relays (currently 32) indicate the
 relay closest to the server independent of number.
 .RE
 .PP
-The 
+The
 .I ignore-client-uids
 statement
 .RS 0.25i
@@ -2463,7 +2463,7 @@ statement
 If the \fIignore-client-uids\fR statement is present and has a value of
 \fItrue\fR or \fIon\fR, the UID for clients will not be recorded.
 If this statement is not present or has a value of \fIfalse\fR or
-\fIoff\fR, then client UIDs will be recorded.  
+\fIoff\fR, then client UIDs will be recorded.
 .RE
 .PP
 The
@@ -2645,7 +2645,7 @@ possible.
 .PP
 The
 .I log-threshold-high
-and 
+and
 .I log-threshold-low
 statements
 .RS 0.25i
@@ -2704,7 +2704,7 @@ statement
 .I Time
 should be the minimum length in seconds that will be assigned to a
 lease.
-The default is the minimum of 300 seconds or 
+The default is the minimum of 300 seconds or
 \fBmax-lease-time\fR.
 .RE
 .PP
@@ -2941,7 +2941,7 @@ subnet 3000::/64 {
 	pool6 {
 		:
 	}
-	# pool C 
+	# pool C
 	pool6 {
 		:
 	}
@@ -3205,6 +3205,71 @@ in use.  Also, the server must attempt the update each time the
 client renews its lease, which could have a significant performance
 impact in environments that place heavy demands on the DHCP server.
 .RE
+
+
+.PP
+The
+.I use-eui-64
+statement
+.RS 0.25i
+.PP
+.B use-eui-64 \fIflag\fB;\fR
+.PP
+
+(Support for this must be enabled at compile time, see EUI_64 in
+ includes/site.h)
+
+The \fIuse-eui-64\fR flag, if enabled, instructs the server to construct an
+address using the client's EUI-64 DUID (Type 3, HW Type EUI-64), rather than
+creating an address using the dynamic algorithm.  This means that a given DUID
+will always generate the same address for a given pool and further that the
+address is guaranteed to be unique to that DUID.  The IPv6 address will be
+calculated from the EUI-64 link layer address, conforming to RFC 2373, unless
+there is a host declaration for the client-id.
+
+The range6 statement for EUI-64 must define full /64 bit ranges. Invalid ranges
+will be flagged during configuration parsing as errors.  See the following
+example:
+
+    subnet6 fc00:e4::/64 {
+        use-eui-64 true;
+        range6 fc00:e4::/64;
+    }
+
+The statement may be specified down to the pool level, allowing a mixture of
+dynamic and EUI-64 based pools.
+
+During lease file parsing, any leases which map to an EUI-64 pool, that have a
+non-EUI-64 DUID or for which the lease address is not the EUI-64 address for
+that DUID in that pool, will be discarded.
+
+If a host declaration exists for the DUID, the server grants the address
+(fixed-prefix6, fixed-address6) according to the host declaration, regardless
+of the DUID type of the client (even for EUI-64 DUIDs).
+
+If a client request's an EUI-64 lease for a given network, and the resultant
+address conflicts with a fixed address reservation, the server will send the
+client a "no addresses available" response.
+
+Any client with a non-conforming DUID (not type 3 or not hw type EUI-64) that
+is not linked to a host declaration, which requests an address from an EUI-64
+enabled pool will be ignored and the event will be logged.
+
+Pools that are configured for EUI-64 will be skipped for dynamic allocation.
+If there are no pools in the shared network from which to allocate, the client
+will get back a no addresses available status.
+
+On an EUI-64 enabled pool, any client with a DUID 3, HW Type EUI-64, requesting
+a solicit/renew and including IA_NA that do not match the EUI-64 policy, they
+will be treated as though they are "outside" the subnet for a given client
+message:
+
+    Solicit - Server will advertise with EUI-64 ia suboption, but with rapid
+    commit off
+    Request - Server will send "an address not on link status", and no ia
+    suboption Renew/Rebind - Server will send the requested address ia
+    suboption with lifetimes of 0, plus an EUI-64 ia
+.RE
 .PP
 The
 .I use-host-decl-names
@@ -3285,7 +3350,7 @@ the \fIVENDOR ENCAPSULATED OPTIONS\fR section.
 .SH SETTING PARAMETER VALUES USING EXPRESSIONS
 Sometimes it's helpful to be able to set the value of a DHCP server
 parameter based on some value that the client has sent.  To do this,
-you can use expression evaluation.  The 
+you can use expression evaluation.  The
 .B dhcp-eval(5)
 manual page describes how to write expressions.  To assign the result
 of an evaluation to an option, define the option as follows:
@@ -3305,7 +3370,7 @@ For example:
 It's often useful to allocate a single address to a single client, in
 approximate perpetuity.  Host statements with \fBfixed-address\fR clauses
 exist to a certain extent to serve this purpose, but because host statements
-are intended to approximate \'static configuration\', they suffer from not 
+are intended to approximate \'static configuration\', they suffer from not
 being referenced in a littany of other Server Services, such as dynamic DNS,
 failover, \'on events\' and so forth.
 .PP

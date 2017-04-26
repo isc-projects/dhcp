@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2016 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2006-2017 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -1248,7 +1248,6 @@ try_client_v6_address(struct iasubopt **addr,
 	return result;
 }
 
-
 /*!
  *
  * \brief  Get an IPv6 address for the client.
@@ -1330,14 +1329,37 @@ pick_v6_address(struct reply_state *reply)
 		     (!permitted(reply->packet, pond->permit_list))))
 			continue;
 
+#ifdef EUI_64
+		/* If pond is EUI-64 but client duid isn't a valid EUI-64
+		 * id, then skip this pond */
+		if (pond->use_eui_64 &&
+		    !valid_eui_64_duid(&reply->ia->iaid_duid, IAID_LEN)) {
+			continue;
+		}
+#endif
+
 		start_pool = pond->last_ipv6_pool;
 		i = start_pool;
 		do {
 			p = pond->ipv6_pools[i];
 			if (p->pool_type == D6O_IA_NA) {
-				result = create_lease6(p, addr, &attempts,
-					               &reply->ia->iaid_duid,
-					               cur_time + 120);
+#ifdef EUI_64
+				if (pond->use_eui_64) {
+					result =
+					create_lease6_eui_64(p, addr,
+					              &reply->ia->iaid_duid,
+					              cur_time + 120);
+				}
+				else
+#endif
+				{
+					result =
+					create_lease6(p, addr, &attempts,
+						      &reply->ia->iaid_duid,
+					              cur_time + 120);
+
+				}
+
 				if (result == ISC_R_SUCCESS) {
 					/*
 					 * Record the pool used (or next one if
@@ -2368,6 +2390,9 @@ reply_process_addr(struct reply_state *reply, struct option_cache *addr) {
 	struct option_cache *oc;
 	struct data_string iaaddr, data;
 	isc_result_t status = ISC_R_SUCCESS;
+#ifdef EUI_64
+	int invalid_for_eui_64 = 0;
+#endif
 
 	/* Initializes values that will be cleaned up. */
 	memset(&iaaddr, 0, sizeof(iaaddr));
@@ -2429,8 +2454,31 @@ reply_process_addr(struct reply_state *reply, struct option_cache *addr) {
 			break;
 	}
 
+#ifdef EUI_64
+	if (subnet) {
+		/* If the requested address falls into an EUI-64 pool, then
+		 * we need to verify if it has EUI-64 duid AND the requested
+		 * address is correct for that duid.  If not we treat it just
+		 * like an not-on-link request. */
+		struct ipv6_pool* pool = NULL;
+		struct in6_addr* addr = (struct in6_addr*)(iaaddr.data);
+		if ((find_ipv6_pool(&pool, D6O_IA_NA, addr) == ISC_R_SUCCESS)
+		    && (pool->ipv6_pond->use_eui_64) &&
+		   (!valid_for_eui_64_pool(pool, &reply->client_id, 0, addr))) {
+			log_debug ("Requested address: %s,"
+				   " not valid for EUI-64 pool",
+				   pin6_addr(addr));
+			invalid_for_eui_64 = 1;
+		}
+	}
+#endif
+
 	/* Address not found on shared network. */
+#ifdef EUI_64
+	if ((subnet == NULL) || invalid_for_eui_64) {
+#else
 	if (subnet == NULL) {
+#endif
 		/* Ignore this address on 'soft' bindings. */
 		if (reply->packet->dhcpv6_msg_type == DHCPV6_SOLICIT) {
 			/* disable rapid commit */
@@ -2496,6 +2544,7 @@ reply_process_addr(struct reply_state *reply, struct option_cache *addr) {
 		reply->send_prefer = reply->send_valid = 0;
 		goto send_addr;
 	}
+
 
 	/* Verify the address belongs to the client. */
 	if (!address_is_owned(reply, &tmp_addr)) {
@@ -3199,7 +3248,9 @@ find_client_temporaries(struct reply_state *reply) {
 			 * Get an address in this temporary pool.
 			 */
 			status = create_lease6(p, &reply->lease, &attempts,
-					       &reply->client_id, cur_time + 120);
+					       &reply->client_id,
+                                               cur_time + 120);
+
 			if (status != ISC_R_SUCCESS) {
 				log_debug("Unable to get a temporary address.");
 				goto cleanup;

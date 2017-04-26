@@ -153,6 +153,13 @@ by Eric Young (eay@cryptsoft.com).
   supplying the patch.
   [ISC-Bugs #29108]
 
+- IPv6 operation now supports an EUI-64 based address allocation which will
+  calculate addresses for clients with EUI-64 DUIDs based on those DUIDs when
+  enabled by setting use-eui-64 true.  The parameter may defined down to the
+  pool scope.  Note this feature must be compiled in by defining EUI_64 in
+  includes/site.h. This flag is undefined by default.
+  [ISC-Bugs #43927]
+
 			Changes since 4.3.0 (bug fixes)
 
 - Tidy up several small tickets.
