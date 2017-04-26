@@ -28,7 +28,7 @@ bindsrcdir=bind-${version}
 
 bindconfig = --disable-kqueue --disable-epoll --disable-devpoll \
 	--without-openssl --without-libxml2 --enable-exportlib \
-	--with-gssapi=no --enable-threads=no @BINDCONFIG@ \
+	--with-gssapi=no --enable-threads=no --without-lmdb @BINDCONFIG@ \
 	--with-export-includedir=${binddir}/include \
 	--with-export-libdir=${binddir}/lib
 

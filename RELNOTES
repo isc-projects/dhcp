@@ -74,6 +74,11 @@ by Eric Young (eay@cryptsoft.com).
   "Run out of memory." on the standard error and exists with status 1.
   [ISC-Bugs #32744]
 
+- The new lmdb (Lightning Memory DataBase) bind9 configure option is
+  now disabled by default to avoid the presence of this library to be
+  detected which can lead to a link failure.
+  [ISC-Bugs #45069]
+
 			Changes since 4.3.5b1
 
 - Corrected a bug which could cause the server to sporadically crash while
