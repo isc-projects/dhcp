@@ -79,6 +79,16 @@ by Eric Young (eay@cryptsoft.com).
   detected which can lead to a link failure.
   [ISC-Bugs #45069]
 
+- The linux interface discovery code has been modified to use getifaddrs() 
+  as is done for BSD and OS-X.  Prior to this the code would only recognize
+  the first address on an interface and thereby omit vlans.
+  Thanks to Jiri Popelka at Redhat, Marius Tomaschewski at Suse, and Wei
+  Kong at Novell, who all submitted patches.
+  [ISC-Bugs #28761]
+  [ISC-Bugs #31992]
+  [ISC-Bugs #25428]
+  [ISC-Bugs #31940]
+
 			Changes since 4.3.5b1
 
 - Corrected a bug which could cause the server to sporadically crash while
@@ -945,16 +955,6 @@ by Eric Young (eay@cryptsoft.com).
   The new message is much shorter and simply points to the README
   and our website for directions on bug submissions.
   [ISC-Bugs #24789]
-
-- The linux interface discovery code has been modified to use getifaddrs() 
-  as is done for BSD and OS-X.  Prior to this the code would only recognize
-  the first address on an interface and thereby omit vlans.
-  Thanks to Jiri Popelka at Redhat, Marius Tomaschewski at Suse, and Wei
-  Kong at Novell, who all submitted patches.
-  [ISC-Bugs #28761]
-  [ISC-Bugs #31992]
-  [ISC-Bugs #25428]
-  [ISC-Bugs #31940]
 
 			Changes since 4.2.0 (new features)
 
