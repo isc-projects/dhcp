@@ -22,7 +22,7 @@ prefix = @prefix@
 exec_prefix = @exec_prefix@
 
 bindconfig = --without-openssl --without-libxml2 --without-libjson \
-	--without-gssapi --disable-threads \
+	--without-gssapi --disable-threads --without-lmdb \
 	--includedir=@includedir@ --libdir=@libdir@ \
 	@BINDLT@ @BINDIOMUX@ @BINDCONFIG@ --enable-full-report
 
