@@ -160,6 +160,13 @@ by Eric Young (eay@cryptsoft.com).
   includes/site.h. This flag is undefined by default.
   [ISC-Bugs #43927]
 
+- On 64-bit platforms, dhclient now generates the correct value for the
+  script environment variable, "expiry", the lease expiry value exceeds
+  0x7FFFFFFF.  Prior to this such values would produce negative values
+  for expiry in the script environment.
+  [ISC-Bugs #43326]
+
+
 			Changes since 4.3.0 (bug fixes)
 
 - Tidy up several small tickets.
@@ -884,7 +891,7 @@ by Eric Young (eay@cryptsoft.com).
   Solaris 11, ethernet device files are located in "/dev/net".  The configure
   script has been modified to detect this situation and adjust the directory
   used accordingly. Thanks to Jarkko Torppa for reporting this issue and
-  submitting a patch 
+  submitting a patch
   [ISC-Bugs #37954]
   [ISC-Bugs #40752]
 
@@ -953,7 +960,7 @@ by Eric Young (eay@cryptsoft.com).
 
 - Correct handling of interface names during interface discovery. This
   addresses an issue where interface names of 15 characters in length
-  could lead to crashes or interface recognition errors during startup 
+  could lead to crashes or interface recognition errors during startup
   of dhcpd, dhclient, and dhcrelay.
   [ISC-Bugs #42226]
 
@@ -990,7 +997,7 @@ by Eric Young (eay@cryptsoft.com).
 - Clean up some memory references in the vendor-class construct.
   [ISC-Bugs #42984]
 
-- The configure script for use with libtool now catches a failure to 
+- The configure script for use with libtool now catches a failure to
   execute autoreconf. Prior to this, autoreconf failures would go undetected
   causing the legacy configure script to loop when run with --enable-libtool.
   [ISC-Bugs #43546]
@@ -999,7 +1006,7 @@ by Eric Young (eay@cryptsoft.com).
   "Run out of memory." on the standard error and exists with status 1.
   [ISC-Bugs #32744]
 
-- The linux interface discovery code has been modified to use getifaddrs() 
+- The linux interface discovery code has been modified to use getifaddrs()
   as is done for BSD and OS-X.  Prior to this the code would only recognize
   the first address on an interface and thereby omit vlans.
   Thanks to Jiri Popelka at Redhat, Marius Tomaschewski at Suse, and Wei

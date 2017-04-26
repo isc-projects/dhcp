@@ -3,7 +3,7 @@
    DHCP Client. */
 
 /*
- * Copyright (c) 2004-2016 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2017 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -186,7 +186,7 @@ usage(const char *sfmt, const char *sarg)
 		log_error(sfmt, sarg);
 #endif
 
-	log_fatal("Usage: %s %s%s\n       %s %s", 
+	log_fatal("Usage: %s %s%s\n       %s %s",
 		  isc_file_basename(progname),
 		  DHCLIENT_USAGE0,
 		  DHCLIENT_USAGEC,
@@ -4085,7 +4085,9 @@ void script_write_params (client, prefix, lease)
 				      universes [i],
 				      &es, client_option_envadd);
 	}
-	client_envadd (client, prefix, "expiry", "%d", (int)(lease -> expiry));
+
+	client_envadd (client, prefix, "expiry", "%lu",
+		       (unsigned long)(lease -> expiry));
 }
 
 /*
