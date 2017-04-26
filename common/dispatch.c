@@ -276,8 +276,8 @@ void add_timeout (when, where, what, ref, unref)
 		sec  = 0;
 		usec = 0;
 	} else if (sec >= TIME_MAX) {
-		log_error("Timeout requested: %lu is too large, "
-			  "reducing to: %lu (TIME_MAX - 1)", sec,
+		log_error("Timeout too large "
+			  "reducing to: %lu (TIME_MAX - 1)",
 			  (unsigned long)(TIME_MAX - 1));
 		sec = TIME_MAX - 1;
 		usec = 0;
