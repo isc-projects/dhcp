@@ -147,6 +147,12 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Bugs #43219]
   [ISC-Bugs #45051]
 
+- Fixed a bug in OMAPI that causes omshell to crash when a name-value
+  pair with a zero length value is shipped in an object. Thanks to
+  Fernando Soto at BlueCat Networks for reporting the issue and
+  supplying the patch.
+  [ISC-Bugs #29108]
+
 			Changes since 4.3.0 (bug fixes)
 
 - Tidy up several small tickets.
