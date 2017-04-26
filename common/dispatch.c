@@ -3,7 +3,7 @@
    Network input dispatcher... */
 
 /*
- * Copyright (c) 2004-2011,2013 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2017 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -193,7 +193,6 @@ isclib_timer_callback(isc_task_t  *taskp,
 
 /* maximum value for usec */
 #define USEC_MAX 1000000
-#define DHCP_SEC_MAX  0xFFFFFFFF
 
 void add_timeout (when, where, what, ref, unref)
 	struct timeval *when;
@@ -255,10 +254,14 @@ void add_timeout (when, where, what, ref, unref)
 	 * about the usec value, if it's zero we assume the caller didn't care.
 	 *
 	 * The ISC timer library doesn't seem to like negative values
-	 * and can't accept any values above 4G-1 seconds so we limit
-	 * the values to 0 <= value < 4G-1.  We do it before
-	 * checking the trace option so that both the trace code and
-	 * the working code use the same values.
+	 * and on 64-bit systems, isc_time_nowplusinterval() can generate range
+	 * errors on values sufficiently larger than 0x7FFFFFFF (TIME_MAX), so
+	 * we'll limit the interval to:
+	 *
+	 * 	0 <= interval <= TIME_MAX - 1
+	 *
+	 * We do it before checking the trace option so that both the trace
+	 * code and * the working code use the same values.
 	 */
 
 	sec  = when->tv_sec - cur_tv.tv_sec;
@@ -272,10 +275,11 @@ void add_timeout (when, where, what, ref, unref)
 	if (sec < 0) {
 		sec  = 0;
 		usec = 0;
-	} else if (sec > DHCP_SEC_MAX) {
-		log_error("Timeout requested too large "
-			  "reducing to 2^^32-1");
-		sec = DHCP_SEC_MAX;
+	} else if (sec >= TIME_MAX) {
+		log_error("Timeout too large "
+			  "reducing to: %lu (TIME_MAX - 1)",
+			  (unsigned long)(TIME_MAX - 1));
+		sec = TIME_MAX - 1;
 		usec = 0;
 	} else if (usec < 0) {
 		usec = 0;
@@ -288,7 +292,7 @@ void add_timeout (when, where, what, ref, unref)
 	 * here in case we want to compare timing information
 	 * for some reason, like debugging.
 	 */
-	q->when.tv_sec  = cur_tv.tv_sec + (sec & DHCP_SEC_MAX);
+	q->when.tv_sec  = cur_tv.tv_sec + sec;
 	q->when.tv_usec = usec;
 
 #if defined (TRACING)
@@ -339,12 +343,12 @@ void add_timeout (when, where, what, ref, unref)
 	q->next  = timeouts;
 	timeouts = q;
 
-	isc_interval_set(&interval, sec & DHCP_SEC_MAX, usec * 1000);
+	isc_interval_set(&interval, sec, usec * 1000);
 	status = isc_time_nowplusinterval(&expires, &interval);
 	if (status != ISC_R_SUCCESS) {
 		/*
-		 * The system time function isn't happy or returned
-		 * a value larger than isc_time_t can hold.
+		 * The system time function isn't happy. Range errors
+		 * should not be possible with the check logic above.
 		 */
 		log_fatal("Unable to set up timer: %s",
 			  isc_result_totext(status));
