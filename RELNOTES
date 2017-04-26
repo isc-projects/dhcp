@@ -166,6 +166,11 @@ by Eric Young (eay@cryptsoft.com).
   for expiry in the script environment.
   [ISC-Bugs #43326]
 
+- Common timer logic was modified to cap the maximum timeout values at
+  0x7FFFFFFF - 1. Values larger than that were causing fatal timer out of
+  range errors on 64-bit platforms. Thanks to Jiri Popelka at Red Hat for
+  reporting the issue.
+  [ISC-Bugs #28038]
 
 			Changes since 4.3.0 (bug fixes)
 
