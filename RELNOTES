@@ -95,6 +95,12 @@ by Eric Young (eay@cryptsoft.com).
   supplying the patch.
   [ISC-Bugs #29108]
 
+- On 64-bit platforms, dhclient now generates the correct value for the
+  script environment variable, "expiry", the lease expiry value exceeds
+  0x7FFFFFFF.  Prior to this such values would produce negative values
+  for expiry in the script environment.
+  [ISC-Bugs #43326]
+
 			Changes since 4.3.5b1
 
 - Corrected a bug which could cause the server to sporadically crash while
