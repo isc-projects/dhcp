@@ -102,6 +102,13 @@ by Eric Young (eay@cryptsoft.com).
   for expiry in the script environment.
   [ISC-Bugs #43326]
 
+- DHCP6 FQDN option unpacking code now correctly handles values that contain
+  spaces, special, or non-printable characters.  Prior to this the buffer
+  size needed was underestitmate causing a conversion error message to
+  be logged and DNS updates to be skipped. Thanks to Fernando Soto at
+  BlueCat Networks for bringing the matter to our attention.
+  [ISC-Bugs #43592]
+
 			Changes since 4.1-ESV-R14b1
 - None
 

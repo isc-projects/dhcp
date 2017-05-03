@@ -3524,12 +3524,17 @@ fqdn6_universe_decode(struct option_state *options,
 		return 0;
 
 	/* Save the contents of the option in a buffer.  There are 3
-	 * one-byte values we record from the packet, so we go ahead
-	 * and allocate a bigger buffer to accommodate them.  But the
-	 * 'length' we got (because it is a DNS encoded string) is
-	 * one longer than we need...so we only add two extra octets.
-	 */
-	if (!buffer_allocate(&bp, length + 2, MDL)) {
+	 * one-byte values we record from the packet. The input is
+	 * DNS encoded and to be safe we'll assume that each character
+	 * is non-printable and will be converted to an escaped number:
+	 * "\\nnn".  Yes, we'll have dead space pretty much all the time
+	 * but the alternative is to basically dry run the conversion
+	 * first to calculate the precise size or reallocate to a smaller
+	 * buffer later, either of which is a bigger performance hit than
+	 * just doing a generous allocation. */
+	unsigned bp_size = 3 + (length * 4);
+
+	if (!buffer_allocate(&bp, bp_size, MDL)) {
 		log_error("No memory for dhcp6.fqdn option buffer.");
 		return 0;
 	}
@@ -3541,7 +3546,6 @@ fqdn6_universe_decode(struct option_state *options,
 		goto error;
 
 	/* XXX: We need to process 'The "N" bit'. */
-
 	if (buffer[0] & 1) /* server-update. */
 		bp->data[2] = 1;
 	else
@@ -3561,7 +3565,7 @@ fqdn6_universe_decode(struct option_state *options,
 		goto error;
 
 	/* Convert the domain name to textual representation for config. */
-	len = MRns_name_ntop(buffer + 1, (char *)bp->data + 3, length - 1);
+	len = MRns_name_ntop(buffer + 1, (char *)bp->data + 3, bp_size - 3);
 	if (len == -1) {
 		log_error("Unable to convert dhcp6.fqdn domain name to "
 			  "printable form.");
