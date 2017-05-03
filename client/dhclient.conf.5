@@ -266,6 +266,11 @@ options will be ignored.  There is no default require list.
 		also require domain-search;
 	}
 .fi
+
+NOTE: For ISC DHCP release 4.1-ESV-R14 and earlier, dhclient running in -6
+mode does not discard offers as described above. This has been corrected as of
+release 4.1-ESV-R15 but must be enabled at compile time (see
+ENFORCE_DHCPV6_CLIENT_REQUIRE in includes/site.h).
 .PP
 .I The
 .B send

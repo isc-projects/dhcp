@@ -141,6 +141,8 @@ static isc_result_t dhc6_check_status(isc_result_t rval,
 				      struct option_state *options,
 				      const char *scope,
 				      unsigned *code);
+static int dhc6_score_lease(struct client_state *client,
+			    struct dhc6_lease *lease);
 
 extern int onetry;
 extern int stateless;
@@ -3193,6 +3195,15 @@ init_handler(struct packet *packet, struct client_state *client)
 		return;
 	}
 
+	int lease_score =  dhc6_score_lease(client, lease);
+#ifdef ENFORCE_DHCPV6_CLIENT_REQUIRE
+	if (lease_score == 0) {
+		log_debug("RCV:Advertised lease scored 0, toss it.");
+		dhc6_lease_destroy(&lease, MDL);
+		return;
+	}
+#endif
+
 	insert_lease(&client->advertised_leases, lease);
 
 	/* According to RFC3315 section 17.1.2, the client MUST wait for
@@ -3206,8 +3217,7 @@ init_handler(struct packet *packet, struct client_state *client)
 	 * should not if the advertise contains less than one IA and address.
 	 */
 	if ((client->txcount > 1) ||
-	    ((lease->pref == 255) &&
-	     (dhc6_score_lease(client, lease) > SCORE_MIN))) {
+	    ((lease->pref == 255) && (lease_score > SCORE_MIN))) {
 		log_debug("RCV:  Advertisement immediately selected.");
 		cancel_timeout(do_init6, client);
 		start_selecting6(client);

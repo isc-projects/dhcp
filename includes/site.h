@@ -306,3 +306,10 @@
    limit the number of TCP connections that the server will
    allow at one time.  A value of 0 means there is no limit.*/
 #define MAX_FD_VALUE 200
+
+/* Enable enforcement of the require option statement as documented
+ * in man page.  Instructs the dhclient, when in -6 mode, to discard
+ * offered leases that do not contain all options specified as required
+ * in the client's configuration file. The client already enforces this
+ * in -4 mode. */
+/*#define ENFORCE_DHCPV6_CLIENT_REQUIRE*/
