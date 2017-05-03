@@ -325,6 +325,13 @@
  * supported by the configure script. */
 /* #define EUI_64 */
 
+/* Enable enforcement of the require option statement as documented
+ * in man page.  Instructs the dhclient, when in -6 mode, to discard
+ * offered leases that do not contain all options specified as required
+ * in the client's configuration file. The client already enforces this
+ * in -4 mode. */
+#define ENFORCE_DHCPV6_CLIENT_REQUIRE
+
 /* Include definitions for various options.  In general these
    should be left as is, but if you have already defined one
    of these and prefer your definition you can comment the 

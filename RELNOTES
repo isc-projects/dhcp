@@ -179,6 +179,13 @@ by Eric Young (eay@cryptsoft.com).
   BlueCat Networks for bringing the matter to our attention.
   [ISC-Bugs #43592]
 
+- When running in -6 mode, dhclient now enforces the require option statement
+  and will discard offered leases that do not contain all the required
+  options specified in the client configuration.  Prior to this the client
+  would still consider such leases.  This may be disabled at compile time
+  (see ENFORCE_DHCPV6_CLIENT_REQUIRE in includes/site.h).
+  [ISC-Bugs #41473]
+
 			Changes since 4.3.0 (bug fixes)
 
 - Tidy up several small tickets.
