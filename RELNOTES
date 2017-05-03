@@ -107,6 +107,13 @@ by Eric Young (eay@cryptsoft.com).
   reporting the issue.
   [ISC-Bugs #28038]
 
+- DHCP6 FQDN option unpacking code now correctly handles values that contain
+  spaces, special, or non-printable characters.  Prior to this the buffer
+  size needed was underestitmate causing a conversion error message to
+  be logged and DNS updates to be skipped. Thanks to Fernando Soto at
+  BlueCat Networks for bringing the matter to our attention.
+  [ISC-Bugs #43592]
+
 			Changes since 4.3.5b1
 
 - Corrected a bug which could cause the server to sporadically crash while
