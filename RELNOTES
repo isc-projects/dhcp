@@ -60,18 +60,6 @@ by Eric Young (eay@cryptsoft.com).
   script.
   [ISC-Bugs #39863]
 
-- Removed an extraneous expression in omapi socket callback function. Prior
-  to this change, the logic was techinically incorrect but other factors
-  ensured the outcome itself was correct.  This change was made primarily
-  for code clarity. Thanks to Ganesh Pinjala for bringing the issue to our
-  attention.
-  [ISC-Bugs #42834]
-
-- Corrected a bug which could cause the server to sporadically crash while
-  loading lease files with the lease-id-format is set to "hex".  Our thanks
-  to Jay Ford, University of Iowa for reporting the issue.
-  [ISC-Bugs #43185]
-
 - Pass configure arguments which begin with an upper case letter, e.g.
   CFLAGS, to the embedded bind configure, so it is no longer required
   to use environment variables to get the same effect.
@@ -87,12 +75,6 @@ by Eric Young (eay@cryptsoft.com).
   The only user visible side effect is that --with-libbind now requires
   either "no" or an (absolute) path, i.e. "yes" is no longer valid.
   [ISC-Bugs #43227]
-
-- Eliminated a noisy, but otherwise harmless debug log statment that may
-  appear during server startup when building with --enable-binary-leases
-  and configuring multiple pools in a shared network.  Thanks to Fernando
-  Soto from BlueCat Networks for reporting the issue and supplying a patch.
-  [ISC-Bugs #43262]
 
 - Added the support for git repositories in the util/bind.sh script.
   When you build ISC DHCP from a git repo, i.e., without a "bind"
@@ -140,59 +122,12 @@ by Eric Young (eay@cryptsoft.com).
   section in the README file for the recommended procedure.
   [ISC-Bugs #29402]
 
-- When replying to a DHCPINFORM, the server will now include options specified
-  at the pool scope, provided the ciaddr field of the DHCPINFORM is populated.
-  Prior to this the server only evaluated options down to the subnet scope.
-  Thanks to Fernando Soto at BlueCat Networks for reporting the issue.
-  [ISC-Bugs #43219]
-  [ISC-Bugs #45051]
-
-- Fixed a bug in OMAPI that causes omshell to crash when a name-value
-  pair with a zero length value is shipped in an object. Thanks to
-  Fernando Soto at BlueCat Networks for reporting the issue and
-  supplying the patch.
-  [ISC-Bugs #29108]
-
 - IPv6 operation now supports an EUI-64 based address allocation which will
   calculate addresses for clients with EUI-64 DUIDs based on those DUIDs when
   enabled by setting use-eui-64 true.  The parameter may defined down to the
   pool scope.  Note this feature must be compiled in by defining EUI_64 in
   includes/site.h. This flag is undefined by default.
   [ISC-Bugs #43927]
-
-- On 64-bit platforms, dhclient now generates the correct value for the
-  script environment variable, "expiry", the lease expiry value exceeds
-  0x7FFFFFFF.  Prior to this such values would produce negative values
-  for expiry in the script environment.
-  [ISC-Bugs #43326]
-
-- Common timer logic was modified to cap the maximum timeout values at
-  0x7FFFFFFF - 1. Values larger than that were causing fatal timer out of
-  range errors on 64-bit platforms. Thanks to Jiri Popelka at Red Hat for
-  reporting the issue.
-  [ISC-Bugs #28038]
-
-- DHCP6 FQDN option unpacking code now correctly handles values that contain
-  spaces, special, or non-printable characters.  Prior to this the buffer
-  size needed was underestitmate causing a conversion error message to
-  be logged and DNS updates to be skipped. Thanks to Fernando Soto at
-  BlueCat Networks for bringing the matter to our attention.
-  [ISC-Bugs #43592]
-
-- When running in -6 mode, dhclient now enforces the require option statement
-  and will discard offered leases that do not contain all the required
-  options specified in the client configuration.  Prior to this the client
-  would still consider such leases.  This may be disabled at compile time
-  (see ENFORCE_DHCPV6_CLIENT_REQUIRE in includes/site.h). Thanks to
-  Mritunjaykumar Dubey at Nokia for reporting the issue.
-  [ISC-Bugs #41473]
-
-- Altered DHCPv4 lease time calculation to avoid roll over errors on 64-bit
-  OS systems when using -1 or large values for default-lease-time.  Rollover
-  values will be replaced with 0x7FFFFFFF - 1.  This alleviates unintentionally
-  short expiration times being handed out when infinite lease times (-1) in
-  conjuction with failover.
-  [ISC-Bugs #41976]
 
 			Changes since 4.3.0 (bug fixes)
 
@@ -1024,14 +959,44 @@ by Eric Young (eay@cryptsoft.com).
 - Clean up some memory references in the vendor-class construct.
   [ISC-Bugs #42984]
 
+- Removed an extraneous expression in omapi socket callback function. Prior
+  to this change, the logic was techinically incorrect but other factors
+  ensured the outcome itself was correct.  This change was made primarily
+  for code clarity. Thanks to Ganesh Pinjala for bringing the issue to our
+  attention.
+  [ISC-Bugs #42834]
+
+- Corrected a bug which could cause the server to sporadically crash while
+  loading lease files with the lease-id-format is set to "hex".  Our thanks
+  to Jay Ford, University of Iowa for reporting the issue.
+  [ISC-Bugs #43185]
+
+- Eliminated a noisy, but otherwise harmless debug log statment that may
+  appear during server startup when building with --enable-binary-leases
+  and configuring multiple pools in a shared network.  Thanks to Fernando
+  Soto from BlueCat Networks for reporting the issue and supplying a patch.
+  [ISC-Bugs #43262]
+
 - The configure script for use with libtool now catches a failure to
   execute autoreconf. Prior to this, autoreconf failures would go undetected
   causing the legacy configure script to loop when run with --enable-libtool.
   [ISC-Bugs #43546]
 
+- When replying to a DHCPINFORM, the server will now include options specified
+  at the pool scope, provided the ciaddr field of the DHCPINFORM is populated.
+  Prior to this the server only evaluated options down to the subnet scope.
+  Thanks to Fernando Soto at BlueCat Networks for reporting the issue.
+  [ISC-Bugs #43219]
+  [ISC-Bugs #45051]
+
 - When memory allocation fails in a repeated way the process writes
   "Run out of memory." on the standard error and exists with status 1.
   [ISC-Bugs #32744]
+
+- The new lmdb (Lightning Memory DataBase) bind9 configure option is
+  now disabled by default to avoid the presence of this library to be
+  detected which can lead to a link failure.
+  [ISC-Bugs #45069]
 
 - The linux interface discovery code has been modified to use getifaddrs()
   as is done for BSD and OS-X.  Prior to this the code would only recognize
@@ -1043,10 +1008,45 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Bugs #25428]
   [ISC-Bugs #31940]
 
-- The new lmdb (Lightning Memory DataBase) bind9 configure option is
-  now disabled by default to avoid the presence of this library to be
-  detected which can lead to a link failure.
-  [ISC-Bugs #45069]
+- Fixed a bug in OMAPI that causes omshell to crash when a name-value
+  pair with a zero length value is shipped in an object. Thanks to
+  Fernando Soto at BlueCat Networks for reporting the issue and
+  supplying the patch.
+  [ISC-Bugs #29108]
+
+- On 64-bit platforms, dhclient now generates the correct value for the
+  script environment variable, "expiry", the lease expiry value exceeds
+  0x7FFFFFFF.  Prior to this such values would produce negative values
+  for expiry in the script environment.
+  [ISC-Bugs #43326]
+
+- Common timer logic was modified to cap the maximum timeout values at
+  0x7FFFFFFF - 1. Values larger than that were causing fatal timer out of
+  range errors on 64-bit platforms. Thanks to Jiri Popelka at Red Hat for
+  reporting the issue.
+  [ISC-Bugs #28038]
+
+- DHCP6 FQDN option unpacking code now correctly handles values that contain
+  spaces, special, or non-printable characters.  Prior to this the buffer
+  size needed was underestitmate causing a conversion error message to
+  be logged and DNS updates to be skipped. Thanks to Fernando Soto at
+  BlueCat Networks for bringing the matter to our attention.
+  [ISC-Bugs #43592]
+
+- When running in -6 mode, dhclient now enforces the require option statement
+  and will discard offered leases that do not contain all the required
+  options specified in the client configuration.  Prior to this the client
+  would still consider such leases.  This may be disabled at compile time
+  (see ENFORCE_DHCPV6_CLIENT_REQUIRE in includes/site.h). Thanks to
+  Mritunjaykumar Dubey at Nokia for reporting the issue.
+  [ISC-Bugs #41473]
+
+- Altered DHCPv4 lease time calculation to avoid roll over errors on 64-bit
+  OS systems when using -1 or large values for default-lease-time.  Rollover
+  values will be replaced with 0x7FFFFFFF - 1.  This alleviates unintentionally
+  short expiration times being handed out when infinite lease times (-1) in
+  conjuction with failover.
+  [ISC-Bugs #41976]
 
 			Changes since 4.2.0 (new features)
 
