@@ -75,6 +75,8 @@ const int dhcp_type_name_max = ((sizeof dhcp_type_names) / sizeof (char *));
 # define send_packet trace_packet_send
 #endif
 
+static TIME leaseTimeCheck(TIME calculated, TIME alternate);
+
 void
 dhcp (struct packet *packet) {
 	int ms_nulltp = 0;
@@ -2289,8 +2291,15 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 			 * the desired lease time upon renewal.
 			 */
 			if (offer == DHCPACK) {
-				lt->tstp = cur_time + lease_time +
-						(new_lease_time / 2);
+				if (lease_time == INFINITE_TIME) {
+					lt->tstp = MAX_TIME;
+				} else {
+					lt->tstp =
+						leaseTimeCheck(
+							(cur_time + lease_time
+							 + (new_lease_time / 2))
+							 , MAX_TIME - 1);
+				}
 
 				/* If we reduced the potential expiry time,
 				 * make sure we don't offer an old-expiry-time
@@ -2307,12 +2316,16 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		}
 #endif /* FAILOVER_PROTOCOL */
 
-		/* If the lease duration causes the time value to wrap,
-		   use the maximum expiry time. */
-		if (cur_time + lease_time < cur_time)
-			state -> offered_expiry = MAX_TIME - 1;
-		else
-			state -> offered_expiry = cur_time + lease_time;
+		if (lease_time == INFINITE_TIME) {
+			state->offered_expiry = MAX_TIME;
+		} else {
+			/* If the lease duration causes the time value to wrap,
+			 * use the maximum expiry time. */
+			state->offered_expiry
+				= leaseTimeCheck(cur_time + lease_time,
+						 MAX_TIME - 1);
+		}
+
 		if (when)
 			lt -> ends = when;
 		else
@@ -4633,4 +4646,31 @@ void use_host_decl_name(struct packet* packet,
                         option_cache_dereference(&oc, MDL);
                 }
         }
+}
+
+
+/* \brief Validates a proposed value for use as a lease time
+ *
+ * Convenience function used for catching calculeated lease
+ * times that overflow 4-byte times used in v4 protocol.
+ *
+ * We use variables of type TIME in lots of places, which on
+ * 64-bit systems is 8 bytes while on 32-bit OSs it is int32_t,
+ * so we have all sorts of fun places to mess things up.
+ * This function checks a calculated lease time for and if it
+ * is unsuitable for use as a lease time, the given alternate
+ * value is returned.
+ * \param calculated
+ * \param alternate
+ *
+ * \returen either the calculated value if it is valid, or
+ * the alternate value supplied
+ */
+TIME leaseTimeCheck(TIME calculated, TIME alternate) {
+	if ((sizeof(TIME) > 4 && calculated >= INFINITE_TIME) ||
+	    (calculated < cur_time)) {
+		return (alternate);
+	}
+
+	return (calculated);
 }

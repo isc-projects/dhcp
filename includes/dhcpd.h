@@ -1354,6 +1354,7 @@ typedef unsigned char option_mask [16];
 #define DHCPD_LOG_FACILITY	LOG_DAEMON
 #endif
 
+#define INFINITE_TIME 0xffffffff
 #define MAX_TIME 0x7fffffff
 #define MIN_TIME 0
 

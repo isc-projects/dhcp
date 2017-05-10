@@ -117,6 +117,13 @@ by Eric Young (eay@cryptsoft.com).
   Mritunjaykumar Dubey at Nokia for reporting the issue.
   [ISC-Bugs #41473]
 
+- Altered DHCPv4 lease time calculation to avoid roll over errors on 64-bit
+  OS systems when using -1 or large values for default-lease-time.  Rollover
+  values will be replaced with 0x7FFFFFFF - 1.  This alleviates unintentionally
+  short expiration times being handed out when infinite lease times (-1) in
+  conjuction with failover.
+  [ISC-Bugs #41976]
+
 			Changes since 4.1-ESV-R14b1
 - None
 
