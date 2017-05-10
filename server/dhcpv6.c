@@ -2068,7 +2068,7 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 	 * A not included IA ("cleanup" below) could give a Renew/Rebind.
 	 */
 	oc = lookup_option(&dhcpv6_universe, packet_ia, D6O_IAADDR);
-	reply->min_valid = reply->min_prefer = 0xffffffff;
+	reply->min_valid = reply->min_prefer = INFINITE_TIME;
 	reply->client_valid = reply->client_prefer = 0;
 	for (; oc != NULL ; oc = oc->next) {
 		status = reply_process_addr(reply, oc);
@@ -2796,7 +2796,7 @@ reply_process_ia_ta(struct reply_state *reply, struct option_cache *ia) {
 	 * Deal with an IAADDR for lifetimes.
 	 * For all or none, process IAADDRs as hints.
 	 */
-	reply->min_valid = reply->min_prefer = 0xffffffff;
+	reply->min_valid = reply->min_prefer = INFINITE_TIME;
 	reply->client_valid = reply->client_prefer = 0;
 	oc = lookup_option(&dhcpv6_universe, packet_ia, D6O_IAADDR);
 	for (; oc != NULL; oc = oc->next) {
@@ -3516,10 +3516,10 @@ reply_process_is_addressed(struct reply_state *reply,
 	 * The following doesn't work on at least some systems:
 	 * (cur_time + reply->send_valid < cur_time)
 	 */
-	if (reply->send_valid != 0xFFFFFFFF) {
+	if (reply->send_valid != INFINITE_TIME) {
 		time_t test_time = cur_time + reply->send_valid;
 		if (test_time < cur_time)
-			reply->send_valid = 0xFFFFFFFF;
+			reply->send_valid = INFINITE_TIME;
         }
 
 	if (reply->client_prefer == 0)
@@ -3528,7 +3528,7 @@ reply_process_is_addressed(struct reply_state *reply,
 		reply->send_prefer = reply->client_prefer;
 
 	if ((reply->send_prefer >= reply->send_valid) &&
-	    (reply->send_valid != 0xFFFFFFFF))
+	    (reply->send_valid != INFINITE_TIME))
 		reply->send_prefer = (reply->send_valid / 2) +
 				     (reply->send_valid / 8);
 
@@ -3583,7 +3583,7 @@ reply_process_is_addressed(struct reply_state *reply,
 		 * when connecting to the lease file MAX_TIME is
 		 */
 		if (reply->buf.reply.msg_type == DHCPV6_REPLY) {
-			if (reply->send_valid == 0xFFFFFFFF) {
+			if (reply->send_valid == INFINITE_TIME) {
 				reply->lease->soft_lifetime_end_time = MAX_TIME;
 			} else {
 				reply->lease->soft_lifetime_end_time =
@@ -3870,7 +3870,7 @@ reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia) {
 	 * For each prefix in this IA_PD, decide what to do about it.
 	 */
 	oc = lookup_option(&dhcpv6_universe, packet_ia, D6O_IAPREFIX);
-	reply->min_valid = reply->min_prefer = 0xffffffff;
+	reply->min_valid = reply->min_prefer = INFINITE_TIME;
 	reply->client_valid = reply->client_prefer = 0;
 	reply->preflen = -1;
 	for (; oc != NULL ; oc = oc->next) {
@@ -4762,10 +4762,10 @@ reply_process_is_prefixed(struct reply_state *reply,
 	 * The following doesn't work on at least some systems:
 	 * (cur_time + reply->send_valid < cur_time)
 	 */
-	if (reply->send_valid != 0xFFFFFFFF) {
+	if (reply->send_valid != INFINITE_TIME) {
 		time_t test_time = cur_time + reply->send_valid;
 		if (test_time < cur_time)
-			reply->send_valid = 0xFFFFFFFF;
+			reply->send_valid = INFINITE_TIME;
         }
 
 	if (reply->client_prefer == 0)
@@ -4774,7 +4774,7 @@ reply_process_is_prefixed(struct reply_state *reply,
 		reply->send_prefer = reply->client_prefer;
 
 	if ((reply->send_prefer >= reply->send_valid) &&
-	    (reply->send_valid != 0xFFFFFFFF))
+	    (reply->send_valid != INFINITE_TIME))
 		reply->send_prefer = (reply->send_valid / 2) +
 				     (reply->send_valid / 8);
 
@@ -4814,7 +4814,7 @@ reply_process_is_prefixed(struct reply_state *reply,
 		 * when connecting to the lease file MAX_TIME is
 		 */
 		if (reply->buf.reply.msg_type == DHCPV6_REPLY) {
-			if (reply->send_valid == 0xFFFFFFFF) {
+			if (reply->send_valid == INFINITE_TIME) {
 				reply->lease->soft_lifetime_end_time = MAX_TIME;
 			} else {
 				reply->lease->soft_lifetime_end_time =
@@ -8038,8 +8038,10 @@ set_reply_tee_times(struct reply_state* reply, unsigned ia_cursor)
 	} else if (set_tee_times) {
 		/* Setting them is enabled so T1 is either infinite or
 		 * 0.5 * the shortest preferred lifetime in the IA_XX  */
-		reply->renew = (reply->min_prefer == 0xFFFFFFFF ? 0xFFFFFFFF
-				 : reply->min_prefer / 2);
+		if (reply->min_prefer == INFINITE_TIME)
+			reply->renew = INFINITE_TIME;
+		else
+			reply->renew = reply->min_prefer / 2;
 	} else {
 		/* Default is to let the client choose */
 		reply->renew = 0;
@@ -8071,8 +8073,10 @@ set_reply_tee_times(struct reply_state* reply, unsigned ia_cursor)
 	} else if (set_tee_times) {
 		/* Setting them is enabled so T2 is either infinite or
 		 * 0.8 * the shortest preferred lifetime in the reply */
-		reply->rebind = (reply->min_prefer == 0xFFFFFFFF ? 0xFFFFFFFF
-				 : (reply->min_prefer / 5) * 4);
+		if (reply->min_prefer == INFINITE_TIME)
+			reply->rebind = INFINITE_TIME;
+		else
+			reply->rebind = (reply->min_prefer / 5) * 4;
 	} else {
 		/* Default is to let the client choose */
 		reply->rebind = 0;

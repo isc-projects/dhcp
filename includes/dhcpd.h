@@ -1585,8 +1585,9 @@ typedef unsigned char option_mask [16];
 #define DHCPD_LOG_FACILITY	LOG_DAEMON
 #endif
 
-#define MAX_TIME 0x7fffffff
-#define MIN_TIME 0
+#define INFINITE_TIME	0xffffffff
+#define MAX_TIME	0x7fffffff
+#define MIN_TIME	0
 
 #ifdef USE_LOG_PID
 /* include the pid in the syslog messages */
