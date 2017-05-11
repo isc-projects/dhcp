@@ -39,6 +39,8 @@ enum dhcp_token {
 	SLASH = '/',
 	LBRACE = '{',
 	RBRACE = '}',
+	LBRACKET = '[',
+	RBRACKET = ']',
 	LPAREN = '(',
 	RPAREN = ')',
 	EQUAL = '=',
