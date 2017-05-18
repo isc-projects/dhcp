@@ -242,6 +242,9 @@
 /* File for dhcpd6 process information. */
 #undef _PATH_DHCPD6_PID
 
+/* Default file containing dhcpd configuration. */
+#undef _PATH_DHCPD_CONF
+
 /* File for dhcpd leases. */
 #undef _PATH_DHCPD_DB
 

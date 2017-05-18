@@ -130,6 +130,10 @@ by Eric Young (eay@cryptsoft.com).
   the issue to our attention.
   [ISC-Bugs #41976]
 
+- Added new compile time option --with-srv-conf-file which specifies a
+  default location of the server configuration file.
+  [ISC-Bugs #44765]
+
 			Changes since 4.3.5b1
 
 - Corrected a bug which could cause the server to sporadically crash while
