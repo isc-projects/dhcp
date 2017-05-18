@@ -1398,7 +1398,7 @@ void bind_lease (client)
 		    client->new->medium);
 	if (client->active && client->state != S_REBOOTING)
 		script_write_params(client, "old_", client->active);
-	script_write_params (client, "new_", client->new);
+	script_write_params(client, "new_", client->new);
 	script_write_requested(client);
 	if (client->alias)
 		script_write_params(client, "alias_", client->alias);
@@ -2248,8 +2248,8 @@ void send_discover (cpp)
 
 		log_info ("Trying medium \"%s\" %d",
 			  client -> medium -> string, increase);
-		script_init (client, "MEDIUM", client -> medium);
-		if (script_go (client)) {
+		script_init(client, "MEDIUM", client -> medium);
+		if (script_go(client)) {
 			fail = 1;
 			goto again;
 		}
@@ -2360,18 +2360,18 @@ void state_panic (cpp)
 			      piaddr (client -> active -> address));
 			/* Run the client script with the existing
 			   parameters. */
-			script_init (client, "TIMEOUT",
+			script_init(client, "TIMEOUT",
 				     client -> active -> medium);
-			script_write_params (client, "new_", client -> active);
+			script_write_params(client, "new_", client -> active);
 			script_write_requested(client);
 			if (client -> alias)
-				script_write_params (client, "alias_",
-						     client -> alias);
+				script_write_params(client, "alias_",
+						    client -> alias);
 
 			/* If the old lease is still good and doesn't
 			   yet need renewal, go into BOUND state and
 			   timeout at the renewal time. */
-			if (!script_go (client)) {
+			if (!script_go(client)) {
 			    if (cur_time < client -> active -> renewal) {
 				client -> state = S_BOUND;
 				log_info ("bound: renewal in %ld %s.",
@@ -2438,10 +2438,10 @@ void state_panic (cpp)
 	}
 
 	log_info ("No working leases in persistent database - sleeping.");
-	script_init (client, "FAIL", (struct string_list *)0);
+	script_init(client, "FAIL", (struct string_list *)0);
 	if (client -> alias)
-		script_write_params (client, "alias_", client -> alias);
-	script_go (client);
+		script_write_params(client, "alias_", client -> alias);
+	script_go(client);
 	client -> state = S_INIT;
 	tv.tv_sec = cur_tv.tv_sec + ((client->config->retry_interval + 1) / 2 +
 		    (random() % client->config->retry_interval));
@@ -2490,10 +2490,10 @@ void send_request (cpp)
 	if (client -> state == S_REBOOTING &&
 	    !client -> medium &&
 	    client -> active -> medium ) {
-		script_init (client, "MEDIUM", client -> active -> medium);
+		script_init(client, "MEDIUM", client -> active -> medium);
 
 		/* If the medium we chose won't fly, go to INIT state. */
-		if (script_go (client))
+		if (script_go(client))
 			goto cancel;
 
 		/* Record the medium. */
@@ -2505,21 +2505,21 @@ void send_request (cpp)
 	if (client -> state != S_REQUESTING &&
 	    cur_time > client -> active -> expiry) {
 		/* Run the client script with the new parameters. */
-		script_init (client, "EXPIRE", (struct string_list *)0);
-		script_write_params (client, "old_", client -> active);
+		script_init(client, "EXPIRE", (struct string_list *)0);
+		script_write_params(client, "old_", client -> active);
 		script_write_requested(client);
 		if (client -> alias)
-			script_write_params (client, "alias_",
-					     client -> alias);
-		script_go (client);
+			script_write_params(client, "alias_",
+					    client -> alias);
+		script_go(client);
 
 		/* Now do a preinit on the interface so that we can
 		   discover a new address. */
-		script_init (client, "PREINIT", (struct string_list *)0);
+		script_init(client, "PREINIT", (struct string_list *)0);
 		if (client -> alias)
-			script_write_params (client, "alias_",
-					     client -> alias);
-		script_go (client);
+			script_write_params(client, "alias_",
+					    client -> alias);
+		script_go(client);
 
 		client -> state = S_INIT;
 		state_init (client);
@@ -3856,10 +3856,20 @@ int write_client_lease (client, lease, rewrite, makesure)
 char scriptName [256];
 FILE *scriptFile;
 
-void script_init (client, reason, medium)
-	struct client_state *client;
-	const char *reason;
-	struct string_list *medium;
+/**
+ * @brief Initializes basic variables for a script
+ *
+ * This function is called as an initial preparation for calling a script.
+ * It sets up a number of common env. variables that will be passed to
+ * the script. For actual script calling, see @ref script_go .
+ *
+ * @param client variables will be stored here (if null, the whole function
+ *               is no-op)
+ * @param reason specified the reason for calling a script (must be non-null)
+ * @param medium if specified, defines medium type (may be null)
+ */
+void script_init(struct client_state *client, const char *reason,
+                 struct string_list *medium)
 {
 	struct string_list *sl, *next;
 
@@ -3930,10 +3940,27 @@ void client_option_envadd (struct option_cache *oc,
 	}
 }
 
-void script_write_params (client, prefix, lease)
-	struct client_state *client;
-	const char *prefix;
-	struct client_lease *lease;
+/**
+ * @brief Adds parameters to environment variables for a script
+ *
+ * This function add details of specified lease to a list of env. variables
+ * to be passed to a script. The lease details will be prepended with
+ * specified prefix (e.g. "old_") and added to the list stored in client.
+ * Following variables may be set:
+ * - ip_address
+ * - next_server
+ * - network_number
+ * - broadcast_address
+ * - filename
+ * - server_name
+ * - expiry
+ *
+ * @param client env. variables will be stored here
+ * @param prefix textual prefix to be added to each variable (e.g. "old_")
+ * @param lease lease details will be extracted from here
+ */
+void script_write_params(struct client_state *client, const char *prefix,
+			 struct client_lease *lease)
 {
 	int i;
 	struct data_string data;
@@ -4046,14 +4073,16 @@ void script_write_params (client, prefix, lease)
 		       (unsigned long)(lease -> expiry));
 }
 
-/*
+/**
+ * @brief Write out the environent variable the client requested.
  * Write out the environment variables for the objects that the
  * client requested.  If the object was requested the variable will be:
  * requested_<option_name>=1
  * If it wasn't requested there won't be a variable.
+ *
+ * @param client client structure
  */
-void script_write_requested(client)
-	struct client_state *client;
+void script_write_requested(struct client_state *client)
 {
 	int i;
 	struct option **req;
@@ -4071,8 +4100,19 @@ void script_write_requested(client)
 	}
 }
 
-int script_go (client)
-	struct client_state *client;
+/**
+ * @brief Calls external script.
+ *
+ * External script is specified either using -sf command line or
+ * script parameter in the configuration file.
+ *
+ * @param client specifies client information (environment variables,
+ *        and other parameters will be extracted and passed to the script.
+ * @return If positive, it contains exit code of the process running script.
+ *         If negative, returns the signal number that cause the script process
+ *         to terminate.
+ */
+int script_go(struct client_state *client)
 {
 	char *scriptName;
 	char *argv [2];
@@ -4389,11 +4429,11 @@ void do_release(client)
 		script_init (client,
 			     "RELEASE", (struct string_list *)0);
 		if (client -> alias)
-			script_write_params (client, "alias_",
-					     client -> alias);
-		script_write_params (client, "old_", client -> active);
+			script_write_params(client, "alias_",
+					    client -> alias);
+		script_write_params(client, "old_", client -> active);
 		script_write_requested(client);
-		script_go (client);
+		script_go(client);
 	}
 
 	/* Cancel any timeouts. */
@@ -4488,9 +4528,9 @@ isc_result_t dhclient_interface_startup_hook (struct interface_info *interface)
 		script_init (ip -> client,
 			     "PREINIT", (struct string_list *)0);
 		if (ip -> client -> alias)
-			script_write_params (ip -> client, "alias_",
-					     ip -> client -> alias);
-		script_go (ip -> client);
+			script_write_params(ip -> client, "alias_",
+					    ip -> client -> alias);
+		script_go(ip -> client);
 	}
 
 	discover_interfaces (interfaces_requested != 0
