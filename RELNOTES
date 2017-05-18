@@ -54,6 +54,11 @@ by Eric Young (eay@cryptsoft.com).
 
 			Changes since 4.3.0 (new features)
 
+- Client now calls the script with reason set to FAIL when run with -1 (ony try)
+  and there are no sever responses. Thank you Andrew Pollock for providing
+  an initial patch.
+  [ISC-bugs #18183]
+
 - Insert the raw data from a fully encapsualted option into the option cache.
   This allows "exists" to check for the option if any sub options exist.  It
   also adds the raw data to the environment variables supplied to the client
