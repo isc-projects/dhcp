@@ -776,6 +776,7 @@ enable_secs_byteorder
 enable_log_pid
 enable_binary_leases
 with_atf
+with_srv_conf_file
 with_srv_lease_file
 with_srv6_lease_file
 with_cli_lease_file
@@ -1468,6 +1469,9 @@ Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
   --with-atf=PATH         specify location where atf was installed (or "bind")
+  --with-srv-conf-file=PATH
+                          Default file containing dhcpd configuration (default
+                          is typically /etc/dhcpd.conf)
   --with-srv-lease-file=PATH
                           File for dhcpd leases (default is
                           LOCALSTATEDIR/db/dhcpd.leases)
@@ -5825,6 +5829,18 @@ case "$localstatedir" in
 		localstatedir=/var
 		;;
 esac
+
+# Default server configuration file.
+
+# Check whether --with-srv-conf-file was given.
+if test "${with_srv_conf_file+set}" = set; then :
+  withval=$with_srv_conf_file;
+cat >>confdefs.h <<_ACEOF
+#define _PATH_DHCPD_CONF "$withval"
+_ACEOF
+
+fi
+
 
 # Allow specification of alternate state files
 
