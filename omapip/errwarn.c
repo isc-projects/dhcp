@@ -79,7 +79,7 @@ void log_fatal (const char * fmt, ... )
   log_error ("than a configuration issue please read the section on submitting");
   log_error ("bugs on either our web page at www.isc.org or in the README file");
   log_error ("before submitting a bug.  These pages explain the proper");
-  log_error ("process and the information we find helpful for debugging..");
+  log_error ("process and the information we find helpful for debugging.");
   log_error ("%s", "");
   log_error ("exiting.");
 
