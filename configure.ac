@@ -277,6 +277,13 @@ case "$localstatedir" in
 		;;
 esac
 
+# Default server configuration file.
+AC_ARG_WITH(srv-conf-file,
+	AS_HELP_STRING([--with-srv-conf-file=PATH],[Default file containing dhcpd configuration
+		        (default is typically /etc/dhcpd.conf)]),
+	AC_DEFINE_UNQUOTED([_PATH_DHCPD_CONF], ["$withval"],
+			   [Default file containing dhcpd configuration.]))
+
 # Allow specification of alternate state files
 AC_ARG_WITH(srv-lease-file,
 	AC_HELP_STRING([--with-srv-lease-file=PATH],

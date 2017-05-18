@@ -1,7 +1,7 @@
               Internet Systems Consortium DHCP Distribution
 
                            Version 4.1-ESV-R14
-			     5 Octoboer 2016
+			     5 October 2016
 
                               Release Notes
 
@@ -124,6 +124,10 @@ by Eric Young (eay@cryptsoft.com).
   conjuction with failover.  Our thanks to Alessandro Gherardi for bringing
   the issue to our attention.
   [ISC-Bugs #41976]
+
+- Added new compile time option --with-srv-conf-file which specifies a
+  default location of the server configuration file.
+  [ISC-Bugs #44765]
 
 			Changes since 4.1-ESV-R14b1
 - None
