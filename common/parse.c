@@ -1281,7 +1281,7 @@ parse_option_name (cfile, allocate, known, opt)
 			option_reference(opt, option, MDL);
 		} else
 			log_info("option %s has been redefined as option %s.  "
-				 "Please update your configs if neccessary.",
+				 "Please update your configs if necessary.",
 				 val, option->name);
 	/* If we've been told to allocate, that means that this
 	 * (might) be an option code definition, so we'll create
