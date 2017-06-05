@@ -1,6 +1,6 @@
 .\"	$Id: dhclient.8,v 1.30.8.4.6.1 2011/04/15 22:26:20 sar Exp $
 .\"
-.\" Copyright (c) 2004-2016 by Internet Systems Consortium, Inc. ("ISC")
+.\" Copyright (c) 2004-2017 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
@@ -114,6 +114,10 @@ dhclient - Dynamic Host Configuration Protocol Client
 ]
 [
 .B -w
+]
+[
+.B --dad-wait-time
+.I seconds
 ]
 [
 .B -v
@@ -361,6 +365,15 @@ all of the items.
 Restore normal address query for IPv6. This implies \fB-6\fR.
 It is used to restore normal operation after using \fB-T\fR or \fB-P\fR.
 Multiple addresses can be requested with multiple \fB\-N\fR flags.
+.TP
+.BI \--dad-wait-time \ seconds
+Specify maximum time (in seconds) that the client should wait for the
+duplicate address detection (DAD) to complete on an interface. This
+value is propagated to the dhclient script in a dad_wait_time environment
+variable. If any of the IPv6 addresses on the interface are tentative
+(DAD is in progress), the script will wait for the specified number of
+seconds for DAD to complete. If the script ignores this variable the
+parameter has no effect.
 .PP
 .I Modifying default file locations:
 The following options can be used to modify the locations a client uses

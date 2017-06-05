@@ -66,7 +66,7 @@ struct data_string default_duid;
 #define ASSERT_STATE(state_is, state_shouldbe) {}
 
 static const char copyright[] = 
-"Copyright 2004-2016 Internet Systems Consortium.";
+"Copyright 2004-2017 Internet Systems Consortium.";
 static const char arr [] = "All rights reserved.";
 static const char message [] = "Internet Systems Consortium DHCP Client";
 static const char url [] = 
@@ -87,6 +87,7 @@ int wanted_ia_pd = 0;
 int require_all_ias = 0;	/* If the user requires all of the IAs to
 				   be available before accepting a lease
 				   0 = no, 1 = requries */
+int dad_wait_time = 0;
 char *mockup_relay = NULL;
 
 char *progname = NULL;
@@ -139,6 +140,7 @@ usage(const char *sfmt, const char *sarg)
 	log_fatal("Usage: %s "
 #ifdef DHCPv6
 		  "[-4|-6] [-SNTPR1dvrx] [-nw] [-p <port>]\n"
+		  "                [--dad-wait-time seconds]\n"
 #else /* DHCPv6 */
 		  "[-1dvrx] [-nw] [-p <port>]\n"
 #endif /* DHCPv6 */
@@ -353,6 +355,15 @@ main(int argc, char **argv) {
 			local_family_set = 1;
 			local_family = AF_INET6;
 			require_all_ias = 1;
+		} else if (!strcmp(argv[i], "--dad-wait-time")) {
+			if (++i == argc) {
+				usage(use_noarg, argv[i-1]);
+			}
+			dad_wait_time = (int)strtol(argv[i], &s, 10);
+			if (errno || (*s != '\0') || (dad_wait_time < 0)) {
+				usage("Invalid value for --dad-wait-time: %s", argv[i]);
+			}
+
 #endif /* DHCPv6 */
 		} else if (!strcmp(argv[i], "-v")) {
 			quiet = 0;
@@ -3172,6 +3183,8 @@ void script_init (client, reason, medium)
 
 		client_envadd (client, "", "reason", "%s", reason);
 		client_envadd (client, "", "pid", "%ld", (long int)getpid ());
+		client_envadd (client, "", "dad_wait_time", "%ld",
+					   (long int)dad_wait_time);
 	}
 }
 

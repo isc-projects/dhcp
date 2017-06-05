@@ -144,7 +144,42 @@ if [ x$reason = xPREINIT6 ]; then
   # Ensure interface is up.
   ifconfig ${interface} up
 
+  # We need to give the kernel some time to active interface
+  interface_up_wait_time=5
+  for i in $(seq 0 ${interface_up_wait_time})
+  do
+      ifconfig ${interface} | grep inactive &> /dev/null
+      if [ $? -ne 0 ]; then
+          break;
+      fi
+      sleep 1
+  done
+
   # XXX: Remove any stale addresses from aborted clients.
+
+  # Wait for duplicate address detection for this interface if the
+  # --dad-wait-time parameter has been specified and is greater than
+  # zero.
+  if [ ${dad_wait_time} -gt 0 ]; then
+      # Check if any IPv6 address on this interface is marked as
+      # tentative.
+      ifconfig ${interface} | grep inet6 | grep tentative \
+          &> /dev/null
+      if [ $? -eq 0 ]; then
+          # Wait for duplicate address detection to complete or for
+          # the timeout specified as --dad-wait-time.
+          for i in $(seq 0 $dad_wait_time)
+          do
+              # We're going to poll for the tentative flag every second.
+              sleep 1
+              ifconfig ${interface} | grep inet6 | grep tentative \
+                  &> /dev/null
+              if [ $? -ne 0 ]; then
+                  break;
+              fi
+          done
+      fi
+  fi
 
   exit_with_hooks 0
 fi
