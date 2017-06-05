@@ -96,6 +96,7 @@ int wanted_ia_pd = 0;
 int require_all_ias = 0;	/* If the user requires all of the IAs to
 				   be available before accepting a lease
 				   0 = no, 1 = requries */
+int dad_wait_time = 0;
 char *mockup_relay = NULL;
 
 char *progname = NULL;
@@ -166,10 +167,11 @@ usage(const char *sfmt, const char *sarg)
 	log_fatal("Usage: %s "
 #ifdef DHCPv6
 #ifdef DHCP4o6
-		  "[-4|-6] [-SNTPRI1dvrxi] [-nw] -4o6 <port>]\n"
-		  "                [-p <port>] [-D LL|LLT] \n"
+		  "[-4|-6] [-SNTPRI1dvrxi] [-nw] -4o6 <port>] [-p <port>]\n"
+		  "                [-D LL|LLT] [--dad-wait-time seconds]\n"
 #else /* DHCP4o6 */
-		  "[-4|-6] [-SNTPRI1dvrxi] [-nw] [-p <port>] [-D LL|LLT] \n"
+		  "[-4|-6] [-SNTPRI1dvrxi] [-nw] [-p <port>]\n"
+          "                [-D LL|LLT] [--dad-wait-time seconds]\n"
 #endif
 #else /* DHCPv6 */
 		  "[-I1dvrxi] [-nw] [-p <port>] [-D LL|LLT] \n"
@@ -402,6 +404,15 @@ main(int argc, char **argv) {
 			local_family_set = 1;
 			local_family = AF_INET6;
 			require_all_ias = 1;
+		} else if (!strcmp(argv[i], "--dad-wait-time")) {
+			if (++i == argc) {
+				usage(use_noarg, argv[i-1]);
+			}
+			dad_wait_time = (int)strtol(argv[i], &s, 10);
+			if (errno || (*s != '\0') || (dad_wait_time < 0)) {
+				usage("Invalid value for --dad-wait-time: %s", argv[i]);
+			}
+
 #endif /* DHCPv6 */
 		} else if (!strcmp(argv[i], "-D")) {
 			duid_v4 = 1;
@@ -3863,6 +3874,8 @@ void script_init (client, reason, medium)
 
 		client_envadd (client, "", "reason", "%s", reason);
 		client_envadd (client, "", "pid", "%ld", (long int)getpid ());
+		client_envadd (client, "", "dad_wait_time", "%ld",
+					   (long int)dad_wait_time);
 	}
 }
 
