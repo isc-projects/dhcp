@@ -133,6 +133,17 @@ by Eric Young (eay@cryptsoft.com).
   default location of the server configuration file.
   [ISC-Bugs #44765]
 
+- Added --dad-wait-time parameter to dhclient. It specifies the maximum time,
+  in seconds, that the client process should wait for the duplicate address
+  detection to complete before initiating DHCP requests. This value is
+  propagated to the dhclient script and the script is responsible for waiting
+  the specified amount of time or until DAD has completed. If the script does
+  not support it, specifying this parameter has no effect. The default value
+  is 0 which specifies that the script should not wait for DAD. With this
+  change the following scripts have been modified to support the new parameter:
+  freebsd, linux, macos, netbsd, openbsd.
+  [ISC-Bugs #36169]
+
 			Changes since 4.3.0 (bug fixes)
 
 - Tidy up several small tickets.
