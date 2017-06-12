@@ -1437,22 +1437,25 @@ try_client_v6_prefix(struct iasubopt **pref,
 	if (requested_pref->len < sizeof(tmp_plen) + sizeof(tmp_pref)) {
 		return DHCP_R_INVALIDARG;
 	}
+
 	tmp_plen = (int) requested_pref->data[0];
-	if ((tmp_plen < 3) || (tmp_plen > 128) ||
-	    ((int)tmp_plen != pool->units)) {
+	if ((tmp_plen < 3) || (tmp_plen > 128)) {
 		return ISC_R_FAILURE;
 	}
+
 	memcpy(&tmp_pref, requested_pref->data + 1, sizeof(tmp_pref));
 	if (IN6_IS_ADDR_UNSPECIFIED(&tmp_pref)) {
 		return ISC_R_FAILURE;
 	}
+
 	ia.len = 16;
 	memcpy(&ia.iabuf, &tmp_pref, 16);
 	if (!is_cidr_mask_valid(&ia, (int) tmp_plen)) {
 		return ISC_R_FAILURE;
 	}
 
-	if (!ipv6_in_pool(&tmp_pref, pool)) {
+	if (!ipv6_in_pool(&tmp_pref, pool) ||
+	    ((int)tmp_plen != pool->units)) {
 		return ISC_R_ADDRNOTAVAIL;
 	}
 
@@ -1464,6 +1467,7 @@ try_client_v6_prefix(struct iasubopt **pref,
 	if (result != ISC_R_SUCCESS) {
 		return result;
 	}
+
 	(*pref)->addr = tmp_pref;
 	(*pref)->plen = tmp_plen;
 
@@ -1472,6 +1476,7 @@ try_client_v6_prefix(struct iasubopt **pref,
 	if (result != ISC_R_SUCCESS) {
 		iasubopt_dereference(pref, MDL);
 	}
+
 	return result;
 }
 
@@ -1687,13 +1692,6 @@ eval_prefix_mode(int len, int preflen, int prefix_mode) {
 		/* otherwise use it */
 		break;
 	}
-
-#if defined (DEBUG)
-	log_debug("eval_prefix_mode: "
-		  "len %d, preflen %d, mode %s, use_it %d",
-		  len, preflen,
-		  prefix_length_modes.values[prefix_mode].name, use_it);
-#endif
 
 	return (use_it);
 }

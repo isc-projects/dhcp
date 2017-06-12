@@ -5974,13 +5974,16 @@ parse_ia_pd_declaration(struct parse *cfile) {
 			executable_statement_dereference (&on_star[i], MDL);
 		}
 			
-		/* find the pool this address is in */
+		/* Find the pool this address is in. We need to check prefix
+		 * lengths too in case the pool has been reconfigured. */
 		pool = NULL;
-		if (find_ipv6_pool(&pool, D6O_IA_PD,
-				   &iapref->addr) != ISC_R_SUCCESS) {
+		if ((find_ipv6_pool(&pool, D6O_IA_PD,
+				   &iapref->addr) != ISC_R_SUCCESS) ||
+		     (pool->units != iapref->plen)) {
 			inet_ntop(AF_INET6, &iapref->addr,
 				  addr_buf, sizeof(addr_buf));
-			log_error("No pool found for prefix %s", addr_buf);
+			log_error("No pool found for prefix %s/%d", addr_buf,
+				  iapref->plen);
 			iasubopt_dereference(&iapref, MDL);
 			continue;
 		}
