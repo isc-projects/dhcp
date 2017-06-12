@@ -153,7 +153,8 @@ by Eric Young (eay@cryptsoft.com).
   are deemed "out-of-pool" either by address or mis-matched prefix length.
   Clients seeking to renew or rebind such leases will get a response of
   No Binding in the case of the former, and the prefix delegation with
-  lifetimes set to zero in the case of the latter.
+  lifetimes set to zero in the case of the latter. Thanks to Mark Nejedlo
+  at TDS Telecom for reporting this issue.
   [ISC-Bugs #35378]
 
 			Changes since 4.3.5b1
