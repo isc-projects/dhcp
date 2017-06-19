@@ -1,6 +1,6 @@
 .\"	dhcpd.8
 .\"
-.\" Copyright (c) 2004-2016 by Internet Systems Consortium, Inc. ("ISC")
+.\" Copyright (c) 2004-2017 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
@@ -369,8 +369,8 @@ port will be used for the established connection.
 
 When DDNS is enabled at compile time (see includes/site.h)
 the server will open both a v4 and a v6 UDP socket on
-random ports.  These ports are opened even if DDNS is disabled
-in the configuration file.
+random ports, unless DDNS updates are globally disabled by
+setting ddns-update-style to none in the configuration file.
 .PP
 .SH CONFIGURATION
 The syntax of the dhcpd.conf(5) file is discussed separately.  This

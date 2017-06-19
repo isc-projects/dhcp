@@ -493,8 +493,9 @@ port will be used for the established connection.
 
 When DDNS is enabled at compile time (see includes/site.h)
 the client will open both a v4 and a v6 UDP socket on
-random ports.  These ports are opened even if DDNS is disabled
-in the configuration file.
+random ports.  These ports are not opened unless/until the
+client first attempts to do an update.  If the client is not
+configured to do updates, the ports will never be opened.
 .PP
 .SH CONFIGURATION
 The syntax of the \fBdhclient.conf(5)\fR file is discussed separately.

@@ -157,6 +157,15 @@ by Eric Young (eay@cryptsoft.com).
   at TDS Telecom for reporting this issue.
   [ISC-Bugs #35378]
 
+- Modified DDNS support initialization such that DNS related ports will only be
+  opened by the server (dhcpd) at startup if ddns-update-style is not "none";
+  by dhclient only if and when the it first attempts an update; and never by
+  dhcrelay.  Prior to this all three always did the initialization at startup
+  which causes them to always open on and listen for traffic on two random
+  ports.
+  [ISC-Bugs #45290]
+  [ISC-Bugs #33377]
+
 			Changes since 4.3.5b1
 
 - Corrected a bug which could cause the server to sporadically crash while
