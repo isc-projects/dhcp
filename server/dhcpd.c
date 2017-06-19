@@ -1253,10 +1253,16 @@ void postconf_initialization (int quiet)
 		}
 	}
 
-	if (dhcp_context_create(DHCP_CONTEXT_POST_DB, local4_ptr, local6_ptr)
-	    != ISC_R_SUCCESS)
-		log_fatal("Unable to complete ddns initialization");
-
+	/* Don't init DNS client if update style is none. This avoids
+	 * listening ports that aren't needed.  We don't use ddns-udpates
+	 * as that has multiple levels of scope. */
+	if (ddns_update_style != DDNS_UPDATE_STYLE_NONE) {
+		if (dhcp_context_create(DHCP_CONTEXT_POST_DB,
+					local4_ptr, local6_ptr)
+			!= ISC_R_SUCCESS) {
+			log_fatal("Unable to complete ddns initialization");
+		}
+	}
 #else
 	/* If we don't have support for updates compiled in tell the user */
 	if (ddns_update_style != DDNS_UPDATE_STYLE_NONE) {

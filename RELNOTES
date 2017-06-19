@@ -144,6 +144,15 @@ by Eric Young (eay@cryptsoft.com).
   freebsd, linux, macos, netbsd, openbsd.
   [ISC-Bugs #36169]
 
+- Modified DDNS support initialization such DNS related ports will only be
+  opened by the server (dhcpd) at startup if ddns-update-style is not "none";
+  by dhclient only if and when the it first attempts an update; and never by
+  dhcrelay.  Prior to this all three always did the initialization at startup
+  which causes them to always open on and listen for traffic on two random
+  ports.
+  [ISC-Bugs #45290]
+  [ISC-Bugs #33377]
+
 			Changes since 4.3.0 (bug fixes)
 
 - Tidy up several small tickets.

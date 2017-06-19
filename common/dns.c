@@ -3,8 +3,7 @@
    Domain Name Service subroutines. */
 
 /*
- * Copyright (c) 2009-2015 by Internet Systems Consortium, Inc. ("ISC")
- * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2017 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2001-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -2151,6 +2150,12 @@ ddns_modify_fwd(dhcp_ddns_cb_t *ddns_cb, const char *file, int line)
 
 	isc_sockaddrlist_t *zlist = NULL;
 
+	/* Creates client context if we need to */
+	result = dns_client_init();
+	if (result != ISC_R_SUCCESS) {
+		return result;
+	}
+
 	/* Get a pointer to the clientname to make things easier. */
 	clientname = (unsigned char *)ddns_cb->fwd_name.data;
 
@@ -2358,6 +2363,12 @@ ddns_modify_ptr(dhcp_ddns_cb_t *ddns_cb, const char *file, int line)
 	isc_sockaddrlist_t *zlist = NULL;
 	unsigned char buf[256];
 	int buflen;
+
+	/* Creates client context if we need to */
+	result = dns_client_init();
+	if (result != ISC_R_SUCCESS) {
+		return result;
+	}
 
 	/*
 	 * Try to lookup the zone in the zone cache.  As with the forward
