@@ -4224,8 +4224,11 @@ void client_envadd (struct client_state *client,
 
 	val = dmalloc (strlen (prefix) + strlen (name) + 1 /* = */ +
 		       len + sizeof *val, MDL);
-	if (!val)
+	if (!val) {
+		log_error ("client_envadd: cannot allocate space for variable");
 		return;
+	}
+
 	s = val -> string;
 	strcpy (s, prefix);
 	strcat (s, name);
@@ -4235,8 +4238,10 @@ void client_envadd (struct client_state *client,
 		va_start (list, fmt);
 		vsnprintf (s, len + 1, fmt, list);
 		va_end (list);
-	} else
+	} else {
 		strcpy (s, spbuf);
+	}
+
 	val -> next = client -> env;
 	client -> env = val;
 	client -> envc++;

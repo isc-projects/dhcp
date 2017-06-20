@@ -153,6 +153,10 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Bugs #45290]
   [ISC-Bugs #33377]
 
+- Added error logging to two memory allocation failure checks. Thanks to Bill
+  Parker (wp02855 at gmail dot com) for reporting the issue.
+  [ISC-Bugs #41185]
+
 			Changes since 4.3.0 (bug fixes)
 
 - Tidy up several small tickets.

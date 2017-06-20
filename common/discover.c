@@ -3,7 +3,7 @@
    Find and identify the network interfaces. */
 
 /*
- * Copyright (c) 2004-2016 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2017 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -1491,8 +1491,11 @@ void interface_stash (struct interface_info *tptr)
 		delta = tptr -> index - interface_max + 10;
 		vec = dmalloc ((interface_max + delta) *
 			       sizeof (struct interface_info *), MDL);
-		if (!vec)
+		if (!vec) {
+			log_error ("interface_stash: allocation failed ");
 			return;
+		}
+
 		memset (&vec [interface_max], 0,
 			(sizeof (struct interface_info *)) * delta);
 		interface_max += delta;
@@ -1502,8 +1505,10 @@ void interface_stash (struct interface_info *tptr)
 			     sizeof (struct interface_info *)));
 		    dfree (interface_vector, MDL);
 		}
+
 		interface_vector = vec;
 	}
+
 	interface_reference (&interface_vector [tptr -> index], tptr, MDL);
 	if (tptr -> index >= interface_count)
 		interface_count = tptr -> index + 1;
