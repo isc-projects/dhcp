@@ -1,7 +1,7 @@
 /* dhc6.c - DHCPv6 client routines. */
 
 /*
- * Copyright (c) 2012-2016 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2012-2017 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2006-2010 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -4364,6 +4364,7 @@ dhc6_check_times(struct client_state *client)
 	TIME renew=MAX_TIME, rebind=MAX_TIME, depref=MAX_TIME,
 	     lo_expire=MAX_TIME, hi_expire=0, max_ia_starts = 0, tmp;
 	int has_addrs = ISC_FALSE;
+	int has_preferred_addrs = ISC_FALSE;
 	struct timeval tv;
 
 	lease = client->active_lease;
@@ -4392,6 +4393,10 @@ dhc6_check_times(struct client_state *client)
 
 				if (tmp < depref)
 					depref = tmp;
+
+				if (!(addr->flags & DHC6_ADDR_EXPIRED)) {
+					has_preferred_addrs = ISC_TRUE;
+				}
 			}
 
 			if (!(addr->flags & DHC6_ADDR_EXPIRED)) {
@@ -4550,7 +4555,10 @@ dhc6_check_times(struct client_state *client)
 		break;
 
 	      default:
-		log_fatal("Impossible condition at %s:%d.", MDL);
+		if (has_preferred_addrs) {
+			log_fatal("Impossible condition, state %d at %s:%d.",
+				  client->state, MDL);
+		}
 	}
 
 	/* Separately, set a time at which we will depref and expire

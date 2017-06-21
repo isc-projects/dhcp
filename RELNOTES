@@ -144,7 +144,7 @@ by Eric Young (eay@cryptsoft.com).
   freebsd, linux, macos, netbsd, openbsd.
   [ISC-Bugs #36169]
 
-- Modified DDNS support initialization such DNS related ports will only be
+- Modified DDNS support initialization such that DNS related ports will only be
   opened by the server (dhcpd) at startup if ddns-update-style is not "none";
   by dhclient only if and when the it first attempts an update; and never by
   dhcrelay.  Prior to this all three always did the initialization at startup
@@ -156,6 +156,12 @@ by Eric Young (eay@cryptsoft.com).
 - Added error logging to two memory allocation failure checks. Thanks to Bill
   Parker (wp02855 at gmail dot com) for reporting the issue.
   [ISC-Bugs #41185]
+
+- Corrected a dhclient -6 issue that caused the client to crash with an
+  "Impossible condition" error after de-preferencing its only IA binding.
+  The crash occurred when server configuration changes rendered the existing
+  binding out-of-range and no other leases were available to offer.
+  [ISC-Bugs #44373]
 
 			Changes since 4.3.0 (bug fixes)
 
