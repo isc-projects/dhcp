@@ -170,6 +170,12 @@ by Eric Young (eay@cryptsoft.com).
   Parker (wp02855 at gmail dot com) for reporting the issue.
   [ISC-Bugs #41185]
 
+- Corrected a dhclient -6 issue that caused the client to crash with an
+  "Impossible condition" error after de-preferencing its only IA binding.
+  The crash occurred when server configuration changes rendered the existing
+  binding out-of-range and no other leases were available to offer.
+  [ISC-Bugs #44373]
+
 			Changes since 4.3.5b1
 
 - Corrected a bug which could cause the server to sporadically crash while
