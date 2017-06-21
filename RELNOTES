@@ -149,7 +149,7 @@ by Eric Young (eay@cryptsoft.com).
   by dhclient only if and when the it first attempts an update; and never by
   dhcrelay.  Prior to this all three always did the initialization at startup
   which causes them to always open on and listen for traffic on two random
-  ports.
+  ports. Thanks to Rodney Beede for reporting the issue.
   [ISC-Bugs #45290]
   [ISC-Bugs #33377]
 
