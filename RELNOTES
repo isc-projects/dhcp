@@ -89,6 +89,7 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Bugs #31992]
   [ISC-Bugs #25428]
   [ISC-Bugs #31940]
+  [ISC-Bugs #32935]
 
 - Fixed a bug in OMAPI that causes omshell to crash when a name-value
   pair with a zero length value is shipped in an object. Thanks to
@@ -159,7 +160,8 @@ by Eric Young (eay@cryptsoft.com).
 - Corrected a dhclient -6 issue that caused the client to crash with an
   "Impossible condition" error after de-preferencing its only IA binding.
   The crash occurred when server configuration changes rendered the existing
-  binding out-of-range and no other leases were available to offer.
+  binding out-of-range and no other leases were available to offer. Thanks
+  to Pierre Clerissi for bringing this issue to our attention.
   [ISC-Bugs #44373]
 
 - Client now calls the script with reason set to FAIL when run with -1
