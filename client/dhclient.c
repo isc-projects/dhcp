@@ -1482,6 +1482,11 @@ void bind_lease (client)
 			if (!quiet)
 				log_info("Unable to obtain a lease on first "
 					 "try (declined).  Exiting.");
+
+			/* Let's call a script and we're done */
+			script_init(client, "FAIL", (struct string_list *)0);
+			script_go(client);
+
 			finish(2);
 		} else {
 			state_init(client);
@@ -2491,6 +2496,11 @@ void state_panic (cpp)
 		if (!quiet)
 			log_info ("Unable to obtain a lease on first try.%s",
 				  "  Exiting.");
+
+		/* Let's call a script and we're done */
+		script_init(client, "FAIL", (struct string_list *)0);
+		script_go(client);
+
 		finish(2);
 	}
 
