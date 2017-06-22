@@ -213,11 +213,14 @@ if_register_socket(struct interface_info *info, int family,
 	 * respective interfaces.  This does not (and should not) affect
 	 * DHCPv4 sockets; we can't yet support BSD sockets well, much
 	 * less multiple sockets. Make sense only with multicast.
+	 * RedHat defines SO_REUSEPORT with a kernel which does not support
+	 * it and returns ENOPROTOOPT so in this case ignore the error.
 	 */
 	if (local_family == AF_INET6) {
 		flag = 1;
-		if (setsockopt(sock, SOL_SOCKET, SO_REUSEPORT,
-			       (char *)&flag, sizeof(flag)) < 0) {
+		if ((setsockopt(sock, SOL_SOCKET, SO_REUSEPORT,
+			        (char *)&flag, sizeof(flag)) < 0) &&
+		    (errno != ENOPROTOOPT)) {
 			log_fatal("Can't set SO_REUSEPORT option on dhcp "
 				  "socket: %m");
 		}
