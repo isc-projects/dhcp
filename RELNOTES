@@ -129,9 +129,9 @@ by Eric Young (eay@cryptsoft.com).
   includes/site.h. This flag is undefined by default.
   [ISC-Bugs #43927]
 
-- Client now calls the script with reason set to FAIL when run with -1 (one try)
-  and there are no server responses. Thank you Andrew Pollock for providing
-  an initial patch.
+- Client now calls the script with reason set to FAIL when run with -1
+  (one try) and there are no server responses. Thanks for a patch by Martin
+  Pitt which got to us via Andrew Pollock.
   [ISC-bugs #18183]
 
 			Changes since 4.3.0 (bug fixes)
