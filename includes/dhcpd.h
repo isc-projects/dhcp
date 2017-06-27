@@ -3530,6 +3530,7 @@ void free_everything (void);
 /* failover.c */
 #if defined (FAILOVER_PROTOCOL)
 extern dhcp_failover_state_t *failover_states;
+void dhcp_failover_sanity_check (void);
 void dhcp_failover_startup (void);
 int dhcp_failover_write_all_states (void);
 isc_result_t enter_failover_peer (dhcp_failover_state_t *);
