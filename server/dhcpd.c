@@ -820,6 +820,10 @@ main(int argc, char **argv) {
 
 	postconf_initialization (quiet);
 
+#if defined (FAILOVER_PROTOCOL)
+	dhcp_failover_sanity_check();
+#endif
+
 #if defined(DHCPv6) && defined(DHCP4o6)
 	if (dhcpv4_over_dhcpv6) {
 		if ((local_family == AF_INET) && (interfaces != NULL))

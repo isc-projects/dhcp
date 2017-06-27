@@ -1102,6 +1102,11 @@ by Eric Young (eay@cryptsoft.com).
   at TDS Telecom for reporting this issue.
   [ISC-Bugs #35378]
 
+- The server now detects failover peers that are not referenced in at least
+  one pool when run with the command line option for test mode, -T.  Prior to
+  this the check was performed too far down stream to be detected in test mode.
+  [ISC-Bugs #29892]
+
 			Changes since 4.2.0 (new features)
 
 - If a client renews before 'dhcp-cache-threshold' percent of its lease
