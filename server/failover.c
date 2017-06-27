@@ -3,7 +3,7 @@
    Failover protocol support code... */
 
 /*
- * Copyright (c) 2004-2016 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2017 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -50,6 +50,37 @@ static inline int secondary_not_hoarding(dhcp_failover_state_t *state,
 					 struct pool *p);
 static void scrub_lease(struct lease* lease, const char *file, int line);
 
+/*!
+ * \brief Performs a "pre-flight" sanity check of failover configuration
+ *
+ * Provides an opportunity to do post-parse pre-startup sanity checking
+ * of failover configuration.  This allows checks to be done under test
+ * mode (-T), without requiring full startup for validation.
+ *
+ * Currently, it enforces all failover peers be used in at lease one
+ * pool. This logic was formerly located in dhcp_failover_startup.
+ *
+ * On failure, a fatal error is logged.
+ *
+ */
+void dhcp_failover_sanity_check() {
+	dhcp_failover_state_t *state;
+	int fail_count = 0;
+
+	for (state = failover_states; state; state = state->next) {
+		if (state->pool_count == 0) {
+			log_error ("ERROR: Failover peer, %s, has no referring"
+				   " pools. You must refer to each peer in at"
+				   " least one pool declaration.",
+				   state->name);
+			fail_count++;
+		}
+	}
+
+	if (fail_count) {
+		log_fatal ("Failover configuration sanity check failed");
+	}
+}
 
 void dhcp_failover_startup ()
 {
@@ -60,15 +91,6 @@ void dhcp_failover_startup ()
 	for (state = failover_states; state; state = state -> next) {
 		dhcp_failover_state_transition (state, "startup");
 
-		if (state -> pool_count == 0) {
-			log_error ("failover peer declaration with no %s",
-				   "referring pools.");
-			log_error ("In order to use failover, you MUST %s",
-				   "refer to your main failover declaration");
-			log_error ("in each pool declaration.   You MUST %s",
-				   "NOT use range declarations outside");
-			log_fatal ("of pool declarations.");
-		}
 		/* In case the peer is already running, immediately try
 		   to establish a connection with it. */
 		status = dhcp_failover_link_initiate ((omapi_object_t *)state);

@@ -3,7 +3,7 @@
    Definitions for dhcpd... */
 
 /*
- * Copyright (c) 2004-2016 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2017 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -3132,6 +3132,7 @@ int deletePTR (const struct data_string *, const struct data_string *,
 /* failover.c */
 #if defined (FAILOVER_PROTOCOL)
 extern dhcp_failover_state_t *failover_states;
+void dhcp_failover_sanity_check (void);
 void dhcp_failover_startup (void);
 int dhcp_failover_write_all_states (void);
 isc_result_t enter_failover_peer (dhcp_failover_state_t *);

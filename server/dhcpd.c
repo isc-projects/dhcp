@@ -3,7 +3,7 @@
    DHCP Server Daemon. */
 
 /*
- * Copyright (c) 2004-2016 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2017 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -737,6 +737,10 @@ main(int argc, char **argv) {
 		log_fatal ("Configuration file errors encountered -- exiting");
 
 	postconf_initialization (quiet);
+
+#if defined (FAILOVER_PROTOCOL)
+	dhcp_failover_sanity_check();
+#endif
  
 #if defined (PARANOIA) && !defined (EARLY_CHROOT)
 	if (set_chroot) setup_chroot (set_chroot);
