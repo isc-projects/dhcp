@@ -169,6 +169,10 @@ by Eric Young (eay@cryptsoft.com).
   Pitt which got to us via Andrew Pollock.
   [ISC-bugs #18183]
 
+- Linux script updated. The script is now based on Debian version. It uses
+  ip tool from iproute2 package and ifconfig is no longer used.
+  [ISC-bugs #19430]
+
 			Changes since 4.3.0 (bug fixes)
 
 - Tidy up several small tickets.
