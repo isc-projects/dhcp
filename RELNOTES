@@ -188,6 +188,10 @@ by Eric Young (eay@cryptsoft.com).
   this the check was performed too far down stream to be detected in test mode.
   [ISC-Bugs #29892]
 
+- Linux script updated. The script is now based on Debian version. It uses
+  ip tool from iproute2 package and ifconfig is no longer used.
+  [ISC-bugs #19430]
+
 			Changes since 4.3.5b1
 
 - Corrected a bug which could cause the server to sporadically crash while
