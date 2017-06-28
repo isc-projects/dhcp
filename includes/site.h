@@ -114,6 +114,13 @@
 /* Define this if you want to debug the binary leases (lease_chain) code */
 /* #define DEBUG_BINARY_LEASES */
 
+/* Define this if you want to debug checksum calculations */
+/* #define DEBUG_CHECKSUM */
+
+/* Define this if you want to verbosely debug checksum calculations */
+/* #define DEBUG_CHECKSUM_VERBOSE */
+
+
 /* Define this if you want DHCP failover protocol support in the DHCP
    server. */
 

@@ -1113,6 +1113,11 @@ by Eric Young (eay@cryptsoft.com).
   this the check was performed too far down stream to be detected in test mode.
   [ISC-Bugs #29892]
 
+- Changed severity of the log message indicating UDP checksum errors in
+  the received packets from 'info' to 'debug' to avoid logging excessive
+  number of false positives when UDP checksum offloading is enabled.
+  [ISC-bugs #41757]
+
 			Changes since 4.2.0 (new features)
 
 - If a client renews before 'dhcp-cache-threshold' percent of its lease
