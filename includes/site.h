@@ -332,6 +332,11 @@
  * in -4 mode. */
 /* #define ENFORCE_DHCPV6_CLIENT_REQUIRE */
 
+/* Enable the invocation of the client script with a FAIL state code
+ * by dhclient when running in one-try mode (-T) and the attempt to
+ * obtain the desired lease(s) fails. Applies to IPv4 mode only. */
+/* #define CALL_SCRIPT_ON_ONETRY_FAIL */
+
 /* Include definitions for various options.  In general these
    should be left as is, but if you have already defined one
    of these and prefer your definition you can comment the 
