@@ -194,6 +194,11 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-bugs #19430]
   [ISC-bugs #18111]
 
+- Changed severity of the log message indicating UDP checksum errors in
+  the received packets from 'info' to 'debug' to avoid logging excessive
+  number of false positives when UDP checksum offloading is enabled.
+  [ISC-bugs #41757]
+
 			Changes since 4.3.5b1
 
 - Corrected a bug which could cause the server to sporadically crash while
