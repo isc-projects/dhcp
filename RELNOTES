@@ -164,9 +164,10 @@ by Eric Young (eay@cryptsoft.com).
   to Pierre Clerissi for bringing this issue to our attention.
   [ISC-Bugs #44373]
 
-- Client now calls the script with reason set to FAIL when run with -1
-  (one try) and there are no server responses. Thanks for a patch by Martin
-  Pitt which got to us via Andrew Pollock.
+- By defining CALL_SCRIPT_ON_ONETRY_FAIL in includes/site.h, dhclient will
+  now call the script with reason set to FAIL when run with -1 (one try) and
+  there are no server responses.  This applies to IPv4 mode only. Thanks for a
+  patch by Martin Pitt which got to us via Andrew Pollock.
   [ISC-bugs #18183]
 
 - The server now detects failover peers that are not referenced in at least

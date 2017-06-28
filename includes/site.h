@@ -319,4 +319,9 @@
  * offered leases that do not contain all options specified as required
  * in the client's configuration file. The client already enforces this
  * in -4 mode. */
-/*#define ENFORCE_DHCPV6_CLIENT_REQUIRE*/
+/* #define ENFORCE_DHCPV6_CLIENT_REQUIRE */
+
+/* Enable the invocation of the client script with a FAIL state code
+ * by dhclient when running in one-try mode (-T) and the attempt to
+ * obtain the desired lease(s) fails. Applies to IPv4 mode only. */
+/* #define CALL_SCRIPT_ON_ONETRY_FAIL */
