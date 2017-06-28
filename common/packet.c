@@ -49,7 +49,7 @@ u_int32_t checksum (buf, nbytes, sum)
 	unsigned i;
 
 #ifdef DEBUG_CHECKSUM
-	log_debug ("checksum (%x %d %x)", buf, nbytes, sum);
+	log_debug ("checksum (%x %d %x)", (unsigned)buf, nbytes, sum);
 #endif
 
 	/* Checksum all the pairs of bytes first... */
@@ -353,8 +353,8 @@ decode_udp_ip_header(struct interface_info *interface,
 		udp_packets_bad_checksum++;
 		if (((udp_packets_seen > 4) && (udp_packets_bad_checksum != 0))
 		    && ((udp_packets_seen / udp_packets_bad_checksum) < 2)) {
-			log_info ("%u bad udp checksums in %u packets",
-			          udp_packets_bad_checksum, udp_packets_seen);
+			log_debug ("%u bad udp checksums in %u packets",
+			           udp_packets_bad_checksum, udp_packets_seen);
 			udp_packets_seen = udp_packets_bad_checksum = 0;
 		}
 
