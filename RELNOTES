@@ -1,5 +1,5 @@
                 Internet Systems Consortium DHCP Distribution
-                             Version 4.4.0-pre-alpha
+                             Version 4.4.0-dev
                              29 March 2016
 
                              Release Notes
@@ -164,9 +164,10 @@ by Eric Young (eay@cryptsoft.com).
   to Pierre Clerissi for bringing this issue to our attention.
   [ISC-Bugs #44373]
 
-- Client now calls the script with reason set to FAIL when run with -1
-  (one try) and there are no server responses. Thanks for a patch by Martin
-  Pitt which got to us via Andrew Pollock.
+- By defining CALL_SCRIPT_ON_ONETRY_FAIL in includes/site.h, dhclient will
+  now call the script with reason set to FAIL when run with -1 (one try) and
+  there are no server responses.  This applies to IPv4 mode only. Thanks for a
+  patch by Martin Pitt which got to us via Andrew Pollock.
   [ISC-bugs #18183]
 
 - Linux script updated. The script is now based on Debian version. It uses

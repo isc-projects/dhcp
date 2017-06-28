@@ -1479,14 +1479,16 @@ void bind_lease (client)
 		destroy_client_lease(client->new);
 		client->new = NULL;
 		if (onetry) {
-			if (!quiet)
+			if (!quiet) {
 				log_info("Unable to obtain a lease on first "
 					 "try (declined).  Exiting.");
+			}
 
+#if defined (CALL_SCRIPT_ON_ONETRY_FAIL)
 			/* Let's call a script and we're done */
 			script_init(client, "FAIL", (struct string_list *)0);
 			script_go(client);
-
+#endif
 			finish(2);
 		} else {
 			state_init(client);
@@ -2493,14 +2495,16 @@ void state_panic (cpp)
 	   tell the shell script that we failed to allocate an address,
 	   and try again later. */
 	if (onetry) {
-		if (!quiet)
+		if (!quiet) {
 			log_info ("Unable to obtain a lease on first try.%s",
 				  "  Exiting.");
+		}
 
+#if defined (CALL_SCRIPT_ON_ONETRY_FAIL)
 		/* Let's call a script and we're done */
 		script_init(client, "FAIL", (struct string_list *)0);
 		script_go(client);
-
+#endif
 		finish(2);
 	}
 
