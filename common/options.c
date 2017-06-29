@@ -2059,14 +2059,14 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 
 					/* If emit_quotes, then use ISC DHCP
 					 * escapes.  Otherwise, rely only on
-					 * ns_name_ntop().
+					 * MRns_name_ntop().
 					 */
 					if (emit_quotes) {
 						nbp = nbuff;
 						pretty_domain(&op, endbuf-1,
 							      &nbp, nend);
 					} else {
-						/* ns_name_ntop() includes
+						/* MRns_name_ntop() includes
 						 * a trailing NUL in its
 						 * count.
 						 */
@@ -3259,7 +3259,7 @@ int nwip_option_space_encapsulate (result, packet, lease, client_state,
 	return status;
 }
 
-/* We don't want to use ns_name_pton()...it doesn't tell us how many bytes
+/* We don't want to use MRns_name_pton()...it doesn't tell us how many bytes
  * it has consumed, and it plays havoc with our escapes.
  *
  * So this function does DNS encoding, and returns either the number of

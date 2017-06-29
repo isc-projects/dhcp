@@ -211,35 +211,7 @@ typedef enum __ns_update_operation {
 	ns_uop_max = 2
 } ns_update_operation;
 
-/*
- * This structure is used for TSIG authenticated messages
- */
-struct ns_tsig_key {
-        char name[NS_MAXDNAME], alg[NS_MAXDNAME];
-        unsigned char *data;
-        unsigned len;
-};
-typedef struct ns_tsig_key ns_tsig_key;
-
-/*
- * This structure is used for TSIG authenticated TCP messages
- */
-struct ns_tcp_tsig_state {
-	int counter;
-	struct dst_key *key;
-	void *ctx;
-	unsigned char sig[NS_PACKETSZ];
-	unsigned siglen;
-};
-typedef struct ns_tcp_tsig_state ns_tcp_tsig_state;
-
-#define NS_TSIG_FUDGE 300
-#define NS_TSIG_TCP_COUNT 100
 #define NS_TSIG_ALG_HMAC_MD5 "HMAC-MD5.SIG-ALG.REG.INT"
-
-#define NS_TSIG_ERROR_NO_TSIG -10
-#define NS_TSIG_ERROR_NO_SPACE -11
-#define NS_TSIG_ERROR_FORMERR -12
 
 /*
  * Currently defined type values for resources and queries.

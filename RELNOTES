@@ -176,6 +176,11 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-bugs #19430]
   [ISC-bugs #18111]
 
+- The directory minires has been removed from the source tree.  It has
+  long been obsolete for branches other than v4_1_esv.  Additonally,
+  includes/minires.h was renamed includes/ns_name.h.
+  [ISC-bugs #45471]
+
 			Changes since 4.3.0 (bug fixes)
 
 - Tidy up several small tickets.
