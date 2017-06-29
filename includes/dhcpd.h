@@ -69,7 +69,7 @@
 
 #include "arpa/nameser.h"
 
-#include "minires.h"
+#include "ns_name.h"
 
 struct hash_table;
 typedef struct hash_table group_hash_t;
@@ -3129,8 +3129,6 @@ int dns_zone_dereference (struct dns_zone **, const char *, int);
 #if defined (NSUPDATE)
 #define FIND_FORWARD 0
 #define FIND_REVERSE 1
-isc_result_t find_tsig_key (ns_tsig_key **, const char *, struct dns_zone *);
-void tkey_free (ns_tsig_key **);
 isc_result_t find_cached_zone (dhcp_ddns_cb_t *, int);
 void forget_zone (struct dns_zone **);
 void repudiate_zone (struct dns_zone **);

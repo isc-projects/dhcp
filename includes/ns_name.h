@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2014 by Internet Systems Consortium, Inc. ("ISC")
- * Copyright (c) 2004,2007-2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2017 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2001-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -21,8 +20,8 @@
  *   <info@isc.org>
  *   http://www.isc.org/
  */
-#ifndef MINIRES_H
-#define MINIRES_H
+#ifndef NS_NAME_H
+#define NS_NAME_H
 
 #include "cdefs.h"
 #include "osdep.h"
@@ -43,4 +42,4 @@ int MRns_name_pton(const char *, u_char *, size_t);
 int MRns_name_uncompress_list(const unsigned char*, int buflen, char*, size_t);
 int MRns_name_compress_list(const char*, int buflen, unsigned char*, size_t);
 
-#endif /* MINIRES_H */
+#endif /* NS_NAME_H */

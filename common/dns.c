@@ -608,55 +608,6 @@ ddns_cb_forget_zone(dhcp_ddns_cb_t *ddns_cb)
 		ISC_LINK_INIT(&ddns_cb->zone_addrs[i], link);
 	}
 }
-
-isc_result_t find_tsig_key (ns_tsig_key **key, const char *zname,
-			    struct dns_zone *zone)
-{
-	ns_tsig_key *tkey;
-
-	if (!zone)
-		return ISC_R_NOTFOUND;
-
-	if (!zone -> key) {
-		return DHCP_R_KEY_UNKNOWN;
-	}
-	
-	if ((!zone -> key -> name ||
-	     strlen (zone -> key -> name) > NS_MAXDNAME) ||
-	    (!zone -> key -> algorithm ||
-	     strlen (zone -> key -> algorithm) > NS_MAXDNAME) ||
-	    (!zone -> key) ||
-	    (!zone -> key -> key) ||
-	    (zone -> key -> key -> len == 0)) {
-		return DHCP_R_INVALIDKEY;
-	}
-	tkey = dmalloc (sizeof *tkey, MDL);
-	if (!tkey) {
-	      nomem:
-		return ISC_R_NOMEMORY;
-	}
-	memset (tkey, 0, sizeof *tkey);
-	tkey -> data = dmalloc (zone -> key -> key -> len, MDL);
-	if (!tkey -> data) {
-		dfree (tkey, MDL);
-		goto nomem;
-	}
-	strcpy (tkey -> name, zone -> key -> name);
-	strcpy (tkey -> alg, zone -> key -> algorithm);
-	memcpy (tkey -> data,
-		zone -> key -> key -> value, zone -> key -> key -> len);
-	tkey -> len = zone -> key -> key -> len;
-	*key = tkey;
-	return ISC_R_SUCCESS;
-}
-
-void tkey_free (ns_tsig_key **key)
-{
-	if ((*key) -> data)
-		dfree ((*key) -> data, MDL);
-	dfree ((*key), MDL);
-	*key = (ns_tsig_key *)0;
-}
 #endif
 
 isc_result_t remove_dns_zone (struct dns_zone *zone)

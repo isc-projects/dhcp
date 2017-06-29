@@ -30,7 +30,7 @@
 
 #include <omapip/omapip_p.h>
 #include "arpa/nameser.h"
-#include "minires.h"
+#include "ns_name.h"
 
 #include <errno.h>
 

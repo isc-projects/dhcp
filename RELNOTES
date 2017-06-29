@@ -200,6 +200,11 @@ by Eric Young (eay@cryptsoft.com).
   number of false positives when UDP checksum offloading is enabled.
   [ISC-bugs #41757]
 
+- The directory minires has been removed from the source tree.  It has
+  long been obsolete for branches other than v4_1_esv.  Additonally,
+  includes/minires.h was renamed includes/ns_name.h.
+  [ISC-bugs #45471]
+
 			Changes since 4.3.5b1
 
 - Corrected a bug which could cause the server to sporadically crash while

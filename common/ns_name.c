@@ -30,7 +30,7 @@
 #include <string.h>
 #include <ctype.h>
 
-#include "minires.h"
+#include "ns_name.h"
 #include "arpa/nameser.h"
 
 /* Data. */
