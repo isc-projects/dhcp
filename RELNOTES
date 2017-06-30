@@ -205,6 +205,11 @@ by Eric Young (eay@cryptsoft.com).
   includes/minires.h was renamed includes/ns_name.h.
   [ISC-bugs #45471]
 
+- Replaced ifconfig parameters "add" and "delete" with "alias" and "-alias"
+  for IPv6 mode in the client scripts, netbsd and openbsd.  This was
+  preventing IPv6 addresses from being added or removed from interfaces.
+  [ISC-bugs #31573]
+
 			Changes since 4.3.5b1
 
 - Corrected a bug which could cause the server to sporadically crash while
