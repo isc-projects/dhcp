@@ -1124,6 +1124,11 @@ by Eric Young (eay@cryptsoft.com).
   number of false positives when UDP checksum offloading is enabled.
   [ISC-bugs #41757]
 
+- Replaced ifconfig parameters "add" and "delete" with "alias" and "-alias"
+  for IPv6 mode in the client scripts, netbsd and openbsd.  This was
+  preventing IPv6 addresses from being added or removed from interfaces.
+  [ISC-bugs #31573]
+
 			Changes since 4.2.0 (new features)
 
 - If a client renews before 'dhcp-cache-threshold' percent of its lease

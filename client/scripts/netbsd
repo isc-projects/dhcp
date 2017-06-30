@@ -314,7 +314,7 @@ if [ ${reason} = BOUND6 ] ; then
     exit_with_hooks 2;
   fi
 
-  ifconfig ${interface} inet6 add ${new_ip6_address}/${new_ip6_prefixlen}
+  ifconfig ${interface} inet6 alias ${new_ip6_address}/${new_ip6_prefixlen}
 
   # Check for nameserver options.
   make_resolv_conf
@@ -351,7 +351,7 @@ if [ ${reason} = EXPIRE6 -o ${reason} = RELEASE6 -o ${reason} = STOP6 ] ; then
     exit_with_hooks 2;
   fi
 
-  ifconfig ${interface} inet6 delete ${old_ip6_address}/${old_ip6_prefixlen}
+  ifconfig ${interface} inet6 -alias ${old_ip6_address}/${old_ip6_prefixlen}
 
   exit_with_hooks 0
 fi
