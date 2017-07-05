@@ -208,6 +208,7 @@ by Eric Young (eay@cryptsoft.com).
 - Replaced ifconfig parameters "add" and "delete" with "alias" and "-alias"
   for IPv6 mode in the client scripts, netbsd and openbsd.  This was
   preventing IPv6 addresses from being added or removed from interfaces.
+  Thanks to Tim Dean for reporting this issue.
   [ISC-bugs #31573]
 
 			Changes since 4.3.5b1
