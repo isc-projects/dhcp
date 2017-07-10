@@ -52,6 +52,20 @@ ISC DHCP is open source software maintained by Internet Systems
 Consortium.  This product includes cryptographic software written
 by Eric Young (eay@cryptsoft.com).
 
+Our next major version of ISC DHCP, version 4.4.0, will be re-licensed under
+the Mozilla Public License, MPL 2.0.  To read the MPL 2.0 license terms, please
+refer to: https://www.mozilla.org/en-US/MPL/2.0/.
+  
+This change will apply to ISC DHCP version 4.4.0 and any 4.4.x versions.  Older
+versions already published under the ISC license will remain under the ISC
+license.  Those unsure whether or not the license change affects their use of
+ISC DHCP, or who wish to discuss how to comply with the license may contact
+ISC at info@isc.org or use https://www.isc.org/mission/contact/.
+
+We welcome comments from DHCP users, about this or anything else we do.
+Email Vicky Risk, Product Manager at vicky@isc.org or discuss on 
+dhcp-users@lists.isc.org.
+
 			Changes since 4.3.5
 
 - The server now allows the client identifier (option 61) to own leases
