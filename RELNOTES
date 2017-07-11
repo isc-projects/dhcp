@@ -177,7 +177,7 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-bugs #18111]
 
 - The directory minires has been removed from the source tree.  It has
-  long been obsolete for branches other than v4_1_esv.  Additonally,
+  long been obsolete for branches other than v4_1_esv.  Additionally,
   includes/minires.h was renamed includes/ns_name.h.
   [ISC-bugs #45471]
 
@@ -1081,7 +1081,7 @@ by Eric Young (eay@cryptsoft.com).
 
 - DHCP6 FQDN option unpacking code now correctly handles values that contain
   spaces, special, or non-printable characters.  Prior to this the buffer
-  size needed was underestitmate causing a conversion error message to
+  size needed was underestimated causing a conversion error message to
   be logged and DNS updates to be skipped. Thanks to Fernando Soto at
   BlueCat Networks for bringing the matter to our attention.
   [ISC-Bugs #43592]
@@ -1098,7 +1098,7 @@ by Eric Young (eay@cryptsoft.com).
   OS systems when using -1 or large values for default-lease-time.  Rollover
   values will be replaced with 0x7FFFFFFF - 1.  This alleviates unintentionally
   short expiration times being handed out when infinite lease times (-1) in
-  conjuction with failover.  Our thanks to Alessandro Gherardi for bringing
+  conjunction with failover.  Our thanks to Alessandro Gherardi for bringing
   the issue to our attention.
   [ISC-Bugs #41976]
 
