@@ -181,6 +181,11 @@ by Eric Young (eay@cryptsoft.com).
   includes/minires.h was renamed includes/ns_name.h.
   [ISC-bugs #45471]
 
+- The directory includes/isc-dhcp and it's only occupant, dst.h, have
+  been removed from the source tree.  They are obsolete for branches
+  other than v4_1_esv.
+  [ISC-bugs #45541]
+
 			Changes since 4.3.0 (bug fixes)
 
 - Tidy up several small tickets.
