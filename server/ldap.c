@@ -3,7 +3,7 @@
    Routines for reading the configuration from LDAP */
 
 /*
- * Copyright (c) 2010,2015-2016 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2010-2017 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2003-2006 Ntelos, Inc.
  * All rights reserved.
  *

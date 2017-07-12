@@ -3,7 +3,7 @@
    Helper routings for allowing LDAP to read configuration with GSSAPI/krb auth */
 
 /*
- * Copyright (c) 2015 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2015-2017 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2014 William B.
  * All rights reserved.
  *

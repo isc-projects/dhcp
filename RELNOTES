@@ -1,41 +1,14 @@
                 Internet Systems Consortium DHCP Distribution
-                             Version 4.4.0-dev
+                            Version 4.4.0-dev
                              29 March 2016
 
                              Release Notes
 
                               NEW FEATURES
 
-The major "theme" for ISC DHCP 4.3.x was to update the support for
-DHCPv6 to include several of the features that have been available
-for DHCPv4.  These include:
+The major "theme" for ISC DHCP 4.4.x ....
 
-- Support the use of classes
-
-- Support for on_commit, on_expiry and on_release statements
-
-- Better logging of address assignments
-
-- Support for using DHCPv6 relay options in expressions
-
-This release also adds support for the standard DDNS as described in the
-current RFCs as well as enhancing support for dynamically adding and removing
-subclasses via OMAPI.
-
-There are a number of DHCPv6 limitations and features missing in this
-release, which will be addressed in the future:
-
-- Only Solaris, Linux, FreeBSD, NetBSD, and OpenBSD are supported.
-
-- DHCPv6 includes human-readable text in status code messages, in
-  English.  A method to reconfigure or support other languages would
-  be preferable.
-
-- The "host-identifier" option is limited to a simple token.
-
-- The client and server can only operate DHCPv4 or DHCPv6 at a time,
-  not both.  To use both protocols simultaneously, two instances of the
-  relevant daemon are required, one with the '-6' command line option.
+    <TBD PRIOR TO RELEASE OF 4.4.0>
 
 For information on how to install, configure and run this software, as
 well as how to find documentation and report bugs, please consult the
@@ -51,6 +24,19 @@ work on other platforms. Please report any problems and suggested fixes to
 ISC DHCP is open source software maintained by Internet Systems
 Consortium.  This product includes cryptographic software written
 by Eric Young (eay@cryptsoft.com).
+
+Please note that as of version 4.4.0, ISC DHCP is licensed under the Mozilla
+Public License, MPL 2.0. Please see https://www.mozilla.org/en-US/MPL/2.0/
+to read the MPL 2.0 license terms.
+
+Older versions already published under the ISC license will remain under the
+ISC license.  Those unsure whether or not the license change affects their use
+of ISC DHCP, or who wish to discuss how to comply with the license may contact
+ISC at info@isc.org or use https://www.isc.org/mission/contact/.
+
+We welcome comments from DHCP users, about this or anything else we do.  Email
+Vicky Risk, Product Manager at vicky@isc.org or discuss on
+dhcp-users@lists.isc.org.
 
 			Changes since 4.3.0 (new features)
 
@@ -185,6 +171,11 @@ by Eric Young (eay@cryptsoft.com).
   been removed from the source tree.  They are obsolete for branches
   other than v4_1_esv.
   [ISC-bugs #45541]
+
+- Replaced ISC licensing with Mozilla Public License, MPL 2.0 licensing
+  throughout.  Please see https://www.mozilla.org/en-US/MPL/2.0/ to read
+  the MPL 2.0 license terms.
+  [ISC-Bugs #45541]
 
 			Changes since 4.3.0 (bug fixes)
 
