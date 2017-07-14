@@ -97,7 +97,7 @@ dhcp-users@lists.isc.org.
 - The linux interface discovery code has been modified to use getifaddrs() 
   as is done for BSD and OS-X.  Prior to this the code would only recognize
   the first address on an interface and thereby omit vlans.
-  Thanks to Jiri Popelka at Redhat, Marius Tomaschewski at Suse, and Wei
+  Thanks to Jiri Popelka at Redhat, Marius Tomaschewski at SUSE, and Wei
   Kong at Novell, who all submitted patches.
   [ISC-Bugs #28761]
   [ISC-Bugs #31992]
