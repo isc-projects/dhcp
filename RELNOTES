@@ -1,6 +1,6 @@
                 Internet Systems Consortium DHCP Distribution
-                           Version 4.3.6b1
-                             14 July 2017
+                            Version 4.3.6
+                             31 July 2017
 
                              Release Notes
 
@@ -65,6 +65,10 @@ ISC at info@isc.org or use https://www.isc.org/mission/contact/.
 We welcome comments from DHCP users, about this or anything else we do.
 Email Vicky Risk, Product Manager at vicky@isc.org or discuss on 
 dhcp-users@lists.isc.org.
+
+			Changes since 4.3.6b1
+
+- None
 
 			Changes since 4.3.5
 
