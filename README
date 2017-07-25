@@ -1,6 +1,6 @@
               Internet Systems Consortium DHCP Distribution
-                        Version 4.1-ESV-R15b1
-                            14 July 2017
+                          Version 4.1-ESV-R15
+                            31 July 2017
 
                              README FILE
 
@@ -98,7 +98,7 @@ directory, it may not have up-to-date information).
 
 			    RELEASE STATUS
 
-This is ISC DHCP 4.1-ESV-R15b1, an extended support (ESV) release that
+This is ISC DHCP 4.1-ESV-R15, an extended support (ESV) release that
 provides patches for several bugs.
 
 ESVs are intended for users who have longer upgrade constraints 
@@ -139,12 +139,12 @@ information.   On Digital Unix, type ``man pfilt''.
 To build the DHCP Distribution, unpack the compressed tar file using
 the tar utility and the gzip command - type something like:
 
-	gunzip dhcp-4.1-ESV-R15b1.tar.gz
-	tar xvf dhcp-4.1-ESV-R15b1.tar
+	gunzip dhcp-4.1-ESV-R15.tar.gz
+	tar xvf dhcp-4.1-ESV-R15.tar
 
 			    CONFIGURING IT
 
-Now, cd to the dhcp-4.1-ESV-R15b1 subdirectory that you've just created and
+Now, cd to the dhcp-4.1-ESV-R15 subdirectory that you've just created and
 configure the source tree by typing:
 
 	./configure
