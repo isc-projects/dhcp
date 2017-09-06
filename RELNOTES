@@ -1134,7 +1134,8 @@ dhcp-users@lists.isc.org.
   hint that does not match the prior lease.  Now the server will only
   return the previous lease if it exactly matches the hint.  If not
   it will attempt to allocate a new prefix based on the hint and the
-  prefix-length-mode.
+  prefix-length-mode.  Thanks to Tim DeNike - Lightspeed Communications
+  for pointing out the error of our ways.
   [ISC-bugs #45780]
 
 			Changes since 4.2.0 (new features)
