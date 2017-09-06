@@ -4664,6 +4664,19 @@ find_client_prefix(struct reply_state *reply) {
 			best_prefix = prefix_compare(reply, prefix,
 						     best_prefix);
 		}
+
+		/*
+		 * If we have prefix length hint and we're not igoring them,
+		 * then toss the best match if it doesn't match the hint,
+		 * unless this is in response to a rebind.  In the latter
+		 * case we're supposed to return it with zero lifetimes.
+		 * (See rt45780) */
+		if (best_prefix && (reply->preflen > 0)
+		    && (prefix_length_mode != PLM_IGNORE)
+		    && (reply->preflen != best_prefix->plen)
+		    && (reply->packet->dhcpv6_msg_type != DHCPV6_REBIND)) {
+			best_prefix = NULL;
+		}
 	}
 
 	/* Try to pick a new prefix if we didn't find one, or if we found an
