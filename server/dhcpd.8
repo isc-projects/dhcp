@@ -473,7 +473,8 @@ look something like this:
 .sp 1
 	subnet 239.252.197.0 netmask 255.255.255.0 {
 	  range 239.252.197.10 239.252.197.250;
-	  default-lease-time 600 max-lease-time 7200;
+	  default-lease-time 600;
+	  max-lease-time 7200;
 	  option subnet-mask 255.255.255.0;
 	  option broadcast-address 239.252.197.255;
 	  option routers 239.252.197.1;
