@@ -1138,6 +1138,11 @@ dhcp-users@lists.isc.org.
   for pointing out the error of our ways.
   [ISC-bugs #45780]
 
+- Added explicit include of BIND9 isc/util.h to adapt to revisisions
+  in BIND9 (see BIND9 ticket #46311).  Prior to this the build was failing
+  with implicit function declarations errors for POST() and INSIST().
+  [ISC-bugs #46332]
+
 			Changes since 4.2.0 (new features)
 
 - If a client renews before 'dhcp-cache-threshold' percent of its lease

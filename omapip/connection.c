@@ -27,7 +27,7 @@
  */
 
 #include "dhcpd.h"
-
+#include <isc/util.h>
 #include <omapip/omapip_p.h>
 #include <arpa/inet.h>
 #include <arpa/nameser.h>

@@ -35,6 +35,7 @@
  */
 
 #include "dhcpd.h"
+#include <isc/util.h>
 #include <errno.h>
 #include <sys/ioctl.h>
 #include <sys/uio.h>

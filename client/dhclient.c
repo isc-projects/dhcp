@@ -31,14 +31,15 @@
  */
 
 #include "dhcpd.h"
+#include <isc/util.h>
+#include <isc/file.h>
+#include <dns/result.h>
 #include <syslog.h>
 #include <signal.h>
 #include <errno.h>
 #include <sys/time.h>
 #include <sys/wait.h>
 #include <limits.h>
-#include <isc/file.h>
-#include <dns/result.h>
 
 TIME default_lease_time = 43200; /* 12 hours... */
 TIME max_lease_time = 86400; /* 24 hours... */

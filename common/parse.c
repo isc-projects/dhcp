@@ -27,6 +27,7 @@
  */
 
 #include "dhcpd.h"
+#include <isc/util.h>
 #include <syslog.h>
 
 struct collection default_collection = { NULL, "default", NULL };
