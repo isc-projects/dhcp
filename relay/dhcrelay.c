@@ -142,7 +142,7 @@ static int strip_relay_agent_options(struct interface_info *,
 static void request_v4_interface(const char* name, int flags);
 
 static const char copyright[] =
-"Copyright 2004-2016 Internet Systems Consortium.";
+"Copyright 2004-2017 Internet Systems Consortium.";
 static const char arr[] = "All rights reserved.";
 static const char message[] =
 "Internet Systems Consortium DHCP Relay Agent";
@@ -207,6 +207,10 @@ static const char use_v6command[] = "Command not used for DHCPv4: %s";
 
 static void
 usage(const char *sfmt, const char *sarg) {
+	log_info("%s %s", message, PACKAGE_VERSION);
+	log_info(copyright);
+	log_info(arr);
+	log_info(url);
 
 	/* If desired print out the specific error message */
 #ifdef PRINT_SPECIFIC_CL_ERRORS

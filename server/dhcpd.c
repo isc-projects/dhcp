@@ -27,7 +27,7 @@
  */
 
 static const char copyright[] =
-"Copyright 2004-2016 Internet Systems Consortium.";
+"Copyright 2004-2017 Internet Systems Consortium.";
 static const char arr [] = "All rights reserved.";
 static const char message [] = "Internet Systems Consortium DHCP Server";
 static const char url [] =
@@ -198,6 +198,7 @@ usage(const char *sfmt, const char *sarg) {
 	log_info("%s %s", message, PACKAGE_VERSION);
 	log_info(copyright);
 	log_info(arr);
+	log_info(url);
 
 	/* If desired print out the specific error message */
 #ifdef PRINT_SPECIFIC_CL_ERRORS
