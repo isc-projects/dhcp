@@ -812,6 +812,11 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		parse_lease_id_format(cfile);
 		break;
 
+	      case PERCENT:
+		/* Used by the MA so simply ignore... */
+		skip_to_semi (cfile);
+		break;
+
 	      default:
 		et = (struct executable_statement *)0;
 		lose = 0;
