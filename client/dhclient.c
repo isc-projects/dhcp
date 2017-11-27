@@ -68,6 +68,8 @@ int duid_type = 0;
 int duid_v4 = 0;
 int std_dhcid = 0;
 
+int decline_wait_time = 10; /* Default to 10 secs per, RFC 2131, 3.1.5 */
+
 /* ASSERT_STATE() does nothing now; it used to be
    assert (state_is == state_shouldbe). */
 #define ASSERT_STATE(state_is, state_shouldbe) {}
@@ -159,17 +161,19 @@ static const char use_v6command[] = "Command not used for DHCPv4: %s";
 #ifdef DHCPv6
 #ifdef DHCP4o6
 #define DHCLIENT_USAGE0 \
-"[-4|-6] [-SNTPRI1dvrxi] [-nw] -4o6 <port>] [-p <port>]\n" \
-"                [-D LL|LLT] [--dad-wait-time seconds]\n" \
-"                [--prefix-len-hint length]\n"
+"[-4|-6] [-SNTPRI1dvrxi] [-nw] -4o6 <port>] [-p <port>] [-D LL|LLT]\n" \
+"                [--dad-wait-time <seconds>] [--prefix-len-hint <length>]\n" \
+"                [--decline-wait-time <seconds>]\n"
 #else /* DHCP4o6 */
 #define DHCLIENT_USAGE0 \
 "[-4|-6] [-SNTPRI1dvrxi] [-nw] [-p <port>] [-D LL|LLT]\n" \
-"                [--dad-wait-time seconds] [--prefix-len-hint length]\n"
+"                [--dad-wait-time <seconds>] [--prefix-len-hint <length>]\n" \
+"                [--decline-wait-time <seconds>]\n"
 #endif
 #else /* DHCPv6 */
 #define DHCLIENT_USAGE0 \
-"[-I1dvrxi] [-nw] [-p <port>] [-D LL|LLT] \n"
+"[-I1dvrxi] [-nw] [-p <port>] [-D LL|LLT] \n" \
+"                [--decline-wait-time <seconds>]\n"
 #endif
 
 #define DHCLIENT_USAGEC \
@@ -507,6 +511,18 @@ main(int argc, char **argv) {
 				      argv[i]);
 			}
 #endif /* DHCPv6 */
+		} else if (!strcmp(argv[i], "--decline-wait-time")) {
+			if (++i == argc) {
+				usage(use_noarg, argv[i-1]);
+			}
+
+			errno = 0;
+			decline_wait_time = (int)strtol(argv[i], &s, 10);
+			if (errno || (*s != '\0') ||
+			    (decline_wait_time < 0)) {
+				usage("Invalid value for "
+				      "--decline-wait-time: %s", argv[i]);
+			}
 		} else if (!strcmp(argv[i], "-D")) {
 			duid_v4 = 1;
 			if (++i == argc)
@@ -1511,7 +1527,10 @@ void bind_lease (client)
 #endif
 			finish(2);
 		} else {
-			state_init(client);
+			struct timeval tv;
+			tv.tv_sec = cur_tv.tv_sec + decline_wait_time;
+			tv.tv_usec = cur_tv.tv_usec;
+			add_timeout(&tv, state_init, client, 0, 0);
 			return;
 		}
 	}
@@ -3985,8 +4004,10 @@ void script_init(struct client_state *client, const char *reason,
 
 		client_envadd (client, "", "reason", "%s", reason);
 		client_envadd (client, "", "pid", "%ld", (long int)getpid ());
+#if defined(DHCPv6)
 		client_envadd (client, "", "dad_wait_time", "%ld",
 					   (long int)dad_wait_time);
+#endif
 	}
 }
 

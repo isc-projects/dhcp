@@ -142,6 +142,10 @@ dhclient - Dynamic Host Configuration Protocol Client
 .I length
 ]
 [
+.B --decline-wait-time
+.I seconds
+]
+[
 .B -v
 ]
 [
@@ -365,6 +369,13 @@ client id in this fashion is discouraged.
 .BI \-I
 Use the standard DDNS scheme from RFCs 4701 & 4702.
 .TP
+.TP
+.BI \--decline-wait-time \ seconds
+Specify the time (in seconds) that an IPv4 client should wait after
+declining an address before issuing a discover.  The default is
+10 seconds as recommended by RFC 2131, Section 3.1.5.  A value of
+zero equates to no wait at all.
+.PP
 .BI \--version
 Print version number and exit.
 .PP

@@ -186,7 +186,17 @@ dhcp-users@lists.isc.org.
 - Added a new dhclient command line parameter, --prefix-len-hint <length>.
   When used in conjunction with -P, it directs dhclient to use the given
   length as the prefix length hint when requesting prefixes.
-  [ISC-Bugs #43792]
+ [ISC-Bugs #43792]
+ [ISC-Bugs #35112]
+ [ISC-Bugs #32228]
+ [ISC-Bugs #29470]
+
+- dhclient will now wait for 10 seconds after declining an IPv4 address
+  before issuing a discover.  This is in keeping with RFC 2131, section 3.1.5.
+  Prior to this dhclient did not wait at all. The amount of time dhclient
+  waits can be specified via a new command line parameter:
+  --decline-wait-time <seconds>.  A value of zero equates to no wait at all.
+  [ISC-Bugs #45457]
 
 			Changes since 4.3.0 (bug fixes)
 
