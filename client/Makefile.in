@@ -104,8 +104,8 @@ CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(sbindir)" "$(DESTDIR)$(man5dir)" \
 	"$(DESTDIR)$(man8dir)" "$(DESTDIR)$(sysconfdir)"
 PROGRAMS = $(sbin_PROGRAMS)
-am_dhclient_OBJECTS = clparse.$(OBJEXT) dhclient.$(OBJEXT) \
-	dhc6.$(OBJEXT)
+am_dhclient_OBJECTS = client_tables.$(OBJEXT) clparse.$(OBJEXT) \
+	dhclient.$(OBJEXT) dhc6.$(OBJEXT)
 dhclient_OBJECTS = $(am_dhclient_OBJECTS)
 dhclient_DEPENDENCIES = ../common/libdhcp.@A@ ../omapip/libomapi.@A@
 AM_V_P = $(am__v_P_@AM_V@)
@@ -369,7 +369,7 @@ SUBDIRS = . tests
 AM_CPPFLAGS = -DCLIENT_PATH='"PATH=$(sbindir):/sbin:/bin:/usr/sbin:/usr/bin"' \
 	-DLOCALSTATEDIR='"$(localstatedir)"'
 dist_sysconf_DATA = dhclient.conf.example
-dhclient_SOURCES = clparse.c dhclient.c dhc6.c \
+dhclient_SOURCES = client_tables.c clparse.c dhclient.c dhc6.c \
 		   scripts/bsdos scripts/freebsd scripts/linux scripts/macos \
 		   scripts/netbsd scripts/nextstep scripts/openbsd \
 		   scripts/solaris scripts/openwrt
@@ -468,6 +468,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/client_tables.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/clparse.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dhc6.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dhclient.Po@am__quote@

@@ -197,6 +197,8 @@ usage(const char *sfmt, const char *sarg)
 		  DHCLIENT_USAGEH);
 }
 
+extern void initialize_client_option_spaces();
+
 int
 main(int argc, char **argv) {
 	int fd;
@@ -229,7 +231,6 @@ main(int argc, char **argv) {
 #else
 	progname = argv[0];
 #endif
-
 	/* Initialize client globals. */
 	memset(&default_duid, 0, sizeof(default_duid));
 
@@ -572,6 +573,9 @@ main(int argc, char **argv) {
 
 	/* Set up the initial dhcp option universe. */
 	initialize_common_option_spaces();
+
+	/* Set up the initial client option universe. */
+	initialize_client_option_spaces();
 
 	/* Assign v4 or v6 specific running parameters. */
 	if (local_family == AF_INET)
