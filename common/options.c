@@ -202,6 +202,16 @@ int parse_option_buffer (options, buffer, length, universe)
 							     universe, NULL);
 		}
 
+		if (universe == &dhcp_universe && code == DHO_HOST_NAME &&
+		    len == 0) {
+			/* non-compliant clients can send it
+			 * we'll just drop it and go on */
+			log_debug ("Ignoring empty DHO_HOST_NAME option");
+			option_dereference(&option, MDL);
+			offset += len;
+			continue;
+		}
+
 		op = lookup_option(universe, options, code);
 		if (op == NULL) {
 			/* If we don't have an option create one */
