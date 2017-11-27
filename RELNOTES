@@ -198,6 +198,10 @@ dhcp-users@lists.isc.org.
   --decline-wait-time <seconds>.  A value of zero equates to no wait at all.
   [ISC-Bugs #45457]
 
+- Corrected dhclient command line parsing for --dad-wait-time that causes
+  even valid values to fail as invalid on some environments.
+  [ISC-Bugs #46535]
+
 			Changes since 4.3.0 (bug fixes)
 
 - Tidy up several small tickets.

@@ -495,9 +495,12 @@ main(int argc, char **argv) {
 			if (++i == argc) {
 				usage(use_noarg, argv[i-1]);
 			}
+
+			errno = 0;
 			dad_wait_time = (int)strtol(argv[i], &s, 10);
 			if (errno || (*s != '\0') || (dad_wait_time < 0)) {
-				usage("Invalid value for --dad-wait-time: %s", argv[i]);
+				usage("Invalid value for --dad-wait-time: %s",
+				      argv[i]);
 			}
 		} else if (!strcmp(argv[i], "--prefix-len-hint")) {
 			if (++i == argc) {
