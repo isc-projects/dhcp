@@ -98,7 +98,11 @@ int wanted_ia_pd = 0;
 int require_all_ias = 0;	/* If the user requires all of the IAs to
 				   be available before accepting a lease
 				   0 = no, 1 = requries */
+#if defined(DHCPv6)
 int dad_wait_time = 0;
+int prefix_len_hint = 0;
+#endif
+
 char *mockup_relay = NULL;
 
 char *progname = NULL;
@@ -156,11 +160,12 @@ static const char use_v6command[] = "Command not used for DHCPv4: %s";
 #ifdef DHCP4o6
 #define DHCLIENT_USAGE0 \
 "[-4|-6] [-SNTPRI1dvrxi] [-nw] -4o6 <port>] [-p <port>]\n" \
-"                [-D LL|LLT] [--dad-wait-time seconds]\n"
+"                [-D LL|LLT] [--dad-wait-time seconds]\n" \
+"                [--prefix-len-hint length]\n"
 #else /* DHCP4o6 */
 #define DHCLIENT_USAGE0 \
 "[-4|-6] [-SNTPRI1dvrxi] [-nw] [-p <port>] [-D LL|LLT]\n" \
-"                [--dad-wait-time seconds]\n"
+"                [--dad-wait-time seconds] [--prefix-len-hint length]\n"
 #endif
 #else /* DHCPv6 */
 #define DHCLIENT_USAGE0 \
@@ -490,7 +495,17 @@ main(int argc, char **argv) {
 			if (errno || (*s != '\0') || (dad_wait_time < 0)) {
 				usage("Invalid value for --dad-wait-time: %s", argv[i]);
 			}
+		} else if (!strcmp(argv[i], "--prefix-len-hint")) {
+			if (++i == argc) {
+				usage(use_noarg, argv[i-1]);
+			}
 
+			errno = 0;
+			prefix_len_hint = (int)strtol(argv[i], &s, 10);
+			if (errno || (*s != '\0') || (prefix_len_hint < 0)) {
+				usage("Invalid value for --prefix-len-hint: %s",
+				      argv[i]);
+			}
 #endif /* DHCPv6 */
 		} else if (!strcmp(argv[i], "-D")) {
 			duid_v4 = 1;

@@ -146,6 +146,8 @@ static int dhc6_score_lease(struct client_state *client,
 
 extern int onetry;
 extern int stateless;
+extern int prefix_len_hint;
+
 
 /*
  * Assign DHCPv6 port numbers as a client.
@@ -1708,7 +1710,7 @@ dhc6_create_iaid(struct client_state *client,
 	int start_idx, copy_len;
 
 	memset(ia, 0, sizeof(*ia));
-	if (!buffer_allocate(&ia->buffer, 12, MDL)) {
+	if (!buffer_allocate(&ia->buffer, len, MDL)) {
 		return (ISC_R_NOMEMORY);
 	}
 	ia->data = ia->buffer->data;
@@ -1771,18 +1773,22 @@ dhc6_bare_ia_xx(struct client_state *client,
 	      case D6O_IA_NA:
 		type_string = "IA_NA";
 		type_option = ia_na_option;
-		len = 12;
+		len = IA_NA_OFFSET;
 		break;
 	      case D6O_IA_TA:
 		type_string = "IA_TA";
 		type_option = ia_ta_option;
-		len = 4;
+		len = IA_TA_OFFSET;
 		break;
 	      case D6O_IA_PD:
 		type_string = "IA_PD";
 		type_option = ia_pd_option;
-		len = 12;
+		len = IA_PD_OFFSET;
+		if (prefix_len_hint > 0) {
+			len += IASUBOPT_PD_LEN;
+		}
 		break;
+
 	      default:
 		return (ISC_R_FAILURE);
 	}
@@ -1811,7 +1817,7 @@ dhc6_bare_ia_xx(struct client_state *client,
 		/* If we are requesting an NA or a PD we also want to add
 		 * the renew and rebind times we are requesting.
 		 */
-		if (len == 12) {
+		if (ia_type != D6O_IA_TA) {
 			t1 = client->config->requested_lease / 2;
 			t2 = t1 + (t1 / 2);
 			putULong(ia.buffer->data + 4, t1);
@@ -1821,6 +1827,18 @@ dhc6_bare_ia_xx(struct client_state *client,
 				  (unsigned)t1);
 			log_debug("XMT:  | X-- Request rebind in +%u",
 				  (unsigned)t2);
+		}
+
+		if (ia_type == D6O_IA_PD && prefix_len_hint > 0) {
+			unsigned char *ptr = ia.buffer->data + IA_NA_OFFSET;
+			putUShort(ptr, D6O_IAPREFIX);
+			ptr += 2;
+			putUShort(ptr, IASUBOPT_PD_LEN);
+			ptr += 2;
+			putUChar(ptr + IASUBOPT_PD_PREFLEN_OFFSET,
+				 prefix_len_hint);
+			log_debug("XMT:  | | X-- Request prefix ::/%u.",
+				  prefix_len_hint);
 		}
 
 		/* and append it to the packet */
@@ -2128,6 +2146,25 @@ do_init6(void *input)
 
 				data_string_forget(&addr, MDL);
 			}
+		} else if (prefix_len_hint > 0) {
+			memset(&addr, 0, sizeof(addr));
+			if (!buffer_allocate(&addr.buffer, 25, MDL)) {
+				log_error("Unable to allocate memory "
+					  "for IAPREFIX.");
+				data_string_forget(&ia, MDL);
+				data_string_forget(&ds, MDL);
+				return;
+			}
+
+			addr.data = addr.buffer->data;
+			addr.len = 25;
+
+			putUChar(addr.buffer->data + 8, prefix_len_hint);
+			log_debug("XMT:  | | X-- Request prefix ::/%u.",
+				  prefix_len_hint);
+			append_option(&ia, &dhcpv6_universe, iaprefix_option,
+				      &addr);
+			data_string_forget(&addr, MDL);
 		}
 
 		append_option(&ds, &dhcpv6_universe, ia_pd_option, &ia);

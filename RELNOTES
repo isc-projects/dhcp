@@ -183,6 +183,11 @@ dhcp-users@lists.isc.org.
   they are received.
   [ISC-Bugs #39669]
 
+- Added a new dhclient command line parameter, --prefix-len-hint <length>.
+  When used in conjunction with -P, it directs dhclient to use the given
+  length as the prefix length hint when requesting prefixes.
+  [ISC-Bugs #43792]
+
 			Changes since 4.3.0 (bug fixes)
 
 - Tidy up several small tickets.

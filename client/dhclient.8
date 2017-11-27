@@ -138,6 +138,10 @@ dhclient - Dynamic Host Configuration Protocol Client
 .I seconds
 ]
 [
+.B --prefix-len-hint
+.I length
+]
+[
 .B -v
 ]
 [
@@ -168,7 +172,7 @@ so on.
 There are two versions of the DHCP protocol DHCPv4 and DHCPv6.  At
 startup the client may be started for one or the other via the
 .B -4
-or 
+or
 .B -6
 options.
 .PP
@@ -301,15 +305,15 @@ combination with the
 flag.
 .TP
 .BI \-e \ VAR=value
-Define additional environment variables for the environment where 
+Define additional environment variables for the environment where
 .B dhclient-script
-executes.  You may specify multiple 
+executes.  You may specify multiple
 .B \-e
 options on the command line.
 .TP
 .BI \-r
 Release the current lease and stop the running DHCP client as previously
-recorded in the PID file.  When shutdown via this method 
+recorded in the PID file.  When shutdown via this method
 .B dhclient-script
 will be executed with the specific reason for calling the script set.
 The client normally doesn't release the current lease as this is not
@@ -321,7 +325,7 @@ to notify the server if they wish to release an assigned IP address.
 .BI \-x
 Stop the running DHCP client without releasing the current lease.
 Kills existing \fBdhclient\fR process as previously recorded in the
-PID file.  When shutdown via this method 
+PID file.  When shutdown via this method
 .B dhclient-script
 will be executed with the specific reason for calling the script set.
 .TP
@@ -336,7 +340,7 @@ one less than the specified port.
 .TP
 .BI \-s \ server-addr
 Specify the server IP address or fully qualified domain name to use as
-a destination for DHCP protocol messages before 
+a destination for DHCP protocol messages before
 .B dhclient
 has acquired an IP address.  Normally,
 .B dhclient
@@ -359,7 +363,7 @@ setting a client id in the configuration file.  Overridding the
 client id in this fashion is discouraged.
 .TP
 .BI \-I
-Use the standard DDNS scheme from RFCs 4701 & 4702.  
+Use the standard DDNS scheme from RFCs 4701 & 4702.
 .TP
 .BI \--version
 Print version number and exit.
@@ -422,6 +426,11 @@ variable. If any of the IPv6 addresses on the interface are tentative
 (DAD is in progress), the script will wait for the specified number of
 seconds for DAD to complete. If the script ignores this variable the
 parameter has no effect.
+.PP
+.TP
+.BI \--prefix-len-hint \ length
+When used in conjunction with -P, it directs the client to use the given
+length to use a prefix hint of, "::/length", when requesting new prefixes.
 .PP
 .I Modifying default file locations:
 The following options can be used to modify the locations a client uses
@@ -504,7 +513,7 @@ The DHCP client provides some ability to control it while it is
 running, without stopping it.  This capability is provided using OMAPI,
 an API for manipulating remote objects.  OMAPI clients connect to the
 client using TCP/IP, authenticate, and can then examine the client's
-current status and make changes to it. 
+current status and make changes to it.
 .PP
 Rather than implementing the underlying OMAPI protocol directly, user
 programs should use the dhcpctl API or OMAPI itself.  Dhcpctl is a

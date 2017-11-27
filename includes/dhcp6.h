@@ -280,3 +280,15 @@ struct dhcpv4_over_dhcpv6_packet {
 #define EUI_64_ID_LEN 12  /* 2 for duid-type, 2 for hardware type, 8 for ID */
 #define IAID_LEN 4
 
+/* Offsets with iasubopt wire data of data values for IA_NA and TA */
+#define IASUBOPT_NA_ADDR_OFFSET         0
+#define IASUBOPT_NA_PREF_OFFSET         16
+#define IASUBOPT_NA_VALID_OFFSET        20
+#define IASUBOPT_NA_LEN                 24
+
+/* Offsets with iasubopt wire data of data values for PD */
+#define IASUBOPT_PD_PREF_OFFSET         0
+#define IASUBOPT_PD_VALID_OFFSET        4
+#define IASUBOPT_PD_PREFLEN_OFFSET      8
+#define IASUBOPT_PD_PREFIX_OFFSET       9
+#define IASUBOPT_PD_LEN                 25
