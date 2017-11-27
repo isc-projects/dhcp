@@ -76,11 +76,19 @@ void dhcp_failover_sanity_check() {
 				   state->name);
 			fail_count++;
 		}
+
+		if (state->load_balance_max_secs == 0) {
+			log_info ("WARNING: load balancing will be disabled "
+                                  "for failover peer, %s, "
+				  "because its load balance max secs is 0",
+				  state->name);
+		}
 	}
 
 	if (fail_count) {
 		log_fatal ("Failover configuration sanity check failed");
 	}
+
 }
 
 void dhcp_failover_startup ()
@@ -5968,7 +5976,8 @@ int load_balance_mine (struct packet *packet, dhcp_failover_state_t *state)
 	}
 #endif
 
-	if (state->load_balance_max_secs < ec) {
+	if ((state->load_balance_max_secs == 0) ||
+	    (state->load_balance_max_secs < ec)) {
 		return (1);
 	}
 

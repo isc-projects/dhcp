@@ -749,6 +749,10 @@ failover peers gets into a state where it is responding to failover
 messages but not responding to some client requests, the other
 failover peer will take over its client load automatically as the
 clients retry.
+.PP
+It is possible to disable load balancing between peers by setting this
+value to 0 on both peers.  Bear in mind that this means both peers will
+respond to all DHCPDISCOVERs or DHCPREQUESTs.
 .RE
 .PP
 The

@@ -177,6 +177,12 @@ dhcp-users@lists.isc.org.
   the MPL 2.0 license terms.
   [ISC-Bugs #45541]
 
+- Load balancing for failover peers can now be disabled by setting
+  "load balance max secs" to 0. Doing so for both peers means both
+  servers will respond to all DHCPDISCOVERs or DHCPREQUESTs as soon as
+  they are received.
+  [ISC-Bugs #39669]
+
 			Changes since 4.3.0 (bug fixes)
 
 - Tidy up several small tickets.
