@@ -772,7 +772,6 @@ enable_paranoia
 enable_early_chroot
 enable_ipv4_pktinfo
 enable_use_sockets
-enable_secs_byteorder
 enable_log_pid
 enable_binary_leases
 with_atf
@@ -1453,8 +1452,6 @@ Optional Features:
   --enable-ipv4-pktinfo   enable use of pktinfo on IPv4 sockets (default is
                           no)
   --enable-use-sockets    use the standard BSD socket API (default is no)
-  --enable-secs-byteorder Correct bad byteorders in the secs field (default is
-                          no).
   --enable-log-pid        Include PIDs in syslog messages (default is no).
   --enable-binary-leases  enable support for binary insertion of leases
                           (default is no)
@@ -5542,20 +5539,6 @@ fi
 if test "$enable_use_sockets" = "yes"; then
 
 $as_echo "#define USE_SOCKETS 1" >>confdefs.h
-
-fi
-
-# Try to hnadle incorrect byte order for secs field
-# This is off by default
-# Check whether --enable-secs_byteorder was given.
-if test "${enable_secs_byteorder+set}" = set; then :
-  enableval=$enable_secs_byteorder;
-fi
-
-
-if test "$enable_secs_byteorder" = "yes" ; then
-
-$as_echo "#define SECS_BYTEORDER 1" >>confdefs.h
 
 fi
 
