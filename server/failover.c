@@ -50,6 +50,7 @@ static inline int secondary_not_hoarding(dhcp_failover_state_t *state,
 					 struct pool *p);
 static void scrub_lease(struct lease* lease, const char *file, int line);
 
+int check_secs_byte_order = 0; /* enables byte order check of secs field if 1 */
 
 /*!
  * \brief Performs a "pre-flight" sanity check of failover configuration
@@ -5964,17 +5965,16 @@ int load_balance_mine (struct packet *packet, dhcp_failover_state_t *state)
 
 	ec = ntohs(packet->raw->secs);
 
-#if defined(SECS_BYTEORDER)
 	/*
 	 * If desired check to see if the secs field may have been byte
 	 * swapped.  We assume it has if the high order byte isn't cleared
 	 * while the low order byte is cleared.  In this case we swap the
 	 * bytes and continue processing.
 	 */
-	if ((ec > 255) && ((ec & 0xff) == 0)) {
+	if ((check_secs_byte_order == 1) &&
+	    ((ec > 255) && ((ec & 0xff) == 0))) {
 		ec = (ec >> 8) | (ec << 8);
 	}
-#endif
 
 	if ((state->load_balance_max_secs == 0) ||
 	    (state->load_balance_max_secs < ec)) {

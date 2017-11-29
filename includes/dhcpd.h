@@ -802,6 +802,9 @@ struct lease_state {
 #ifdef EUI_64
 #define SV_USE_EUI_64			90
 #endif
+#if defined (FAILOVER_PROTOCOL)
+#define SV_CHECK_SECS_BYTE_ORDER	91
+#endif
 
 #if !defined (DEFAULT_PING_TIMEOUT)
 # define DEFAULT_PING_TIMEOUT 1

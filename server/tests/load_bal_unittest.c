@@ -134,11 +134,12 @@ ATF_TC_HEAD(load_balance_swap, tc)
 ATF_TC_BODY(load_balance_swap, tc)
 {
 #if defined(FAILOVER_PROTOCOL) 
-#if defined(SECS_BYTEORDER)
 	struct packet packet;
 	struct dhcp_packet raw;
 	dhcp_failover_state_t pstate, sstate;
 	u_int8_t hba[256];
+
+    check_secs_byte_order = 1;
 
 	memset(&packet, 0, sizeof(struct packet));
 	memset(&raw, 0, sizeof(struct dhcp_packet));
@@ -179,10 +180,6 @@ ATF_TC_BODY(load_balance_swap, tc)
 	if (load_balance_mine(&packet, &sstate) != 1) {
 		atf_tc_fail("ERROR: secondary not accepted %s:%d", MDL);
 	}
-	
-#else
-	atf_tc_skip("SECS_BYTEORDER not defined");
-#endif
 #else
 	atf_tc_skip("failover is disabled");
 #endif
