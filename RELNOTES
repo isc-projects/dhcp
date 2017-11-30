@@ -197,6 +197,7 @@ dhcp-users@lists.isc.org.
   Prior to this dhclient did not wait at all. The amount of time dhclient
   waits can be specified via a new command line parameter:
   --decline-wait-time <seconds>.  A value of zero equates to no wait at all.
+  Thanks to Pavel Kankovsky for bringing this matter to our attention.
   [ISC-Bugs #45457]
 
 - Corrected dhclient command line parsing for --dad-wait-time that causes
