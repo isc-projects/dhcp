@@ -1176,6 +1176,11 @@ dhcp-users@lists.isc.org.
   in the lease file causing issues with DDNS and so forth.
   [ISC-bugs #43786]
 
+- Replaced iasubopt::heap_index with separate values for active and inactive
+  heaps: iasubopt::active_index and iasubopt::inactive_index.  This was done
+  to accomodate a change in behavior in BIND9 isc_heap_delete().
+  [ISC-bugs #46719]
+
 			Changes since 4.2.0 (new features)
 
 - If a client renews before 'dhcp-cache-threshold' percent of its lease

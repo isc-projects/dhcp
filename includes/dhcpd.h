@@ -1622,8 +1622,9 @@ struct iasubopt {
  */
 #define EXPIRED_IPV6_CLEANUP_TIME (60*60)
 
-	int heap_index;				/* index into heap, or -1
-						   (internal use only) */
+	/* index into heaps, or -1 (internal use only) */
+	int active_index;
+	int inactive_index;
 
 	/*
 	 * A pointer to the state of the ddns update for this lease.

@@ -216,7 +216,8 @@ iasubopt_allocate(struct iasubopt **iasubopt, const char *file, int line) {
 
 	tmp->refcnt = 1;
 	tmp->state = FTS_FREE;
-	tmp->heap_index = -1;
+	tmp->active_index = 0;
+	tmp->inactive_index = 0;
 	tmp->plen = 255;
 
 	*iasubopt = tmp;
@@ -600,14 +601,18 @@ lease_older(void *a, void *b) {
 }
 
 /*
- * Helper function for lease address/prefix heaps.
+ * Helper functions for lease address/prefix heaps.
  * Callback when an address's position in the heap changes.
  */
 static void
-lease_index_changed(void *iasubopt, unsigned int new_heap_index) {
-	((struct iasubopt *)iasubopt)-> heap_index = new_heap_index;
+active_changed(void *iasubopt, unsigned int new_heap_index) {
+	((struct iasubopt *)iasubopt)->active_index = new_heap_index;
 }
 
+static void
+inactive_changed(void *iasubopt, unsigned int new_heap_index) {
+	((struct iasubopt *)iasubopt)->inactive_index = new_heap_index;
+}
 
 /*!
  *
@@ -660,13 +665,13 @@ ipv6_pool_allocate(struct ipv6_pool **pool, u_int16_t type,
 		dfree(tmp, file, line);
 		return ISC_R_NOMEMORY;
 	}
-	if (isc_heap_create(dhcp_gbl_ctx.mctx, lease_older, lease_index_changed,
+	if (isc_heap_create(dhcp_gbl_ctx.mctx, lease_older, active_changed,
 			    0, &(tmp->active_timeouts)) != ISC_R_SUCCESS) {
 		iasubopt_free_hash_table(&(tmp->leases), file, line);
 		dfree(tmp, file, line);
 		return ISC_R_NOMEMORY;
 	}
-	if (isc_heap_create(dhcp_gbl_ctx.mctx, lease_older, lease_index_changed,
+	if (isc_heap_create(dhcp_gbl_ctx.mctx, lease_older, inactive_changed,
 			    0, &(tmp->inactive_timeouts)) != ISC_R_SUCCESS) {
 		isc_heap_destroy(&(tmp->active_timeouts));
 		iasubopt_free_hash_table(&(tmp->leases), file, line);
@@ -1361,7 +1366,7 @@ cleanup_lease6(ia_hash_t *ia_table,
 	 * Remove the old lease from the active heap and from the hash table
 	 * then remove the lease from the IA and clean up the IA if necessary.
 	 */
-	isc_heap_delete(pool->active_timeouts, test_iasubopt->heap_index);
+	isc_heap_delete(pool->active_timeouts, test_iasubopt->active_index);
 	pool->num_active--;
 	if (pool->ipv6_pond)
 		pool->ipv6_pond->num_active--;
@@ -1434,7 +1439,7 @@ add_lease6(struct ipv6_pool *pool, struct iasubopt *lease,
 		if ((test_iasubopt->state == FTS_ACTIVE) ||
 		    (test_iasubopt->state == FTS_ABANDONED)) {
 			isc_heap_delete(pool->active_timeouts,
-					test_iasubopt->heap_index);
+					test_iasubopt->active_index);
 			pool->num_active--;
 			if (pool->ipv6_pond)
 				pool->ipv6_pond->num_active--;
@@ -1446,7 +1451,7 @@ add_lease6(struct ipv6_pool *pool, struct iasubopt *lease,
 			}
 		} else {
 			isc_heap_delete(pool->inactive_timeouts,
-					test_iasubopt->heap_index);
+					test_iasubopt->inactive_index);
 			pool->num_inactive--;
 		}
 
@@ -1567,14 +1572,13 @@ lease6_usable(struct iasubopt *lease) {
 static isc_result_t
 move_lease_to_active(struct ipv6_pool *pool, struct iasubopt *lease) {
 	isc_result_t insert_result;
-	int old_heap_index;
 
-	old_heap_index = lease->heap_index;
 	insert_result = isc_heap_insert(pool->active_timeouts, lease);
 	if (insert_result == ISC_R_SUCCESS) {
        		iasubopt_hash_add(pool->leases, &lease->addr, 
 				  sizeof(lease->addr), lease, MDL);
-		isc_heap_delete(pool->inactive_timeouts, old_heap_index);
+		isc_heap_delete(pool->inactive_timeouts,
+				lease->inactive_index);
 		pool->num_active++;
 		pool->num_inactive--;
 		lease->state = FTS_ACTIVE;
@@ -1624,16 +1628,16 @@ renew_lease6(struct ipv6_pool *pool, struct iasubopt *lease) {
 	if (lease->state == FTS_ACTIVE) {
 		if (old_end_time <= lease->hard_lifetime_end_time) {
 			isc_heap_decreased(pool->active_timeouts,
-					   lease->heap_index);
+					   lease->active_index);
 		} else {
 			isc_heap_increased(pool->active_timeouts,
-					   lease->heap_index);
+					   lease->active_index);
 		}
 		return ISC_R_SUCCESS;
 	} else if (lease->state == FTS_ABANDONED) {
 		char tmp_addr[INET6_ADDRSTRLEN];
                 lease->state = FTS_ACTIVE;
-                isc_heap_increased(pool->active_timeouts, lease->heap_index);
+                isc_heap_increased(pool->active_timeouts, lease->active_index);
 		log_info("Reclaiming previously abandoned address %s",
 			 inet_ntop(AF_INET6, &(lease->addr), tmp_addr,
 				   sizeof(tmp_addr)));
@@ -1655,9 +1659,7 @@ static isc_result_t
 move_lease_to_inactive(struct ipv6_pool *pool, struct iasubopt *lease, 
 		       binding_state_t state) {
 	isc_result_t insert_result;
-	int old_heap_index;
 
-	old_heap_index = lease->heap_index;
 	insert_result = isc_heap_insert(pool->inactive_timeouts, lease);
 	if (insert_result == ISC_R_SUCCESS) {
 		/*
@@ -1708,7 +1710,7 @@ move_lease_to_inactive(struct ipv6_pool *pool, struct iasubopt *lease,
 
 		iasubopt_hash_delete(pool->leases, 
 				     &lease->addr, sizeof(lease->addr), MDL);
-		isc_heap_delete(pool->active_timeouts, old_heap_index);
+		isc_heap_delete(pool->active_timeouts, lease->active_index);
 		lease->state = state;
 		pool->num_active--;
 		pool->num_inactive++;
@@ -1786,7 +1788,7 @@ decline_lease6(struct ipv6_pool *pool, struct iasubopt *lease) {
 		pool->ipv6_pond->num_abandoned++;
 
 	lease->hard_lifetime_end_time = MAX_TIME;
-	isc_heap_decreased(pool->active_timeouts, lease->heap_index);
+	isc_heap_decreased(pool->active_timeouts, lease->active_index);
 	return ISC_R_SUCCESS;
 }
 
@@ -2059,7 +2061,7 @@ cleanup_old_expired(struct ipv6_pool *pool) {
 			break;
 		}
 
-		isc_heap_delete(pool->inactive_timeouts, tmp->heap_index);
+		isc_heap_delete(pool->inactive_timeouts, tmp->inactive_index);
 		pool->num_inactive--;
 
 		if (tmp->ia != NULL) {

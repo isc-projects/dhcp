@@ -65,8 +65,13 @@ ATF_TC_BODY(iaaddr_basic, tc)
     if (iaaddr->state != FTS_FREE) {
         atf_tc_fail("ERROR: bad state %s:%d", MDL);
     }
-    if (iaaddr->heap_index != -1) {
-        atf_tc_fail("ERROR: bad heap_index %s:%d", MDL);
+    if (iaaddr->active_index != 0) {
+        atf_tc_fail("ERROR: bad active_index :%d %s:%d",
+            iaaddr->active_index, MDL);
+    }
+    if (iaaddr->inactive_index != 0) {
+        atf_tc_fail("ERROR: bad inactive_index %d %s:%d",
+            iaaddr->inactive_index, MDL);
     }
     if (iasubopt_reference(&iaaddr_copy, iaaddr, MDL) != ISC_R_SUCCESS) {
         atf_tc_fail("ERROR: iasubopt_reference() %s:%d", MDL);
