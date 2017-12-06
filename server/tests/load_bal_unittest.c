@@ -139,7 +139,7 @@ ATF_TC_BODY(load_balance_swap, tc)
 	dhcp_failover_state_t pstate, sstate;
 	u_int8_t hba[256];
 
-    check_secs_byte_order = 1;
+	check_secs_byte_order = 1;
 
 	memset(&packet, 0, sizeof(struct packet));
 	memset(&raw, 0, sizeof(struct dhcp_packet));
