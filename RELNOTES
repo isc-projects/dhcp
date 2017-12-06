@@ -210,6 +210,14 @@ dhcp-users@lists.isc.org.
   sent and logged.
   [ISC-Bugs #2729]
 
+- When given the -T command line argument, in addition to reading the
+  current lease file, the server will write the leases to a temporary
+  lease file.  This can help detect issues in server configuration that
+  only surface when leases are written to the file.  The current lease
+  file will not be modified and the temporary lease file is removed upon
+  completion of the test.
+  [ISC-Bugs #22267]
+
 			Changes since 4.3.0 (bug fixes)
 
 - Tidy up several small tickets.

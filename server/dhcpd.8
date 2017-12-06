@@ -269,8 +269,11 @@ automatically before installing it.
 .BI \-T
 Test the lease file.  The server tests the lease file
 for correct syntax, but will not attempt to perform any network
-operations.  This can be used to test a new lease file
-automatically before installing it.
+operations.  In addition to reading the lease file it will also
+write the leases to a temporary lease file.  The current lease
+file will not be modified and the temporary lease file will be
+removed upon completion of the test. This can be used to test a
+new lease file automatically before installing it.
 .TP
 .BI \-user \ user
 Setuid to user after completing privileged operations,
