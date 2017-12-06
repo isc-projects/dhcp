@@ -204,6 +204,12 @@ dhcp-users@lists.isc.org.
   even valid values to fail as invalid on some environments.
   [ISC-Bugs #46535]
 
+- dhclient will now include the lease address when logging DHCPOFFERs,
+  DHCPREQUESTs, DHCPACKs, DHCPRELEASEs, and DHCPDECLINEs.  Additionally,
+  DHCPOFFERs will be logged before their corresponding DHCPREQUESTs are
+  sent and logged.
+  [ISC-Bugs #2729]
+
 			Changes since 4.3.0 (bug fixes)
 
 - Tidy up several small tickets.

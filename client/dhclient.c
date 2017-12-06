@@ -1355,7 +1355,9 @@ void dhcpack (packet)
 		return;
 	}
 
-	log_info ("DHCPACK from %s", piaddr (packet -> client_addr));
+	log_info ("DHCPACK of %s from %s",
+		  inet_ntoa(packet->raw->yiaddr),
+		  piaddr (packet->client_addr));
 
 	lease = packet_to_lease (packet, client);
 	if (!lease) {
@@ -2016,8 +2018,9 @@ void dhcpoffer (packet)
 		return;
 	}
 
-	sprintf (obuf, "%s from %s", name, piaddr (packet -> client_addr));
-
+	sprintf (obuf, "%s of %s from %s", name,
+		 inet_ntoa(packet->raw->yiaddr),
+		 piaddr(packet->client_addr));
 
 	/* If this lease doesn't supply the minimum required DHCPv4 parameters,
 	 * ignore it.
@@ -2065,6 +2068,9 @@ void dhcpoffer (packet)
 		return;
 	}
 
+	/* log it now, so it emits before the request goes out */
+	log_info("%s", obuf);
+
 	/* If this lease was acquired through a BOOTREPLY, record that
 	   fact. */
 	if (!packet -> options_valid || !packet -> packet_type)
@@ -2109,7 +2115,6 @@ void dhcpoffer (packet)
 		add_timeout(&tv, state_selecting, client, 0, 0);
 		cancel_timeout(send_discover, client);
 	}
-	log_info("%s", obuf);
 }
 
 /* Allocate a client_lease structure and initialize it from the parameters
@@ -2574,6 +2579,8 @@ void send_request (cpp)
 	struct sockaddr_in destination;
 	struct in_addr from;
 	struct timeval tv;
+	char rip_buf[128];
+	const char* rip_str = "";
 
 	/* Figure out how long it's been since we started transmitting. */
 	interval = cur_time - client -> first_sending;
@@ -2700,10 +2707,19 @@ void send_request (cpp)
 		log_info ("DHCPREQUEST");
 	} else
 #endif
-	log_info ("DHCPREQUEST on %s to %s port %d",
-	      client -> name ? client -> name : client -> interface -> name,
-	      inet_ntoa (destination.sin_addr),
-	      ntohs (destination.sin_port));
+	memset(rip_buf, 0x0, sizeof(rip_buf));
+	if (client->state == S_BOUND || client->state == S_RENEWING ||
+	    client->state == S_REBINDING) {
+		rip_str = inet_ntoa(client->packet.ciaddr);
+	} else {
+		rip_str = piaddr(client->requested_address);
+	}
+
+	strncpy(rip_buf, rip_str, sizeof(rip_buf)-1);
+	log_info ("DHCPREQUEST for %s on %s to %s port %d", rip_buf,
+		  client->name ? client->name : client->interface->name,
+		  inet_ntoa(destination.sin_addr),
+		  ntohs (destination.sin_port));
 
 #if defined(DHCPv6) && defined(DHCP4o6)
 	if (dhcpv4_over_dhcpv6) {
@@ -2760,10 +2776,11 @@ void send_decline (cpp)
 		log_info ("DHCPDECLINE");
 	} else
 #endif
-	log_info ("DHCPDECLINE on %s to %s port %d",
-	      client->name ? client->name : client->interface->name,
-	      inet_ntoa(sockaddr_broadcast.sin_addr),
-	      ntohs(sockaddr_broadcast.sin_port));
+	log_info ("DHCPDECLINE of %s on %s to %s port %d",
+		  piaddr(client->requested_address),
+		  (client->name ? client->name : client->interface->name),
+		  inet_ntoa(sockaddr_broadcast.sin_addr),
+		  ntohs(sockaddr_broadcast.sin_port));
 
 	/* Send out a packet. */
 #if defined(DHCPv6) && defined(DHCP4o6)
@@ -2822,10 +2839,11 @@ void send_release (cpp)
 		log_info ("DHCPRELEASE");
 	} else
 #endif
-	log_info ("DHCPRELEASE on %s to %s port %d",
-	      client -> name ? client -> name : client -> interface -> name,
-	      inet_ntoa (destination.sin_addr),
-	      ntohs (destination.sin_port));
+	log_info ("DHCPRELEASE of %s on %s to %s port %d",
+		  piaddr(client->active->address),
+		  client->name ? client->name : client->interface->name,
+		  inet_ntoa (destination.sin_addr),
+		  ntohs (destination.sin_port));
 
 #if defined(DHCPv6) && defined(DHCP4o6)
 	if (dhcpv4_over_dhcpv6) {
