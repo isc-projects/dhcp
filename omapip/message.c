@@ -339,7 +339,7 @@ isc_result_t omapi_message_unregister (omapi_object_t *mo)
 }
 
 #ifdef DEBUG_PROTOCOL
-static const char *omapi_message_op_name(int op) {
+const char *omapi_message_op_name(int op) {
 	switch (op) {
 	case OMAPI_OP_OPEN:    return "OMAPI_OP_OPEN";
 	case OMAPI_OP_REFRESH: return "OMAPI_OP_REFRESH";

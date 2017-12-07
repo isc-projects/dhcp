@@ -565,6 +565,15 @@ isc_result_t omapi_connection_writer (omapi_object_t *h)
 			omapi_buffer_dereference (&buffer, MDL);
 		}
 	}
+
+	/* If we had data left to write when we're told to disconnect,
+	* we need recall disconnect, now that we're done writing.
+	* See rt46767. */
+	if (c->out_bytes == 0 && c->state == omapi_connection_disconnecting) {
+		omapi_disconnect (h, 1);
+		return ISC_R_SHUTTINGDOWN;
+	}
+
 	return ISC_R_SUCCESS;
 }
 
