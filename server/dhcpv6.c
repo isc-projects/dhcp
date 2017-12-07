@@ -179,6 +179,12 @@ set_reply_tee_times(struct reply_state* reply, unsigned ia_cursor);
 static const char *iasubopt_plen_str(struct iasubopt *lease);
 static int release_on_roam(struct reply_state *reply);
 
+static int reuse_lease6(struct reply_state *reply, struct iasubopt *lease);
+static void shorten_lifetimes(struct reply_state *reply, struct iasubopt *lease,
+			      time_t age, int threshold);
+static void write_to_packet(struct reply_state *reply, unsigned ia_cursor);
+static const char *iasubopt_plen_str(struct iasubopt *lease);
+
 #ifdef DHCP4o6
 /*
  * \brief Omapi I/O handler
@@ -2193,24 +2199,16 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 			goto cleanup;
 	}
 
-	reply->cursor += store_options6((char *)reply->buf.data + reply->cursor,
-					sizeof(reply->buf) - reply->cursor,
-					reply->reply_ia, reply->packet,
-					required_opts_IA, NULL);
-
-	/* Reset the length of this IA to match what was just written. */
-	putUShort(reply->buf.data + ia_cursor + 2,
-		  reply->cursor - (ia_cursor + 4));
-
-	/* Calculate T1/T2 and stuff them in the reply */
-	set_reply_tee_times(reply, ia_cursor);
-
 	/*
 	 * yes, goto's aren't the best but we also want to avoid extra
 	 * indents
 	 */
-	if (status == ISC_R_CANCELED)
+	if (status == ISC_R_CANCELED) {
+		/* We're replying with a status code so we still need to
+		 * write it out in wire-format to the outbound buffer */
+		write_to_packet(reply, ia_cursor);
 		goto cleanup;
+	}
 
 	/*
 	 * Handle static leases, we always log stuff and if it's
@@ -2268,24 +2266,28 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 	 * Loop through the assigned dynamic addresses, referencing the
 	 * leases onto this IA_NA rather than any old ones, and updating
 	 * pool timers for each (if any).
+	 *
+	 * Note that we must do ddns_updates() before we test for lease
+	 * reuse (so we'll know if DNS entries are different).  To ensure
+	 * we don't break any configs, we run on_commit statements before
+	 * we do ddns_updates() just in case the former affects the later.
+	 * This is symetrical with v4 logic.  We always run on_commit and
+	 * ddns_udpates() whether a lease is reused or renewed.
 	 */
-
 	if ((reply->ia->num_iasubopt != 0) &&
 	    (reply->buf.reply.msg_type == DHCPV6_REPLY)) {
+		int must_commit = 0;
 		struct iasubopt *tmp;
 		struct data_string *ia_id;
 		int i;
 
 		for (i = 0 ; i < reply->ia->num_iasubopt ; i++) {
 			tmp = reply->ia->iasubopt[i];
-
-			if (tmp->ia != NULL)
+			if (tmp->ia != NULL) {
 				ia_dereference(&tmp->ia, MDL);
-			ia_reference(&tmp->ia, reply->ia, MDL);
+			}
 
-			/* Commit 'hard' bindings. */
-			renew_lease6(tmp->ipv6_pool, tmp);
-			schedule_lease_timeout(tmp->ipv6_pool);
+			ia_reference(&tmp->ia, reply->ia, MDL);
 
 			/* If we have anything to do on commit do it now */
 			if (tmp->on_star.on_commit != NULL) {
@@ -2301,9 +2303,8 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 			}
 
 #if defined (NSUPDATE)
-			/*
-			 * Perform ddns updates.
-			 */
+
+			/* Perform ddns updates */
 			oc = lookup_option(&server_universe, reply->opt_state,
 					   SV_DDNS_UPDATES);
 			if ((oc == NULL) ||
@@ -2317,9 +2318,19 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 					     tmp, NULL, reply->opt_state);
 			}
 #endif
-			/* Do our threshold check. */
-			check_pool6_threshold(reply, tmp);
+			if (!reuse_lease6(reply, tmp)) {
+				/* Commit 'hard' bindings. */
+				must_commit = 1;
+				renew_lease6(tmp->ipv6_pool, tmp);
+				schedule_lease_timeout(tmp->ipv6_pool);
+
+				/* Do our threshold check. */
+				check_pool6_threshold(reply, tmp);
+			}
 		}
+
+		/* write the IA_NA in wire-format to the outbound buffer */
+		write_to_packet(reply, ia_cursor);
 
 		/* Remove any old ia from the hash. */
 		if (reply->old_ia != NULL) {
@@ -2339,8 +2350,14 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 		ia_hash_add(ia_na_active, (unsigned char *)ia_id->data,
 			    ia_id->len, reply->ia, MDL);
 
-		write_ia(reply->ia);
+		/* If we couldn't reuse all of the iasubopts, we
+		* must update udpate the lease db */
+		if (must_commit) {
+			write_ia(reply->ia);
+		}
 	} else {
+		/* write the IA_NA in wire-format to the outbound buffer */
+		write_to_packet(reply, ia_cursor);
 		schedule_lease_timeout_reply(reply);
 	}
 
@@ -2376,6 +2393,28 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 	 * success at higher layers.
 	 */
 	return((status == ISC_R_CANCELED) ? ISC_R_SUCCESS : status);
+}
+
+/*
+ * Writes the populated IA_xx in wire format to the reply buffer
+ */
+void
+write_to_packet(struct reply_state *reply, unsigned ia_cursor) {
+	reply->cursor += store_options6((char *)reply->buf.data + reply->cursor,
+					sizeof(reply->buf) - reply->cursor,
+					reply->reply_ia, reply->packet,
+					(reply->ia->ia_type != D6O_IA_PD ?
+					required_opts_IA : required_opts_IA_PD),
+					NULL);
+
+	/* Reset the length of this IA to match what was just written. */
+	putUShort(reply->buf.data + ia_cursor + 2,
+		  reply->cursor - (ia_cursor + 4));
+
+	if (reply->ia->ia_type != D6O_IA_TA) {
+		/* Calculate T1/T2 and stuff them in the reply */
+		set_reply_tee_times(reply, ia_cursor);
+	}
 }
 
 /*
@@ -2973,21 +3012,17 @@ reply_process_ia_ta(struct reply_state *reply, struct option_cache *ia) {
 		goto cleanup;
 
       store:
-	reply->cursor += store_options6((char *)reply->buf.data + reply->cursor,
-					sizeof(reply->buf) - reply->cursor,
-					reply->reply_ia, reply->packet,
-					required_opts_IA, NULL);
-
-	/* Reset the length of this IA to match what was just written. */
-	putUShort(reply->buf.data + ia_cursor + 2,
-		  reply->cursor - (ia_cursor + 4));
 
 	/*
 	 * yes, goto's aren't the best but we also want to avoid extra
 	 * indents
 	 */
-	if (status == ISC_R_CANCELED)
+	if (status == ISC_R_CANCELED) {
+		/* We're replying with a status code so we still need to
+		* write it out in wire-format to the outbound buffer */
+		write_to_packet(reply, ia_cursor);
 		goto cleanup;
+	}
 
 	/*
 	 * If we have any addresses log what we are doing.
@@ -3022,6 +3057,7 @@ reply_process_ia_ta(struct reply_state *reply, struct option_cache *ia) {
 	 */
 	if ((reply->ia->num_iasubopt != 0) &&
 	    (reply->buf.reply.msg_type == DHCPV6_REPLY)) {
+		int must_commit = 0;
 		struct iasubopt *tmp;
 		struct data_string *ia_id;
 		int i;
@@ -3032,10 +3068,6 @@ reply_process_ia_ta(struct reply_state *reply, struct option_cache *ia) {
 			if (tmp->ia != NULL)
 				ia_dereference(&tmp->ia, MDL);
 			ia_reference(&tmp->ia, reply->ia, MDL);
-
-			/* Commit 'hard' bindings. */
-			renew_lease6(tmp->ipv6_pool, tmp);
-			schedule_lease_timeout(tmp->ipv6_pool);
 
 			/* If we have anything to do on commit do it now */
 			if (tmp->on_star.on_commit != NULL) {
@@ -3067,9 +3099,20 @@ reply_process_ia_ta(struct reply_state *reply, struct option_cache *ia) {
 					     tmp, NULL, reply->opt_state);
 			}
 #endif
-			/* Do our threshold check. */
-			check_pool6_threshold(reply, tmp);
+
+			if (!reuse_lease6(reply, tmp)) {
+				/* Commit 'hard' bindings. */
+				must_commit = 1;
+				renew_lease6(tmp->ipv6_pool, tmp);
+				schedule_lease_timeout(tmp->ipv6_pool);
+
+				/* Do our threshold check. */
+				check_pool6_threshold(reply, tmp);
+			}
 		}
+
+		/* write the IA_TA in wire-format to the outbound buffer */
+		write_to_packet(reply, ia_cursor);
 
 		/* Remove any old ia from the hash. */
 		if (reply->old_ia != NULL) {
@@ -3089,8 +3132,14 @@ reply_process_ia_ta(struct reply_state *reply, struct option_cache *ia) {
 		ia_hash_add(ia_ta_active, (unsigned char *)ia_id->data,
 			    ia_id->len, reply->ia, MDL);
 
-		write_ia(reply->ia);
+		/* If we couldn't reuse all of the iasubopts, we
+		* must update udpate the lease db */
+		if (must_commit) {
+			write_ia(reply->ia);
+		}
 	} else {
+		/* write the IA_TA in wire-format to the outbound buffer */
+		write_to_packet(reply, ia_cursor);
 		schedule_lease_timeout_reply(reply);
 	}
 
@@ -3118,6 +3167,170 @@ reply_process_ia_ta(struct reply_state *reply, struct option_cache *ia) {
 	 * success at higher layers.
 	 */
 	return((status == ISC_R_CANCELED) ? ISC_R_SUCCESS : status);
+}
+/*
+ * Determines if a lease (iasubopt) can be reused without extending it.
+ * If dhcp-cache-threshold is greater than zero (i.e enabled) then
+ * a lease may be reused without going through a full renewal if
+ * it meets all the requirements.  In short it must be active, younger
+ * than the threshold, and not have DNS changes.
+ *
+ * If it is determined that it can be reused, that a call to
+ * shorten_lifetimes() is made to reduce the valid and preferred lifetimes
+ * sent to the client by the age of the lease.
+ *
+ * Returns 1 if lease can be reused, 0 otherwise
+ */
+int
+reuse_lease6(struct reply_state *reply, struct iasubopt *lease) {
+	int threshold = DEFAULT_CACHE_THRESHOLD;
+	struct option_cache* oc = NULL;
+	struct data_string d1;
+	time_t age;
+	time_t limit;
+	int reuse_it = 0;
+
+	/* In order to even qualify for reuse consideration:
+	 * 1. Lease must be active
+	 * 2. It must have been accepted at least once
+	 * 3. DNS info must not have changed */
+	if ((lease->state != FTS_ACTIVE) ||
+	    (lease->hard_lifetime_end_time == 0) ||
+	    (lease->ddns_cb != NULL)) {
+		return (0);
+	}
+
+	/* Look up threshold value */
+	memset(&d1, 0, sizeof(struct data_string));
+	oc = lookup_option(&server_universe, reply->opt_state,
+			   SV_CACHE_THRESHOLD);
+	if (oc &&
+	    evaluate_option_cache(&d1, reply->packet, NULL, NULL,
+				  reply->packet->options, reply->opt_state,
+				  &lease->scope, oc, MDL)) {
+			if (d1.len == 1 && (d1.data[0] < 100)) {
+                                threshold = d1.data[0];
+			}
+
+		data_string_forget(&d1, MDL);
+	}
+
+	if (threshold <= 0) {
+		return (0);
+	}
+
+	if (lease->valid >= MAX_TIME) {
+		/* Infinite leases are always reused.  We have to make
+		* a choice because we cannot determine when they actually
+		* began, so we either always reuse them or we never do. */
+		log_debug ("reusing infinite lease for: %s%s",
+			    pin6_addr(&lease->addr), iasubopt_plen_str(lease));
+		return (1);
+	}
+
+	age = cur_tv.tv_sec - (lease->hard_lifetime_end_time - lease->valid);
+	if (lease->valid <= (INT_MAX / threshold))
+		limit = lease->valid * threshold / 100;
+	else
+		limit = lease->valid / 100 * threshold;
+
+	if (age < limit) {
+		/* Reduce valid/preferred going to the client by age */
+		shorten_lifetimes(reply, lease, age, threshold);
+		reuse_it = 1;
+	}
+
+	return (reuse_it);
+}
+
+/*
+ * Reduces the valid and preferred lifetimes for a given lease (iasubopt)
+ *
+ * We cannot determine until after a iasubopt has been added to
+ * the reply if the lease can be reused. Therefore, when we do reuse a
+ * lease we need a way to alter the lifetimes that will be sent to the client.
+ * That's where this function comes in handy:
+ *
+ * Locate the iasubopt by it's address within the reply the reduce both
+ * the preferred and valid lifetimes by the given number of seconds.
+ *
+ * Note that this function, by necessity, works directly with the
+ * option_cache data. Sort of a no-no but I don't have any better ideas.
+ */
+void shorten_lifetimes(struct reply_state *reply, struct iasubopt *lease,
+		       time_t age, int threshold) {
+	struct option_cache* oc = NULL;
+	int subopt_type;
+	int addr_offset;
+	int pref_offset;
+	int val_offset;
+	int exp_length;
+
+	if (reply->ia->ia_type != D6O_IA_PD) {
+		subopt_type = D6O_IAADDR;
+		addr_offset = IASUBOPT_NA_ADDR_OFFSET;
+		pref_offset = IASUBOPT_NA_PREF_OFFSET;
+		val_offset = IASUBOPT_NA_VALID_OFFSET;
+		exp_length = IASUBOPT_NA_LEN;
+	}
+	else {
+		subopt_type = D6O_IAPREFIX;
+		addr_offset = IASUBOPT_PD_PREFIX_OFFSET;
+		pref_offset = IASUBOPT_PD_PREF_OFFSET;
+		val_offset = IASUBOPT_PD_VALID_OFFSET;
+		exp_length = IASUBOPT_PD_LEN;
+	}
+
+	// loop through the iasubopts for the one that matches this lease
+	oc = lookup_option(&dhcpv6_universe, reply->reply_ia, subopt_type);
+        for (; oc != NULL ; oc = oc->next) {
+		if (oc->data.data == NULL || oc->data.len != exp_length) {
+			/* shouldn't happen */
+			continue;
+		}
+
+		/* If address matches (and for PDs the prefix len matches)
+		* we assume this is our subopt, so update the lifetimes */
+		if (!memcmp(oc->data.data + addr_offset, &lease->addr, 16) &&
+		    (subopt_type != D6O_IA_PD ||
+		     (oc->data.data[IASUBOPT_PD_PREFLEN_OFFSET] ==
+		      lease->plen))) {
+			u_int32_t pref_life = getULong(oc->data.data +
+						       pref_offset);
+			u_int32_t valid_life = getULong(oc->data.data +
+							val_offset);
+
+			if (pref_life < MAX_TIME && pref_life > age) {
+				pref_life -= age;
+				putULong((unsigned char*)(oc->data.data) +
+					  pref_offset, pref_life);
+
+				if (reply->min_prefer > pref_life) {
+					reply->min_prefer = pref_life;
+				}
+			}
+
+			if (valid_life < MAX_TIME && valid_life > age) {
+				valid_life -= age;
+				putULong((unsigned char*)(oc->data.data) +
+					 val_offset, valid_life);
+
+				if (reply->min_valid > reply->send_valid) {
+					reply->min_valid = valid_life;
+				}
+			}
+
+			log_debug ("Reusing lease for: %s%s, "
+				   "age %ld secs < %d%%,"
+				   " sending shortened lifetimes -"
+				   " preferred: %u, valid %u",
+				   pin6_addr(&lease->addr),
+				   iasubopt_plen_str(lease),
+				   age, threshold,
+				   pref_life, valid_life);
+			break;
+		}
+	}
 }
 
 /*
@@ -4008,24 +4221,16 @@ reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia) {
 			goto cleanup;
 	}
 
-	reply->cursor += store_options6((char *)reply->buf.data + reply->cursor,
-					sizeof(reply->buf) - reply->cursor,
-					reply->reply_ia, reply->packet,
-					required_opts_IA_PD, NULL);
-
-	/* Reset the length of this IA_PD to match what was just written. */
-	putUShort(reply->buf.data + ia_cursor + 2,
-		  reply->cursor - (ia_cursor + 4));
-
-	/* Calculate T1/T2 and stuff them in the reply */
-	set_reply_tee_times(reply, ia_cursor);
-
 	/*
 	 * yes, goto's aren't the best but we also want to avoid extra
 	 * indents
 	 */
-	if (status == ISC_R_CANCELED)
+	if (status == ISC_R_CANCELED) {
+		/* We're replying with a status code so we still need to
+		 * write it out in wire-format to the outbound buffer */
+		write_to_packet(reply, ia_cursor);
 		goto cleanup;
+	}
 
 	/*
 	 * Handle static prefixes, we always log stuff and if it's
@@ -4085,9 +4290,14 @@ reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia) {
 	 * Loop through the assigned dynamic prefixes, referencing the
 	 * prefixes onto this IA_PD rather than any old ones, and updating
 	 * prefix pool timers for each (if any).
+	 *
+	 * If a lease can be reused we skip renewing it or checking the
+	 * pool threshold. If it can't we flag that the IA must be commited
+	 * to the db and do the renewal and pool check.
 	 */
 	if ((reply->buf.reply.msg_type == DHCPV6_REPLY) &&
 	    (reply->ia->num_iasubopt != 0)) {
+		int must_commit = 0;
 		struct iasubopt *tmp;
 		struct data_string *ia_id;
 		int i;
@@ -4098,10 +4308,6 @@ reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia) {
 			if (tmp->ia != NULL)
 				ia_dereference(&tmp->ia, MDL);
 			ia_reference(&tmp->ia, reply->ia, MDL);
-
-			/* Commit 'hard' bindings. */
-			renew_lease6(tmp->ipv6_pool, tmp);
-			schedule_lease_timeout(tmp->ipv6_pool);
 
 			/* If we have anything to do on commit do it now */
 			if (tmp->on_star.on_commit != NULL) {
@@ -4116,9 +4322,19 @@ reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia) {
 					(&tmp->on_star.on_commit, MDL);
 			}
 
-			/* Do our threshold check. */
-			check_pool6_threshold(reply, tmp);
+			if (!reuse_lease6(reply, tmp)) {
+				/* Commit 'hard' bindings. */
+				must_commit = 1;
+				renew_lease6(tmp->ipv6_pool, tmp);
+				schedule_lease_timeout(tmp->ipv6_pool);
+
+				/* Do our threshold check. */
+				check_pool6_threshold(reply, tmp);
+			}
 		}
+
+		/* write the IA_PD in wire-format to the outbound buffer */
+		write_to_packet(reply, ia_cursor);
 
 		/* Remove any old ia from the hash. */
 		if (reply->old_ia != NULL) {
@@ -4138,8 +4354,14 @@ reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia) {
 		ia_hash_add(ia_pd_active, (unsigned char *)ia_id->data,
 			    ia_id->len, reply->ia, MDL);
 
-		write_ia(reply->ia);
+		/* If we couldn't reuse all of the iasubopts, we
+		* must udpate the lease db */
+		if (must_commit) {
+			write_ia(reply->ia);
+		}
 	} else {
+		/* write the IA_PD in wire-format to the outbound buffer */
+		write_to_packet(reply, ia_cursor);
 		schedule_lease_timeout_reply(reply);
 	}
 

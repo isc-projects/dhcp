@@ -2191,16 +2191,28 @@ with allowed values between 0 and 100. The default value is 25 (25% of
 the lease time). This parameter expresses the percentage of the total
 lease time, measured from the beginning, during which a
 client's attempt to renew its lease will result in getting
-the already assigned lease, rather than an extended lease.
+the already assigned lease, rather than an extended lease.  This feature
+is supported for both IPv4 and IPv6 and down to the pool level and for
+IPv6 all three pool types: NA, TA and PD.
 .PP
 Clients that attempt renewal frequently can cause the server to
 update and write the database frequently resulting in a performance
 impact on the server.  The \fIdhcp-cache-threshold\fR
 statement instructs the DHCP server to avoid updating leases too
-frequently thus avoiding this behavior.  Instead the server assigns the
+frequently thus avoiding this behavior.  Instead the server replies with the
 same lease (i.e. reuses it) with no modifications except for CLTT (Client Last
-Transmission Time) which does not require disk operations. This
-feature applies to IPv4 only.
+Transmission Time) and for IPv4:
+
+    the lease time sent to the client is shortened by the age of
+    the lease
+
+while for IPv6:
+
+    the preferred and valid lifetimes sent to the client are
+    shortened by the age of the lease.
+
+None of these changes require writing the lease to disk.
+
 .PP
 When an existing lease is matched to a renewing client, it will be reused
 if all of the following conditions are true:
@@ -2212,11 +2224,15 @@ if all of the following conditions are true:
     4. The client information provided in the renewal does not alter
     any of the following:
        a. DNS information and DNS updates are enabled
-       b. Billing class to which the lease is associated
-       c. The host declaration associated with the lease
+       b. Billing class to which the lease is associated (IPv4 only)
+       c. The host declaration associated with the lease (IPv4 only)
        d. The client id - this may happen if a client boots without
-       a client id and then starts using one in subsequent requests.
+          a client id and then starts using one in subsequent
+          requests. (IPv4 only)
 .fi
+.PP
+While lease data is not written to disk when a lease is reused, the server
+will still execute any on-commit statements.
 .PP
 Note that the lease can be reused if the options the client or relay agent
 sends are changed.  These changes will not be recorded in the in-memory or

@@ -264,6 +264,17 @@ dhcp-users@lists.isc.org.
   the out-of-the-box user experience.
   [ISC-Bugs #45615]
 
+- Added support for 'dhcp-cache-threshold' to IPv6 operation: If a client
+  renews before 'dhcp-cache-threshold' percent of its lease has elapsed
+  (default 25%), the server will reuse the allocated lease (provide a
+  lease within the currently allocated lease-time) rather than extend or
+  renew the lease.  This allows the server to reply without needlessly
+  writing leases to disk.  The preferred and valid lease lifetimes
+  sent to the client will be reduced by the age of the lease. The option
+  may be specified down to the pool level and is supported for all three
+  pool types: NA, TA, and PD.
+  [ISC-Bugs #45292]
+
 			Changes since 4.3.0 (bug fixes)
 
 - Tidy up several small tickets.
