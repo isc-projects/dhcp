@@ -251,6 +251,11 @@ dhcp-users@lists.isc.org.
   reporting the issue.
   [ISC-Bugs #44576]
 
+- The ability of the server to send back dhcp6.vendor-opts values has been
+  restored. A change in 4.3.5 (see #29246) which enabled it to send back the
+  FQDN option unfortunately broke its ability send back dhcp6.vendor-opts.
+  [ISC-Bugs #46427]
+
 			Changes since 4.3.0 (bug fixes)
 
 - Tidy up several small tickets.

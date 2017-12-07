@@ -1126,11 +1126,13 @@ store_options6(char *buf, int buflen,
 		}
 
 		/*
-		 * See if this is the VSIO option.
+		 * If this is the VSIO option flag it so we'll know to
+		 * check the vsio space later on.  However we still need
+		 * to check for the existence of any defined via
+		 * dhcp6.vendor-opts. Those are stored as simple values.
 		 */
 		if (code == vsio_option_code) {
 			vsio_wanted = 1;
-			continue;
 		}
 
 		/*
