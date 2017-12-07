@@ -77,7 +77,7 @@ option server.ddns-rev-domainname = \"in-addr.arpa.\";";
 int ddns_update_style;
 int dont_use_fsync = 0; /* 0 = default, use fsync, 1 = don't use fsync */
 int server_id_check = 0; /* 0 = default, don't check server id, 1 = do check */
-int prefix_length_mode = PLM_EXACT;
+int prefix_length_mode = PLM_PREFER;
 
 int authoring_byte_order = 0; /* 0 = not set */
 int lease_id_format = TOKEN_OCTAL; /* octal by default */

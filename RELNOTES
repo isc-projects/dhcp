@@ -256,6 +256,14 @@ dhcp-users@lists.isc.org.
   FQDN option unfortunately broke its ability send back dhcp6.vendor-opts.
   [ISC-Bugs #46427]
 
+- The default value for server (-6) parameter, prefix-length-mode, has been
+  changed from "exact" to "prefer". In "prefer" mode the server will offer
+  the first available prefix with the same length as that requested by the
+  client. If none are found then it will offer the first available prefix of
+  any length.  This is more in line with with RFC 8168 and should improve
+  the out-of-the-box user experience.
+  [ISC-Bugs #45615]
+
 			Changes since 4.3.0 (bug fixes)
 
 - Tidy up several small tickets.
