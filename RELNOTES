@@ -237,6 +237,20 @@ dhcp-users@lists.isc.org.
   doing load balancing within failover.
   [ISC-Bugs #45364]
 
+- If the server detects that a DHCPv6 client (IAID+DUID) has roamed to a new
+  network, it will now automatically release pre-existing leases on the old
+  network. When this occurs the server will emit a log statement:
+
+      "Client: <id> roamed to new network, releasing lease: <address>"
+
+  The server will carry out all of the same steps that would normally occur
+  when a client explicitly releases a lease.  Prior to this the server simply
+  dropped the pre-existing leases on the floor without doing the appropriate
+  clean-up.  Clients that need leases in multiple networks must supply a
+  unique IAID in each IA. Thanks to Fernando Soto from BlueCat Networks for
+  reporting the issue.
+  [ISC-Bugs #44576]
+
 			Changes since 4.3.0 (bug fixes)
 
 - Tidy up several small tickets.

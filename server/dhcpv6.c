@@ -176,6 +176,9 @@ static isc_result_t get_first_ia_addr_val (struct packet* packet, int addr_type,
 static void
 set_reply_tee_times(struct reply_state* reply, unsigned ia_cursor);
 
+static const char *iasubopt_plen_str(struct iasubopt *lease);
+static int release_on_roam(struct reply_state *reply);
+
 #ifdef DHCP4o6
 /*
  * \brief Omapi I/O handler
@@ -2320,10 +2323,13 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 
 		/* Remove any old ia from the hash. */
 		if (reply->old_ia != NULL) {
-			ia_id = &reply->old_ia->iaid_duid;
-			ia_hash_delete(ia_na_active,
-				       (unsigned char *)ia_id->data,
-				       ia_id->len, MDL);
+			if (!release_on_roam(reply)) {
+				ia_id = &reply->old_ia->iaid_duid;
+				ia_hash_delete(ia_na_active,
+					       (unsigned char *)ia_id->data,
+					       ia_id->len, MDL);
+			}
+
 			ia_dereference(&reply->old_ia, MDL);
 		}
 
@@ -3067,10 +3073,13 @@ reply_process_ia_ta(struct reply_state *reply, struct option_cache *ia) {
 
 		/* Remove any old ia from the hash. */
 		if (reply->old_ia != NULL) {
-			ia_id = &reply->old_ia->iaid_duid;
-			ia_hash_delete(ia_ta_active,
-				       (unsigned char *)ia_id->data,
-				       ia_id->len, MDL);
+			if (!release_on_roam(reply)) {
+				ia_id = &reply->old_ia->iaid_duid;
+				ia_hash_delete(ia_ta_active,
+					       (unsigned char *)ia_id->data,
+					       ia_id->len, MDL);
+			}
+
 			ia_dereference(&reply->old_ia, MDL);
 		}
 
@@ -4113,10 +4122,13 @@ reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia) {
 
 		/* Remove any old ia from the hash. */
 		if (reply->old_ia != NULL) {
-			ia_id = &reply->old_ia->iaid_duid;
-			ia_hash_delete(ia_pd_active,
-				       (unsigned char *)ia_id->data,
-				       ia_id->len, MDL);
+			if (!release_on_roam(reply)) {
+				ia_id = &reply->old_ia->iaid_duid;
+				ia_hash_delete(ia_pd_active,
+					       (unsigned char *)ia_id->data,
+					       ia_id->len, MDL);
+			}
+
 			ia_dereference(&reply->old_ia, MDL);
 		}
 
@@ -8147,5 +8159,63 @@ set_reply_tee_times(struct reply_state* reply, unsigned ia_cursor)
 	putULong(reply->buf.data + ia_cursor + 12, reply->rebind);
 }
 
+/*
+ * Releases the iasubopts in the pre-existing IA, if they are not in
+ * the same shared-network as the new IA.
+ *
+ * returns 1 if the release was done, 0 otherwise
+ */
+int
+release_on_roam(struct reply_state* reply) {
+	struct ia_xx* old_ia = reply->old_ia;
+	struct iasubopt *lease = NULL;
+	int i;
+
+	if (old_ia == NULL || old_ia->num_iasubopt <= 0) {
+		return(0);
+	}
+
+	/* If the old shared-network and new are the same, client hasn't
+	* roamed, nothing to do. We only check the first one because you
+	* cannot have iasubopts on different shared-networks within a
+	* single ia. */
+	lease = old_ia->iasubopt[0];
+	if (lease->ipv6_pool->shared_network == reply->shared) {
+		return (0);
+	}
+
+	/* Old and new are on different shared networks so the client must
+	* roamed. Release the old leases. */
+	for (i = 0;  i < old_ia->num_iasubopt; i++) {
+		lease = old_ia->iasubopt[i];
+
+		log_info("Client: %s roamed to new network,"
+			 " releasing lease: %s%s",
+			 print_hex_1(reply->client_id.len,
+				     reply->client_id.data, 60),
+			 pin6_addr(&lease->addr), iasubopt_plen_str(lease));
+
+                release_lease6(lease->ipv6_pool, lease);
+                lease->ia->cltt = cur_time;
+                write_ia(lease->ia);
+        }
+
+	return (1);
+}
+
+/*
+ * Convenience function which returns a string (static buffer)
+ * containing either a "/" followed by the prefix length or an
+ * empty string depending on the lease type
+ */
+const char *iasubopt_plen_str(struct iasubopt *lease) {
+	static char prefix_buf[16];
+	*prefix_buf = 0;
+	if ((lease->ia) && (lease->ia->ia_type == D6O_IA_PD)) {
+		sprintf(prefix_buf, "/%-d", lease->plen);
+	}
+
+	return (prefix_buf);
+}
 
 #endif /* DHCPv6 */
