@@ -2021,6 +2021,20 @@ addresses, as long as those addresses are not restricted by
 and \fIdeny\fR statements within their \fIpool\fR declarations.
 .RE
 .PP
+The \fIcheck-secs-byte-order\fR statement
+.RS 0.25i
+.PP
+.B check-secs-byte-order \fIflag\fB;\fR
+.PP
+When \fIcheck-secs-byte-order\fR is enabled, the server will check for DHCPv4
+clients that do the byte ordering on the secs field incorrectly. This field
+should be in network byte order but some clients get it wrong. When this
+parameter is enabled the server will examine the secs field and if it looks
+wrong (high byte non zero and low byte zero) swap the bytes.  The default
+is disabled. This parameter is only useful when doing load balancing within
+failover. (Formerly, this behavior had to be enabled during compilation
+configuration via --enable-secs-byteorder).
+.PP
 The \fIdb-time-format\fR statement
 .RS 0.25i
 .PP

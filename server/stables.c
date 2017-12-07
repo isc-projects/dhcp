@@ -280,6 +280,9 @@ static struct option server_options[] = {
 #ifdef EUI_64
 	{ "use-eui-64", "f",		&server_universe,  SV_USE_EUI_64, 1 },
 #endif
+#if defined (FAILOVER_PROTOCOL)
+	{ "check-secs-byte-order", "f", &server_universe, SV_CHECK_SECS_BYTE_ORDER, 1 },
+#endif
 	{ NULL, NULL, NULL, 0, 0 }
 };
 

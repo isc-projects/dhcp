@@ -227,6 +227,16 @@ dhcp-users@lists.isc.org.
   [ISC-Bugs #21297]
   [ISC-Bugs #36966]
 
+- Replaced compilation option, enable-secs-byteorder, with a run-time, server
+  configuration parameter, check-secs-byte-order.  When enabled, the
+  server will check for clients that do the byte ordering on the secs field
+  incorrectly.  This field should be in network byte order but some clients
+  get it wrong.  When this parameter is enabled the server will examine the
+  secs field and if it looks wrong (high byte non zero and low byte zero) swap
+  the bytes.  The default is disabled.  This parameter is only useful when
+  doing load balancing within failover.
+  [ISC-Bugs #45364]
+
 			Changes since 4.3.0 (bug fixes)
 
 - Tidy up several small tickets.

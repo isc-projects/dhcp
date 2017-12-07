@@ -392,5 +392,7 @@ typedef struct _dhcp_failover_state {
 	u_int32_t updxid;		/* XID of UPDREQ* message in action. */
 } dhcp_failover_state_t;
 
+extern int check_secs_byte_order; /* check byte order of secs field when true */
+
 #define DHCP_FAILOVER_VERSION		1
 #endif /* FAILOVER_PROTOCOL */

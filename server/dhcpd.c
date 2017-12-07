@@ -1378,6 +1378,15 @@ void postconf_initialization (int quiet)
 		data_string_forget (&db, MDL);
         }
 
+#if defined (FAILOVER_PROTOCOL)
+       oc = lookup_option(&server_universe, options, SV_CHECK_SECS_BYTE_ORDER);
+       if ((oc != NULL) &&
+	   evaluate_boolean_option_cache(NULL, NULL, NULL, NULL, options, NULL,
+					 &global_scope, oc, MDL)) {
+		check_secs_byte_order = 1;
+	}
+#endif
+
 #if defined (BINARY_LEASES)
 	if (local_family == AF_INET) {
 		log_info("Source compiled to use binary-leases");
