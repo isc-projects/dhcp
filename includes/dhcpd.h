@@ -1134,6 +1134,7 @@ struct dhc6_addr {
 	/* Address state flags. */
 	#define DHC6_ADDR_DEPREFFED	0x01
 	#define DHC6_ADDR_EXPIRED	0x02
+	#define DHC6_ADDR_DECLINED	0x04
 	u_int8_t flags;
 
 	TIME starts;
@@ -1179,7 +1180,8 @@ enum dhcp_state {
 	S_BOUND = 5,
 	S_RENEWING = 6,
 	S_REBINDING = 7,
-	S_STOPPED = 8
+	S_DECLINING = 8,
+	S_STOPPED = 9
 };
 
 /* Possible pending client operations. */

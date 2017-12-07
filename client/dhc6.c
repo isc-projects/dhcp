@@ -115,6 +115,8 @@ void do_select6(void *input);
 void do_refresh6(void *input);
 static void do_release6(void *input);
 static void start_bound(struct client_state *client);
+static void start_decline6(struct client_state *client);
+static void do_decline6(void *input);
 static void start_informed(struct client_state *client);
 void informed_handler(struct packet *packet, struct client_state *client);
 void bound_handler(struct packet *packet, struct client_state *client);
@@ -143,6 +145,11 @@ static isc_result_t dhc6_check_status(isc_result_t rval,
 				      unsigned *code);
 static int dhc6_score_lease(struct client_state *client,
 			    struct dhc6_lease *lease);
+
+static isc_result_t dhc6_add_ia_na_decline(struct client_state *client,
+					   struct data_string *packet,
+					   struct dhc6_lease *lease);
+static int drop_declined_addrs(struct dhc6_lease *lease);
 
 extern int onetry;
 extern int stateless;
@@ -2353,6 +2360,7 @@ start_release6(struct client_state *client)
 	cancel_timeout(do_select6, client);
 	cancel_timeout(do_refresh6, client);
 	cancel_timeout(do_release6, client);
+	cancel_timeout(do_decline6, client);
 	client->state = S_STOPPED;
 
 	/*
@@ -2972,6 +2980,47 @@ dhc6_stop_action(struct client_state *client, isc_result_t *rvalp,
 	return ISC_TRUE;
 }
 
+static isc_boolean_t
+dhc6_decline_action(struct client_state *client, isc_result_t *rvalp,
+		  unsigned code)
+{
+	isc_result_t rval;
+
+	if (rvalp == NULL)
+		log_fatal("Impossible condition at %s:%d.", MDL);
+
+	if (client == NULL) {
+		*rvalp = DHCP_R_INVALIDARG;
+		return ISC_FALSE;
+	}
+	rval = *rvalp;
+
+	if (rval == ISC_R_SUCCESS) {
+		return ISC_FALSE;
+	}
+
+	switch (code) {
+	case STATUS_UseMulticast:
+		/* The server is telling us to use a multicast address, so
+		* we have to delete the unicast option from the active
+		* lease, then allow retransmission to occur normally.
+		* (XXX: It might be preferable in this case to retransmit
+		* sooner than the current interval, but for now we don't.)
+		*/
+		if (client->active_lease != NULL)
+			delete_option(&dhcp_universe,
+				      client->active_lease->options,
+				      D6O_UNICAST);
+		return ISC_FALSE;
+	default:
+		/* Anything else is basically meaningless */
+		break;
+	}
+
+	return ISC_TRUE;
+}
+
+
 /* Look at a new and old lease, and make sure the new information is not
  * losing us any state.
  */
@@ -3008,6 +3057,10 @@ dhc6_check_reply(struct client_state *client, struct dhc6_lease *new)
 
 	      case S_STOPPED:
 		action = dhc6_stop_action;
+		break;
+
+	      case S_DECLINING:
+		action = dhc6_decline_action;
 		break;
 
 	      default:
@@ -3123,6 +3176,7 @@ dhc6_check_reply(struct client_state *client, struct dhc6_lease *new)
 		break;
 
 	      case S_STOPPED:
+	      case S_DECLINING:
 		/* Nothing critical to do at this stage. */
 		break;
 
@@ -4261,17 +4315,35 @@ reply_handler(struct packet *packet, struct client_state *client)
 	cancel_timeout(do_select6, client);
 	cancel_timeout(do_refresh6, client);
 	cancel_timeout(do_release6, client);
+	cancel_timeout(do_decline6, client);
 
-	/* If this is in response to a Release/Decline, clean up and return. */
+	/* If this is in response to a Release, clean up and return. */
 	if (client->state == S_STOPPED) {
-		if (client->active_lease == NULL)
-			return;
+		if (client->active_lease != NULL) {
+			dhc6_lease_destroy(&client->active_lease, MDL);
+			client->active_lease = NULL;
+			/* We should never wait for nothing!? */
+			if (stopping_finished()) {
+				finish(0);
+			}
+		}
 
-		dhc6_lease_destroy(&client->active_lease, MDL);
-		client->active_lease = NULL;
-		/* We should never wait for nothing!? */
-		if (stopping_finished())
-			finish(0);
+		return;
+	}
+
+	if (client->state == S_DECLINING) {
+		/* Weed thru the lease and delete all declined addresses.
+		 * Toss the lease if there aren't any addresses left */
+		int live_cnt = drop_declined_addrs(client->active_lease);
+		if (live_cnt == 0) {
+			dhc6_lease_destroy(&client->active_lease, MDL);
+			client->active_lease = NULL;
+		}
+
+		/* Solicit with any live addresses we have so far, and
+		* add additional empty NA iasubopts for those we had
+		* to decline. */
+		start_init6(client);
 		return;
 	}
 
@@ -4770,6 +4842,7 @@ start_bound(struct client_state *client)
 	struct dhc6_addr *addr, *oldaddr;
 	struct dhc6_lease *lease, *old;
 	const char *reason;
+	int decline_cnt = 0;
 #if defined (NSUPDATE)
 	TIME dns_update_offset = 1;
 #endif
@@ -4853,7 +4926,22 @@ start_bound(struct client_state *client)
 			dhc6_marshall_values("new_", client, lease, ia, addr);
 			script_write_requested6(client);
 
-			script_go(client);
+			/* When script returns 3, DAD failed */
+			if (script_go(client) == 3) {
+				if (ia->ia_type == D6O_IA_NA) {
+					addr->flags |= DHC6_ADDR_DECLINED;
+					log_debug ("Flag address declined:%s",
+						   piaddr(addr->address));
+					decline_cnt++;
+				}
+			}
+		}
+
+		/* If the client script DAD failed any addresses we need
+		* build and issue a DECLINE */
+		if (decline_cnt) {
+			start_decline6(client);
+			return;
 		}
 
 		/* XXX: maybe we should loop on the old values instead? */
@@ -4913,6 +5001,153 @@ void
 bound_handler(struct packet *packet, struct client_state *client)
 {
 	log_debug("RCV: Input packets are ignored once bound.");
+}
+
+/*
+ * start_decline6() kicks off the decline process, transmitting
+ * an decline packet and scheduling a retransmission event.
+ */
+void
+start_decline6(struct client_state *client)
+{
+	/* Cancel any pending transmissions */
+	cancel_timeout(do_confirm6, client);
+	cancel_timeout(do_select6, client);
+	cancel_timeout(do_refresh6, client);
+	cancel_timeout(do_release6, client);
+	cancel_timeout(do_decline6, client);
+	client->state = S_DECLINING;
+
+	if (client->active_lease == NULL)
+		return;
+
+	/* Set timers per RFC3315 section 18.1.7. */
+	client->IRT = DEC_TIMEOUT * 100;
+	client->MRT = 0;
+	client->MRC = DEC_MAX_RC;
+	client->MRD = 0;
+
+	dhc6_retrans_init(client);
+	client->v6_handler = reply_handler;
+
+	client->refresh_type = DHCPV6_DECLINE;
+	do_decline6(client);
+}
+
+/*
+ * do_decline6() creates a Decline packet and transmits it.
+ * The decline will contain an IA_NA with iasubopt(s) for
+ * each IA_NA containing declined address(es) in the active
+ * lease.
+ */
+static void
+do_decline6(void *input)
+{
+	struct client_state *client;
+	struct data_string ds;
+	int send_ret;
+	struct timeval elapsed, tv;
+
+	client = input;
+	if (client == NULL || client->active_lease == NULL) {
+		return;
+	}
+
+	if ((client->MRC != 0) && (client->txcount > client->MRC))  {
+		log_info("Max retransmission count exceeded.");
+		goto decline_done;
+	}
+
+	/*
+	 * Start_time starts at the first transmission.
+	 */
+	if (client->txcount == 0) {
+		client->start_time.tv_sec = cur_tv.tv_sec;
+		client->start_time.tv_usec = cur_tv.tv_usec;
+	}
+
+	/* elapsed = cur - start */
+	elapsed.tv_sec = cur_tv.tv_sec - client->start_time.tv_sec;
+	elapsed.tv_usec = cur_tv.tv_usec - client->start_time.tv_usec;
+	if (elapsed.tv_usec < 0) {
+		elapsed.tv_sec -= 1;
+		elapsed.tv_usec += 1000000;
+	}
+
+	memset(&ds, 0, sizeof(ds));
+	if (!buffer_allocate(&ds.buffer, 4, MDL)) {
+		log_error("Unable to allocate memory for Decline.");
+		goto decline_done;
+	}
+
+	ds.data = ds.buffer->data;
+	ds.len = 4;
+	ds.buffer->data[0] = DHCPV6_DECLINE;
+	memcpy(ds.buffer->data + 1, client->dhcpv6_transaction_id, 3);
+
+	/* Form an elapsed option. */
+	/* Maximum value is 65535 1/100s coded as 0xffff. */
+	if ((elapsed.tv_sec < 0) || (elapsed.tv_sec > 655) ||
+	    ((elapsed.tv_sec == 655) && (elapsed.tv_usec > 350000))) {
+		client->elapsed = 0xffff;
+	} else {
+		client->elapsed = elapsed.tv_sec * 100;
+		client->elapsed += elapsed.tv_usec / 10000;
+	}
+
+	client->elapsed = htons(client->elapsed);
+
+	log_debug("XMT: Forming Decline.");
+	make_client6_options(client, &client->sent_options,
+			     client->active_lease, DHCPV6_DECLINE);
+	dhcpv6_universe.encapsulate(&ds, NULL, NULL, client, NULL,
+				    client->sent_options, &global_scope,
+				    &dhcpv6_universe);
+
+	/* Append IA_NA's. */
+	if (dhc6_add_ia_na_decline(client, &ds, client->active_lease)
+	    != ISC_R_SUCCESS) {
+		data_string_forget(&ds, MDL);
+		goto decline_done;
+	}
+
+	/* Transmit and wait. */
+	log_info("XMT: Decline on %s, interval %ld0ms.",
+		 client->name ? client->name : client->interface->name,
+		 (long int)client->RT);
+
+	send_ret = send_packet6(client->interface, ds.data, ds.len,
+				&DHCPv6DestAddr);
+	if (send_ret != ds.len) {
+		log_error("dhc6: sendpacket6() sent %d of %d bytes",
+			  send_ret, ds.len);
+	}
+
+	data_string_forget(&ds, MDL);
+
+	/* Wait RT */
+	tv.tv_sec = cur_tv.tv_sec + client->RT / 100;
+	tv.tv_usec = cur_tv.tv_usec + (client->RT % 100) * 10000;
+	if (tv.tv_usec >= 1000000) {
+		tv.tv_sec += 1;
+		tv.tv_usec -= 1000000;
+	}
+	add_timeout(&tv, do_decline6, client, NULL, NULL);
+	dhc6_retrans_advance(client);
+	return;
+
+decline_done:
+	/* We here because we've exhausted our retry limits or
+	 * something else has gone wrong with the decline process.
+	 * So let's just toss the existing lease and start over.
+	 */
+	if (client->active_lease != NULL) {
+		dhc6_lease_destroy(&client->active_lease, MDL);
+		client->active_lease = NULL;
+	}
+
+	start_init6(client);
+	return;
 }
 
 /* start_renew6() gets us all ready to go to start transmitting Renew packets.
@@ -5716,4 +5951,163 @@ active_prefix(struct client_state *client)
 	}
 	return ISC_TRUE;
 }
+
+/* Adds a leases's declined addreses to the outbound packet
+ *
+ * For each IA_NA in the lease that contains one or more declined
+ * addresses, an IA_NA option with an iasubopt for each declined
+ * address is added to the outbound packet.
+ *
+ * We skip PDs and TAs as declines are undefined for them.
+ */
+static isc_result_t
+dhc6_add_ia_na_decline(struct client_state *client, struct data_string *packet,
+		       struct dhc6_lease *lease) {
+	struct data_string iads;
+	struct data_string addrds;
+	struct dhc6_addr *addr;
+	struct dhc6_ia *ia;
+	isc_result_t rval = ISC_R_SUCCESS;
+
+	memset(&iads, 0, sizeof(iads));
+	memset(&addrds, 0, sizeof(addrds));
+	for (ia = lease->bindings; ia != NULL && rval == ISC_R_SUCCESS;
+	     ia = ia->next) {
+		if (ia->ia_type != D6O_IA_NA)
+			continue;
+
+		int start_new_ia = 1;
+		for (addr = ia->addrs ; addr != NULL ; addr = addr->next) {
+			/*
+			 * Do not confirm expired addresses, do not request
+			 * expired addresses (but we keep them around for
+			 * solicit).
+			 */
+			if (!(addr->flags & DHC6_ADDR_DECLINED)) {
+				continue;
+			}
+
+			if (start_new_ia) {
+				if (!buffer_allocate(&iads.buffer, 12, MDL)) {
+					log_error("Unable to allocate memory"
+						  " for IA_NA.");
+					rval = ISC_R_NOMEMORY;
+					break;
+				}
+
+				/* Copy the IAID into the packet buffer. */
+				memcpy(iads.buffer->data, ia->iaid, 4);
+				iads.data = iads.buffer->data;
+				iads.len = 12;
+
+				/* Set t1/t2 to zero; server will ignore them */
+				memset(iads.buffer->data + 4, 0, 8);
+				log_debug("XMT:  X-- IA_NA %s",
+				print_hex_1(4, iads.buffer->data, 55));
+				start_new_ia = 0;
+			}
+
+			if (addr->address.len != 16) {
+				log_error("Illegal IPv6 address length (%d), "
+					  "ignoring.  (%s:%d)",
+					  addr->address.len, MDL);
+				continue;
+			}
+
+			if (!buffer_allocate(&addrds.buffer, 24, MDL)) {
+				log_error("Unable to allocate memory for "
+					  "IAADDR.");
+				rval = ISC_R_NOMEMORY;
+				break;
+			}
+
+			addrds.data = addrds.buffer->data;
+			addrds.len = 24;
+
+			/* Copy the address into the packet buffer. */
+			memcpy(addrds.buffer->data, addr->address.iabuf, 16);
+
+			/* Preferred and max life are irrelevant */
+			memset(addrds.buffer->data + 16, 0, 8);
+			log_debug("XMT:  | X-- Decline Address %s",
+				  piaddr(addr->address));
+
+			append_option(&iads, &dhcpv6_universe, iaaddr_option,
+				      &addrds);
+			data_string_forget(&addrds, MDL);
+		}
+
+		/*
+		 * It doesn't make sense to make a request without an
+		 * address.
+		 */
+		if (ia->addrs == NULL) {
+			log_debug("!!!:  V IA_NA has no IAADDRs - removed.");
+			rval = ISC_R_FAILURE;
+		} else if (rval == ISC_R_SUCCESS) {
+			log_debug("XMT:  V IA_NA appended.");
+			append_option(packet, &dhcpv6_universe, ia_na_option,
+				      &iads);
+		}
+
+		data_string_forget(&iads, MDL);
+	}
+
+	return (rval);
+}
+
+/*
+ * Remove any declined NA addresses from the lease.
+ *
+ * Returns zero if the all of the bindings on the lease
+ * were removed, non-zero if there are PD, TA, or usuable NA
+ * bindings
+ */
+int drop_declined_addrs(struct dhc6_lease *lease) {
+	struct dhc6_ia *ia;
+	int live_cnt = 0;
+
+	for (ia = lease->bindings; ia != NULL; ia = ia->next) {
+		struct dhc6_addr* prev_addr;
+		struct dhc6_addr* addr;
+		struct dhc6_addr* next;
+
+		/* If it's a PD or TA, we assume it has at least
+		* one usuable binding */
+		if (ia->ia_type != D6O_IA_NA) {
+			live_cnt++;
+			continue;
+		}
+
+		prev_addr = NULL;
+		for (addr = ia->addrs ; addr != NULL ; ) {
+			if (!(addr->flags & DHC6_ADDR_DECLINED))  {
+				live_cnt++;
+				addr = addr->next;
+				prev_addr = addr;
+				continue;
+			}
+
+			/* If we're deleting head, move it up one */
+			if (ia->addrs == addr) {
+				ia->addrs = addr->next;
+				prev_addr = addr->next;
+			} else {
+				prev_addr->next = addr->next;
+			}
+
+			if (addr->options != NULL) {
+                        	option_state_dereference(&addr->options, MDL);
+			}
+
+			next = addr->next;
+			dfree(addr, MDL);
+			addr = next;
+		}
+	}
+
+	return (live_cnt);
+}
+
+
 #endif /* DHCPv6 */

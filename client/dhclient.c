@@ -4508,6 +4508,7 @@ void client_location_changed ()
 			      case S_INIT:
 			      case S_REBINDING:
 			      case S_STOPPED:
+			      case S_DECLINING:
 				break;
 			}
 			client -> state = S_INIT;

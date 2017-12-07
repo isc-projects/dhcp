@@ -218,6 +218,15 @@ dhcp-users@lists.isc.org.
   completion of the test.
   [ISC-Bugs #22267]
 
+- dhclient will now generate a DHCPv6 DECLINE message containing all IA_NA
+  addresses which for which the client script indicates a DAD failure. After
+  receiving the DECLINE reply, dhclient will restart the solicit process.
+  Note, the client script must exit with a value of 3 to signify that the
+  address failed DAD.  Thanks to Jiri Popelka of Red Hat for submitting the
+  patch that was the foundation for this change.
+  [ISC-Bugs #21297]
+  [ISC-Bugs #23357] 
+
 			Changes since 4.3.0 (bug fixes)
 
 - Tidy up several small tickets.
