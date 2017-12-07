@@ -254,6 +254,8 @@ dhcp-users@lists.isc.org.
 - The ability of the server to send back dhcp6.vendor-opts values has been
   restored. A change in 4.3.5 (see #29246) which enabled it to send back the
   FQDN option unfortunately broke its ability send back dhcp6.vendor-opts.
+  Thanks to Sumant Gupta (sumantgupta at gmail dot com) of Landis+Gry for
+  bringing this issue to our attention.
   [ISC-Bugs #46427]
 
 - The default value for server (-6) parameter, prefix-length-mode, has been
