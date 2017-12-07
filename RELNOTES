@@ -225,7 +225,7 @@ dhcp-users@lists.isc.org.
   address failed DAD.  Thanks to Jiri Popelka of Red Hat for submitting the
   patch that was the foundation for this change.
   [ISC-Bugs #21297]
-  [ISC-Bugs #23357] 
+  [ISC-Bugs #36966]
 
 			Changes since 4.3.0 (bug fixes)
 
