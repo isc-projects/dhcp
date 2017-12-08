@@ -1227,6 +1227,74 @@ on the PTR record, but the \fIinterim\fR update method does not do this.
 In the final RFC this requirement was relaxed such that a server may
 add a DHCID RR to the PTR record.
 .PP
+.SH DDNS IN DUAL STACK ENVIRONMENTS
+As described in RFC 4703, section 5.2, in order to perform DDNS in dual
+stack environments, both IPv4 and IPv6 servers would need to be configured
+to use the standard update style and participating IPv4 clients MUST
+convey DUIDs as described in RFC 4361, section 6.1., in their
+dhcp-client-identifiers.
+.PP
+In a nutshell, this mechanism is intended to use globally unique DUIDs
+to idenfity both IPv4 and IPv6 clients, and where a device has both
+IPv4 and IPv6 leases it is identified by the same DUID.  This allows
+a dual stack client to use the same FQDN for both mappings, while
+being protected from updates for other clients by the rules of conflict
+detection.
+.PP
+However, not all IPv4 clients implement this behavior which makes
+supporting them dual stack environments problematic.  In order to
+address this issue ISC DHCP (as of 4.4.0) supports a new mode of
+DDNS conflict resolution referred to as Dual Stack Mixed Mode (DSMM).
+.PP
+The concept behind DSMM is relatively simple.  All dhcp servers of one
+protocol (IPv4 or v6) use one ddns-update-style (interim or standard)
+while all servers of the "other" protocol will use the "other"
+ddns-udpate-style.  In this way, all servers of a given protocol are
+using the same record type (TXT or DHCID) for their DHCID RR entries.
+This allows conflict detection to be enforced within each protocol
+without interferring with the other's entries.
+.PP
+DSMM modifications now ensure that IPv4 DSMM servers only ever modify
+A records, their associated PTR records and DHCID records, while DSMM
+IPv6 severs only modify AAAA records, their associated PTR records,
+and DHCID records.
+.PP
+Note that DSMM is not a perfect solution, it is a compromise that can
+work well provided all participating DNS updaters play by DSMM rules.
+As with anything else in life, it only works as well as those who
+particpate behave.
+.PP
+While conflict detection is enabled by default, DSMM is not.  To enable
+DSMM, both update-conflict-detection and ddns-dual-stack-mixed-mode must
+be true.
+.PP
+.SH PROTECTING DNS ENTRIES FOR STATIC CLIENTS
+Built into conflict resolution is the protection of manually made entries
+for static clients.  Per the rules of conflict resolution,  a DNS updater
+may not alter forward DNS entries unless there is a DHCID RR which matches
+for whom the update is being made.  Therefore, any forward DNS entries
+without a corresponding DHCID RR cannot be altered by such an updater.
+.PP
+In some environments, it may be desirable to use only this aspect of conflict
+resolution and allow DNS updaters to overwrite entries for dynamic clients
+regardless of what client owns them.  In other words, the presence or lack
+of a DHCID RR is used to determine whether entries may or may not be
+overwritten.  Whether or not the client matches the data value of the DHCID
+RR is irrelevant.   This behavior, off by default, can be configured through
+the parameter, ddns-guard-id-must-match.  As with DSMM, this behavior is
+can only be enabled if conflict resolution is enabled.   This behavior should
+be considered carefully before electing to use it.
+.PP
+There is an additional parameter that can be used with DSMM
+ddns-other-guard-is-dynamic.  When enabled along with DSMM, a server will
+regard the presence of a DHCID RR of the other style type as indicating that
+the forward DNS entries for that FQDN should be dynamic and may be overwritten.
+For example, such a server using interim style could overwrite the DNS entries
+for an FQDN if there is only a DHDID type DHDID RR for the FQDN.  Essentially,
+if there are dynamic entries for one protocol, that is enough to overcome the
+static protection of entries for the other protocol.  This behavior warrants
+careful consideration before electing to use it.
+.PP
 .SH DYNAMIC DNS UPDATE SECURITY
 .PP
 When you set your DNS server up to allow updates from the DHCP server,
@@ -2070,6 +2138,34 @@ appended to the client's hostname to form a fully-qualified
 domain-name (FQDN).
 .RE
 .PP
+The \fIddns-dual-stack-mixed-mode\fR statement
+.RS 0.25i
+.PP
+.B ddns-dual-stack-mixed-mode \fIflag\fB;\fR
+.PP
+The \fIddns-dual-stack-mixed-mode\fR parameter controls whether or not the
+server applies Dual Stack Mixed Mode rules during DDNS conflict resolution.
+This parameter is off by default, has no effect unless
+update-conflict-detection is enabled, and may only be specified at the
+global scope.
+.RE
+.PP
+The \fIddns-guard-id-must-match\fR statement
+.RS 0.25i
+.PP
+.B ddns-guard-id-must-match \fIflag\fB;\fR
+.PP
+The \fIddns-guard-id-must-match\fR parameter controls whether or not a
+the client id within a DHCID RR must match that of the DNS update's client
+to permit DNS entries associated with that DHCID RR to be ovewritten.
+Proper conflict resolution requires ID matching and should only be disabled
+after careful consideration.  When disabled, it is allows any DNS updater to
+replace DNS entries that have an associated DHCID RR, regardless of client
+identity. This parameter is on by default, has no effect unless
+update-conflict-detection is enabled, and may only be specified at the global
+scope.
+.RE
+.PP
 The \fddns-local-address4\fR and \fddns-local-address6\fR statements
 .RS 0.25i
 .PP
@@ -2080,6 +2176,20 @@ The \fddns-local-address4\fR and \fddns-local-address6\fR statements
 The \fIaddress\fR parameter should be the local IPv4 or IPv6 address
 the server should use as the from address when sending DDNS update
 requests.
+.RE
+.PP
+The \fIddns-other-guard-is-dynamic\fR statement
+.RS 0.25i
+.PP
+.B ddns-other-guard-is-dynamic \fIflag\fB;\fR
+.PP
+The \fIddns-other-guard-is-dynamic\fR parameter controls whether or not a
+a server running DSMM will consider the presence of the other update style
+DHCID RR as an indcation that a DNS entries may be overwritten. It should
+only be enabled after careful study as it allows DNS entries that would
+otherwise be protected as static, to be overwritten in certain cases. This
+paramater is off by default, has no effect unless ddns-dual-stack-mixed-mode
+is enabled, and may only be specified at the global scope.
 .RE
 .PP
 The \fIddns-rev-domainname\fR statement
@@ -3125,7 +3235,7 @@ server will use dhcp-renewal-time and dhcp-rebinding-time, respectively.
 A value of zero tells the client it may choose its own value.
 
 When those options are not defined then values will be set to zero unless the
-global \fIdhcpv6-set-tee-times\R is enabled.  When this option is enabled the
+global \fIdhcpv6-set-tee-times\fR is enabled.  When this option is enabled the
 times are calculated as recommended by RFC 3315, Section 22.4:
 
       T1 will be set to 0.5 times the shortest preferred lifetime
@@ -3199,7 +3309,8 @@ If the \fIupdate-conflict-detection\fR parameter is true, the server will
 perform standard DHCID multiple-client, one-name conflict detection.  If
 the parameter has been set false, the server will skip this check and
 instead simply tear down any previous bindings to install the new
-binding without question.  The default is true.
+binding without question.  The default is true and this parameter may only
+be specified at the global scope.
 .RE
 .PP
 The

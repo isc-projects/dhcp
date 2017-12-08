@@ -48,7 +48,7 @@ static const char url [] =
 #  include <unistd.h>
 #  include <pwd.h>
 /* get around the ISC declaration of group */
-#  define group real_group 
+#  define group real_group
 #    include <grp.h>
 #  undef group
 
@@ -73,7 +73,10 @@ option server.ddns-hostname =						    \n\
 option server.ddns-domainname =	config-option domain-name;		    \n\
 option server.ddns-rev-domainname = \"in-addr.arpa.\";";
 
+/* Stores configured DDNS conflict detection flags */
+u_int16_t ddns_conflict_mask;
 #endif /* NSUPDATE */
+
 int ddns_update_style;
 int dont_use_fsync = 0; /* 0 = default, use fsync, 1 = don't use fsync */
 int server_id_check = 0; /* 0 = default, don't check server id, 1 = do check */
@@ -237,7 +240,7 @@ static void setup_chroot (char *chroot_dir) {
 }
 #endif /* PARANOIA */
 
-int 
+int
 main(int argc, char **argv) {
 	int fd;
 	int i, status;
@@ -598,7 +601,7 @@ main(int argc, char **argv) {
 		const char *path = path_dhcpd_db;
                 path_dhcpd_db = realpath(path_dhcpd_db, NULL);
                 if (path_dhcpd_db == NULL)
-                        log_fatal("Failed to get realpath for %s: %s", path, 
+                        log_fatal("Failed to get realpath for %s: %s", path,
                                    strerror(errno));
         }
 
@@ -696,7 +699,7 @@ main(int argc, char **argv) {
 #endif
 		}
 	}
-  
+
   	if (local_family == AF_INET) {
 		remote_port = htons(ntohs(local_port) + 1);
 	} else {
@@ -789,13 +792,13 @@ main(int argc, char **argv) {
 		    log_error ("** You must specify a lease file with -lf.");
 		    log_error ("   Dhcpd will not overwrite your default");
 		    log_fatal ("   lease file when playing back a trace. **");
-	    }		
+	    }
 	    trace_file_replay (traceinfile);
 
 #if defined (DEBUG_MEMORY_LEAKAGE) && \
                 defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
             free_everything ();
-            omapi_print_dmalloc_usage_by_caller (); 
+            omapi_print_dmalloc_usage_by_caller ();
 #endif
 
 	    exit (0);
@@ -844,7 +847,7 @@ main(int argc, char **argv) {
 #endif
 
         /* test option should cause an early exit */
- 	if (cftest && !lftest) 
+ 	if (cftest && !lftest)
  		exit(0);
 
 	/*
@@ -905,8 +908,8 @@ main(int argc, char **argv) {
 	 * Remove addresses from our pools that we should not issue
 	 * to clients.
 	 *
-	 * We currently have no support for this in IPv4. It is not 
-	 * as important in IPv4, as making pools with ranges that 
+	 * We currently have no support for this in IPv4. It is not
+	 * as important in IPv4, as making pools with ranges that
 	 * leave out interfaces and hosts is fairly straightforward
 	 * using range notation, but not so handy with CIDR notation.
 	 */
@@ -985,7 +988,7 @@ main(int argc, char **argv) {
 			log_fatal ("setgroups: %m");
 		if (setgid (set_gid))
 			log_fatal ("setgid(%d): %m", (int) set_gid);
-	}	
+	}
 
 	if (set_uid) {
 		if (setuid (set_uid))
@@ -1268,6 +1271,12 @@ void postconf_initialization (int quiet)
 			log_fatal("Unable to complete ddns initialization");
 		}
 	}
+
+	/* Set the conflict detection flag mask based on globally
+	 * defined DDNS configuration params.  This mask should be
+	 * to init ddns_cb::flags before for every DDNS transaction. */
+	ddns_conflict_mask = get_conflict_mask(options);
+
 #else
 	/* If we don't have support for updates compiled in tell the user */
 	if (ddns_update_style != DDNS_UPDATE_STYLE_NONE) {
@@ -1352,7 +1361,7 @@ void postconf_initialization (int quiet)
 	}
 
 	oc = lookup_option(&server_universe, options, SV_PREFIX_LEN_MODE);
-	if ((oc != NULL) && 
+	if ((oc != NULL) &&
 	    evaluate_option_cache(&db, NULL, NULL, NULL, options, NULL,
 					  &global_scope, oc, MDL)) {
 		if (db.len == 1) {
@@ -1518,7 +1527,7 @@ int dhcpd_interface_setup_hook (struct interface_info *ip, struct iaddr *ia)
 			interface_reference (&subnet -> interface, ip, MDL);
 			subnet -> interface_address = *ia;
 		} else if (subnet -> interface != ip) {
-			log_error ("Multiple interfaces match the %s: %s %s", 
+			log_error ("Multiple interfaces match the %s: %s %s",
 				   "same subnet",
 				   subnet -> interface -> name, ip -> name);
 		}
@@ -1532,11 +1541,11 @@ int dhcpd_interface_setup_hook (struct interface_info *ip, struct iaddr *ia)
 				shared_network_reference
 					(&ip -> shared_network, share, MDL);
 		}
-		
+
 		if (!share -> interface) {
 			interface_reference (&share -> interface, ip, MDL);
 		} else if (share -> interface != ip) {
-			log_error ("Multiple interfaces match the %s: %s %s", 
+			log_error ("Multiple interfaces match the %s: %s %s",
 				   "same shared network",
 				   share -> interface -> name, ip -> name);
 		}
@@ -1657,13 +1666,13 @@ static isc_result_t dhcp_io_shutdown_countdown (void *vlp)
 	    if (no_pid_file == ISC_FALSE)
 		    (void) unlink(path_dhcpd_pid);
 	    exit (0);
-	}		
+	}
 #else
 	if (shutdown_state == shutdown_done) {
 #if defined (DEBUG_MEMORY_LEAKAGE) && \
 		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 		free_everything ();
-		omapi_print_dmalloc_usage_by_caller (); 
+		omapi_print_dmalloc_usage_by_caller ();
 #endif
 		if (no_pid_file == ISC_FALSE)
 			(void) unlink(path_dhcpd_pid);
@@ -1707,7 +1716,7 @@ isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
 	/* Called on signal. */
 	log_info("Received signal %d, initiating shutdown.", shutdown_signal);
 	shutdown_signal = SIGUSR1;
-	
+
 	/*
 	 * Prompt the shutdown event onto the timer queue
 	 * and return to the dispatch loop.

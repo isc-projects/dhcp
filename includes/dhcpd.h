@@ -805,6 +805,9 @@ struct lease_state {
 #if defined (FAILOVER_PROTOCOL)
 #define SV_CHECK_SECS_BYTE_ORDER	91
 #endif
+#define SV_DDNS_DUAL_STACK_MIXED_MODE	92
+#define SV_DDNS_GUARD_ID_MUST_MATCH 	93
+#define SV_DDNS_OTHER_GUARD_IS_DYNAMIC	94
 
 #if !defined (DEFAULT_PING_TIMEOUT)
 # define DEFAULT_PING_TIMEOUT 1
@@ -1738,29 +1741,37 @@ struct ipv6_pond {
 */
 #define POND_TRACK_MAX ISC_UINT64_MAX
 
-/* Flags and state for dhcp_ddns_cb_t */
-#define DDNS_UPDATE_ADDR        0x01
-#define DDNS_UPDATE_PTR         0x02
-#define DDNS_INCLUDE_RRSET      0x04
-#define DDNS_CONFLICT_OVERRIDE  0x08
-#define DDNS_CLIENT_DID_UPDATE  0x10
-#define DDNS_EXECUTE_NEXT       0x20
-#define DDNS_ABORT              0x40
-#define DDNS_STATIC_LEASE       0x80
-#define DDNS_ACTIVE_LEASE	0x100
-/*
- * The following two groups are separate and we could reuse
- * values but not reusing them may be useful in the future.
- */
-#define DDNS_STATE_CLEANUP          0 // The previous step failed, cleanup
+/* Flags for dhcp_ddns_cb_t */
+#define DDNS_UPDATE_ADDR		0x0001
+#define DDNS_UPDATE_PTR			0x0002
+#define DDNS_INCLUDE_RRSET		0x0004
+#define DDNS_CONFLICT_DETECTION		0x0008
+#define DDNS_CLIENT_DID_UPDATE		0x0010
+#define DDNS_EXECUTE_NEXT		0x0020
+#define DDNS_ABORT			0x0040
+#define DDNS_STATIC_LEASE		0x0080
+#define DDNS_ACTIVE_LEASE		0x0100
+#define DDNS_DUAL_STACK_MIXED_MODE	0x0200
+#define DDNS_GUARD_ID_MUST_MATCH	0x0400
+#define DDNS_OTHER_GUARD_IS_DYNAMIC	0x0800
 
-#define DDNS_STATE_ADD_FW_NXDOMAIN  1
-#define DDNS_STATE_ADD_FW_YXDHCID   2
-#define DDNS_STATE_ADD_PTR          3
+#define CONFLICT_BITS (DDNS_CONFLICT_DETECTION|\
+                       DDNS_DUAL_STACK_MIXED_MODE|\
+                       DDNS_GUARD_ID_MUST_MATCH|\
+                       DDNS_OTHER_GUARD_IS_DYNAMIC)
 
-#define DDNS_STATE_REM_FW_YXDHCID  17
-#define DDNS_STATE_REM_FW_NXRR     18
-#define DDNS_STATE_REM_PTR         19
+/* States for dhcp_ddns_cb_t */
+#define DDNS_STATE_CLEANUP            0 /* startup or the previous step failed, cleanup */
+
+#define DDNS_STATE_ADD_FW_NXDOMAIN    1
+#define DDNS_STATE_ADD_FW_YXDHCID     2
+#define DDNS_STATE_ADD_PTR            3
+#define DDNS_STATE_DSMM_FW_ADD3       4
+
+#define DDNS_STATE_REM_FW_YXDHCID    17
+#define DDNS_STATE_REM_FW_NXRR       18
+#define DDNS_STATE_REM_PTR           19
+#define DDNS_STATE_REM_FW_DSMM_OTHER 20
 
 /*
  * Flags for the dns print function
@@ -1803,11 +1814,12 @@ typedef struct dhcp_ddns_cb {
 	void *dataspace;
 
 	dns_rdataclass_t dhcid_class;
+	dns_rdataclass_t other_dhcid_class;
 	char *lease_tag;
 } dhcp_ddns_cb_t;
 
 extern struct ipv6_pool **pools;
-extern int num_pools;
+
 
 /* External definitions... */
 
@@ -2081,6 +2093,9 @@ extern struct timeval cur_tv;
 #define cur_time cur_tv.tv_sec
 
 extern int ddns_update_style;
+#if defined (NSUPDATE)
+extern u_int16_t ddns_conflict_mask;
+#endif
 extern int dont_use_fsync;
 extern int server_id_check;
 
@@ -2193,6 +2208,7 @@ int ddns_updates(struct packet *, struct lease *, struct lease *,
 		 struct iasubopt *, struct iasubopt *, struct option_state *);
 isc_result_t ddns_removals(struct lease *, struct iasubopt *,
 			   struct dhcp_ddns_cb *, isc_boolean_t);
+u_int16_t get_conflict_mask(struct option_state *input_options);
 #if defined (TRACING)
 void trace_ddns_init(void);
 #endif
@@ -3156,6 +3172,7 @@ isc_result_t ddns_update_fwd(struct data_string *, struct iaddr,
 			     unsigned);
 isc_result_t ddns_remove_fwd(struct data_string *,
 			     struct iaddr, struct data_string *);
+char *ddns_state_name(int state);
 #endif /* NSUPDATE */
 
 dhcp_ddns_cb_t *ddns_cb_alloc(const char *file, int line);

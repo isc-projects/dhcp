@@ -105,7 +105,6 @@
 
 /* Define this if you want to see the requests and replies between the
    DHCP code and the DNS library code. */
-
 /* #define DEBUG_DNS_UPDATES */
 
 /* Define this if you want to debug the host part of the inform processing */
