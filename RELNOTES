@@ -288,6 +288,8 @@ dhcp-users@lists.isc.org.
   3. ddns-other-guard is-dynamic - alters dual-stack-mixed-mode behavior to
   allow unguarded DNS entries to be overwritten in certain cases
   [ISC-Bugs #42620]
+  [ISC-Bugs #42621]
+  [ISC-Bugs #44753]
 
 			Changes since 4.3.0 (bug fixes)
 
