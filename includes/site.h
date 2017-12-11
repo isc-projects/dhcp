@@ -285,7 +285,7 @@
    is a host address and doesn't include any on-link information.
    64 indicates that the first 64 bits are the subnet or on-link
    prefix. */
-#define DHCLIENT_DEFAULT_PREFIX_LEN 64
+#define DHCLIENT_DEFAULT_PREFIX_LEN 128
 
 /* Enable the gentle shutdown signal handling.  Currently this
    means that on SIGINT or SIGTERM a client will release its

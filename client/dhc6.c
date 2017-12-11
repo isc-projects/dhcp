@@ -154,7 +154,7 @@ static int drop_declined_addrs(struct dhc6_lease *lease);
 extern int onetry;
 extern int stateless;
 extern int prefix_len_hint;
-
+extern int address_prefix_len;
 
 /*
  * Assign DHCPv6 port numbers as a client.
@@ -4434,7 +4434,7 @@ dhc6_marshall_values(const char *prefix, struct client_state *client,
 				      (unsigned) addr->plen);
 		} else {
 			client_envadd(client, prefix, "ip6_prefixlen",
-				      "%d", DHCLIENT_DEFAULT_PREFIX_LEN);
+				      "%d", address_prefix_len);
 			client_envadd(client, prefix, "ip6_address",
 				      "%s", piaddr(addr->address));
 		}

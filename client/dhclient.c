@@ -105,6 +105,7 @@ int dad_wait_time = 0;
 int prefix_len_hint = 0;
 #endif
 
+int address_prefix_len = DHCLIENT_DEFAULT_PREFIX_LEN;
 char *mockup_relay = NULL;
 
 char *progname = NULL;
@@ -163,12 +164,14 @@ static const char use_v6command[] = "Command not used for DHCPv4: %s";
 #define DHCLIENT_USAGE0 \
 "[-4|-6] [-SNTPRI1dvrxi] [-nw] -4o6 <port>] [-p <port>] [-D LL|LLT]\n" \
 "                [--dad-wait-time <seconds>] [--prefix-len-hint <length>]\n" \
-"                [--decline-wait-time <seconds>]\n"
+"                [--decline-wait-time <seconds>]\n" \
+"                [--address-prefix-len length]\n"
 #else /* DHCP4o6 */
 #define DHCLIENT_USAGE0 \
 "[-4|-6] [-SNTPRI1dvrxi] [-nw] [-p <port>] [-D LL|LLT]\n" \
 "                [--dad-wait-time <seconds>] [--prefix-len-hint <length>]\n" \
-"                [--decline-wait-time <seconds>]\n"
+"                [--decline-wait-time <seconds>]\n" \
+"                [--address-prefix-len length]\n"
 #endif
 #else /* DHCPv6 */
 #define DHCLIENT_USAGE0 \
@@ -495,7 +498,6 @@ main(int argc, char **argv) {
 			if (++i == argc) {
 				usage(use_noarg, argv[i-1]);
 			}
-
 			errno = 0;
 			dad_wait_time = (int)strtol(argv[i], &s, 10);
 			if (errno || (*s != '\0') || (dad_wait_time < 0)) {
@@ -512,6 +514,17 @@ main(int argc, char **argv) {
 			if (errno || (*s != '\0') || (prefix_len_hint < 0)) {
 				usage("Invalid value for --prefix-len-hint: %s",
 				      argv[i]);
+			}
+		} else if (!strcmp(argv[i], "--address-prefix-len")) {
+			if (++i == argc) {
+				usage(use_noarg, argv[i-1]);
+			}
+			errno = 0;
+			address_prefix_len = (int)strtol(argv[i], &s, 10);
+			if (errno || (*s != '\0') ||
+			    (address_prefix_len < 0)) {
+				usage("Invalid value for"
+				      " --address-prefix-len: %s", argv[i]);
 			}
 #endif /* DHCPv6 */
 		} else if (!strcmp(argv[i], "--decline-wait-time")) {

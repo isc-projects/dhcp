@@ -303,6 +303,15 @@ dhcp-users@lists.isc.org.
   leases file.  Default is true.
   [ISC-Bugs #45046]
 
+- Changed the default value of the prefix length passed by dhclient into the
+  client script for each IPv6 address, from 64 to 128. In addition, dhclient
+  now supports a command line argument, --address-prefix-len <len>, which may
+  be used to override the default value.  PLEASE NOTE: If your DHCPv6 clients
+  require a value other than 128, you MUST specify the value via this new
+  command line argument.  Prior to this the only way to alter the value was at
+  compile time by changing DHCLIENT_DEFAULT_PREFIX_LEN in include/sites.h.
+  [ISC-Bugs #23252]
+
 			Changes since 4.3.0 (bug fixes)
 
 - Tidy up several small tickets.
