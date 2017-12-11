@@ -145,11 +145,11 @@ static isc_result_t dhc6_check_status(isc_result_t rval,
 				      unsigned *code);
 static int dhc6_score_lease(struct client_state *client,
 			    struct dhc6_lease *lease);
-
 static isc_result_t dhc6_add_ia_na_decline(struct client_state *client,
 					   struct data_string *packet,
 					   struct dhc6_lease *lease);
 static int drop_declined_addrs(struct dhc6_lease *lease);
+static isc_boolean_t unexpired_address_in_lease(struct dhc6_lease *lease);
 
 extern int onetry;
 extern int stateless;
@@ -1571,7 +1571,9 @@ start_confirm6(struct client_state *client)
 	/* If there is no active lease, there is nothing to check. */
 	if ((client->active_lease == NULL) ||
 	    !active_prefix(client) ||
-	    client->active_lease->released) {
+	    client->active_lease->released ||
+	    !unexpired_address_in_lease(client->active_lease)) {
+		dhc6_lease_destroy(&client->active_lease, MDL);
 		start_init6(client);
 		return;
 	}
@@ -6109,5 +6111,29 @@ int drop_declined_addrs(struct dhc6_lease *lease) {
 	return (live_cnt);
 }
 
+/* Run through the addresses in lease and return true if there's any unexpired.
+ * Return false otherwise.
+ */
+static isc_boolean_t
+unexpired_address_in_lease(struct dhc6_lease *lease)
+{
+	struct dhc6_ia *ia;
+	struct dhc6_addr *addr;
 
+	if (lease == NULL) {
+		return ISC_FALSE;
+	}
+
+	for (ia = lease->bindings ; ia != NULL ; ia = ia->next) {
+		for (addr = ia->addrs ; addr != NULL ; addr = addr->next) {
+			if (!(addr->flags & DHC6_ADDR_EXPIRED) &&
+			    (addr->starts + addr->max_life > cur_time)) {
+				return ISC_TRUE;
+			}
+		}
+	}
+
+	log_debug("PRC: Previous lease is devoid of active addresses.");
+	return ISC_FALSE;
+}
 #endif /* DHCPv6 */

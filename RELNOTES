@@ -313,6 +313,11 @@ dhcp-users@lists.isc.org.
   [ISC-Bugs #23252]
   [ISC-Bugs #37221]
 
+- Modified dhclient (-6) to bypass sending a confirm (INIT REBOOT) when it has
+  only expired address assocations.  Thanks to Jiri Popelka at Red Hat for
+  raising the issue and submitting the patch.
+  [ISC-Bugs #22675]
+
 			Changes since 4.3.0 (bug fixes)
 
 - Tidy up several small tickets.
