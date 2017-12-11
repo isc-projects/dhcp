@@ -385,7 +385,7 @@ main(int argc, char **argv) {
 
 		    token = next_token (&val, (unsigned *)0, cfile);
 		    if (token != END_OF_FILE && token != EOL) {
-			    printf ("usage: key <name> <value> {algorithm}\n");
+			    printf ("usage: key <name> <value>\n");
 			    skip_to_semi (cfile);
 			    break;
 		    }
