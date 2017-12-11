@@ -311,6 +311,7 @@ dhcp-users@lists.isc.org.
   command line argument.  Prior to this the only way to alter the value was at
   compile time by changing DHCLIENT_DEFAULT_PREFIX_LEN in include/sites.h.
   [ISC-Bugs #23252]
+  [ISC-Bugs #37221]
 
 			Changes since 4.3.0 (bug fixes)
 
@@ -1289,7 +1290,7 @@ dhcp-users@lists.isc.org.
   to accomodate a change in behavior in BIND9 isc_heap_delete().
   [ISC-bugs #46719]
 
-- Plugged a socket descriptor leak in OMAPI, that can occur when there is
+! Plugged a socket descriptor leak in OMAPI, that can occur when there is
   data pending to be written to an OMAPI connection, when the connection
   is closed by the reader. Thanks to Pavel Zhukov at RedHat for bringing
   this issue to our attention and whose patch helped guide us in the right
