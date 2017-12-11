@@ -291,6 +291,13 @@ dhcp-users@lists.isc.org.
   [ISC-Bugs #42621]
   [ISC-Bugs #44753]
 
+- A "key-algorithm <algorithm>" statement has been added to omshell to
+  allow the specification of the key algorithm to use during transaction
+  authentication.  Prior to this it was hard-coded to be hmac-md5. It now
+  supports all of the same algorithms as the dhcpd server: hmac-md5 (the
+  default), hmac-sha1, hmac-sha224, hmac-sha256, hmac-sha384, and hmac-sha512.
+  [ISC-Bugs #46771]
+
 			Changes since 4.3.0 (bug fixes)
 
 - Tidy up several small tickets.

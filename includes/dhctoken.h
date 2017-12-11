@@ -375,7 +375,8 @@ enum dhcp_token {
 	TOKEN_BIG_ENDIAN = 675,
 	LEASE_ID_FORMAT = 676,
 	TOKEN_HEX = 677,
-	TOKEN_OCTAL = 678
+	TOKEN_OCTAL = 678,
+	KEY_ALGORITHM = 679
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\

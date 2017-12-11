@@ -321,12 +321,42 @@ main(int argc, char **argv) {
 		    }
 		    break;
 
+		  case KEY_ALGORITHM:
+		    /* Algorithm is optional */
+		    token = next_token (&val, (unsigned *)0, cfile);
+		    if (token != NAME || !is_identifier(token)) {
+			printf ("missing or invalid algorithm name\n");
+			printf ("usage: key-algoritm <algorithm name>\n");
+			skip_to_semi (cfile);
+			break;
+		    }
+
+		    s = dmalloc (strlen (val) + 1, MDL);
+		    if (!s) {
+			printf ("no memory for algorithm name.\n");
+			skip_to_semi (cfile);
+			break;
+		    }
+
+		    strcpy (s, val);
+		    algorithm = s;
+
+		    token = next_token (&val, (unsigned *)0, cfile);
+		    if (token != END_OF_FILE && token != EOL) {
+			    printf ("extra information after %s\n", algorithm);
+			    printf ("usage: key-algorithm <algorithm name>\n");
+			    skip_to_semi (cfile);
+			    break;
+		    }
+
+		    break;
+
 		  case KEY:
 		    token = peek_token(&val, (unsigned *)0, cfile);
 		    if (token == STRING) {
 			    token = next_token (&val, (unsigned *)0, cfile);
 			    if (!is_identifier (token)) {
-				    printf ("usage: key <name> <value>\n");
+			            printf ("usage: key <name> <value>\n");
 				    skip_to_semi (cfile);
 				    break;
 			    }
@@ -340,7 +370,7 @@ main(int argc, char **argv) {
 		    } else {
 			    s = parse_host_name(cfile);
 			    if (s == NULL) {
-				    printf ("usage: key <name> <value>\n");
+			            printf ("usage: key <name> <value>\n");
 				    skip_to_semi(cfile);
 				    break;
 			    }
@@ -352,12 +382,14 @@ main(int argc, char **argv) {
 			    skip_to_semi (cfile);
 			    break;
 		    }
+
 		    token = next_token (&val, (unsigned *)0, cfile);
 		    if (token != END_OF_FILE && token != EOL) {
-			    printf ("usage: key <name> <secret>\n");
+			    printf ("usage: key <name> <value> {algorithm}\n");
 			    skip_to_semi (cfile);
 			    break;
 		    }
+
 		    break;
 
 		  case CONNECT:

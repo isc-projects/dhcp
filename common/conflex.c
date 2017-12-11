@@ -1104,6 +1104,8 @@ intern(char *atom, enum dhcp_token dfv) {
 		}
 		if (!strcasecmp (atom + 1, "ey"))
 			return KEY;
+		if (!strcasecmp (atom + 1, "ey-algorithm"))
+			return KEY_ALGORITHM;
 		break;
 	      case 'l':
 		if (!strcasecmp (atom + 1, "case"))
