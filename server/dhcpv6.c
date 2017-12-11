@@ -2225,6 +2225,9 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 				     reply->client_id.data, 60),
 			 iaid);
 
+		/* Write the lease out in wire-format to the outbound buffer */
+		write_to_packet(reply, ia_cursor);
+
 		if ((reply->buf.reply.msg_type == DHCPV6_REPLY) &&
 		    (reply->on_star.on_commit != NULL)) {
 			execute_statements(NULL, reply->packet, NULL, NULL,
@@ -4247,6 +4250,10 @@ reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia) {
 			 print_hex_1(reply->client_id.len,
 				     reply->client_id.data, 60),
 			 iaid);
+
+		/* Write the lease out in wire-format to the outbound buffer */
+		write_to_packet(reply, ia_cursor);
+
 		if ((reply->buf.reply.msg_type == DHCPV6_REPLY) &&
 		    (reply->on_star.on_commit != NULL)) {
 			execute_statements(NULL, reply->packet, NULL, NULL,
