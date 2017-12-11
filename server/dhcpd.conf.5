@@ -2920,6 +2920,21 @@ or provable, so we urge caution in the use of this statement.
 .RE
 .PP
 The
+.I persist-eui-64-leases
+statement
+.RS 0.25i
+.PP
+.B persist-eui-64-leases \fIflag\fR\fB;\fR
+.PP
+When this flag is enabled, the server will write EUI-64 based leases to the
+leases file. Since such leases can only, ever be valid for a single DUID value
+it can be argued that writing them to the leases file isn't essential and not
+doing so may have perfomance advantages.  See \fIuse-eui-64\fR statement for
+more details on EUI-64 based address allocation.  The flag is enabled by
+default and may only be set at the global scope.
+.RE
+.PP
+The
 .I pid-file-name
 statement
 .RS 0.25i
@@ -3349,8 +3364,6 @@ in use.  Also, the server must attempt the update each time the
 client renews its lease, which could have a significant performance
 impact in environments that place heavy demands on the DHCP server.
 .RE
-
-
 .PP
 The
 .I use-eui-64
@@ -3413,6 +3426,9 @@ message:
     Request - Server will send "an address not on link status", and no ia
     suboption Renew/Rebind - Server will send the requested address ia
     suboption with lifetimes of 0, plus an EUI-64 ia
+
+Whether or not  EUI-64 based leases are written out to the lease database
+may be controlled by \fIpersist-eui-64-leases\fR statement.
 .RE
 .PP
 The

@@ -82,6 +82,10 @@ int dont_use_fsync = 0; /* 0 = default, use fsync, 1 = don't use fsync */
 int server_id_check = 0; /* 0 = default, don't check server id, 1 = do check */
 int prefix_length_mode = PLM_PREFER;
 
+#ifdef EUI_64
+int persist_eui64 = 1; /* 1 = write EUI64 leases to disk, 0 = don't */
+#endif
+
 int authoring_byte_order = 0; /* 0 = not set */
 int lease_id_format = TOKEN_OCTAL; /* octal by default */
 u_int32_t abandon_lease_time = DEFAULT_ABANDON_LEASE_TIME;
@@ -847,8 +851,9 @@ main(int argc, char **argv) {
 #endif
 
         /* test option should cause an early exit */
- 	if (cftest && !lftest)
+	if (cftest && !lftest) {
  		exit(0);
+	}
 
 	/*
 	 * First part of dealing with pid files.  Check to see if
@@ -1393,6 +1398,21 @@ void postconf_initialization (int quiet)
 	   evaluate_boolean_option_cache(NULL, NULL, NULL, NULL, options, NULL,
 					 &global_scope, oc, MDL)) {
 		check_secs_byte_order = 1;
+	}
+#endif
+
+#ifdef EUI_64
+       oc = lookup_option(&server_universe, options, SV_PERSIST_EUI_64_LEASES);
+       if (oc != NULL) {
+		persist_eui64 = evaluate_boolean_option_cache(NULL, NULL, NULL,
+							      NULL, options,
+							      NULL,
+							      &global_scope,
+							      oc, MDL);
+	}
+
+	if (!persist_eui64) {
+		log_info("EUI64 leases will not be written to lease file");
 	}
 #endif
 

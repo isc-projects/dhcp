@@ -279,6 +279,7 @@ static struct option server_options[] = {
 	{ "abandon-lease-time", "T",		&server_universe,  SV_ABANDON_LEASE_TIME, 1 },
 #ifdef EUI_64
 	{ "use-eui-64", "f",		&server_universe,  SV_USE_EUI_64, 1 },
+	{ "persist-eui-64-leases", "f",	&server_universe,  SV_PERSIST_EUI_64_LEASES, 1 },
 #endif
 #if defined (FAILOVER_PROTOCOL)
 	{ "check-secs-byte-order", "f", &server_universe, SV_CHECK_SECS_BYTE_ORDER, 1 },

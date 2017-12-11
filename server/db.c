@@ -374,7 +374,7 @@ int write_host (host)
 					++errors;
 			}
 		}
-		
+
 		memset (&ip_addrs, 0, sizeof ip_addrs);
 		if (host -> fixed_addr &&
 		    evaluate_option_cache (&ip_addrs, (struct packet *)0,
@@ -384,7 +384,7 @@ int write_host (host)
 					   (struct option_state *)0,
 					   &global_scope,
 					   host -> fixed_addr, MDL)) {
-		
+
 			errno = 0;
 			fprintf (db_file, "\n  fixed-address ");
 			if (errno)
@@ -525,9 +525,30 @@ write_ia(const struct ia_xx *ia) {
 	char *s;
 	int fprintf_ret;
 
-	/* 
-	 * If the lease file is corrupt, don't try to write any more 
-	 * leases until we've written a good lease file. 
+#ifdef EUI_64
+	/* If we're not writing EUI64 leases to the file, then
+	* we can skip writing this IA provided all of its leases
+	* are EUI64. (Not sure you can ever have a case where
+	* they aren't but doesn't hurt to check) */
+	if (ia->ia_type == D6O_IA_NA && !persist_eui64) {
+		int i;
+		for (i=0; i < ia->num_iasubopt; i++) {
+			if (!ia->iasubopt[i]->ipv6_pool->ipv6_pond->use_eui_64)
+			{
+				break;
+			}
+		}
+
+		if (i == ia->num_iasubopt) {
+			/* Their all EUI64 so we can skip it */
+			return(1);
+		}
+	}
+#endif
+
+	/*
+	 * If the lease file is corrupt, don't try to write any more
+	 * leases until we've written a good lease file.
 	 */
 	if (lease_file_is_corrupt) {
 		if (!new_lease_file(0)) {
@@ -587,11 +608,11 @@ write_ia(const struct ia_xx *ia) {
 			goto error_exit;
 		}
 		if ((iasubopt->state <= 0) || (iasubopt->state > FTS_LAST)) {
-			log_fatal("Unknown iasubopt state %d at %s:%d", 
+			log_fatal("Unknown iasubopt state %d at %s:%d",
 				  iasubopt->state, MDL);
 		}
 		binding_state = binding_state_names[iasubopt->state-1];
-		if (fprintf(db_file, "    binding state %s;\n", 
+		if (fprintf(db_file, "    binding state %s;\n",
 			    binding_state) < 0) {
 			goto error_exit;
 		}
@@ -639,7 +660,7 @@ write_ia(const struct ia_xx *ia) {
 			if (write_binding_scope(db_file, bnd,
 						"\n    ") != ISC_R_SUCCESS)
 				goto error_exit;
-				
+
 		}
 
 		if (iasubopt->on_star.on_expiry) {
@@ -650,7 +671,7 @@ write_ia(const struct ia_xx *ia) {
 				goto error_exit;
 			write_statements(db_file,
 					 iasubopt->on_star.on_expiry, 6);
-			if (fprintf(db_file, "\n    }") < 0) 
+			if (fprintf(db_file, "\n    }") < 0)
 				goto error_exit;
 		}
 
@@ -697,9 +718,9 @@ write_server_duid(void) {
 		return 1;
 	}
 
-	/* 
-	 * If the lease file is corrupt, don't try to write any more 
-	 * leases until we've written a good lease file. 
+	/*
+	 * If the lease file is corrupt, don't try to write any more
+	 * leases until we've written a good lease file.
 	 */
 	if (lease_file_is_corrupt) {
 		if (!new_lease_file(0)) {
@@ -882,7 +903,7 @@ write_named_billing_class(const void *key, unsigned len, void *object)
 			if (fprintf(db_file, "  dynamic;\n") <= 0)
 				return ISC_R_IOERROR;
 		}
-	
+
 		if (class->lease_limit > 0) {
 			if (fprintf(db_file, "  lease limit %d;\n",
 				    class->lease_limit) <= 0)
@@ -893,7 +914,7 @@ write_named_billing_class(const void *key, unsigned len, void *object)
 			if (fprintf(db_file, "  match if ") <= 0)
 				return ISC_R_IOERROR;
 
-                        errno = 0;                                       
+                        errno = 0;
 			write_expression(db_file, class->expr, 5, 5, 0);
                         if (errno)
                                 return ISC_R_IOERROR;
@@ -919,7 +940,7 @@ write_named_billing_class(const void *key, unsigned len, void *object)
 			if (fprintf(db_file, ";\n") <= 0)
 				return ISC_R_IOERROR;
 		}
-	
+
 		if (class->statements != 0) {
                         errno = 0;
 			write_statements(db_file, class->statements, 8);
@@ -1238,7 +1259,7 @@ int new_lease_file (int test_mode)
 #if defined (TRACING)
 	}
 #endif
-	
+
 	/* Move in the new file... */
 	if (rename (newfname, path_dhcpd_db) < 0) {
 		log_error ("Can't install new lease database %s to %s: %m",

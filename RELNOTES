@@ -298,6 +298,11 @@ dhcp-users@lists.isc.org.
   default), hmac-sha1, hmac-sha224, hmac-sha256, hmac-sha384, and hmac-sha512.
   [ISC-Bugs #46771]
 
+- Added a server configuration parameter, persist-eui-64-leases, which
+  determines whether or not EUI-64 based leases are written to the
+  leases file.  Default is true.
+  [ISC-Bugs #45046]
+
 			Changes since 4.3.0 (bug fixes)
 
 - Tidy up several small tickets.

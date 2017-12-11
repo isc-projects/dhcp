@@ -801,6 +801,7 @@ struct lease_state {
 #define SV_ABANDON_LEASE_TIME		89
 #ifdef EUI_64
 #define SV_USE_EUI_64			90
+#define SV_PERSIST_EUI_64_LEASES	91
 #endif
 #if defined (FAILOVER_PROTOCOL)
 #define SV_CHECK_SECS_BYTE_ORDER	91
@@ -2098,6 +2099,10 @@ extern u_int16_t ddns_conflict_mask;
 #endif
 extern int dont_use_fsync;
 extern int server_id_check;
+
+#ifdef EUI_64
+extern int persist_eui64;
+#endif
 
 extern int prefix_length_mode;
 extern int authoring_byte_order;
