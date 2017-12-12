@@ -1297,10 +1297,11 @@ dhcp-users@lists.isc.org.
 
 ! Plugged a socket descriptor leak in OMAPI, that can occur when there is
   data pending to be written to an OMAPI connection, when the connection
-  is closed by the reader. Thanks to Pavel Zhukov at RedHat for bringing
-  this issue to our attention and whose patch helped guide us in the right
-  direction.
-  [ISc-Bugs #46767]
+  is closed by the reader. Thanks to both Konstantin Orekhov at eBay and
+  Pavel Zhukov at RedHat for bringing this issue to our attention, and to
+  Pavel whose patch helped guide us in the right direction.
+  [ISC-Bugs #46767]
+  [ISC-Bugs #41861]
 
 			Changes since 4.2.0 (new features)
 
