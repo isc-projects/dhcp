@@ -1442,7 +1442,7 @@ Optional Features:
                           yes)
   --enable-tracing        enable support for server activity tracing (default
                           is yes)
-  --enable-delayed-ack    queues multiple DHCPACK replies (default is no)
+  --enable-delayed-ack    queues multiple DHCPACK replies (default is yes)
   --enable-dhcpv6         enable support for DHCPv6 (default is yes)
   --enable-dhcpv4o6       enable support for DHCPv4-over-DHCPv6 (default is
                           no)
@@ -5440,18 +5440,17 @@ $as_echo "#define TRACING 1" >>confdefs.h
 
 fi
 
-# Delayed-ack feature support (experimental).
+# Delayed-ack feature support.
 # Check whether --enable-delayed_ack was given.
 if test "${enable_delayed_ack+set}" = set; then :
   enableval=$enable_delayed_ack;
 fi
 
-if test "$enable_delayed_ack" = "yes"; then
+if test "$enable_delayed_ack" != "no"; then
+    enable_delayed_ack="yes"
 
 $as_echo "#define DELAYED_ACK 1" >>confdefs.h
 
-else
-    enable_delayed_ack="no"
 fi
 
 # DHCPv6 optional compile-time feature.
@@ -5487,6 +5486,9 @@ if test "$enable_dhcpv4o6" = "yes"; then
 
 $as_echo "#define DHCP4o6 1" >>confdefs.h
 
+else
+    # so we can report below
+    enable_dhcpv4o6="no"
 fi
 
 # PARANOIA is off by default (until we can test it with all features)
@@ -9015,6 +9017,7 @@ Features:
   binary-leases: $enable_binary_leases
   dhcpv6:        $enable_dhcpv6
   delayed-ack:   $enable_delayed_ack
+  dhcpv4o6:      $enable_dhcpv4o6
 
 Developer:
   ATF unittests : $atf_path

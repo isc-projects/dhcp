@@ -142,14 +142,13 @@ if test "$enable_tracing" != "no" ; then
 		  [Define to include server activity tracing support.])
 fi
 
-# Delayed-ack feature support (experimental).
+# Delayed-ack feature support.
 AC_ARG_ENABLE(delayed_ack,
-	AS_HELP_STRING([--enable-delayed-ack],[queues multiple DHCPACK replies (default is no)]))
-if test "$enable_delayed_ack" = "yes"; then
+	AS_HELP_STRING([--enable-delayed-ack],[queues multiple DHCPACK replies (default is yes)]))
+if test "$enable_delayed_ack" != "no"; then
+    enable_delayed_ack="yes"
 	AC_DEFINE([DELAYED_ACK], [1],
 		  [Define to queue multiple DHCPACK replies per fsync.])
-else
-    enable_delayed_ack="no"
 fi
 
 # DHCPv6 optional compile-time feature.
@@ -177,6 +176,9 @@ if test "$enable_dhcpv4o6" = "yes"; then
 	fi
 	AC_DEFINE([DHCP4o6], [1], 
 		  [Define to 1 to include DHCPv4 over DHCPv6 support.])
+else
+    # so we can report below
+    enable_dhcpv4o6="no"
 fi
 
 # PARANOIA is off by default (until we can test it with all features)
@@ -1036,6 +1038,7 @@ Features:
   binary-leases: $enable_binary_leases
   dhcpv6:        $enable_dhcpv6
   delayed-ack:   $enable_delayed_ack
+  dhcpv4o6:      $enable_dhcpv4o6
 
 Developer:
   ATF unittests : $atf_path

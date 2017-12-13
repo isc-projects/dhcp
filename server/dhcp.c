@@ -3574,7 +3574,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 	} else {
   		lease->cltt = cur_time;
 #if defined(DELAYED_ACK) && !defined(DHCP4o6)
-		if (enqueue)
+		if (enqueue && max_outstanding_acks != 0)
 			delayed_ack_enqueue(lease);
 		else 
 #endif

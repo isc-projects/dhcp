@@ -264,6 +264,15 @@ dhcp-users@lists.isc.org.
   raising the issue and submitting the patch.
   [ISC-Bugs #22675]
 
+- Support for delayed-ack is now compiled in by default. Prior to this
+  it had to be enabled at compile time via --enable-delayed-acks. The
+  default value for delayed-ack, however, has been changed from 28 to 0
+  (i.e. disabled).  This was done to minimize the impact on users not
+  currently using the feature.  Please note that the delayed-ack feature
+  is not currently compatible with support for DHPCv4o6 (compiled out by
+  default).  You must compile with one or the other but not both.
+  [ISC-Bugs #42446]
+
 			Changes since 4.3.6 (Bugs):
 
 - Corrected an issue where the server would return a client's previously
