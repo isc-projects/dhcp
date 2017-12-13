@@ -231,7 +231,7 @@ dhcp-users@lists.isc.org.
   2. ddns-guard-id-must-match - relaxes the DHCID RR client id matching
   requirement of DNS conflict resolution.
 
-  3. ddns-other-guard is-dynamic - alters dual-stack-mixed-mode behavior to
+  3. ddns-other-guard-is-dynamic - alters dual-stack-mixed-mode behavior to
   allow unguarded DNS entries to be overwritten in certain cases
   [ISC-Bugs #42620]
   [ISC-Bugs #42621]
