@@ -273,6 +273,9 @@ dhcp-users@lists.isc.org.
   default).  You must compile with one or the other but not both.
   [ISC-Bugs #42446]
 
+- Corrected some minor coverity issues: CID 1426059, 1426058, and 1426057.
+  [ISC-Bugs #46836]
+
 			Changes since 4.3.6 (Bugs):
 
 - Corrected an issue where the server would return a client's previously

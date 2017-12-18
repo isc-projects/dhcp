@@ -3295,7 +3295,7 @@ void shorten_lifetimes(struct reply_state *reply, struct iasubopt *lease,
 		/* If address matches (and for PDs the prefix len matches)
 		* we assume this is our subopt, so update the lifetimes */
 		if (!memcmp(oc->data.data + addr_offset, &lease->addr, 16) &&
-		    (subopt_type != D6O_IA_PD ||
+		    (subopt_type != D6O_IAPREFIX ||
 		     (oc->data.data[IASUBOPT_PD_PREFLEN_OFFSET] ==
 		      lease->plen))) {
 			u_int32_t pref_life = getULong(oc->data.data +

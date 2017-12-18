@@ -1577,7 +1577,7 @@ ddns_fwd_srv_add3(dhcp_ddns_cb_t *ddns_cb,
 {
 	isc_result_t result;
 	const char *logstr = NULL;
-	char ddns_address[MAX_ADDRESS_STRING_LEN];
+	char ddns_address[MAX_ADDRESS_STRING_LEN+1];
 
 #if defined (DEBUG_DNS_UPDATES)
 	log_info ("DDNS: ddns_fwd_srv_add3: %s eresult: %d",
@@ -1585,7 +1585,9 @@ ddns_fwd_srv_add3(dhcp_ddns_cb_t *ddns_cb,
 #endif
 
 	/* Construct a printable form of the address for logging */
-	strcpy(ddns_address, piaddr(ddns_cb->address));
+	memset(ddns_address, 0x0, sizeof(ddns_address));
+	strncpy(ddns_address, piaddr(ddns_cb->address),
+                sizeof(ddns_address) - 1);
 
 	switch(eresult) {
 	case ISC_R_SUCCESS:

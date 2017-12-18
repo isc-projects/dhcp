@@ -5141,12 +5141,9 @@ do_decline6(void *input)
 decline_done:
 	/* We here because we've exhausted our retry limits or
 	 * something else has gone wrong with the decline process.
-	 * So let's just toss the existing lease and start over.
-	 */
-	if (client->active_lease != NULL) {
-		dhc6_lease_destroy(&client->active_lease, MDL);
-		client->active_lease = NULL;
-	}
+	 * So let's just toss the existing lease and start over. */
+	dhc6_lease_destroy(&client->active_lease, MDL);
+	client->active_lease = NULL;
 
 	start_init6(client);
 	return;
