@@ -809,6 +809,7 @@ struct lease_state {
 #define SV_DDNS_DUAL_STACK_MIXED_MODE	92
 #define SV_DDNS_GUARD_ID_MUST_MATCH 	93
 #define SV_DDNS_OTHER_GUARD_IS_DYNAMIC	94
+#define SV_RELEASE_ON_ROAM		95
 
 #if !defined (DEFAULT_PING_TIMEOUT)
 # define DEFAULT_PING_TIMEOUT 1
@@ -2104,7 +2105,11 @@ extern int server_id_check;
 extern int persist_eui64;
 #endif
 
+#ifdef DHCPv6
 extern int prefix_length_mode;
+extern int do_release_on_roam;
+#endif
+
 extern int authoring_byte_order;
 extern int lease_id_format;
 extern u_int32_t abandon_lease_time;

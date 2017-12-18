@@ -80,7 +80,11 @@ u_int16_t ddns_conflict_mask;
 int ddns_update_style;
 int dont_use_fsync = 0; /* 0 = default, use fsync, 1 = don't use fsync */
 int server_id_check = 0; /* 0 = default, don't check server id, 1 = do check */
+
+#ifdef DHCPv6
 int prefix_length_mode = PLM_PREFER;
+int do_release_on_roam = 0; /* 0 = default, do not release v6 leases on roam */
+#endif
 
 #ifdef EUI_64
 int persist_eui64 = 1; /* 1 = write EUI64 leases to disk, 0 = don't */
@@ -1365,6 +1369,7 @@ void postconf_initialization (int quiet)
 		server_id_check = 1;
 	}
 
+#ifdef DHCPv6
 	oc = lookup_option(&server_universe, options, SV_PREFIX_LEN_MODE);
 	if ((oc != NULL) &&
 	    evaluate_option_cache(&db, NULL, NULL, NULL, options, NULL,
@@ -1377,6 +1382,7 @@ void postconf_initialization (int quiet)
 
 		data_string_forget(&db, MDL);
 	}
+#endif
 
 	// Set global abandon-lease-time option.
 	oc = lookup_option (&server_universe, options, SV_ABANDON_LEASE_TIME);
@@ -1413,6 +1419,16 @@ void postconf_initialization (int quiet)
 
 	if (!persist_eui64) {
 		log_info("EUI64 leases will not be written to lease file");
+	}
+#endif
+
+#ifdef DHCPv6
+	oc = lookup_option(&server_universe, options, SV_RELEASE_ON_ROAM);
+	if (oc != NULL) {
+		do_release_on_roam =
+			evaluate_boolean_option_cache(NULL, NULL, NULL, NULL,
+						      options, NULL,
+						      &global_scope, oc, MDL);
 	}
 #endif
 

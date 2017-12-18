@@ -8400,7 +8400,8 @@ release_on_roam(struct reply_state* reply) {
 	struct iasubopt *lease = NULL;
 	int i;
 
-	if (old_ia == NULL || old_ia->num_iasubopt <= 0) {
+	if ((!do_release_on_roam) || old_ia == NULL
+	    || old_ia->num_iasubopt <= 0) {
 		return(0);
 	}
 

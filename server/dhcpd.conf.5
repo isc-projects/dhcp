@@ -3116,6 +3116,27 @@ starting with pool A but with appropriately adjusted length criteria.
 .RE
 .PP
 The
+.I release-on-roam
+statement
+.RS 0.25i
+.PP
+.B release-on-roam \fIflag\fB;\fR
+.PP
+When enabled and the dhcpd server detects that a DHCPv6 client (IAID+DUID)
+has roamed to a new network, it will release the pre-existing leases on the
+old network and emit a log statement similiar to the following:
+
+      "Client: <id> roamed to new network, releasing lease: <address>"
+
+The server will carry out all of the same steps that would normally occur
+when a client explicitly releases a lease.  When release-on-roam is disabled
+(the default) the server makes such leases unavailable until they expire or
+the server is restarted. Clients that need leases in multiple networks must
+supply a unique IAID in each IA.  This parameter may only be specified at
+the global level.
+.RE
+.PP
+The
 .I remote-port
 statement
 .RS 0.25i

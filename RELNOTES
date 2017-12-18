@@ -184,19 +184,26 @@ dhcp-users@lists.isc.org.
   doing load balancing within failover.
   [ISC-Bugs #45364]
 
-- If the server detects that a DHCPv6 client (IAID+DUID) has roamed to a new
-  network, it will now automatically release pre-existing leases on the old
-  network. When this occurs the server will emit a log statement:
+- Added --release-on-roam to dhcpd server. When enabled and the server detects
+  that a DHCPv6 client (IAID+DUID) has roamed to a new network, it will release
+  the pre-existing leases on the old network and emit a log statement similar
+  to the following:
 
       "Client: <id> roamed to new network, releasing lease: <address>"
 
   The server will carry out all of the same steps that would normally occur
-  when a client explicitly releases a lease.  Prior to this the server simply
-  dropped the pre-existing leases on the floor without doing the appropriate
-  clean-up.  Clients that need leases in multiple networks must supply a
-  unique IAID in each IA. Thanks to Fernando Soto from BlueCat Networks for
-  reporting the issue.
+  when a client explicitly releases a lease.  This behavior is disabled by
+  default and may only be specified globally. Prior to this the server renders
+  the leases unavailable until they expire or the server is restarted. Clients
+  that need leases in multiple networks must supply a unique IAID in each IA.
+  When release-on-roam is disabled (the default) the server maintains the
+  prior behavior of making such leases unavailable until they expire or the
+  server is restarted. Clients that need leases in multiple networks must
+  supply a unique IAID in each IA.  This parameter may only be specified at
+  the global level.  Thanks to Fernando Soto from BlueCat Networks for
+  suggesting this change.
   [ISC-Bugs #44576]
+  [ISC-Bugs #46849]
 
 - The ability of the server to send back dhcp6.vendor-opts values has been
   restored. A change in 4.3.5 (see #29246) which enabled it to send back the

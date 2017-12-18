@@ -287,6 +287,7 @@ static struct option server_options[] = {
 	{ "ddns-dual-stack-mixed-mode", "f",		&server_universe,  SV_DDNS_DUAL_STACK_MIXED_MODE, 1 },
 	{ "ddns-guard-id-must-match", "f",		&server_universe,  SV_DDNS_GUARD_ID_MUST_MATCH, 1 },
 	{ "ddns-other-guard-is-dynamic", "f",		&server_universe,  SV_DDNS_OTHER_GUARD_IS_DYNAMIC, 1 },
+	{ "release-on-roam", "f",	&server_universe,  SV_RELEASE_ON_ROAM, 1 },
 	{ NULL, NULL, NULL, 0, 0 }
 };
 
