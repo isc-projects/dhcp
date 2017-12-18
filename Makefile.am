@@ -18,7 +18,7 @@ EXTRA_DIST = RELNOTES LICENSE configure.ac+lt config+lt \
 	     contrib/ms2isc/readme.txt contrib/ldap/dhcpd-conf-to-ldap \
 	     contrib/ldap/dhcp.schema contrib/ldap/README.ldap \
              contrib/dhcp-lease-list.pl \
-	     doc/DHCPv4-over-DHCPv6 \
+	     doc/BIND-libraries doc/DHCPv4-over-DHCPv6 \
 	     doc/IANA-arp-parameters doc/Makefile doc/References.html \
 	     doc/References.txt doc/References.xml doc/api+protocol \
 	     doc/ja_JP.eucJP/dhclient-script.8 doc/ja_JP.eucJP/dhclient.8 \
@@ -26,8 +26,8 @@ EXTRA_DIST = RELNOTES LICENSE configure.ac+lt config+lt \
 	     doc/ja_JP.eucJP/dhcp-eval.5 doc/ja_JP.eucJP/dhcp-options.5 \
 	     doc/examples/dhclient-dhcpv6.conf doc/examples/dhcpd-dhcpv6.conf \
 	     doc/devel/arch.dox doc/devel/atf.dox doc/devel/contrib.dox \
-	     doc/devel/debug.dox doc/devel/isc-logo.jpg doc/devel/mainpage.dox \
-	     doc/devel/omapi.dox doc/devel/qa.dox \
+	     doc/devel/debug.dox doc/devel/isc-logo.jpg doc/devel/libtool.dox \
+	     doc/devel/mainpage.dox doc/devel/omapi.dox doc/devel/qa.dox \
 	     common/tests/Atffile server/tests/Atffile
 
 if HAVE_BINDDIR
