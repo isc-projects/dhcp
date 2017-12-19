@@ -55,6 +55,14 @@ struct in_addr limited_broadcast;
 int local_family = AF_INET;
 struct in_addr local_address;
 
+#ifdef DHCPv6
+/*
+ * Another clear abuse of the fact that undefined IP addresses are all zeroes.
+ */
+struct in6_addr local_address6;
+int bind_local_address6 = 0;
+#endif /* DHCPv6 */
+
 void (*bootp_packet_handler) (struct interface_info *,
 			      struct dhcp_packet *, unsigned,
 			      unsigned int,

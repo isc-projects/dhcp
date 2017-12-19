@@ -157,10 +157,19 @@ if_register_socket(struct interface_info *info, int family,
 		addr6 = (struct sockaddr_in6 *)&name; 
 		addr6->sin6_family = AF_INET6;
 		addr6->sin6_port = local_port;
+		/* A server feature */
+		if (bind_local_address6) {
+			memcpy(&addr6->sin6_addr,
+			       &local_address6,
+			       sizeof(addr6->sin6_addr));
+		}
+		/* A client feature */
 		if (linklocal6) {
 			memcpy(&addr6->sin6_addr,
 			       linklocal6,
 			       sizeof(addr6->sin6_addr));
+		}
+		if (IN6_IS_ADDR_LINKLOCAL(&addr6->sin6_addr)) {
 			addr6->sin6_scope_id = if_nametoindex(info->name);
 		}
 #ifdef HAVE_SA_LEN
@@ -497,8 +506,21 @@ if_register6(struct interface_info *info, int do_multicast) {
 			 * create a socket, this is just a sanity check.
 			 */
 			log_fatal("Impossible condition at %s:%d", MDL);
+		} else if (bind_local_address6) {
+			char addr6_str[INET6_ADDRSTRLEN];
+
+			if (inet_ntop(AF_INET6,
+				      &local_address6,
+				      addr6_str,
+				      sizeof(addr6_str)) == NULL) {
+				log_fatal("inet_ntop: unable to convert "
+					  "local-address6");
+			}
+			log_info("Bound to [%s]:%d",
+				 addr6_str,
+				 (int) ntohs(local_port));
 		} else {
-			log_info("Bound to *:%d", ntohs(local_port));
+			log_info("Bound to *:%d", (int) ntohs(local_port));
 		}
 	}
 		
@@ -828,6 +850,7 @@ ssize_t send_packet6(struct interface_info *interface,
 	cmsg->cmsg_len = CMSG_LEN(sizeof(*pktinfo));
 	pktinfo = (struct in6_pktinfo *)CMSG_DATA(cmsg);
 	memset(pktinfo, 0, sizeof(*pktinfo));
+	pktinfo->ipi6_addr = local_address6;
 	pktinfo->ipi6_ifindex = ifindex;
 
 	result = sendmsg(interface->wfdesc, &m, 0);

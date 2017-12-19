@@ -288,6 +288,8 @@ static struct option server_options[] = {
 	{ "ddns-guard-id-must-match", "f",		&server_universe,  SV_DDNS_GUARD_ID_MUST_MATCH, 1 },
 	{ "ddns-other-guard-is-dynamic", "f",		&server_universe,  SV_DDNS_OTHER_GUARD_IS_DYNAMIC, 1 },
 	{ "release-on-roam", "f",	&server_universe,  SV_RELEASE_ON_ROAM, 1 },
+	{ "local-address6", "6",	&server_universe,  SV_LOCAL_ADDRESS6, 1 },
+	{ "bind-local-address6", "f",	&server_universe,  SV_BIND_LOCAL_ADDRESS6, 1 },
 	{ NULL, NULL, NULL, 0, 0 }
 };
 

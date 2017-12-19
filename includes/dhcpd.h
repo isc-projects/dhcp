@@ -810,6 +810,8 @@ struct lease_state {
 #define SV_DDNS_GUARD_ID_MUST_MATCH 	93
 #define SV_DDNS_OTHER_GUARD_IS_DYNAMIC	94
 #define SV_RELEASE_ON_ROAM		95
+#define SV_LOCAL_ADDRESS6		96
+#define SV_BIND_LOCAL_ADDRESS6		97
 
 #if !defined (DEFAULT_PING_TIMEOUT)
 # define DEFAULT_PING_TIMEOUT 1
@@ -2826,6 +2828,8 @@ void interface_trace_setup (void);
 extern struct in_addr limited_broadcast;
 extern int local_family;
 extern struct in_addr local_address;
+extern struct in6_addr local_address6;
+extern int bind_local_address6;
 
 extern u_int16_t local_port;
 extern u_int16_t remote_port;

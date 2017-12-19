@@ -296,6 +296,14 @@ dhcp-users@lists.isc.org.
   [ISC-Bugs #34097]
   [ISC-Bugs #41054]
 
+- Added to the server (-6) a new statement, local-address6, which specifies
+  the source address of packets sent by the server. An additional flag,
+  bind-local-address6, disabled by default makes the service socket to
+  be bound to local-address6. Note as for local-address this does not
+  work with direct client: a relay has to forward packets to the server
+  using the local-address6 destination.
+  [ISC-Bugs #46084]
+
 			Changes since 4.3.6 (Bugs):
 
 - Corrected an issue where the server would return a client's previously

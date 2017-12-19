@@ -2744,6 +2744,29 @@ time.
 .RE
 .PP
 The
+.I local-address6
+and
+.I bind-local-address6
+statements
+.RS 0.25i
+.PP
+.B local-address6 \fIaddress\fB;\fR
+.PP
+.B bind-local-address6 \fIflag\fB;\fR
+.PP
+The \fIlocal-address6\fR statement causes the DHCP server to send IPv6
+packets as originating from the specified IPv6 \fIaddress\fR, rather than
+leaving the kernel to fill in the source address field.
+.PP
+When \fIbind-local-address6\fR is present and has a value of true or on,
+service sockets are bound to \fIaddress\fR too.
+.PP
+By default \fIaddress\fR is the undefined address and the
+\fIbind-local-address6\fR is disabled, both may only be set at the global
+scope.
+.RE
+.PP
+The
 .I log-facility
 statement
 .RS 0.25i
