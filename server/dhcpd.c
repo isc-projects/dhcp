@@ -271,9 +271,9 @@ main(int argc, char **argv) {
 	struct parse *parse;
 	int lose;
 #endif
-	int no_dhcpd_conf = 0;
-	int no_dhcpd_db = 0;
-	int no_dhcpd_pid = 0;
+	int have_dhcpd_conf = 0;
+	int have_dhcpd_db = 0;
+	int have_dhcpd_pid = 0;
 #ifdef DHCPv6
 	int local_family_set = 0;
 #ifdef DHCP4o6
@@ -464,17 +464,17 @@ main(int argc, char **argv) {
 			if (++i == argc)
 				usage(use_noarg, argv[i-1]);
 			path_dhcpd_conf = argv [i];
-			no_dhcpd_conf = 1;
+			have_dhcpd_conf = 1;
 		} else if (!strcmp (argv [i], "-lf")) {
 			if (++i == argc)
 				usage(use_noarg, argv[i-1]);
 			path_dhcpd_db = argv [i];
-			no_dhcpd_db = 1;
+			have_dhcpd_db = 1;
 		} else if (!strcmp (argv [i], "-pf")) {
 			if (++i == argc)
 				usage(use_noarg, argv[i-1]);
 			path_dhcpd_pid = argv [i];
-			no_dhcpd_pid = 1;
+			have_dhcpd_pid = 1;
 		} else if (!strcmp(argv[i], "--no-pid")) {
 			no_pid_file = ISC_TRUE;
                 } else if (!strcmp (argv [i], "-t")) {
@@ -570,42 +570,43 @@ main(int argc, char **argv) {
 	}
 #endif /* DHCPv6 && DHCP4o6 */
 
-	if (!no_dhcpd_conf && (s = getenv ("PATH_DHCPD_CONF"))) {
+	if (!have_dhcpd_conf && (s = getenv ("PATH_DHCPD_CONF"))) {
 		path_dhcpd_conf = s;
 	}
 
 #ifdef DHCPv6
         if (local_family == AF_INET6) {
                 /* DHCPv6: override DHCPv4 lease and pid filenames */
-	        if (!no_dhcpd_db) {
+	        if (!have_dhcpd_db) {
                         if ((s = getenv ("PATH_DHCPD6_DB")))
 		                path_dhcpd_db = s;
                         else
 		                path_dhcpd_db = _PATH_DHCPD6_DB;
 	        }
-	        if (!no_dhcpd_pid) {
+	        if (!have_dhcpd_pid) {
                         if ((s = getenv ("PATH_DHCPD6_PID")))
 		                path_dhcpd_pid = s;
                         else
 		                path_dhcpd_pid = _PATH_DHCPD6_PID;
 	        }
         } else
-#else /* !DHCPv6 */
+#endif /* DHCPv6 */
         {
-	        if (!no_dhcpd_db && (s = getenv ("PATH_DHCPD_DB"))) {
+	        if (!have_dhcpd_db && (s = getenv ("PATH_DHCPD_DB"))) {
 		        path_dhcpd_db = s;
+			have_dhcpd_db = 1;
 	        }
-	        if (!no_dhcpd_pid && (s = getenv ("PATH_DHCPD_PID"))) {
+	        if (!have_dhcpd_pid && (s = getenv ("PATH_DHCPD_PID"))) {
 		        path_dhcpd_pid = s;
+			have_dhcpd_pid = 1;
 	        }
         }
-#endif /* DHCPv6 */
 
         /*
          * convert relative path names to absolute, for files that need
          * to be reopened after chdir() has been called
          */
-        if (path_dhcpd_db[0] != '/') {
+        if (have_dhcpd_db && path_dhcpd_db[0] != '/') {
 		const char *path = path_dhcpd_db;
                 path_dhcpd_db = realpath(path_dhcpd_db, NULL);
                 if (path_dhcpd_db == NULL)
@@ -795,7 +796,7 @@ main(int argc, char **argv) {
 
 #if defined (TRACING)
 	if (traceinfile) {
-	    if (!no_dhcpd_db) {
+	    if (!have_dhcpd_db) {
 		    log_error ("%s", "");
 		    log_error ("** You must specify a lease file with -lf.");
 		    log_error ("   Dhcpd will not overwrite your default");

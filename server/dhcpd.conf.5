@@ -2633,31 +2633,16 @@ statement
 .B lease-file-name \fIname\fB;\fR
 .PP
 .I Name
-should be the name of the DHCP server's lease file.  By default, this
-is DBDIR/dhcpd.leases.  This statement \fBmust\fR appear in the outer
-scope of the configuration file - if it appears in some other scope,
-it will have no effect.  Furthermore, it has no effect if overridden
-by the
-.B -lf
-flag or the
-.B PATH_DHCPD_DB
-environment variable.
-.RE
+Where \fIname\fR is the name of the DHCP server's lease file. By default,
+this is DBDIR/dhcpd.leases.  This statement \fBmust\fR appear in the outer
+scope of the configuration file - if it appears in some other scope, it will
+have no effect.  The value must be the absolute path of the file to use.
+The order of precedence the server uses for the lease file name
+is:
 .PP
-The
-.I limit-addrs-per-ia
-statement
-.RS 0.25i
-.PP
-.B limit-addrs-per-ia \fInumber\fB;\fR
-.PP
-By default, the DHCPv6 server will limit clients to one IAADDR per IA
-option, meaning one address.  If you wish to permit clients to hang onto
-multiple addresses at a time, configure a larger \fInumber\fR here.
-.PP
-Note that there is no present method to configure the server to forcibly
-configure the client with one IP address per each subnet on a shared network.
-This is left to future work.
+    1. \fBlease-file-name\fR configuration file statement.
+    2. \fB-lf\fR command line flag.
+    3. \fBPATH_DHCPD_DB\fR environment variable.
 .RE
 .PP
 The
@@ -2667,21 +2652,16 @@ statement
 .PP
 .B dhcpv6-lease-file-name \fIname\fB;\fR
 .PP
-.I Name
-is the name of the lease file to use if and only if the server is running
-in DHCPv6 mode.  By default, this is DBDIR/dhcpd6.leases.  This statement,
-like
-.I lease-file-name,
-\fBmust\fR appear in the outer scope of the configuration file.  It
-has no effect if overridden by the
-.B -lf
-flag or the
-.B PATH_DHCPD6_DB
-environment variable.  If
-.I dhcpv6-lease-file-name
-is not specified, but
-.I lease-file-name
-is, the latter value will be used.
+Where \fIname\fR is the name of the DHCP server's lease file when the server
+is running DHCPv6. By default, this is DBDIR/dhcpd6.leases. This statement
+\fBmust\fR appear in the outer scope of the configuration file - if it appears
+in some other scope, it will have no effect.  The value must be the absolute
+path of the file to use.  The order of precedence the server uses
+for the lease file name is:
+.PP
+    1. \fBdhcpv6-lease-file-name\fR configuration file statement.
+    2. \fB-lf\fR command line flag.
+    3. \fBPATH_DHCPD6_DB\fR environment variable.
 .RE
 .PP
 The
@@ -2702,6 +2682,22 @@ hexadecimal digits, separated by colons.
 Currently, the values written out based on lease-id-format are the server-duid,
 the uid (DHCPv4 leases), and the IAID_DUID (DHCPv6 leases).  Note the server
 automatically reads the values in either format.
+.RE
+.PP
+The
+.I limit-addrs-per-ia
+statement
+.RS 0.25i
+.PP
+.B limit-addrs-per-ia \fInumber\fB;\fR
+.PP
+By default, the DHCPv6 server will limit clients to one IAADDR per IA
+option, meaning one address.  If you wish to permit clients to hang onto
+multiple addresses at a time, configure a larger \fInumber\fR here.
+.PP
+Note that there is no present method to configure the server to forcibly
+configure the client with one IP address per each subnet on a shared network.
+This is left to future work.
 .RE
 .PP
 The
@@ -2970,14 +2966,13 @@ statement
 .I Name
 should be the name of the DHCP server's process ID file.  This is the
 file in which the DHCP server's process ID is stored when the server
-starts.  By default, this is RUNDIR/dhcpd.pid.  Like the
-.I lease-file-name
-statement, this statement must appear in the outer scope
-of the configuration file.  It has no effect if overridden by the
-.B -pf
-flag or the
-.B PATH_DHCPD_PID
-environment variable.
+starts.  By default, this is RUNDIR/dhcpd.pid.  Like the \fIlease-file-name\fR
+statement, this statement must appear in the outer scope of the configuration
+file. The order of precedence used by the server is:
+.PP
+    1. \fBpid-file-name\fR configuration file statement.
+    2. \fB-lf\fR command line flag.
+    3. \fBPATH_DHCPD_PID\fR environment variable.
 .PP
 The
 .I dhcpv6-pid-file-name
@@ -2989,18 +2984,13 @@ statement
 .I Name
 is the name of the pid file to use if and only if the server is running
 in DHCPv6 mode.  By default, this is DBDIR/dhcpd6.pid.  This statement,
-like
-.I pid-file-name,
-\fBmust\fR appear in the outer scope of the configuration file.  It
-has no effect if overridden by the
-.B -pf
-flag or the
-.B PATH_DHCPD6_PID
-environment variable.  If
-.I dhcpv6-pid-file-name
-is not specified, but
-.I pid-file-name
-is, the latter value will be used.
+like \fIpid-file-name\fr, \fBmust\fR appear in the outer scope of the
+configuration file.  The order of precedence used by the server is:
+.PP
+    1. \fBdhcpv6-pid-file-name\fR configuration file statement.
+    2. \fB-lf\fR command line flag.
+    3. \fBPATH_DHCPD6_PID\fR environment variable.
+.PP
 .RE
 .PP
 The

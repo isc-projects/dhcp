@@ -298,10 +298,10 @@ dhcp-users@lists.isc.org.
 
 - Added to the server (-6) a new statement, local-address6, which specifies
   the source address of packets sent by the server. An additional flag,
-  bind-local-address6, disabled by default makes the service socket to
-  be bound to local-address6. Note as for local-address this does not
-  work with direct client: a relay has to forward packets to the server
-  using the local-address6 destination.
+  bind-local-address6, disabled by default, binds the service socket to
+  to local-address6. Note that bind-local-address does not work with direct
+  clients: a relay has to forward packets to the server using the
+  local-address6 destination.
   [ISC-Bugs #46084]
 
 			Changes since 4.3.6 (Bugs):
@@ -337,6 +337,14 @@ dhcp-users@lists.isc.org.
   this issue to our attention and whose patch helped guide us in the right
   direction.
   [ISC-Bugs #46767]
+
+- The server now recognizes environment variables PATH_DHCPD_DB and
+  PATH_DHCPD_PID.  These had been incorrectly compiled out of the code
+  unless DHCPv6 support was disabled. Additionally, the server man
+  pages were corrected to accurately reflect how the server chooses
+  file names (see lease-file-name and pid-file-name statements). Thanks
+  to Fernando Soto at Bluecat for bringing this matter to our attention.
+  [ISC-Bugs #46859]
 
 			Changes since 4.3.6b1
 
