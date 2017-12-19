@@ -185,6 +185,10 @@ static void shorten_lifetimes(struct reply_state *reply, struct iasubopt *lease,
 static void write_to_packet(struct reply_state *reply, unsigned ia_cursor);
 static const char *iasubopt_plen_str(struct iasubopt *lease);
 
+#ifdef NSUPDATE
+static void ddns_update_static6(struct reply_state* reply);
+#endif
+
 #ifdef DHCP4o6
 /*
  * \brief Omapi I/O handler
@@ -2227,7 +2231,10 @@ reply_process_ia_na(struct reply_state *reply, struct option_cache *ia) {
 
 		/* Write the lease out in wire-format to the outbound buffer */
 		write_to_packet(reply, ia_cursor);
-
+#ifdef NSUPDATE
+		/* Performs DDNS updates if we're configured to do them */
+		ddns_update_static6(reply);
+#endif
 		if ((reply->buf.reply.msg_type == DHCPV6_REPLY) &&
 		    (reply->on_star.on_commit != NULL)) {
 			execute_statements(NULL, reply->packet, NULL, NULL,
@@ -8447,5 +8454,67 @@ const char *iasubopt_plen_str(struct iasubopt *lease) {
 
 	return (prefix_buf);
 }
+
+#ifdef NSUPDATE
+/*
+ * Initiates DDNS updates for static v6 leases if configured to do so.
+ *
+ * The function, which must be called after the IA has been written to the
+ * packet, adds an iasubopt to the IA for static lease.  This is done so we
+ * have an iasubopt to pass into ddns_updates().  A reference to the IA is
+ * added to the DDNS control block to ensure it and it's iasubopt remain in
+ * scope until the update is complete.
+ *
+ */
+void ddns_update_static6(struct reply_state* reply) {
+	struct iasubopt *iasub = NULL;
+	struct binding_scope *scope = NULL;
+	struct option_cache *oc = NULL;
+
+	oc = lookup_option(&server_universe, reply->opt_state, SV_DDNS_UPDATES);
+	if ((oc != NULL) &&
+		(evaluate_boolean_option_cache(NULL, reply->packet, NULL, NULL,
+					       reply->packet->options,
+                                               reply->opt_state, NULL,
+                                               oc, MDL) == 0)) {
+		return;
+	}
+
+	oc = lookup_option(&server_universe, reply->opt_state,
+			   SV_UPDATE_STATIC_LEASES);
+	if ((oc == NULL) ||
+		(evaluate_boolean_option_cache(NULL, reply->packet,
+						     NULL, NULL,
+						     reply->packet->options,
+						     reply->opt_state, NULL,
+						     oc, MDL) == 0)) {
+		return;
+	}
+
+	if (iasubopt_allocate(&iasub, MDL) != ISC_R_SUCCESS) {
+		log_fatal("No memory for iasubopt.");
+	}
+
+	if (ia_add_iasubopt(reply->ia, iasub, MDL) != ISC_R_SUCCESS) {
+		log_fatal("Could not add iasubopt.");
+	}
+
+	ia_reference(&iasub->ia, reply->ia, MDL);
+
+	memcpy(iasub->addr.s6_addr, reply->fixed.data, 16);
+	iasub->plen = 0;
+	iasub->prefer =  MAX_TIME;
+	iasub->valid =  MAX_TIME;
+	iasub->static_lease = 1;
+
+	if (!binding_scope_allocate(&scope, MDL)) {
+		log_fatal("Out of memory for binding scope.");
+	}
+
+	binding_scope_reference(&iasub->scope, scope, MDL);
+
+	ddns_updates(reply->packet, NULL, NULL, iasub, NULL, reply->opt_state);
+}
+#endif /* NSUPDATE */
 
 #endif /* DHCPv6 */

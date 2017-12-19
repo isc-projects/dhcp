@@ -1646,6 +1646,7 @@ struct iasubopt {
 
 	/* space for the on * executable statements */
 	struct on_star on_star;
+	int static_lease;
 };
 
 struct ia_xx {
@@ -1818,6 +1819,7 @@ typedef struct dhcp_ddns_cb {
 	dns_rdataclass_t dhcid_class;
 	dns_rdataclass_t other_dhcid_class;
 	char *lease_tag;
+	struct ia_xx *fixed6_ia;
 } dhcp_ddns_cb_t;
 
 extern struct ipv6_pool **pools;

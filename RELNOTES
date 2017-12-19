@@ -284,6 +284,18 @@ dhcp-users@lists.isc.org.
 - Corrected some minor coverity issues: CID 1426059, 1426058, and 1426057.
   [ISC-Bugs #46836]
 
+- The server (-6) now honors the parameter, update-static-leases, for static
+  (fixed-address6) DHCPv6 leases.  It is worth noting that because stateful
+  data is not retained by the server for static leases, each time a client
+  requests or renews a static lease, the server will perform DDNS updates for
+  it. This may have significant performance implications for environments
+  with many clients that request or renew static leases often. Similarly,
+  the DNS entries will not be removed by server when a client issues a RELEASE
+  nor if the lease is deleted from the configuration. In such cases the DNS
+  entries must be removed manually. This feature is disabled by default.
+  [ISC-Bugs #34097]
+  [ISC-Bugs #41054]
+
 			Changes since 4.3.6 (Bugs):
 
 - Corrected an issue where the server would return a client's previously

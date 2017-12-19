@@ -3379,13 +3379,15 @@ statement
 .PP
 The \fIupdate-static-leases\fR flag, if enabled, causes the DHCP
 server to do DNS updates for clients even if those clients are being
-assigned their IP address using a \fIfixed-address\fR statement - that
-is, the client is being given a static assignment.  It is not
-recommended because the DHCP server has no way to tell that the update
-has been done, and therefore will not delete the record when it is not
-in use.  Also, the server must attempt the update each time the
-client renews its lease, which could have a significant performance
-impact in environments that place heavy demands on the DHCP server.
+assigned their IP address using a \fIfixed-address\fR or
+\fIfixed-address6\fR statement - that is, the client is being given a
+static assignment.  It is not recommended because the DHCP server has
+no way to tell that the update has been done, and therefore will not
+delete the record when it is not in use.  Also, the server must attempt
+the update each time the client renews its lease, which could have a
+significant performance impact in environments that place heavy demands
+on the DHCP server.  This feature is supported for both DHCPv4 and DHCPv6,
+and update modes standard or interim. It is disabled by default.
 .RE
 .PP
 The

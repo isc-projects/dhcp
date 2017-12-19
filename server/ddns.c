@@ -57,6 +57,25 @@ static void copy_conflict_flags(u_int16_t *target, u_int16_t source);
 
 static void ddns_fwd_srv_add3(dhcp_ddns_cb_t *ddns_cb, isc_result_t eresult);
 
+/*
+ * ddns_cb_free() is part of common lib, while ia_* routines are known
+ * only in the server.  Use this wrapper instead of ddns_cb_free() directly.
+ */
+static void
+destroy_ddns_cb(struct dhcp_ddns_cb *ddns_cb, char* file, int line) {
+	if (!ddns_cb) {
+		return;
+	}
+
+        if (ddns_cb->fixed6_ia) {
+                ia_dereference(&ddns_cb->fixed6_ia, MDL);
+        }
+
+	ddns_cb_free(ddns_cb, file, line);
+
+}
+
+
 /* DN: No way of checking that there is enough space in a data_string's
    buffer.  Be certain to allocate enough!
    TL: This is why the expression evaluation code allocates a *new*
@@ -153,6 +172,13 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 		scope = &(lease6->scope);
 		memcpy(ddns_cb->address.iabuf, lease6->addr.s6_addr, 16);
 		ddns_cb->address.len = 16;
+
+		if (lease6->static_lease) {
+			/* We add a reference to keep ia && iasubopt alive
+			* since static v6s are retained anywhere */
+			ia_reference(&ddns_cb->fixed6_ia, lease6->ia, MDL);
+			ddns_cb->flags |= DDNS_STATIC_LEASE;
+		}
 	}
 
 	memset (&d1, 0, sizeof(d1));
@@ -754,7 +780,7 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 	 * Final cleanup.
 	 */
 	if (ddns_cb != NULL) {
-		ddns_cb_free(ddns_cb, MDL);
+		destroy_ddns_cb(ddns_cb, MDL);
 	}
 
 	data_string_forget(&d1, MDL);
@@ -1296,7 +1322,7 @@ ddns_ptr_add(dhcp_ddns_cb_t *ddns_cb,
 	}
 
 	ddns_update_lease_ptr(NULL, NULL, ddns_cb, NULL, MDL);
-	ddns_cb_free(ddns_cb, MDL);
+	destroy_ddns_cb(ddns_cb, MDL);
 	/*
 	 * A single DDNS operation may require several calls depending on
 	 * the current state as the prerequisites for the first message
@@ -1362,7 +1388,7 @@ ddns_ptr_remove(dhcp_ddns_cb_t *ddns_cb,
 
 	ddns_update_lease_ptr(NULL, NULL, ddns_cb, NULL, MDL);
 	ddns_fwd_srv_connector(NULL, NULL, NULL, ddns_cb->next_op, result);
-	ddns_cb_free(ddns_cb, MDL);
+	destroy_ddns_cb(ddns_cb, MDL);
 	return;
 }
 
@@ -1476,7 +1502,7 @@ ddns_fwd_srv_add2(dhcp_ddns_cb_t *ddns_cb,
 	}
 
 	ddns_update_lease_ptr(NULL, NULL, ddns_cb, NULL, MDL);
-	ddns_cb_free(ddns_cb, MDL);
+	destroy_ddns_cb(ddns_cb, MDL);
 	/*
 	 * A single DDNS operation may require several calls depending on
 	 * the current state as the prerequisites for the first message
@@ -1551,7 +1577,7 @@ ddns_fwd_srv_add1(dhcp_ddns_cb_t *ddns_cb,
 	}
 
 	ddns_update_lease_ptr(NULL, NULL, ddns_cb, NULL, MDL);
-	ddns_cb_free(ddns_cb, MDL);
+	destroy_ddns_cb(ddns_cb, MDL);
 	/*
 	 * A single DDNS operation may require several calls depending on
 	 * the current state as the prerequisites for the first message
@@ -1636,7 +1662,7 @@ ddns_fwd_srv_add3(dhcp_ddns_cb_t *ddns_cb,
 	}
 
 	ddns_update_lease_ptr(NULL, NULL, ddns_cb, NULL, MDL);
-	ddns_cb_free(ddns_cb, MDL);
+	destroy_ddns_cb(ddns_cb, MDL);
 	/*
 	 * A single DDNS operation may require several calls depending on
 	 * the current state as the prerequisites for the first message
@@ -1694,7 +1720,7 @@ ddns_fwd_srv_connector(struct lease          *lease,
 	if (result == ISC_R_SUCCESS) {
 		ddns_update_lease_ptr(lease, lease6, ddns_cb, ddns_cb, MDL);
 	} else {
-		ddns_cb_free(ddns_cb, MDL);
+		destroy_ddns_cb(ddns_cb, MDL);
 	}
 
 	return;
@@ -1762,7 +1788,7 @@ ddns_fwd_srv_rem2(dhcp_ddns_cb_t *ddns_cb,
 
 	ddns_update_lease_ptr(NULL, NULL, ddns_cb, NULL, MDL);
 	ddns_fwd_srv_connector(NULL, NULL, NULL, ddns_cb->next_op, eresult);
-	ddns_cb_free(ddns_cb, MDL);
+	destroy_ddns_cb(ddns_cb, MDL);
 	return;
 }
 
@@ -1866,7 +1892,7 @@ ddns_fwd_srv_rem1(dhcp_ddns_cb_t *ddns_cb,
 
 	ddns_update_lease_ptr(NULL, NULL, ddns_cb, NULL, MDL);
 	ddns_fwd_srv_connector(NULL, NULL, NULL, ddns_cb->next_op, eresult);
-	ddns_cb_free(ddns_cb, MDL);
+	destroy_ddns_cb(ddns_cb, MDL);
 }
 
 /*%<
@@ -1952,7 +1978,7 @@ ddns_removals(struct lease    *lease,
 			} else {
 				/* Remvoval, check and remove updates */
 				if (ddns_cb->next_op != NULL) {
-					ddns_cb_free(ddns_cb->next_op, MDL);
+					destroy_ddns_cb(ddns_cb->next_op, MDL);
 					ddns_cb->next_op = NULL;
 				}
 #if defined (DEBUG_DNS_UPDATES)
@@ -1980,7 +2006,7 @@ ddns_removals(struct lease    *lease,
 			} else {
 				/* Remvoval, check and remove updates */
 				if (ddns_cb->next_op != NULL) {
-					ddns_cb_free(ddns_cb->next_op, MDL);
+					destroy_ddns_cb(ddns_cb->next_op, MDL);
 					ddns_cb->next_op = NULL;
 				}
 #if defined (DEBUG_DNS_UPDATES)
@@ -2191,7 +2217,7 @@ ddns_removals(struct lease    *lease,
 	 */
 	ddns_fwd_srv_connector(lease, lease6, scope, add_ddns_cb, execute_add);
 	if (ddns_cb != NULL)
-		ddns_cb_free(ddns_cb, MDL);
+		destroy_ddns_cb(ddns_cb, MDL);
 
 	return (result);
 }

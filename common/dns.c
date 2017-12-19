@@ -594,9 +594,16 @@ ddns_cb_free(dhcp_ddns_cb_t *ddns_cb, const char *file, int line)
 	}
 
 	/* Should be freed by now, check just in case. */
-	if (ddns_cb->transaction != NULL)
+	if (ddns_cb->transaction != NULL) {
 		log_error("Impossible memory leak at %s:%d (attempt to free "
 			  "DDNS Control Block before transaction).", MDL);
+	}
+
+	/* Should be freed by now, check just in case. */
+	if (ddns_cb->fixed6_ia) {
+		log_error("Possible memory leak at %s:%d (attempt to free "
+			  "DDNS Control Block before fxed6_ia).", MDL);
+	}
 
 	dfree(ddns_cb, file, line);
 }
