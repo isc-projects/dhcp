@@ -170,10 +170,6 @@ if test "$enable_dhcpv4o6" = "yes"; then
 	if test "$enable_dhcpv6" = "no"; then
 		AC_MSG_ERROR([dhcpv4o6 requires dhcpv6])
 	fi
-	# DHCPv4o6 is not yet compatible with delayed-ack
-	if test "$enable_delayed_ack" = "yes"; then
-		AC_MSG_ERROR([dhcpv4o6 is not compatible with delayed-ack])
-	fi
 	AC_DEFINE([DHCP4o6], [1], 
 		  [Define to 1 to include DHCPv4 over DHCPv6 support.])
 else

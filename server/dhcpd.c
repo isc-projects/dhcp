@@ -1335,6 +1335,17 @@ void postconf_initialization (int quiet)
 		}
 		data_string_forget(&db, MDL);
 	}
+#if defined(DHCP4o6)
+	/* Delayed acks and DHCPv4-over-DHCPv6 are incompatible */
+	if (dhcpv4_over_dhcpv6) {
+		if (max_outstanding_acks > 0) {
+			log_debug("DHCP4o6 enabled, "
+				  "setting delayed-ack to zero (incompatible)");
+		}
+
+		max_outstanding_acks = 0;
+	}
+#endif
 
 	oc = lookup_option(&server_universe, options, SV_MAX_ACK_DELAY);
 	if (oc &&

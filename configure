@@ -5479,10 +5479,6 @@ if test "$enable_dhcpv4o6" = "yes"; then
 	if test "$enable_dhcpv6" = "no"; then
 		as_fn_error $? "dhcpv4o6 requires dhcpv6" "$LINENO" 5
 	fi
-	# DHCPv4o6 is not yet compatible with delayed-ack
-	if test "$enable_delayed_ack" = "yes"; then
-		as_fn_error $? "dhcpv4o6 is not compatible with delayed-ack" "$LINENO" 5
-	fi
 
 $as_echo "#define DHCP4o6 1" >>confdefs.h
 

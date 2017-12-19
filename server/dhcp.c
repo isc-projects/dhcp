@@ -2149,7 +2149,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 	struct in_addr from;
 	TIME remaining_time;
 	struct iaddr cip;
-#if defined(DELAYED_ACK) && !defined(DHCP4o6)
+#if defined(DELAYED_ACK)
 	/* By default we don't do the enqueue */
 	isc_boolean_t enqueue = ISC_FALSE;
 #endif
@@ -3163,7 +3163,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 			commit = 0;
 		}
 
-#if !defined(DELAYED_ACK) || defined(DHCP4o6)
+#if !defined(DELAYED_ACK)
 		/* Install the new information on 'lt' onto the lease at
 		 * 'lease'.  If this is a DHCPOFFER, it is a 'soft' promise,
 		 * if it is a DHCPACK, it is a 'hard' binding, so it needs
@@ -3175,7 +3175,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		if ((use_old_lease == 0) &&
 		    !supersede_lease(lease, lt, commit,
 				     offer == DHCPACK, offer == DHCPACK, 0)) {
-#else /* defined(DELAYED_ACK) && !defined(DHCP4o6) */
+#else /* defined(DELAYED_ACK) */
 		/*
 		 * If there already isn't a need for a lease commit, and we
 		 * can just answer right away, set a flag to indicate this.
@@ -3573,7 +3573,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		++outstanding_pings;
 	} else {
   		lease->cltt = cur_time;
-#if defined(DELAYED_ACK) && !defined(DHCP4o6)
+#if defined(DELAYED_ACK)
 		if (enqueue && max_outstanding_acks != 0)
 			delayed_ack_enqueue(lease);
 		else 

@@ -234,7 +234,7 @@ static struct option server_options[] = {
 	{ "limit-addrs-per-ia", "L",		&server_universe,  56, 1 },
 	{ "limit-prefs-per-ia", "L",		&server_universe,  57, 1 },
 /* Assert a configuration parsing error if delayed-ack isn't compiled in. */
-#if defined(DELAYED_ACK) && !defined(DHCP4o6)
+#if defined(DELAYED_ACK)
 	{ "delayed-ack", "S",			&server_universe,  58, 1 },
 	{ "max-ack-delay", "L",			&server_universe,  59, 1 },
 #endif

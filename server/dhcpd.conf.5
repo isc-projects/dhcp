@@ -2287,8 +2287,8 @@ a second).
 The delayed-ack feature is compiled in by default, but can be disabled
 at compile time with \'./configure --disable-delayed-ack\'.  Please note
 that the delayed-ack feature is not currently compatible with support for
-DHPCv4o6 (compiled out by default).  You must compile with one or the
-other but not both.
+DHPCv4-over-DHCPv6 so when a 4to6 port ommand line argument enables this
+in the server the delayed-ack value is reset to 0.
 .RE
 .PP
 The
