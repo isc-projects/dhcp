@@ -293,6 +293,7 @@ dhcp-users@lists.isc.org.
   the DNS entries will not be removed by server when a client issues a RELEASE
   nor if the lease is deleted from the configuration. In such cases the DNS
   entries must be removed manually. This feature is disabled by default.
+  Thanks to Bill Shirley for requesting this change.
   [ISC-Bugs #34097]
   [ISC-Bugs #41054]
 
