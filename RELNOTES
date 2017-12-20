@@ -305,6 +305,11 @@ dhcp-users@lists.isc.org.
   local-address6 destination.
   [ISC-Bugs #46084]
 
+- Removed an "Impossible condition" error upon exit in the dhcpd server that
+  has been shutdown via OMAPI. This condition was only apparent under Solaris
+  when building with --enable-use-sockets and --enable-ipv4-pktinfo.
+  [ISC-Bugs #36118]
+
 			Changes since 4.3.6 (Bugs):
 
 - Corrected an issue where the server would return a client's previously
