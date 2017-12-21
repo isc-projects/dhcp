@@ -3336,7 +3336,7 @@ void shorten_lifetimes(struct reply_state *reply, struct iasubopt *lease,
 				   " preferred: %u, valid %u",
 				   pin6_addr(&lease->addr),
 				   iasubopt_plen_str(lease),
-				   age, threshold,
+				   (long)age, threshold,
 				   pref_life, valid_life);
 			break;
 		}
