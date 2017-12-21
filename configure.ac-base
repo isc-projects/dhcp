@@ -867,8 +867,7 @@ fi
 DHLIBS=LTLIBRARIES
 A=la
 BINDLT="--with-libtool --disable-symtable"
-# BIND does not provide uninstall
-DISTCHECK_LIBTOOL_CONFIGURE_FLAG="--enable-libtool --disable-bind-install"
+DISTCHECK_LIBTOOL_CONFIGURE_FLAG="--enable-libtool"
 @END WITH LIBTOOL
 
 @BEGIN WITHOUT LIBTOOL

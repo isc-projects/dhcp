@@ -30,8 +30,7 @@ bindconfig = --without-openssl --without-libxml2 --without-libjson \
 @BIND_ATF_TRUE@cleandirs = ./lib ./include ./atf
 cleanfiles = ./configure.log ./build.log ./install.log
 
-# isccfg depends on isccc?!
-bindlibs = isc dns isccc isccfg irs
+bindlibs = isc dns isccfg irs
 installdirs = includedir=${binddir}/include libdir=${binddir}/lib
 
 @BIND_ATF_FALSE@all: bind1 bind2
@@ -106,7 +105,16 @@ install-bind: all
 	  $(MAKE) install) ;              \
 	 done
 
+@INSTALL_BIND_FALSE@uninstall:
+@INSTALL_BIND_TRUE@uninstall: uninstall-bind
+
+uninstall-bind: all
+	@for libdir in ${bindlibs} ; do   \
+	 (cd ${bindsrcdir}/lib/$$libdir ; \
+	  $(MAKE) uninstall) ;            \
+	 done
+
 # Include the following so that this Makefile is happy when the parent
 # tries to use them.
 
-check distdir distclean dvi installcheck uninstall:
+check distdir distclean dvi installcheck:
