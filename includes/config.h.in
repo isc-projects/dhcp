@@ -157,6 +157,9 @@
 /* Define to any value to include Ari's PARANOIA patch. */
 #undef PARANOIA
 
+/* Define to 1 to include relay port support. */
+#undef RELAY_PORT
+
 /* The size of `struct iaddr *', as computed by sizeof. */
 #undef SIZEOF_STRUCT_IADDR_P
 

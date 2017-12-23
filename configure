@@ -768,6 +768,7 @@ enable_tracing
 enable_delayed_ack
 enable_dhcpv6
 enable_dhcpv4o6
+enable_relay_port
 enable_paranoia
 enable_early_chroot
 enable_ipv4_pktinfo
@@ -1446,6 +1447,7 @@ Optional Features:
   --enable-dhcpv6         enable support for DHCPv6 (default is yes)
   --enable-dhcpv4o6       enable support for DHCPv4-over-DHCPv6 (default is
                           no)
+  --enable-relay-port     enable support for relay port (default is no)
   --enable-paranoia       enable support for chroot/setuid (default is no)
   --enable-early-chroot   enable chrooting prior to configuration (default is
                           no)
@@ -5487,6 +5489,19 @@ else
     enable_dhcpv4o6="no"
 fi
 
+# Relay port (draft-ietf-dhc-relay-port-10.txt) optional compile-time feature.
+# Check whether --enable-relay-port was given.
+if test "${enable_relay_port+set}" = set; then :
+  enableval=$enable_relay_port;
+fi
+
+# Relay port is off by default (for now)
+if test "$enable_relay_port" = "yes"; then
+
+$as_echo "#define RELAY_PORT 1" >>confdefs.h
+
+fi
+
 # PARANOIA is off by default (until we can test it with all features)
 # Check whether --enable-paranoia was given.
 if test "${enable_paranoia+set}" = set; then :
@@ -6207,6 +6222,7 @@ fi
 done
   # needed for linux/filter.h on old systems
 
+relay_port_supported="no"
 ac_fn_c_check_header_compile "$LINENO" "linux/filter.h" "ac_cv_header_linux_filter_h" "
 #ifdef HAVE_LINUX_TYPES_H
 #include <linux/types.h>
@@ -6223,6 +6239,7 @@ then
 
 $as_echo "#define HAVE_LPF 1" >>confdefs.h
 
+	relay_port_supported="yes"
 else
 	ac_fn_c_check_header_mongrel "$LINENO" "sys/dlpi.h" "ac_cv_header_sys_dlpi_h" "$ac_includes_default"
 if test "x$ac_cv_header_sys_dlpi_h" = xyes; then :
@@ -6247,7 +6264,14 @@ fi
 
 $as_echo "#define HAVE_BPF 1" >>confdefs.h
 
+			relay_port_supported="yes"
 		fi
+	fi
+fi
+
+if test "$enable_relay_port" = "yes"; then
+	if test "$relay_port_supported" != "yes"; then
+		as_fn_error $? "--enable-relay-port requires BPF or LPF" "$LINENO" 5
 	fi
 fi
 
@@ -9014,6 +9038,7 @@ Features:
   dhcpv6:        $enable_dhcpv6
   delayed-ack:   $enable_delayed_ack
   dhcpv4o6:      $enable_dhcpv4o6
+  relay-port:    $enable_relay_port
 
 Developer:
   ATF unittests : $atf_path

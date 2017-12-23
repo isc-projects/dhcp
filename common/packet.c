@@ -167,6 +167,12 @@ void assemble_udp_ip_header (interface, buf, bufix,
 	/* Fill out the UDP header */
 	udp.uh_sport = local_port;		/* XXX */
 	udp.uh_dport = port;			/* XXX */
+#if defined(RELAY_PORT)
+	/* Change to relay port defined if sending to server */
+	if (relay_port && (port == htons(67))) {
+		udp.uh_sport = relay_port;
+	}
+#endif
 	udp.uh_ulen = htons(sizeof(udp) + len);
 	memset (&udp.uh_sum, 0, sizeof udp.uh_sum);
 
@@ -296,7 +302,12 @@ decode_udp_ip_header(struct interface_info *interface,
 	  return -1;
 
   /* Is it to the port we're serving? */
+#if defined(RELAY_PORT)
+  if ((udp.uh_dport != local_port) &&
+      ((relay_port == 0) || (udp.uh_dport != relay_port)))
+#else
   if (udp.uh_dport != local_port)
+#endif
 	  return -1;
 #endif /* USERLAND_FILTER */
 

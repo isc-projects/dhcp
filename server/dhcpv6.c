@@ -27,6 +27,14 @@ static void send_dhcpv4_response(struct data_string *raw);
 static void recv_dhcpv4_query(struct data_string *raw);
 static void dhcp4o6_dhcpv4_query(struct data_string *reply_ret,
 				 struct packet *packet);
+
+struct udp_data4o6 {
+	u_int16_t src_port;
+	u_int8_t  rsp_opt_exist;
+	u_int8_t  reserved;
+};
+
+static int offset_data4o6 = 36; /* 16+16+4 */
 #endif
 
 /*
@@ -211,7 +219,7 @@ isc_result_t dhcpv4o6_handler(omapi_object_t *h) {
 
 	cc = recv(dhcp4o6_fd, buf, sizeof(buf), 0);
 
-	if (cc < DHCP_FIXED_NON_UDP + 32)
+	if (cc < DHCP_FIXED_NON_UDP + offset_data4o6)
 		return ISC_R_UNEXPECTED;
 	memset(&raw, 0, sizeof(raw));
 	if (!buffer_allocate(&raw.buffer, cc, MDL)) {
@@ -237,7 +245,7 @@ isc_result_t dhcpv4o6_handler(omapi_object_t *h) {
  * \brief Send the DHCPv4-response back to the DHCPv6 side
  *  (DHCPv6 server function)
  *
- * Format: interface:16 + address:16 + DHCPv6 DHCPv4-response message
+ * Format: interface:16 + address:16 + udp:4 + DHCPv6 DHCPv4-response message
  *
  * \param raw the IPC message content
  */
@@ -246,6 +254,7 @@ static void send_dhcpv4_response(struct data_string *raw) {
 	char name[16 + 1];
 	struct sockaddr_in6 to_addr;
 	char pbuf[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
+	struct udp_data4o6 udp_data;
 	int send_ret;
 
 	memset(name, 0, sizeof(name));
@@ -263,26 +272,32 @@ static void send_dhcpv4_response(struct data_string *raw) {
 	memset(&to_addr, 0, sizeof(to_addr));
 	to_addr.sin6_family = AF_INET6;
 	memcpy(&to_addr.sin6_addr, raw->data + 16, 16);
-	if ((raw->data[32] == DHCPV6_RELAY_FORW) ||
-	    (raw->data[32] == DHCPV6_RELAY_REPL)) {
-		to_addr.sin6_port = local_port;
+	memset(&udp_data, 0, sizeof(udp_data));
+	memcpy(&udp_data, raw->data + 32, 4);
+	if ((raw->data[36] == DHCPV6_RELAY_FORW) ||
+	    (raw->data[36] == DHCPV6_RELAY_REPL)) {
+		if (udp_data.rsp_opt_exist) {
+			to_addr.sin6_port = udp_data.src_port;
+		} else {
+			to_addr.sin6_port = local_port;
+		}
 	} else {
 		to_addr.sin6_port = remote_port;
 	}
 
 	log_info("send_dhcpv4_response(): sending %s on %s to %s port %d",
-		 dhcpv6_type_names[raw->data[32]],
+		 dhcpv6_type_names[raw->data[36]],
 		 name,
 		 inet_ntop(AF_INET6, raw->data + 16, pbuf, sizeof(pbuf)),
 		 ntohs(to_addr.sin6_port));
 
-	send_ret = send_packet6(ip, raw->data + 32, raw->len - 32, &to_addr);
+	send_ret = send_packet6(ip, raw->data + 36, raw->len - 36, &to_addr);
 	if (send_ret < 0) {
 		log_error("send_dhcpv4_response: send_packet6(): %m");
-	} else if (send_ret != raw->len - 32) {
+	} else if (send_ret != raw->len - 36) {
 		log_error("send_dhcpv4_response: send_packet6() "
 			  "sent %d of %d bytes",
-			  send_ret, raw->len - 32);
+			  send_ret, raw->len - 36);
 	}
 }
 #endif /* DHCP4o6 */
@@ -857,6 +872,9 @@ static const int required_opts_solicit[] = {
 };
 static const int required_opts_agent[] = {
 	D6O_INTERFACE_ID,
+#if defined(RELAY_PORT)
+	D6O_RELAY_SOURCE_PORT,
+#endif
 	D6O_RELAY_MSG,
 	0
 };
@@ -6854,6 +6872,35 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 		data_string_forget(&a_opt, MDL);
 	}
 
+#if defined(RELAY_PORT)
+	/*
+	 * Append the relay_source_port option if present.
+	 */
+	oc = lookup_option(&dhcpv6_universe, packet->options,
+			   D6O_RELAY_SOURCE_PORT);
+	if (oc != NULL) {
+		if (!evaluate_option_cache(&a_opt, packet,
+					   NULL, NULL,
+					   packet->options, NULL,
+					   &global_scope, oc, MDL)) {
+			log_error("dhcpv6_relay_forw: error evaluating "
+				  "Relay Source Port.");
+			goto exit;
+		}
+		if (!save_option_buffer(&dhcpv6_universe, opt_state, NULL,
+					(unsigned char *)a_opt.data,
+					a_opt.len,
+					D6O_RELAY_SOURCE_PORT, 0)) {
+			log_error("dhcpv6_relay_forw: error saving "
+				  "Relay Source Port.");
+			goto exit;
+		}
+		data_string_forget(&a_opt, MDL);
+
+		packet->relay_source_port = ISC_TRUE;
+	}
+#endif
+
 	/*
 	 * Append our encapsulated stuff for caller.
 	 */
@@ -7147,6 +7194,35 @@ dhcp4o6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 		data_string_forget(&a_opt, MDL);
 	}
 
+#if defined(RELAY_PORT)
+	/*
+	 * Append the relay_source_port option if present.
+	 */
+	oc = lookup_option(&dhcpv6_universe, packet->options,
+			   D6O_RELAY_SOURCE_PORT);
+	if (oc != NULL) {
+		if (!evaluate_option_cache(&a_opt, packet,
+					   NULL, NULL,
+					   packet->options, NULL,
+					   &global_scope, oc, MDL)) {
+			log_error("dhcpv4o6_relay_forw: error evaluating "
+				  "Relay Source Port.");
+			goto exit;
+		}
+		if (!save_option_buffer(&dhcpv6_universe, opt_state, NULL,
+					(unsigned char *)a_opt.data,
+					a_opt.len,
+					D6O_RELAY_SOURCE_PORT, 0)) {
+			log_error("dhcpv4o6_relay_forw: error saving "
+				  "Relay Source Port.");
+			goto exit;
+		}
+		data_string_forget(&a_opt, MDL);
+
+		packet->relay_source_port = ISC_TRUE;
+	}
+#endif
+
 	/*
 	 * Append our encapsulated stuff for caller.
 	 */
@@ -7436,12 +7512,13 @@ exit:
  * \brief Forward a DHCPv4-query message to the DHCPv4 side
  *  (DHCPv6 server function)
  *
- * Format: interface:16 + address:16 + DHCPv6 DHCPv4-query message
+ * Format: interface:16 + address:16 + udp:4 + DHCPv6 DHCPv4-query message
  *
  * \brief packet the DHCPv6 DHCPv4-query message
  */
 static void forw_dhcpv4_query(struct packet *packet) {
 	struct data_string ds;
+	struct udp_data4o6 udp_data;
 	unsigned len;
 	int cc;
 
@@ -7458,7 +7535,7 @@ static void forw_dhcpv4_query(struct packet *packet) {
 	}
 
 	/* Get a buffer. */
-	len = packet->packet_length + 32;
+	len = packet->packet_length + 36;
 	memset(&ds, 0, sizeof(ds));
 	if (!buffer_allocate(&ds.buffer, len, MDL)) {
 		log_error("forw_dhcpv4_query: "
@@ -7472,7 +7549,10 @@ static void forw_dhcpv4_query(struct packet *packet) {
 	strncpy((char *)ds.buffer->data, packet->interface->name, 16);
 	memcpy(ds.buffer->data + 16,
 	       packet->client_addr.iabuf, 16);
-	memcpy(ds.buffer->data + 32,
+	memset(&udp_data, 0, sizeof(udp_data));
+	udp_data.src_port = packet->client_port;
+	memcpy(ds.buffer->data + 32, &udp_data, 4);
+	memcpy(ds.buffer->data + 36,
 	       (unsigned char *)packet->raw,
 	       packet->packet_length);
 
@@ -7690,6 +7770,15 @@ dhcpv6(struct packet *packet) {
 		to_addr.sin6_port = packet->client_port;
 #endif
 
+#if defined(RELAY_PORT)
+		/*
+		 * Check relay source port.
+		 */
+		if (packet->relay_source_port) {
+			to_addr.sin6_port = packet->client_port;
+		}
+#endif
+
 		memcpy(&to_addr.sin6_addr, packet->client_addr.iabuf,
 		       sizeof(to_addr.sin6_addr));
 
@@ -7716,7 +7805,7 @@ dhcpv6(struct packet *packet) {
  * Receive a message with a DHCPv4-query inside from the DHCPv6 server.
  * (code copied from \ref do_packet6() \ref and dhcpv6())
  *
- * Format: interface:16 + address:16 + DHCPv6 DHCPv4-query message
+ * Format: interface:16 + address:16 + udp:4 + DHCPv6 DHCPv4-query message
  *
  * \param raw the DHCPv6 DHCPv4-query message raw content
  */
@@ -7730,6 +7819,7 @@ static void recv_dhcpv4_query(struct data_string *raw) {
 	const struct dhcpv4_over_dhcpv6_packet *msg;
 	struct data_string reply;
 	struct data_string ds;
+	struct udp_data4o6 udp_data;
 	unsigned len;
 	int cc;
 
@@ -7748,14 +7838,17 @@ static void recv_dhcpv4_query(struct data_string *raw) {
 	iaddr.len = 16;
 	memcpy(iaddr.iabuf, raw->data + 16, 16);
 
+	memset(&udp_data, 0, sizeof(udp_data));
+	memcpy(&udp_data, raw->data + 32, 4);
+
 	/*
 	 * From do_packet6().
 	 */
 
-	if (!packet6_len_okay((char *)raw->data + 32, raw->len - 32)) {
+	if (!packet6_len_okay((char *)raw->data + 36, raw->len - 36)) {
 		log_error("recv_dhcpv4_query: "
 			 "short packet from %s, len %d, dropped",
-			 piaddr(iaddr), raw->len - 32);
+			 piaddr(iaddr), raw->len - 36);
 		return;
 	}
 
@@ -7774,18 +7867,18 @@ static void recv_dhcpv4_query(struct data_string *raw) {
 		return;
 	}
 
-	packet->raw = (struct dhcp_packet *)(raw->data + 32);
-	packet->packet_length = raw->len - 32;
-	packet->client_port = remote_port;
+	packet->raw = (struct dhcp_packet *)(raw->data + 36);
+	packet->packet_length = raw->len - 36;
+	packet->client_port = udp_data.src_port;
 	packet->client_addr = iaddr;
 	interface_reference(&packet->interface, ip, MDL);
 
-	msg_type = raw->data[32];
+	msg_type = raw->data[36];
 	if ((msg_type == DHCPV6_RELAY_FORW) ||
 	    (msg_type == DHCPV6_RELAY_REPL)) {
 		int relaylen =
 		    (int)(offsetof(struct dhcpv6_relay_packet, options));
-		relay = (const struct dhcpv6_relay_packet *)(raw->data + 32);
+		relay = (const struct dhcpv6_relay_packet *)(raw->data + 36);
 		packet->dhcpv6_msg_type = relay->msg_type;
 
 		/* relay-specific data */
@@ -7797,7 +7890,7 @@ static void recv_dhcpv4_query(struct data_string *raw) {
 
 		if (!parse_option_buffer(packet->options,
 					 relay->options,
-					 raw->len - 32 - relaylen,
+					 raw->len - 36 - relaylen,
 					 &dhcpv6_universe)) {
 			/* no logging here, as parse_option_buffer() logs all
 			   cases where it fails */
@@ -7808,7 +7901,7 @@ static void recv_dhcpv4_query(struct data_string *raw) {
 		   (msg_type == DHCPV6_DHCPV4_RESPONSE)) {
 		int msglen =
 		    (int)(offsetof(struct dhcpv4_over_dhcpv6_packet, options));
-		msg = (struct dhcpv4_over_dhcpv6_packet *)(raw->data + 32);
+		msg = (struct dhcpv4_over_dhcpv6_packet *)(raw->data + 36);
 		packet->dhcpv6_msg_type = msg->msg_type;
 
 		/* message-specific data */
@@ -7817,7 +7910,7 @@ static void recv_dhcpv4_query(struct data_string *raw) {
 
 		if (!parse_option_buffer(packet->options,
 					 msg->options,
-					 raw->len - 32 - msglen,
+					 raw->len - 36 - msglen,
 					 &dhcpv6_universe)) {
 			/* no logging here, as parse_option_buffer() logs all
 			   cases where it fails */
@@ -7878,18 +7971,19 @@ static void recv_dhcpv4_query(struct data_string *raw) {
          */
 	build_dhcpv6_reply(&reply, packet);
 
-	packet_dereference(&packet, MDL);
-
-	if (reply.data == NULL)
+	if (reply.data == NULL) {
+		packet_dereference(&packet, MDL);
 		return;
+	}
 
 	/*
 	 * Forward the response.
 	 */
-	len = reply.len + 32;
+	len = reply.len + 36;
 	memset(&ds, 0, sizeof(ds));
 	if (!buffer_allocate(&ds.buffer, len, MDL)) {
 		log_error("recv_dhcpv4_query: no memory.");
+		packet_dereference(&packet, MDL);
 		return;
 	}
 	ds.data = ds.buffer->data;
@@ -7897,7 +7991,15 @@ static void recv_dhcpv4_query(struct data_string *raw) {
 
 	memcpy(ds.buffer->data, name, 16);
 	memcpy(ds.buffer->data + 16, iaddr.iabuf, 16);
-	memcpy(ds.buffer->data + 32, reply.data, reply.len);
+	udp_data.rsp_opt_exist = packet->relay_source_port ? 1 : 0;
+	memcpy(ds.buffer->data + 32, &udp_data, 4);
+	memcpy(ds.buffer->data + 36, reply.data, reply.len);
+
+	/*
+	 * Now we can release the packet.
+	 */
+	packet_dereference(&packet, MDL);
+
 	cc = send(dhcp4o6_fd, ds.data, ds.len, 0);
 	if (cc < 0)
 		log_error("recv_dhcpv4_query: send(): %m");

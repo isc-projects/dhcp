@@ -169,6 +169,7 @@ static struct option agent_options[] = {
 	{ "agent-id", "I",			&agent_universe,   3, 1 },
 	{ "DOCSIS-device-class", "L",		&agent_universe,   4, 1 },
 	{ "link-selection", "I",		&agent_universe,   5, 1 },
+	{ "relay-port", "Z",			&agent_universe,  19, 1 },
 	{ NULL, NULL, NULL, 0, 0 }
 };
 

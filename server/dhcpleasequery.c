@@ -152,6 +152,7 @@ dhcpleasequery(struct packet *packet, int ms_nulltp) {
 	u_int32_t time_rebinding;
 	u_int32_t time_expiry;
 	u_int32_t client_last_transaction_time;
+	u_int16_t relay_port = 0;
 	struct sockaddr_in to;
 	struct in_addr siaddr;
 	struct data_string prl;
@@ -660,12 +661,16 @@ dhcpleasequery(struct packet *packet, int ms_nulltp) {
 #endif
 	memset(to.sin_zero, 0, sizeof(to.sin_zero));
 
+#if defined(RELAY_PORT)
+	relay_port = dhcp_check_relayport(packet);
+#endif
+
 	/* 
 	 * Leasequery packets are be sent to the gateway address.
 	 */
 	to.sin_addr = packet->raw->giaddr;
 	if (packet->raw->giaddr.s_addr != htonl(INADDR_LOOPBACK)) {
-		to.sin_port = local_port;
+		to.sin_port = relay_port ? relay_port : local_port;
 	} else {
 		to.sin_port = remote_port; /* XXXSK: For debugging. */
 	}

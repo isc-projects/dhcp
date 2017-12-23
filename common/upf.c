@@ -156,6 +156,9 @@ void if_deregister_send (info)
    XXX Changes to the filter program may require changes to the constant
    offsets used in if_register_send to patch the UPF program! XXX */
 
+#if defined(RELAY_PORT)
+#error "Relay port is not yet supported for UPF"
+#endif
 
 void if_register_receive (info)
 	struct interface_info *info;

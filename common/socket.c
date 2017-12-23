@@ -65,6 +65,10 @@
 static int no_global_v6_socket = 0;
 static unsigned int global_v6_socket_references = 0;
 static int global_v6_socket = -1;
+#if defined(RELAY_PORT)
+static unsigned int relay_port_v6_socket_references = 0;
+static int relay_port_v6_socket = -1;
+#endif
 
 static void if_register_multicast(struct interface_info *info);
 #endif
@@ -157,6 +161,11 @@ if_register_socket(struct interface_info *info, int family,
 		addr6 = (struct sockaddr_in6 *)&name; 
 		addr6->sin6_family = AF_INET6;
 		addr6->sin6_port = local_port;
+#if defined(RELAY_PORT)
+		if (relay_port &&
+		    ((info->flags & INTERFACE_STREAMS) == INTERFACE_UPSTREAM))
+			addr6->sin6_port = relay_port;
+#endif
 		/* A server feature */
 		if (bind_local_address6) {
 			memcpy(&addr6->sin6_addr,
@@ -187,7 +196,7 @@ if_register_socket(struct interface_info *info, int family,
 	default:
 		addr = (struct sockaddr_in *)&name; 
 		addr->sin_family = AF_INET;
-		addr->sin_port = local_port;
+		addr->sin_port = relay_port ? relay_port : local_port;
 		memcpy(&addr->sin_addr,
 		       &local_address,
 		       sizeof(addr->sin_addr));
@@ -496,6 +505,10 @@ if_register6(struct interface_info *info, int do_multicast) {
 		log_fatal("Impossible condition at %s:%d", MDL);
 	}
 
+#if defined(RELAY_PORT)
+	if (!relay_port ||
+	    ((info->flags & INTERFACE_STREAMS) == INTERFACE_DOWNSTREAM)) {
+#endif
 	if (global_v6_socket_references == 0) {
 		global_v6_socket = if_register_socket(info, AF_INET6,
 						      &req_multi, NULL);
@@ -526,6 +539,30 @@ if_register6(struct interface_info *info, int do_multicast) {
 	info->rfdesc = global_v6_socket;
 	info->wfdesc = global_v6_socket;
 	global_v6_socket_references++;
+
+#if defined(RELAY_PORT)
+	} else {
+	/*
+	 * If relay port is defined, we need to register one
+	 * IPv6 UPD socket to handle upstream server or relay agent
+	 * with a non-547 UDP local port.
+	 */
+	if ((relay_port_v6_socket_references == 0) &&
+	    ((info->flags & INTERFACE_STREAMS) == INTERFACE_UPSTREAM)) {
+		relay_port_v6_socket = if_register_socket(info, AF_INET6,
+							  &req_multi, NULL);
+		if (relay_port_v6_socket < 0) {
+			log_fatal("Impossible condition at %s:%d", MDL);
+		} else {
+			log_info("Bound to relay port *:%d",
+				 (int) ntohs(relay_port));
+		}
+	}
+	info->rfdesc = relay_port_v6_socket;
+	info->wfdesc = relay_port_v6_socket;
+	relay_port_v6_socket_references++;
+	}
+#endif
 
 	if (req_multi)
 		if_register_multicast(info);
@@ -617,6 +654,16 @@ if_deregister6(struct interface_info *info) {
 		global_v6_socket_references--;
 		info->rfdesc = -1;
 		info->wfdesc = -1;
+#if defined(RELAY_PORT)
+	} else if (relay_port &&
+		   (info->rfdesc == relay_port_v6_socket) &&
+		   (info->wfdesc == relay_port_v6_socket) &&
+		   (relay_port_v6_socket_references > 0)) {
+		/* Dereference the relay port v6 socket. */
+		relay_port_v6_socket_references--;
+		info->rfdesc = -1;
+		info->wfdesc = -1;
+#endif
 	} else {
 		log_fatal("Impossible condition at %s:%d", MDL);
 	}
@@ -633,12 +680,23 @@ if_deregister6(struct interface_info *info) {
 		}
 	}
 
-	if (!no_global_v6_socket &&
-	    (global_v6_socket_references == 0)) {
-		close(global_v6_socket);
-		global_v6_socket = -1;
+	if (!no_global_v6_socket) {
+		if (global_v6_socket_references == 0) {
+			close(global_v6_socket);
+			global_v6_socket = -1;
 
-		log_info("Unbound from *:%d", ntohs(local_port));
+			log_info("Unbound from *:%d",
+				 (int) ntohs(local_port));
+		}
+#if defined(RELAY_PORT)
+		if (relay_port && (relay_port_v6_socket_references == 0)) {
+			close(relay_port_v6_socket);
+			relay_port_v6_socket = -1;
+
+			log_info("Unbound from relay port *:%d",
+				 (int) ntohs(relay_port));
+		}
+#endif
 	}
 }
 #endif /* DHCPv6 */

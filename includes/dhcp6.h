@@ -115,6 +115,8 @@
 #define D6O_V6_PCP_SERVER			86 /* RFC7291 */
 #define D6O_DHCPV4_MSG				87 /* RFC7341 */
 #define D6O_DHCP4_O_DHCP6_SERVER		88 /* RFC7341 */
+/* not yet assigned but next free value */
+#define D6O_RELAY_SOURCE_PORT			135 /* I-D */
 
 /*
  * Status Codes, from RFC 3315 section 24.4, and RFC 3633, 5007, 5460.

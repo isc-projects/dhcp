@@ -55,14 +55,14 @@ void if_register_send (info)
 
 	/* Set up the address we're going to connect to. */
 	name.sin_family = AF_INET;
-	name.sin_port = local_port;
+	name.sin_port = relay_port ? relay_port : local_port;
 	name.sin_addr.s_addr = htonl (INADDR_BROADCAST);
 	memset (name.sin_zero, 0, sizeof (name.sin_zero));
 
 	/* List addresses on which we're listening. */
         if (!quiet_interface_discovery)
 		log_info ("Sending on %s, port %d",
-		      piaddr (info -> address), htons (local_port));
+		      piaddr (info -> address), htons (name.sin_port));
 	if ((sock = socket (AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0)
 		log_fatal ("Can't create dhcp socket: %m");
 

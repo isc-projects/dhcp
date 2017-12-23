@@ -152,8 +152,30 @@ static const char url[] =
 char *progname;
 
 #ifdef DHCPv6
+#ifdef RELAY_PORT
 #define DHCRELAY_USAGE \
-"Usage: %s [-4] [-d] [-q] [-a] [-D]\n"\
+"Usage: %s [-4] [-d] [-q] [-a] [-D]\n" \
+"                     [-A <length>] [-c <hops>]\n" \
+"                     [-p <port> | -rp <relay-port>]\n" \
+"                     [-pf <pid-file>] [--no-pid]\n"\
+"                     [-m append|replace|forward|discard]\n" \
+"                     [-i interface0 [ ... -i interfaceN]\n" \
+"                     [-iu interface0 [ ... -iu interfaceN]\n" \
+"                     [-id interface0 [ ... -id interfaceN]\n" \
+"                     [-U interface]\n" \
+"                     server0 [ ... serverN]\n\n" \
+"       %s -6   [-d] [-q] [-I] [-c <hops>]\n" \
+"                     [-p <port> | -rp <relay-port>]\n" \
+"                     [-pf <pid-file>] [--no-pid]\n" \
+"                     [-s <subscriber-id>]\n" \
+"                     -l lower0 [ ... -l lowerN]\n" \
+"                     -u upper0 [ ... -u upperN]\n" \
+"           lower (client link): [address%%]interface[#index]\n" \
+"           upper (server link): [address%%]interface\n\n" \
+"       %s {--version|--help|-h}"
+#else
+#define DHCRELAY_USAGE \
+"Usage: %s [-4] [-d] [-q] [-a] [-D]\n" \
 "                     [-A <length>] [-c <hops>] [-p <port>]\n" \
 "                     [-pf <pid-file>] [--no-pid]\n"\
 "                     [-m append|replace|forward|discard]\n" \
@@ -170,6 +192,20 @@ char *progname;
 "           lower (client link): [address%%]interface[#index]\n" \
 "           upper (server link): [address%%]interface\n\n" \
 "       %s {--version|--help|-h}"
+#endif
+#else /* !DHCPv6 */
+#ifdef RELAY_PORT
+#define DHCRELAY_USAGE \
+"Usage: %s [-d] [-q] [-a] [-D] [-A <length>] [-c <hops>]\n" \
+"                [-p <port> | -rp <relay-port>]\n" \
+"                [-pf <pid-file>] [--no-pid]\n" \
+"                [-m append|replace|forward|discard]\n" \
+"                [-i interface0 [ ... -i interfaceN]\n" \
+"                [-iu interface0 [ ... -iu interfaceN]\n" \
+"                [-id interface0 [ ... -id interfaceN]\n" \
+"                [-U interface]\n" \
+"                server0 [ ... serverN]\n\n" \
+"       %s {--version|--help|-h}"
 #else
 #define DHCRELAY_USAGE \
 "Usage: %s [-d] [-q] [-a] [-D] [-A <length>] [-c <hops>] [-p <port>]\n" \
@@ -181,6 +217,7 @@ char *progname;
 "                [-U interface]\n" \
 "                server0 [ ... serverN]\n\n" \
 "       %s {--version|--help|-h}"
+#endif
 #endif
 
 /*!
@@ -199,6 +236,12 @@ char *progname;
  * \return Nothing
  */
 static const char use_noarg[] = "No argument for command: %s";
+#ifdef RELAY_PORT
+static const char use_port_defined[] = "Port already set, %s inappropriate";
+#if !defined (USE_BPF_RECEIVE) && !defined (USE_LPF_RECEIVE)
+static const char bpf_sock_support[] = "Only LPF and BPF are supported: %s";
+#endif
+#endif
 #ifdef DHCPv6
 static const char use_badproto[] = "Protocol already set, %s inappropriate";
 static const char use_v4command[] = "Command not used for DHCPv6: %s";
@@ -236,6 +279,9 @@ main(int argc, char **argv) {
 	int quiet = 0;
 	int fd;
 	int i;
+#ifdef RELAY_PORT
+	int port_defined = 0;
+#endif
 #ifdef DHCPv6
 	struct stream_list *sl = NULL;
 	int local_family_set = 0;
@@ -349,9 +395,26 @@ main(int argc, char **argv) {
 		} else if (!strcmp(argv[i], "-p")) {
 			if (++i == argc)
 				usage(use_noarg, argv[i-1]);
+#ifdef RELAY_PORT
+			if (port_defined)
+				usage(use_port_defined, argv[i-1]);
+			port_defined = 1;
+#endif
 			local_port = validate_port(argv[i]);
 			log_debug("binding to user-specified port %d",
 				  ntohs(local_port));
+#ifdef RELAY_PORT
+		} else if (!strcmp(argv[i], "-rp")) {
+			if (++i == argc)
+				usage(use_noarg, argv[i-1]);
+			if (port_defined)
+				usage(use_port_defined, argv[i-1]);
+			port_defined = 1;
+			relay_port = validate_port(argv[i]);
+			log_debug("binding to user-specified relay port %d",
+				  ntohs(relay_port));
+			add_agent_options = 1;
+#endif
 		} else if (!strcmp(argv[i], "-c")) {
 			int hcount;
 			if (++i == argc)
@@ -571,6 +634,12 @@ main(int argc, char **argv) {
 			}
  		}
 	}
+
+#if defined(RELAY_PORT) && \
+    !defined (USE_BPF_RECEIVE) && !defined (USE_LPF_RECEIVE)
+	if (relay_port && (local_family == AF_INET))
+		usage(bpf_sock_support, "-rp");
+#endif
 
 	/*
 	 * If the user didn't specify a pid file directly
@@ -1259,6 +1328,12 @@ add_relay_agent_options(struct interface_info *ip, struct dhcp_packet *packet,
 		optlen += 6;
 	}
 
+#ifdef RELAY_PORT
+	if (relay_port) {
+		optlen += 2;
+	}
+#endif
+
 	/* We do not support relay option fragmenting(multiple options to
 	 * support an option data exceeding 255 bytes).
 	 */
@@ -1303,6 +1378,14 @@ add_relay_agent_options(struct interface_info *ip, struct dhcp_packet *packet,
 			log_debug ("Adding link selection suboption"
 				   " with addr: %s", inet_ntoa(giaddr));
 		}
+
+#ifdef RELAY_PORT
+		/* draft-ietf-dhc-relay-port-10.txt section 5.1 */
+		if (relay_port) {
+			*sp++ = RAI_RELAY_PORT;
+			*sp++ = 0u;
+		}
+#endif
 	} else {
 		++agent_option_errors;
 		log_error("No room in packet (used %d of %d) "
@@ -1548,6 +1631,9 @@ setup_streams(void) {
 static const int required_forw_opts[] = {
 	D6O_INTERFACE_ID,
 	D6O_SUBSCRIBER_ID,
+#if defined(RELAY_PORT)
+	D6O_RELAY_SOURCE_PORT,
+#endif
 	D6O_RELAY_MSG,
 	0
 };
@@ -1562,6 +1648,7 @@ process_up6(struct packet *packet, struct stream_list *dp) {
 	struct dhcpv6_relay_packet *relay;
 	struct option_state *opts;
 	struct stream_list *up;
+	u_int16_t relay_client_port = 0;
 
 	/* Check if the message should be relayed to the server. */
 	switch (packet->dhcpv6_msg_type) {
@@ -1622,6 +1709,10 @@ process_up6(struct packet *packet, struct stream_list *dp) {
 			}
 			memset(&relay->link_address, 0, 16);
 		}
+
+		if (packet->client_port != htons(547)) {
+			relay_client_port = packet->client_port;
+		}
 	} else {
 		relay->hop_count = 0;
 		if (!dp)
@@ -1674,6 +1765,30 @@ process_up6(struct packet *packet, struct stream_list *dp) {
 	}
 		
 
+#if defined(RELAY_PORT)
+	/*
+	 * If we use a non-547 UDP source port or if we have received
+	 * from a downstream relay agent uses a non-547 port, we need
+	 * to include the RELAY-SOURCE-PORT option. The "Downstream
+	 * UDP Port" field value in the option allow us to send
+	 * relay-reply message back to the downstream relay agent
+	 * with the correct UDP source port.
+        */
+	if (relay_port || relay_client_port) {
+		if (!save_option_buffer(&dhcpv6_universe, opts, NULL,
+					(unsigned char *) &relay_client_port,
+					sizeof(u_int16_t),
+					D6O_RELAY_SOURCE_PORT, 0)) {
+			log_error("Can't save relay-source-port.");
+			option_state_dereference(&opts, MDL);
+			return;
+		}
+	}
+#else
+	/* Avoid unused but set warning, */
+	(void)(relay_client_port);
+#endif
+
 	/* Add the relay-msg carrying the packet. */
 	if (!save_option_buffer(&dhcpv6_universe, opts,
 				NULL, (unsigned char *) packet->raw,
@@ -1708,6 +1823,9 @@ process_down6(struct packet *packet) {
 	struct data_string relay_msg;
 	const struct dhcpv6_packet *msg;
 	struct data_string if_id;
+#if defined(RELAY_PORT)
+	struct data_string down_port;
+#endif
 	struct sockaddr_in6 to;
 	struct iaddr peer;
 
@@ -1729,6 +1847,9 @@ process_down6(struct packet *packet) {
 	/* Inits. */
 	memset(&relay_msg, 0, sizeof(relay_msg));
 	memset(&if_id, 0, sizeof(if_id));
+#if defined(RELAY_PORT)
+	memset(&down_port, 0, sizeof(down_port));
+#endif
 	memset(&to, 0, sizeof(to));
 	to.sin6_family = AF_INET6;
 #ifdef HAVE_SA_LEN
@@ -1799,6 +1920,37 @@ process_down6(struct packet *packet) {
 		/* Relay-Reply of for another relay, not a client. */
 	      case DHCPV6_RELAY_REPL:
 		to.sin6_port = local_port;
+
+#if defined(RELAY_PORT)
+		oc = lookup_option(&dhcpv6_universe, packet->options,
+				   D6O_RELAY_SOURCE_PORT);
+		if (oc != NULL) {
+			u_int16_t down_relay_port;
+
+			memset(&down_port, 0, sizeof(down_port));
+			if (!evaluate_option_cache(&down_port, packet, NULL,
+						   NULL, packet->options, NULL,
+						   &global_scope, oc, MDL) ||
+			    (down_port.len != sizeof(u_int16_t))) {
+				log_info("Can't evaluate down "
+					 "relay-source-port.");
+				goto cleanup;
+			}
+			memcpy(&down_relay_port, down_port.data,
+			       sizeof(u_int16_t));
+			/*
+			 * If the down_relay_port value is non-zero,
+			 * that means our downstream relay agent uses
+			 * a non-547 UDP source port sending
+			 * relay-forw message to us. We need to use
+			 * the same UDP port sending reply back.
+			 */
+			if (down_relay_port) {
+				to.sin6_port = down_relay_port;
+			}
+		}
+#endif
+
 		/* Fall into: */
 
 	      case DHCPV6_ADVERTISE:

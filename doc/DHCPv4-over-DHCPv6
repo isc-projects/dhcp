@@ -219,3 +219,10 @@ to start the server.
 
 Finally note in the configuration file the use of the shared-network to
 connect the DHCPv4 and  DHCPv6 subnets.
+
+USE WITH DHCPv6 RELAY(s)
+If the DHCPv6 infrastructure uses one (or more) relay because the client
+and the server are not on the same link the best choice is to put the
+first (closest to client) relay address in the dhcp4-o-dhcp6-server
+option so the same path between the DHCPv6 client part and server part
+will be used for DHCPv6 and DHCPv4-over-DHCPv6 traffic.

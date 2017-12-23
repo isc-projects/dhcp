@@ -557,17 +557,21 @@ static struct option dhcpv6_options[] = {
 	{ "solmax-rt", "L",			&dhcpv6_universe, 82, 1 },
 	{ "inf-max-rt", "L",			&dhcpv6_universe, 83, 1 },
 #endif
-#if defined(RFC7710_OPTIONS)
-	{ "v6-captive-portal", "t",		&dhcpv6_universe, 103, 1 },
-#endif
-#if defined(RFC6153_OPTIONS)
-	{ "ipv6-address-andsf", "6A",		&dhcpv6_universe, 143, 1 },
-#endif
 
 			/* RFC7341 OPTIONS */
 #if defined(RFC7341_OPTIONS)
 	{ "dhcpv4-msg", "X",			&dhcpv6_universe, 87, 1 },
 	{ "dhcp4-o-dhcp6-server", "6A",		&dhcpv6_universe, 88, 1 },
+#endif
+
+#if defined(RFC7710_OPTIONS)
+	{ "v6-captive-portal", "t",		&dhcpv6_universe, 103, 1 },
+#endif
+
+	{ "relay-source-port", "S",		&dhcpv6_universe, 135, 1 },
+
+#if defined(RFC6153_OPTIONS)
+	{ "ipv6-address-andsf", "6A",		&dhcpv6_universe, 143, 1 },
 #endif
 
 	{ NULL, NULL, NULL, 0, 0 }

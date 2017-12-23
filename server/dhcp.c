@@ -1063,6 +1063,20 @@ void dhcpdecline (packet, ms_nulltp)
 		lease_dereference (&lease, MDL);
 }
 
+#if defined(RELAY_PORT)
+u_int16_t dhcp_check_relayport(packet)
+	struct packet *packet;
+{
+	if (lookup_option(&agent_universe,
+			  packet->options,
+			  RAI_RELAY_PORT) != NULL) {
+		return (packet->client_port);
+	}
+
+	return (0);
+}
+#endif
+
 void dhcpinform (packet, ms_nulltp)
 	struct packet *packet;
 	int ms_nulltp;
@@ -1084,6 +1098,7 @@ void dhcpinform (packet, ms_nulltp)
 	struct interface_info *interface;
 	int result, h_m_client_ip = 0;
 	struct host_decl  *host = NULL, *hp = NULL, *h;
+	u_int16_t relay_port = 0;
 #if defined (DEBUG_INFORM_HOST)
 	int h_w_fixed_addr = 0;
 #endif
@@ -1145,6 +1160,10 @@ void dhcpinform (packet, ms_nulltp)
 		log_info("%s: ignored (null source address).", msgbuf);
 		return;
 	}
+
+#if defined(RELAY_PORT)
+	relay_port = dhcp_check_relayport(packet);
+#endif
 
 	/* Find the subnet that the client is on. 
 	 * CC: Do the link selection / subnet selection
@@ -1696,7 +1715,7 @@ void dhcpinform (packet, ms_nulltp)
 	 */
 	if (!raw.ciaddr.s_addr && gip.len) {
 		memcpy(&to.sin_addr, gip.iabuf, 4);
-		to.sin_port = local_port;
+		to.sin_port = relay_port ? relay_port : local_port;
 		raw.flags |= htons(BOOTP_BROADCAST);
 	} else {
 		gip.len = 0;
@@ -1753,6 +1772,7 @@ void nak_lease (packet, cip, network_group)
 	unsigned char nak = DHCPNAK;
 	struct packet outgoing;
 	unsigned i;
+	u_int16_t relay_port = 0;
 	struct option_state *options = (struct option_state *)0;
 	struct option_cache *oc = (struct option_cache *)0;
 	struct option_state *eval_options = NULL;
@@ -1781,6 +1801,10 @@ void nak_lease (packet, cip, network_group)
 	save_option (&dhcp_universe, options, oc);
 	option_cache_dereference (&oc, MDL);
 		     
+#if defined(RELAY_PORT)
+	relay_port = dhcp_check_relayport(packet);
+#endif
+
 	/* Set DHCP_MESSAGE to whatever the message is */
 	if (!option_cache_allocate (&oc, MDL)) {
 		log_error ("No memory for DHCPNAK message type.");
@@ -1929,7 +1953,7 @@ void nak_lease (packet, cip, network_group)
 	if (raw.giaddr.s_addr) {
 		to.sin_addr = raw.giaddr;
 		if (raw.giaddr.s_addr != htonl (INADDR_LOOPBACK))
-			to.sin_port = local_port;
+			to.sin_port = relay_port ? relay_port : local_port;
 		else
 			to.sin_port = remote_port; /* for testing. */
 
@@ -3752,6 +3776,7 @@ void dhcp_reply (lease)
 	int result;
 	struct lease_state *state = lease -> state;
 	int nulltp, bootpp, unicastp = 1;
+	u_int16_t relay_port = 0;
 	struct data_string d1;
 	const char *s;
 
@@ -3921,11 +3946,15 @@ void dhcp_reply (lease)
 #endif
 	memset (to.sin_zero, 0, sizeof to.sin_zero);
 
+#if defined(RELAY_PORT)
+	relay_port = dhcp_check_relayport(state->packet);
+#endif
+
 	/* If this was gatewayed, send it back to the gateway... */
 	if (raw.giaddr.s_addr) {
 		to.sin_addr = raw.giaddr;
 		if (raw.giaddr.s_addr != htonl (INADDR_LOOPBACK))
-			to.sin_port = local_port;
+			to.sin_port = relay_port ? relay_port : local_port;
 		else
 			to.sin_port = remote_port; /* For debugging. */
 

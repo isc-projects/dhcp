@@ -469,9 +469,12 @@ struct packet {
 	 */
 	isc_boolean_t unicast;
 
-	/* Propogates server value SV_ECHO_CLIENT_ID so it is available
+	/* Propagates server value SV_ECHO_CLIENT_ID so it is available
          * in cons_options() */
 	int sv_echo_client_id;
+
+	/* Relay port check */
+	isc_boolean_t relay_source_port;
 };
 
 /*
@@ -2440,6 +2443,8 @@ void eval_network_statements(struct option_state **options,
 			    struct packet *packet,
 			    struct group *network_group);
 
+u_int16_t dhcp_check_relayport(struct packet *packet);
+
 /* dhcpleasequery.c */
 void dhcpleasequery (struct packet *, int);
 void dhcpv6_leasequery (struct data_string *, struct packet *);
@@ -2833,6 +2838,7 @@ extern int bind_local_address6;
 
 extern u_int16_t local_port;
 extern u_int16_t remote_port;
+extern u_int16_t relay_port;
 extern int dhcpv4_over_dhcpv6;
 extern int (*dhcp_interface_setup_hook) (struct interface_info *,
 					 struct iaddr *);

@@ -44,6 +44,7 @@ int interfaces_invalidated;
 int quiet_interface_discovery;
 u_int16_t local_port;
 u_int16_t remote_port;
+u_int16_t relay_port = 0;
 int dhcpv4_over_dhcpv6 = 0;
 int (*dhcp_interface_setup_hook) (struct interface_info *, struct iaddr *);
 int (*dhcp_interface_discovery_hook) (struct interface_info *);
@@ -581,6 +582,10 @@ discover_interfaces(int state) {
 	int ir;
 	isc_result_t status;
 	int wifcount = 0;
+#ifdef RELAY_PORT
+	int updone = 0;
+	int downdone = 0;
+#endif
 
 	static int setup_fallback = 0;
 
@@ -946,9 +951,39 @@ discover_interfaces(int state) {
 		switch (local_family) {
 #ifdef DHCPv6 
 		case AF_INET6:
+#ifdef RELAY_PORT
+#define UPSTREAM(ifp) \
+	((ifp->flags & INTERFACE_STREAMS) == INTERFACE_UPSTREAM)
+#define DOWNSTREAM(ifp) \
+        ((ifp->flags & INTERFACE_STREAMS) == INTERFACE_DOWNSTREAM)
+
+			if (relay_port) {
+				/*
+				 * The normal IPv6 relay only needs one
+				 * socket as long as we find an interface.
+				 * When user relay port is defined, and we
+				 * have two different UDP ports. One to
+				 * receive from DHCP client with port 547,
+				 * and the other is user defined for sending
+				 * to the server or upstream relay agent.
+				 * Thus we need to register sockets for one
+				 * upstream and one downstream interfaces.
+				 */
+				if (updone && UPSTREAM(tmp))
+					    continue;
+				if (downdone && DOWNSTREAM(tmp))
+					    continue;
+			}
+#endif
 			status = omapi_register_io_object((omapi_object_t *)tmp,
 							  if_readsocket, 
 							  0, got_one_v6, 0, 0);
+#ifdef RELAY_PORT
+			if (UPSTREAM(tmp))
+				updone++;
+			else
+				downdone++;
+#endif
 			break;
 #endif /* DHCPv6 */
 		case AF_INET:
@@ -970,8 +1005,12 @@ discover_interfaces(int state) {
 		 * dynamically adding and removing interfaces, but
 		 * we're well beyond that point in terms of mess.
 		 */
-		if (((state == DISCOVER_SERVER) || (state == DISCOVER_RELAY)) &&
-		    (local_family == AF_INET6))
+		if (((state == DISCOVER_SERVER) || (state == DISCOVER_RELAY))
+		    && (local_family == AF_INET6)
+#if defined(RELAY_PORT)
+		    && ((relay_port == 0) || (updone && downdone))
+#endif
+		    )
 			break;
 #endif
 	} /* for (tmp = interfaces; ... */
