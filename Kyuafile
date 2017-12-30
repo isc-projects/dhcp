@@ -1,6 +1,0 @@
-syntax(2)
-test_suite('isc-dhcp')
-
-include('client/Kyuafile')
-include('common/Kyuafile')
-include('server/Kyuafile')
