@@ -152,7 +152,9 @@ dhcpleasequery(struct packet *packet, int ms_nulltp) {
 	u_int32_t time_rebinding;
 	u_int32_t time_expiry;
 	u_int32_t client_last_transaction_time;
+#if defined(RELAY_PORT)
 	u_int16_t relay_port = 0;
+#endif
 	struct sockaddr_in to;
 	struct in_addr siaddr;
 	struct data_string prl;
@@ -670,7 +672,11 @@ dhcpleasequery(struct packet *packet, int ms_nulltp) {
 	 */
 	to.sin_addr = packet->raw->giaddr;
 	if (packet->raw->giaddr.s_addr != htonl(INADDR_LOOPBACK)) {
+#if defined(RELAY_PORT)
 		to.sin_port = relay_port ? relay_port : local_port;
+#else
+		to.sin_port = local_port;
+#endif
 	} else {
 		to.sin_port = remote_port; /* XXXSK: For debugging. */
 	}

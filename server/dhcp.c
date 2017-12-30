@@ -1098,7 +1098,9 @@ void dhcpinform (packet, ms_nulltp)
 	struct interface_info *interface;
 	int result, h_m_client_ip = 0;
 	struct host_decl  *host = NULL, *hp = NULL, *h;
+#if defined(RELAY_PORT)
 	u_int16_t relay_port = 0;
+#endif
 #if defined (DEBUG_INFORM_HOST)
 	int h_w_fixed_addr = 0;
 #endif
@@ -1715,7 +1717,11 @@ void dhcpinform (packet, ms_nulltp)
 	 */
 	if (!raw.ciaddr.s_addr && gip.len) {
 		memcpy(&to.sin_addr, gip.iabuf, 4);
+#if defined(RELAY_PORT)
 		to.sin_port = relay_port ? relay_port : local_port;
+#else
+		to.sin_port = local_port;
+#endif
 		raw.flags |= htons(BOOTP_BROADCAST);
 	} else {
 		gip.len = 0;
@@ -1772,7 +1778,9 @@ void nak_lease (packet, cip, network_group)
 	unsigned char nak = DHCPNAK;
 	struct packet outgoing;
 	unsigned i;
+#if defined(RELAY_PORT)
 	u_int16_t relay_port = 0;
+#endif
 	struct option_state *options = (struct option_state *)0;
 	struct option_cache *oc = (struct option_cache *)0;
 	struct option_state *eval_options = NULL;
@@ -1953,7 +1961,11 @@ void nak_lease (packet, cip, network_group)
 	if (raw.giaddr.s_addr) {
 		to.sin_addr = raw.giaddr;
 		if (raw.giaddr.s_addr != htonl (INADDR_LOOPBACK))
+#if defined(RELAY_PORT)
 			to.sin_port = relay_port ? relay_port : local_port;
+#else
+			to.sin_port = local_port;
+#endif
 		else
 			to.sin_port = remote_port; /* for testing. */
 
@@ -3776,7 +3788,9 @@ void dhcp_reply (lease)
 	int result;
 	struct lease_state *state = lease -> state;
 	int nulltp, bootpp, unicastp = 1;
+#if defined(RELAY_PORT)
 	u_int16_t relay_port = 0;
+#endif
 	struct data_string d1;
 	const char *s;
 
@@ -3954,7 +3968,11 @@ void dhcp_reply (lease)
 	if (raw.giaddr.s_addr) {
 		to.sin_addr = raw.giaddr;
 		if (raw.giaddr.s_addr != htonl (INADDR_LOOPBACK))
+#if defined(RELAY_PORT)
 			to.sin_port = relay_port ? relay_port : local_port;
+#else
+			to.sin_port = local_port;
+#endif
 		else
 			to.sin_port = remote_port; /* For debugging. */
 
