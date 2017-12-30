@@ -283,6 +283,7 @@ RANLIB = @RANLIB@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
+UNITTESTS = @UNITTESTS@
 VERSION = @VERSION@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
@@ -341,7 +342,8 @@ SUBDIRS = .
 AM_CPPFLAGS = $(ATF_CFLAGS) -DUNIT_TEST -I$(top_srcdir)/includes \
 	-I@BINDDIR@/include -I$(top_srcdir) -DLOCALSTATEDIR='"."' \
 	-DCLIENT_PATH='"."'
-EXTRA_DIST = Atffile duid0_test.txt duid1_test.txt duid2_test.txt duid3_test.txt
+EXTRA_DIST = Atffile Kyuafile duid0_test.txt duid1_test.txt \
+	duid2_test.txt duid3_test.txt
 DHCPSRC = ../clparse.c ../dhc6.c ../dhclient.c
 DHCPLIBS = $(top_builddir)/common/libdhcp.@A@ \
 	  $(top_builddir)/omapip/libomapi.@A@    \
@@ -748,6 +750,7 @@ info:
 @HAVE_ATF_TRUE@check: $(ATF_TESTS)
 @HAVE_ATF_TRUE@	@if test $(top_srcdir) != ${top_builddir}; then \
 @HAVE_ATF_TRUE@		cp $(top_srcdir)/client/tests/Atffile Atffile; \
+@HAVE_ATF_TRUE@		cp $(top_srcdir)/client/tests/Kyuafile Kyuafile; \
 @HAVE_ATF_TRUE@		cp $(top_srcdir)/client/tests/duid0_test.txt duid0_test.txt; \
 @HAVE_ATF_TRUE@		cp $(top_srcdir)/client/tests/duid1_test.txt duid1_test.txt; \
 @HAVE_ATF_TRUE@		cp $(top_srcdir)/client/tests/duid2_test.txt duid2_test.txt; \
@@ -757,7 +760,8 @@ info:
 
 @HAVE_ATF_TRUE@distclean-local:
 @HAVE_ATF_TRUE@	@if test $(top_srcdir) != ${top_builddir}; then \
-@HAVE_ATF_TRUE@		rm -f Atffile duid0_test.txt duid1_test.txt; \
+@HAVE_ATF_TRUE@		rm -f Atffile Kyuafile; \
+@HAVE_ATF_TRUE@		rm -f duid0_test.txt duid1_test.txt; \
 @HAVE_ATF_TRUE@		rm -f duid2_test.txt duid3_test.txt; \
 @HAVE_ATF_TRUE@	fi
 

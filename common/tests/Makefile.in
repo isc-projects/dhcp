@@ -306,6 +306,7 @@ RANLIB = @RANLIB@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
+UNITTESTS = @UNITTESTS@
 VERSION = @VERSION@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
@@ -362,7 +363,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 SUBDIRS = .
 AM_CPPFLAGS = $(ATF_CFLAGS) -I$(top_srcdir)/includes
-EXTRA_DIST = Atffile
+EXTRA_DIST = Atffile Kyuafile
 ATF_TESTS = $(am__append_1)
 @HAVE_ATF_TRUE@alloc_unittest_SOURCES = test_alloc.c $(top_srcdir)/tests/t_api_dhcp.c
 @HAVE_ATF_TRUE@alloc_unittest_LDADD = $(ATF_LDFLAGS) ../libdhcp.@A@ \
@@ -767,12 +768,13 @@ uninstall-am:
 @HAVE_ATF_TRUE@check: $(ATF_TESTS)
 @HAVE_ATF_TRUE@	@if test $(top_srcdir) != ${top_builddir}; then \
 @HAVE_ATF_TRUE@		cp $(top_srcdir)/common/tests/Atffile Atffile; \
+@HAVE_ATF_TRUE@		cp $(top_srcdir)/common/tests/Kyuafile Kyuafile; \
 @HAVE_ATF_TRUE@	fi
 @HAVE_ATF_TRUE@	sh ${top_builddir}/tests/unittest.sh
 
 @HAVE_ATF_TRUE@distclean-local:
 @HAVE_ATF_TRUE@	@if test $(top_srcdir) != ${top_builddir}; then \
-@HAVE_ATF_TRUE@		rm -f Atffile; \
+@HAVE_ATF_TRUE@		rm -f Atffile Kyuafile; \
 @HAVE_ATF_TRUE@	fi
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
