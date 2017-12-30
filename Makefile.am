@@ -29,7 +29,6 @@ EXTRA_DIST = RELNOTES LICENSE configure.ac+lt config+lt \
 	     doc/devel/debug.dox doc/devel/isc-logo.jpg doc/devel/libtool.dox \
 	     doc/devel/mainpage.dox doc/devel/omapi.dox doc/devel/qa.dox \
 	     client/tests/Atffile common/tests/Atffile server/tests/Atffile \
-	     Kyuafile client/Kyuafile common/Kyuafile server/Kyuafile \
 	     client/tests/Kyuafile common/tests/Kyuafile server/tests/Kyuafile
 
 if HAVE_BINDDIR
