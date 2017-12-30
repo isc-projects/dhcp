@@ -4,7 +4,7 @@ AM_CPPFLAGS = $(ATF_CFLAGS) -DUNIT_TEST -I$(top_srcdir)/includes
 AM_CPPFLAGS += -I@BINDDIR@/include -I$(top_srcdir)
 AM_CPPFLAGS += -DLOCALSTATEDIR='"."'
 
-EXTRA_DIST = Atffile
+EXTRA_DIST = Atffile Kyuafile
 
 # for autotools debugging only
 info:
@@ -54,12 +54,13 @@ leaseq_unittests_LDADD = $(DHCPLIBS) $(ATF_LDFLAGS)
 check: $(ATF_TESTS)
 	@if test $(top_srcdir) != ${top_builddir}; then \
 		cp $(top_srcdir)/server/tests/Atffile Atffile; \
+		cp $(top_srcdir)/server/tests/Kyuafile Kyuafile; \
 	fi
 	sh ${top_builddir}/tests/unittest.sh
 
 distclean-local:
 	@if test $(top_srcdir) != ${top_builddir}; then \
-		rm -f Atffile; \
+		rm -f Atffile Kyuafile; \
 	fi
 
 endif
