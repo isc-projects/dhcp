@@ -312,17 +312,14 @@ dhcp-users@lists.isc.org.
   when building with --enable-use-sockets and --enable-ipv4-pktinfo.
   [ISC-Bugs #36118]
 
-(to be finalized before code freeze next year)
 - Added experimental support for relay port (draft-ietf-dhc-relay-port-10.txt)
-  feature for DHCPv4, DHCPv6 and DHCPv4-over-DHCPv6. As the code points
-  were not yet assigned by IANA temporary (next free) values are used.
-  Relay port had be enabled at compile time via --enable-relay-port and
-  is fully backward compatible, i.e. works with previous implementations
-  of servers and relays, of course in this case using legacy ports.
-  A new --rp <relay-port> command line option specifies to dhcrelay
-  an alternate source port for upstream (i.e. toward the server) messages.
-(update this)
-  Thanks to Naiming Shen and Enke Chen for submitting patches.
+  feature for DHCPv4, DHCPv6 and DHCPv4-over-DHCPv6.  Relay port had
+  be enabled at compile time via --enable-relay-port and is fully
+  backward compatible, i.e. works with previous implementations of
+  servers and relays, of course in this case using legacy ports.
+  A new --rp <relay-port> command line option specifies to dhcrelay an
+  alternate source port for upstream (i.e. toward the server) messages.
+  Thanks to Naiming Shen and Enke Chen of Cisco systems for submitting patches.
   [ISC-Bugs #44535]
 
 			Changes since 4.3.6 (Bugs):
