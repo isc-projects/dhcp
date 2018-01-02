@@ -3,7 +3,7 @@
    DHCP Client. */
 
 /*
- * Copyright (c) 2004-2017 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2018 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -75,7 +75,7 @@ int decline_wait_time = 10; /* Default to 10 secs per, RFC 2131, 3.1.5 */
 #define ASSERT_STATE(state_is, state_shouldbe) {}
 
 #ifndef UNIT_TEST
-static const char copyright[] = "Copyright 2004-2017 Internet Systems Consortium.";
+static const char copyright[] = "Copyright 2004-2018 Internet Systems Consortium.";
 static const char arr [] = "All rights reserved.";
 static const char message [] = "Internet Systems Consortium DHCP Client";
 static const char url [] = "For info, please visit https://www.isc.org/software/dhcp/";

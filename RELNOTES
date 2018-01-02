@@ -1,14 +1,56 @@
                 Internet Systems Consortium DHCP Distribution
-                           Version 4.4.0a1
-                           11 December 2017
+                           Version 4.4.0b1
+                           09 January 2018
 
                              Release Notes
 
                               NEW FEATURES
 
-The major "theme" for ISC DHCP 4.4.x ....
+Please note that that ISC DHCP is now licensed under the Mozilla Public License,
+MPL 2.0. Please see https://www.mozilla.org/en-US/MPL/2.0/ to read the MPL 2.0
+license terms.
 
-    <TBD PRIOR TO RELEASE OF 4.4.0>
+The areas of focus for ISC DHCP 4.4.0 were:
+
+1. Dynamic DNS additions
+2. dhclient improvements
+3. Support for dynamic shared libraries
+
+Dynamic DNS Improvements:
+
+- We added three new server configuration parameters which influence DDNS
+  conflict resolution:
+
+    1. ddns-dual-stack-mixed-mode - alters DNS conflict resolution behavior
+    to mitigate issues with non-compliant clients in dual stack environments.
+
+    2. ddns-guard-id-must-match - relaxes the DHCID RR client id matching
+    requirement of DNS conflict resolution.
+
+    3. ddns-other-guard-is-dynamic - alters dual-stack-mixed-mode behavior to
+    allow unguarded DNS entries to be overwritten in certain cases
+
+- The server now honors update-static-leases parameter for static DHCPv6
+  hosts.
+
+dhclient Improvements:
+
+  - We've added two new command line parameters to dhclient:
+
+    1. --prefix-len-hint - directs dhclient to use the given length as
+    the prefix length hint when requesting prefixes
+
+    2. --declient-wait-time - instructs the client to wiat the given number
+    of seconds after declining an IPv4 address before issuing a discover
+
+  - dhclient will now generate a DHCPv6 DECLINE message when the client script
+    indicates a DAD failure
+
+Dynamic shared library support:
+
+  Configure script, configure.ac+lt, which supports libtool is now provided
+  with the source tar ball.  This script can be used to configure ISC DHCP
+  to build with libtool and thus use dynamnic shared libaries.
 
 For information on how to install, configure and run this software, as
 well as how to find documentation and report bugs, please consult the
@@ -25,18 +67,9 @@ ISC DHCP is open source software maintained by Internet Systems
 Consortium.  This product includes cryptographic software written
 by Eric Young (eay@cryptsoft.com).
 
-Please note that as of version 4.4.0, ISC DHCP is licensed under the Mozilla
-Public License, MPL 2.0. Please see https://www.mozilla.org/en-US/MPL/2.0/
-to read the MPL 2.0 license terms.
+		Changes since 4.4.0a1
 
-Older versions already published under the ISC license will remain under the
-ISC license.  Those unsure whether or not the license change affects their use
-of ISC DHCP, or who wish to discuss how to comply with the license may contact
-ISC at info@isc.org or use https://www.isc.org/mission/contact/.
-
-We welcome comments from DHCP users, about this or anything else we do.  Email
-Vicky Risk, Product Manager at vicky@isc.org or discuss on
-dhcp-users@lists.isc.org.
+- None
 
 		Changes since 4.3.6 (New Features)
 
