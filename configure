@@ -5500,6 +5500,9 @@ if test "$enable_relay_port" = "yes"; then
 
 $as_echo "#define RELAY_PORT 1" >>confdefs.h
 
+else
+    # so we can report below
+    enable_relay_port="no"
 fi
 
 # PARANOIA is off by default (until we can test it with all features)

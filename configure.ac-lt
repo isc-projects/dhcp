@@ -184,6 +184,9 @@ AC_ARG_ENABLE(relay-port,
 if test "$enable_relay_port" = "yes"; then
 	AC_DEFINE([RELAY_PORT], [1],
 		  [Define to 1 to include relay port support.])
+else
+    # so we can report below
+    enable_relay_port="no"
 fi
 
 # PARANOIA is off by default (until we can test it with all features)
