@@ -40,7 +40,7 @@ dhclient Improvements:
     1. --prefix-len-hint - directs dhclient to use the given length as
     the prefix length hint when requesting prefixes
 
-    2. --declient-wait-time - instructs the client to wiat the given number
+    2. --declient-wait-time - instructs the client to wait the given number
     of seconds after declining an IPv4 address before issuing a discover
 
   - dhclient will now generate a DHCPv6 DECLINE message when the client script
@@ -50,7 +50,7 @@ Dynamic shared library support:
 
   Configure script, configure.ac+lt, which supports libtool is now provided
   with the source tar ball.  This script can be used to configure ISC DHCP
-  to build with libtool and thus use dynamnic shared libaries.
+  to build with libtool and thus use dynamic shared libraries.
 
 For information on how to install, configure and run this software, as
 well as how to find documentation and report bugs, please consult the
@@ -94,58 +94,6 @@ by Eric Young (eay@cryptsoft.com).
   includes/site.h. This flag is undefined by default.
   [ISC-Bugs #43927]
 
-- Added new compile time option --with-srv-conf-file which specifies a
-  default location of the server configuration file.
-  [ISC-Bugs #44765]
-
-- Added --dad-wait-time parameter to dhclient. It specifies the maximum time,
-  in seconds, that the client process should wait for the duplicate address
-  detection to complete before initiating DHCP requests. This value is
-  propagated to the dhclient script and the script is responsible for waiting
-  the specified amount of time or until DAD has completed. If the script does
-  not support it, specifying this parameter has no effect. The default value
-  is 0 which specifies that the script should not wait for DAD. With this
-  change the following scripts have been modified to support the new parameter:
-  freebsd, linux, macos, netbsd, openbsd.
-  [ISC-Bugs #36169]
-
-- Modified DDNS support initialization such that DNS related ports will only be
-  opened by the server (dhcpd) at startup if ddns-update-style is not "none";
-  by dhclient only if and when the it first attempts an update; and never by
-  dhcrelay.  Prior to this all three always did the initialization at startup
-  which causes them to always open on and listen for traffic on two random
-  ports. Thanks to Rodney Beede for reporting the issue.
-  [ISC-Bugs #45290]
-  [ISC-Bugs #33377]
-
-- Added error logging to two memory allocation failure checks. Thanks to Bill
-  Parker (wp02855 at gmail dot com) for reporting the issue.
-  [ISC-Bugs #41185]
-
-- Corrected a dhclient -6 issue that caused the client to crash with an
-  "Impossible condition" error after de-preferencing its only IA binding.
-  The crash occurred when server configuration changes rendered the existing
-  binding out-of-range and no other leases were available to offer.  Thanks
-  to Pierre Clerissi for bringing this issue to our attention.
-  [ISC-Bugs #44373]
-
-- By defining CALL_SCRIPT_ON_ONETRY_FAIL in includes/site.h, dhclient will
-  now call the script with reason set to FAIL when run with -1 (one try) and
-  there are no server responses.  This applies to IPv4 mode only. Thanks for a
-  patch by Martin Pitt which got to us via Andrew Pollock.
-  [ISC-bugs #18183]
-
-- Linux script updated. The script is now based on Debian version. It uses
-  ip tool from iproute2 package and ifconfig is no longer used. This also
-  addresses an issue of calling arping with inappropriate parameter.
-  [ISC-bugs #19430]
-  [ISC-bugs #18111]
-
-- The directory minires has been removed from the source tree.  It has
-  long been obsolete for branches other than v4_1_esv.  Additionally,
-  includes/minires.h was renamed includes/ns_name.h.
-  [ISC-bugs #45471]
-
 - The directory includes/isc-dhcp and it's only occupant, dst.h, have
   been removed from the source tree.  They are obsolete for branches
   other than v4_1_esv.
@@ -177,11 +125,8 @@ by Eric Young (eay@cryptsoft.com).
   waits can be specified via a new command line parameter:
   --decline-wait-time <seconds>.  A value of zero equates to no wait at all.
   Thanks to Pavel Kankovsky for bringing this matter to our attention.
+  **NOTE: THIS IS CHANGE IN DEFAULT BEHAVIOR.
   [ISC-Bugs #45457]
-
-- Corrected dhclient command line parsing for --dad-wait-time that causes
-  even valid values to fail as invalid on some environments.
-  [ISC-Bugs #46535]
 
 - dhclient will now include the lease address when logging DHCPOFFERs,
   DHCPREQUESTs, DHCPACKs, DHCPRELEASEs, and DHCPDECLINEs.  Additionally,
@@ -203,6 +148,7 @@ by Eric Young (eay@cryptsoft.com).
   Note, the client script must exit with a value of 3 to signify that the
   address failed DAD.  Thanks to Jiri Popelka of Red Hat for submitting the
   patch that was the foundation for this change.
+  **NOTE: THIS IS CHANGE IN DEFAULT BEHAVIOR.
   [ISC-Bugs #21237]
   [ISC-Bugs #23357]
   [ISC-Bugs #36966]
@@ -238,19 +184,13 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Bugs #44576]
   [ISC-Bugs #46849]
 
-- The ability of the server to send back dhcp6.vendor-opts values has been
-  restored. A change in 4.3.5 (see #29246) which enabled it to send back the
-  FQDN option unfortunately broke its ability send back dhcp6.vendor-opts.
-  Thanks to Sumant Gupta (sumantgupta at gmail dot com) of Landis+Gry for
-  bringing this issue to our attention.
-  [ISC-Bugs #46427]
-
 - The default value for server (-6) parameter, prefix-length-mode, has been
   changed from "exact" to "prefer". In "prefer" mode the server will offer
   the first available prefix with the same length as that requested by the
   client. If none are found then it will offer the first available prefix of
   any length.  This is more in line with with RFC 8168 and should improve
   the out-of-the-box user experience.
+  **NOTE: THIS IS CHANGE IN DEFAULT BEHAVIOR.
   [ISC-Bugs #45615]
 
 - Added support for 'dhcp-cache-threshold' to IPv6 operation: If a client
@@ -296,6 +236,7 @@ by Eric Young (eay@cryptsoft.com).
   require a value other than 128, you MUST specify the value via this new
   command line argument.  Prior to this the only way to alter the value was at
   compile time by changing DHCLIENT_DEFAULT_PREFIX_LEN in include/sites.h.
+  **NOTE: THIS IS CHANGE IN DEFAULT BEHAVIOR.
   [ISC-Bugs #23252]
   [ISC-Bugs #37221]
 
@@ -313,9 +254,6 @@ by Eric Young (eay@cryptsoft.com).
   when a 4to6 port command line argument enables this in the server the
   delayed-ack value is reset to 0.
   [ISC-Bugs #42446]
-
-- Corrected some minor coverity issues: CID 1426059, 1426058, and 1426057.
-  [ISC-Bugs #46836]
 
 - The server (-6) now honors the parameter, update-static-leases, for static
   (fixed-address6) DHCPv6 leases.  It is worth noting that because stateful
@@ -340,19 +278,14 @@ by Eric Young (eay@cryptsoft.com).
   local-address6 destination.
   [ISC-Bugs #46084]
 
-- Removed an "Impossible condition" error upon exit in the dhcpd server that
-  has been shutdown via OMAPI. This condition was only apparent under Solaris
-  when building with --enable-use-sockets and --enable-ipv4-pktinfo.
-  [ISC-Bugs #36118]
-
 - Added experimental support for relay port (draft-ietf-dhc-relay-port-10.txt)
-  feature for DHCPv4, DHCPv6 and DHCPv4-over-DHCPv6.  Relay port had
-  be enabled at compile time via --enable-relay-port and is fully
-  backward compatible, i.e. works with previous implementations of
-  servers and relays, of course in this case using legacy ports.
-  A new --rp <relay-port> command line option specifies to dhcrelay an
-  alternate source port for upstream (i.e. toward the server) messages.
-  Thanks to Naiming Shen and Enke Chen of Cisco systems for submitting patches.
+  feature for DHCPv4, DHCPv6 and DHCPv4-over-DHCPv6.  Relay port has to be
+  enabled at compile time via --enable-relay-port and is fully backward
+  compatible (i.e. works with previous implementations of servers and relays
+  using the standard ports).  A new --rp <relay-port> command line option
+  specifies to dhcrelay an alternate source port for upstream (i.e. toward
+  the server) messages.  Thanks to Naiming Shen and Enke Chen of Cisco
+  systems for submitting these patches.
   [ISC-Bugs #44535]
 
 			Changes since 4.3.6 (Bugs):
@@ -377,6 +310,10 @@ by Eric Young (eay@cryptsoft.com).
   in the lease file causing issues with DDNS and so forth.
   [ISC-bugs #43786]
 
+- Corrected dhclient command line parsing for --dad-wait-time that causes
+  even valid values to fail as invalid on some environments.
+  [ISC-Bugs #46535]
+
 - Replaced iasubopt::heap_index with separate values for active and inactive
   heaps: iasubopt::active_index and iasubopt::inactive_index.  This was done
   to accomodate a change in behavior in BIND9 isc_heap_delete().
@@ -389,6 +326,13 @@ by Eric Young (eay@cryptsoft.com).
   direction.
   [ISC-Bugs #46767]
 
+- The ability of the server to send back dhcp6.vendor-opts values has been
+  restored. A change in 4.3.5 (see #29246) which enabled it to send back the
+  FQDN option unfortunately broke its ability send back dhcp6.vendor-opts.
+  Thanks to Sumant Gupta (sumantgupta at gmail dot com) of Landis+Gry for
+  bringing this issue to our attention.
+  [ISC-Bugs #46427]
+
 - The server now recognizes environment variables PATH_DHCPD_DB and
   PATH_DHCPD_PID.  These had been incorrectly compiled out of the code
   unless DHCPv6 support was disabled. Additionally, the server man
@@ -396,6 +340,14 @@ by Eric Young (eay@cryptsoft.com).
   file names (see lease-file-name and pid-file-name statements). Thanks
   to Fernando Soto at Bluecat for bringing this matter to our attention.
   [ISC-Bugs #46859]
+
+- Removed an "Impossible condition" error upon exit in the dhcpd server that
+  has been shutdown via OMAPI. This condition was only apparent under Solaris
+  when building with --enable-use-sockets and --enable-ipv4-pktinfo.
+  [ISC-Bugs #36118]
+
+- Corrected some minor coverity issues: CID 1426059, 1426058, and 1426057.
+  [ISC-Bugs #46836]
 
 			Changes since 4.3.6b1
 
