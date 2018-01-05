@@ -65,6 +65,13 @@ Dynamic shared library support:
   with the source tar ball.  This script can be used to configure ISC DHCP
   to build with libtool and thus use dynamic shared libraries.
 
+Other Highlights:
+
+ - The server now supports dhcp-cache-threshold for DHCPv6 operations
+ - The server now supports DHPv6 address allocation based on EUI-64 DUIDs
+ - Experimental support for alternate relay port in the both the server
+   and relay for IPv4, IPv6 and 4o6 (see: draft-ietf-dhc-relay-port-10.txt)
+
 For information on how to install, configure and run this software, as
 well as how to find documentation and report bugs, please consult the
 README file.
@@ -80,9 +87,92 @@ ISC DHCP is open source software maintained by Internet Systems
 Consortium.  This product includes cryptographic software written
 by Eric Young (eay@cryptsoft.com).
 
-		Changes since 4.4.0a1
+		Changes since 4.4.0a1 (New Features)
 
-- None
+- Added experimental support for relay port (draft-ietf-dhc-relay-port-10.txt)
+  feature for DHCPv4, DHCPv6 and DHCPv4-over-DHCPv6.  Relay port has to be
+  enabled at compile time via --enable-relay-port and is fully backward
+  compatible (i.e. works with previous implementations of servers and relays
+  using the standard ports).  A new --rp <relay-port> command line option
+  specifies to dhcrelay an alternate source port for upstream (i.e. toward
+  the server) messages.  Thanks to Naiming Shen and Enke Chen of Cisco
+  systems for submitting these patches.
+  [ISC-Bugs #44535]
+
+- Added --release-on-roam to dhcpd server. When enabled and the server detects
+  that a DHCPv6 client (IAID+DUID) has roamed to a new network, it will release
+  the pre-existing leases on the old network and emit a log statement similar
+  to the following:
+
+      "Client: <id> roamed to new network, releasing lease: <address>"
+
+  The server will carry out all of the same steps that would normally occur
+  when a client explicitly releases a lease.  This behavior is disabled by
+  default and may only be specified globally. Prior to this the server renders
+  the leases unavailable until they expire or the server is restarted. Clients
+  that need leases in multiple networks must supply a unique IAID in each IA.
+  When release-on-roam is disabled (the default) the server maintains the
+  prior behavior of making such leases unavailable until they expire or the
+  server is restarted. Clients that need leases in multiple networks must
+  supply a unique IAID in each IA.  This parameter may only be specified at
+  the global level.  Thanks to Fernando Soto from BlueCat Networks for
+  suggesting this change.
+  [ISC-Bugs #44576]
+  [ISC-Bugs #46849]
+
+- Support for delayed-ack is now compiled in by default. Prior to this
+  it had to be enabled at compile time via --enable-delayed-acks. The
+  default value for delayed-ack, however, has been changed from 28 to 0
+  (i.e. disabled).  This was done to minimize the impact on users not
+  currently using the feature.  Please note that the delayed-ack feature
+  is not currently compatible with support for DHPCv4-over-DHCPv6 so
+  when a 4to6 port command line argument enables this in the server the
+  delayed-ack value is reset to 0.
+  [ISC-Bugs #42446]
+
+- The server (-6) now honors the parameter, update-static-leases, for static
+  (fixed-address6) DHCPv6 leases.  It is worth noting that because stateful
+  data is not retained by the server for static leases, each time a client
+  requests or renews a static lease, the server will perform DDNS updates for
+  it. This may have significant performance implications for environments
+  with many clients that request or renew static leases often. Similarly,
+  the DNS entries will not be removed by server when a client issues a RELEASE
+  nor if the lease is deleted from the configuration. In such cases the DNS
+  entries must be removed manually. This feature is disabled by default.
+  Thanks to both Bill Shirley and dgutier-at-cern-dot-ch for requesting
+  this change.
+  [ISC-Bugs #34097]
+  [ISC-Bugs #41054]
+  [ISC-Bugs #41450]
+
+- Added to the server (-6) a new statement, local-address6, which specifies
+  the source address of packets sent by the server. An additional flag,
+  bind-local-address6, disabled by default, binds the service socket to
+  to local-address6. Note that bind-local-address does not work with direct
+  clients: a relay has to forward packets to the server using the
+  local-address6 destination.
+  [ISC-Bugs #46084]
+
+		Changes since 4.4.0a1 (Bugs)
+
+- The server now recognizes environment variables PATH_DHCPD_DB and
+  PATH_DHCPD_PID.  These had been incorrectly compiled out of the code
+  unless DHCPv6 support was disabled. Additionally, the server man
+  pages were corrected to accurately reflect how the server chooses
+  file names (see lease-file-name and pid-file-name statements). Thanks
+  to Fernando Soto at Bluecat for bringing this matter to our attention.
+  [ISC-Bugs #46859]
+
+- Removed an "Impossible condition" error upon exit in the dhcpd server that
+  has been shutdown via OMAPI. This condition was only apparent under Solaris
+  when building with --enable-use-sockets and --enable-ipv4-pktinfo.
+  [ISC-Bugs #36118]
+
+- Corrected some minor coverity issues: CID 1426059, 1426058, and 1426057.
+  [ISC-Bugs #46836]
+
+- Added missing text to dhclient.8 and expanded release note coverage
+  for --address-prefix-len changes.
 
 		Changes since 4.3.6 (New Features)
 
@@ -177,27 +267,6 @@ by Eric Young (eay@cryptsoft.com).
   doing load balancing within failover.
   [ISC-Bugs #45364]
 
-- Added --release-on-roam to dhcpd server. When enabled and the server detects
-  that a DHCPv6 client (IAID+DUID) has roamed to a new network, it will release
-  the pre-existing leases on the old network and emit a log statement similar
-  to the following:
-
-      "Client: <id> roamed to new network, releasing lease: <address>"
-
-  The server will carry out all of the same steps that would normally occur
-  when a client explicitly releases a lease.  This behavior is disabled by
-  default and may only be specified globally. Prior to this the server renders
-  the leases unavailable until they expire or the server is restarted. Clients
-  that need leases in multiple networks must supply a unique IAID in each IA.
-  When release-on-roam is disabled (the default) the server maintains the
-  prior behavior of making such leases unavailable until they expire or the
-  server is restarted. Clients that need leases in multiple networks must
-  supply a unique IAID in each IA.  This parameter may only be specified at
-  the global level.  Thanks to Fernando Soto from BlueCat Networks for
-  suggesting this change.
-  [ISC-Bugs #44576]
-  [ISC-Bugs #46849]
-
 - The default value for server (-6) parameter, prefix-length-mode, has been
   changed from "exact" to "prefer". In "prefer" mode the server will offer
   the first available prefix with the same length as that requested by the
@@ -261,50 +330,6 @@ by Eric Young (eay@cryptsoft.com).
   only expired address associations.  Thanks to Jiri Popelka at Red Hat for
   raising the issue and submitting the patch.
   [ISC-Bugs #22675]
-
-- Support for delayed-ack is now compiled in by default. Prior to this
-  it had to be enabled at compile time via --enable-delayed-acks. The
-  default value for delayed-ack, however, has been changed from 28 to 0
-  (i.e. disabled).  This was done to minimize the impact on users not
-  currently using the feature.  Please note that the delayed-ack feature
-  is not currently compatible with support for DHPCv4-over-DHCPv6 so
-  when a 4to6 port command line argument enables this in the server the
-  delayed-ack value is reset to 0.
-  [ISC-Bugs #42446]
-
-- The server (-6) now honors the parameter, update-static-leases, for static
-  (fixed-address6) DHCPv6 leases.  It is worth noting that because stateful
-  data is not retained by the server for static leases, each time a client
-  requests or renews a static lease, the server will perform DDNS updates for
-  it. This may have significant performance implications for environments
-  with many clients that request or renew static leases often. Similarly,
-  the DNS entries will not be removed by server when a client issues a RELEASE
-  nor if the lease is deleted from the configuration. In such cases the DNS
-  entries must be removed manually. This feature is disabled by default.
-  Thanks to both Bill Shirley and dgutier-at-cern-dot-ch for requesting
-  this change.
-  [ISC-Bugs #34097]
-  [ISC-Bugs #41054]
-  [ISC-Bugs #41450]
-
-- Added to the server (-6) a new statement, local-address6, which specifies
-  the source address of packets sent by the server. An additional flag,
-  bind-local-address6, disabled by default, binds the service socket to
-  to local-address6. Note that bind-local-address does not work with direct
-  clients: a relay has to forward packets to the server using the
-  local-address6 destination.
-  [ISC-Bugs #46084]
-
-- Added experimental support for relay port (draft-ietf-dhc-relay-port-10.txt)
-  feature for DHCPv4, DHCPv6 and DHCPv4-over-DHCPv6.  Relay port has to be
-  enabled at compile time via --enable-relay-port and is fully backward
-  compatible (i.e. works with previous implementations of servers and relays
-  using the standard ports).  A new --rp <relay-port> command line option
-  specifies to dhcrelay an alternate source port for upstream (i.e. toward
-  the server) messages.  Thanks to Naiming Shen and Enke Chen of Cisco
-  systems for submitting these patches.
-  [ISC-Bugs #44535]
-
 			Changes since 4.3.6 (Bugs):
 
 - Corrected an issue where the server would return a client's previously
@@ -349,22 +374,6 @@ by Eric Young (eay@cryptsoft.com).
   Thanks to Sumant Gupta (sumantgupta at gmail dot com) of Landis+Gry for
   bringing this issue to our attention.
   [ISC-Bugs #46427]
-
-- The server now recognizes environment variables PATH_DHCPD_DB and
-  PATH_DHCPD_PID.  These had been incorrectly compiled out of the code
-  unless DHCPv6 support was disabled. Additionally, the server man
-  pages were corrected to accurately reflect how the server chooses
-  file names (see lease-file-name and pid-file-name statements). Thanks
-  to Fernando Soto at Bluecat for bringing this matter to our attention.
-  [ISC-Bugs #46859]
-
-- Removed an "Impossible condition" error upon exit in the dhcpd server that
-  has been shutdown via OMAPI. This condition was only apparent under Solaris
-  when building with --enable-use-sockets and --enable-ipv4-pktinfo.
-  [ISC-Bugs #36118]
-
-- Corrected some minor coverity issues: CID 1426059, 1426058, and 1426057.
-  [ISC-Bugs #46836]
 
 			Changes since 4.3.6b1
 
