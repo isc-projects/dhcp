@@ -35,13 +35,26 @@ Dynamic DNS Improvements:
 
 dhclient Improvements:
 
-  - We've added two new command line parameters to dhclient:
+  - We've added three command line parameters to dhclient:
 
     1. --prefix-len-hint - directs dhclient to use the given length as
     the prefix length hint when requesting prefixes
 
-    2. --declient-wait-time - instructs the client to wait the given number
+    2. --decline-wait-time - instructs the client to wait the given number
     of seconds after declining an IPv4 address before issuing a discover
+
+    3. --address-prefix-len - specifies the prefix length passed by dhclient
+    into the client script (via the environment variable ip6_prefixlen) with
+    each IPv6 address.  We added this parameter because we have changed the
+    default value from 64 to 128 in order to be compliant with RFC3315bis
+    draft (-09, page 64) and RFC5942, Section 4, point 1.
+    **WARNING**: The new default value of 128 may not be backwardly compatible
+    with your environment. If you are operating without a router, such as
+    between VMs on a host, you may find they cannot see each with prefix
+    length of 128. In such cases, you'll need to either provide routing or use
+    the command line parameter to set the value to 64. Alternatively you may
+    change the default at compile time by setting DHCLIENT_DEFAULT_PREFIX_LEN
+    in includes/site.h.
 
   - dhclient will now generate a DHCPv6 DECLINE message when the client script
     indicates a DAD failure
@@ -231,18 +244,21 @@ by Eric Young (eay@cryptsoft.com).
   [ISC-Bugs #45046]
 
 - Changed the default value of the prefix length passed by dhclient into the
-  client script for each IPv6 address, from 64 to 128. In addition, dhclient
-  now supports a command line argument, --address-prefix-len <len>, which may
-  be used to override the default value.  PLEASE NOTE: If your DHCPv6 clients
-  require a value other than 128, you MUST specify the value via this new
-  command line argument.  Prior to this the only way to alter the value was at
-  compile time by changing DHCLIENT_DEFAULT_PREFIX_LEN in include/sites.h.
-  **NOTE: THIS IS CHANGE IN DEFAULT BEHAVIOR.
+  client script for each IPv6 address from 64 to 128. This was done to comply
+  with RFC3315bis draft (-09, page 64) and RFC5942, Section 4, point 1.
+  In addition, dhclient now supports a command line argument,
+  --address-prefix-len, which may be used to override the default value.
+  **WARNING**: This change may not be backwardly compatible with your
+  environment. If you are operating without a router, such as between VMs on
+  a host, you may find they cannot see each with prefix length of 128. In
+  such cases, you'll need to either provide routing or use the command line
+  parameter to set the value to 64. Alternatively you may change the default
+  at compile time by setting DHCLIENT_DEFAULT_PREFIX_LEN in includes/site.h.
   [ISC-Bugs #23252]
   [ISC-Bugs #37221]
 
 - Modified dhclient (-6) to bypass sending a confirm (INIT REBOOT) when it has
-  only expired address assocations.  Thanks to Jiri Popelka at Red Hat for
+  only expired address associations.  Thanks to Jiri Popelka at Red Hat for
   raising the issue and submitting the patch.
   [ISC-Bugs #22675]
 
@@ -300,7 +316,7 @@ by Eric Young (eay@cryptsoft.com).
   for pointing out the error of our ways.
   [ISC-bugs #45780]
 
-- Added explicit include of BIND9 isc/util.h to adapt to revisisions
+- Added explicit include of BIND9 isc/util.h to adapt to revisions
   in BIND9 (see BIND9 ticket #46311).  Prior to this the build was failing
   with implicit function declarations errors for POST() and INSIST().
   [ISC-bugs #46332]
@@ -317,7 +333,7 @@ by Eric Young (eay@cryptsoft.com).
 
 - Replaced iasubopt::heap_index with separate values for active and inactive
   heaps: iasubopt::active_index and iasubopt::inactive_index.  This was done
-  to accomodate a change in behavior in BIND9 isc_heap_delete().
+  to accommodate a change in behavior in BIND9 isc_heap_delete().
   [ISC-bugs #46719]
 
 ! Plugged a socket descriptor leak in OMAPI, that can occur when there is

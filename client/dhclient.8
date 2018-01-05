@@ -1,6 +1,6 @@
 .\"	$Id: dhclient.8,v 1.36 2011/04/15 21:58:12 sar Exp $
 .\"
-.\" Copyright (c) 2004-2017 by Internet Systems Consortium, Inc. ("ISC")
+.\" Copyright (c) 2004-2018 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
 .\"
 .\" This Source Code Form is subject to the terms of the Mozilla Public
@@ -363,7 +363,7 @@ Use a DUID with DHCPv4 clients.  If no DUID is available in the
 lease file one will be constructed and saved.  The DUID will be
 used to construct a RFC4361 style client id that will be included
 in the client's messages.  This client id can be overridden by
-setting a client id in the configuration file.  Overridding the
+setting a client id in the configuration file.  Overriding the
 client id in this fashion is discouraged.
 .TP
 .BI \-I
@@ -428,6 +428,14 @@ overrides these default, with a value of either \fILL\fR or \fILLT\fR.
 Restore normal address query for IPv6. This implies \fB-6\fR.
 It is used to restore normal operation after using \fB-T\fR or \fB-P\fR.
 Multiple addresses can be requested with multiple \fB\-N\fR flags.
+.TP
+.BI \--address-prefix-len \ length
+Specify the length of the prefix for IPv6 addresses. This value is passed by
+dhclient into the client script via the environment variable, ip6_prefixlen,
+when binding IPv6 addresses.  The default value is 128.  Alternatively you may
+change the default at compile time by setting DHCLIENT_DEFAULT_PREFIX_LEN in
+includes/site.h.
+.PP
 .TP
 .BI \--dad-wait-time \ seconds
 Specify maximum time (in seconds) that the client should wait for the

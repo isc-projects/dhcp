@@ -165,13 +165,13 @@ static const char use_v6command[] = "Command not used for DHCPv4: %s";
 "[-4|-6] [-SNTPRI1dvrxi] [-nw] -4o6 <port>] [-p <port>] [-D LL|LLT]\n" \
 "                [--dad-wait-time <seconds>] [--prefix-len-hint <length>]\n" \
 "                [--decline-wait-time <seconds>]\n" \
-"                [--address-prefix-len length]\n"
+"                [--address-prefix-len <length>]\n"
 #else /* DHCP4o6 */
 #define DHCLIENT_USAGE0 \
 "[-4|-6] [-SNTPRI1dvrxi] [-nw] [-p <port>] [-D LL|LLT]\n" \
 "                [--dad-wait-time <seconds>] [--prefix-len-hint <length>]\n" \
 "                [--decline-wait-time <seconds>]\n" \
-"                [--address-prefix-len length]\n"
+"                [--address-prefix-len <length>]\n"
 #endif
 #else /* DHCPv6 */
 #define DHCLIENT_USAGE0 \
