@@ -50,7 +50,7 @@ dhclient Improvements:
     draft (-09, page 64) and RFC5942, Section 4, point 1.
     **WARNING**: The new default value of 128 may not be backwardly compatible
     with your environment. If you are operating without a router, such as
-    between VMs on a host, you may find they cannot see each with prefix
+    between VMs on a host, you may find they cannot see each other with prefix
     length of 128. In such cases, you'll need to either provide routing or use
     the command line parameter to set the value to 64. Alternatively you may
     change the default at compile time by setting DHCLIENT_DEFAULT_PREFIX_LEN
@@ -160,7 +160,8 @@ by Eric Young (eay@cryptsoft.com).
   unless DHCPv6 support was disabled. Additionally, the server man
   pages were corrected to accurately reflect how the server chooses
   file names (see lease-file-name and pid-file-name statements). Thanks
-  to Fernando Soto at Bluecat for bringing this matter to our attention.
+  to Fernando Soto at Bluecat Networks for bringing this matter to our
+  attention.
   [ISC-Bugs #46859]
 
 - Removed an "Impossible condition" error upon exit in the dhcpd server that
