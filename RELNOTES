@@ -168,7 +168,7 @@ by Eric Young (eay@cryptsoft.com).
   when building with --enable-use-sockets and --enable-ipv4-pktinfo.
   [ISC-Bugs #36118]
 
-- Corrected some minor coverity issues: CID 1426059, 1426058, and 1426057.
+- Corrected some minor Coverity issues: CID 1426059, 1426058, and 1426057.
   [ISC-Bugs #46836]
 
 - Added missing text to dhclient.8 and expanded release note coverage
