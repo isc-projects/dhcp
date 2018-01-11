@@ -185,8 +185,8 @@ if test "$enable_relay_port" = "yes"; then
 	AC_DEFINE([RELAY_PORT], [1],
 		  [Define to 1 to include relay port support.])
 else
-    # so we can report below
-    enable_relay_port="no"
+	# so we can report below
+	enable_relay_port="no"
 fi
 
 # PARANOIA is off by default (until we can test it with all features)
@@ -307,13 +307,12 @@ elif test "$atf_path" != "no" ; then
                 ATF_BIN=$atf_path/bin
         fi
 
-        if test ! -x $ATF_BIN/atf-run  -o  ! -x $ATF_BIN/atf-report ; then
-            AC_MSG_WARN([atf-run/atf-report not found, assuming they are in your path])
-        fi
+        UNITTESTS=tests
 
         AC_SUBST(ATF_CFLAGS)
         AC_SUBST(ATF_LDFLAGS)
         AC_SUBST(ATF_BIN)
+        AC_SUBST(UNITTESTS)
     fi
 fi
 

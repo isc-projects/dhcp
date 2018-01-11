@@ -301,6 +301,7 @@ RANLIB = @RANLIB@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
+UNITTESTS = @UNITTESTS@
 VERSION = @VERSION@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
@@ -382,7 +383,9 @@ EXTRA_DIST = RELNOTES LICENSE configure.ac+lt config+lt \
 	doc/devel/atf.dox doc/devel/contrib.dox doc/devel/debug.dox \
 	doc/devel/isc-logo.jpg doc/devel/libtool.dox \
 	doc/devel/mainpage.dox doc/devel/omapi.dox doc/devel/qa.dox \
-	common/tests/Atffile server/tests/Atffile $(am__append_1)
+	client/tests/Atffile common/tests/Atffile server/tests/Atffile \
+	client/tests/Kyuafile common/tests/Kyuafile \
+	server/tests/Kyuafile $(am__append_1)
 
 # Use an autoconf substitution vs an automake conditional here
 # to fool automake when the bind directory does not exist.

@@ -2,7 +2,7 @@ SUBDIRS = .
 
 AM_CPPFLAGS = $(ATF_CFLAGS) -I$(top_srcdir)/includes
 
-EXTRA_DIST = Atffile
+EXTRA_DIST = Atffile Kyuafile
 
 ATF_TESTS =
 
@@ -45,12 +45,13 @@ ns_name_unittest_LDADD += ../libdhcp.@A@ ../../omapip/libomapi.@A@ \
 check: $(ATF_TESTS)
 	@if test $(top_srcdir) != ${top_builddir}; then \
 		cp $(top_srcdir)/common/tests/Atffile Atffile; \
+		cp $(top_srcdir)/common/tests/Kyuafile Kyuafile; \
 	fi
 	sh ${top_builddir}/tests/unittest.sh
 
 distclean-local:
 	@if test $(top_srcdir) != ${top_builddir}; then \
-		rm -f Atffile; \
+		rm -f Atffile Kyuafile; \
 	fi
 
 endif

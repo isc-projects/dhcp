@@ -5,7 +5,8 @@ AM_CPPFLAGS += -I@BINDDIR@/include -I$(top_srcdir)
 AM_CPPFLAGS += -DLOCALSTATEDIR='"."'
 AM_CPPFLAGS += -DCLIENT_PATH='"."'
 
-EXTRA_DIST = Atffile duid0_test.txt duid1_test.txt duid2_test.txt duid3_test.txt
+EXTRA_DIST = Atffile Kyuafile
+EXTRA_DIST += duid0_test.txt duid1_test.txt duid2_test.txt duid3_test.txt
 
 # for autotools debugging only
 info:
@@ -37,6 +38,7 @@ duid_unittests_LDADD += $(DHCPLIBS)
 check: $(ATF_TESTS)
 	@if test $(top_srcdir) != ${top_builddir}; then \
 		cp $(top_srcdir)/client/tests/Atffile Atffile; \
+		cp $(top_srcdir)/client/tests/Kyuafile Kyuafile; \
 		cp $(top_srcdir)/client/tests/duid0_test.txt duid0_test.txt; \
 		cp $(top_srcdir)/client/tests/duid1_test.txt duid1_test.txt; \
 		cp $(top_srcdir)/client/tests/duid2_test.txt duid2_test.txt; \
@@ -46,7 +48,8 @@ check: $(ATF_TESTS)
 
 distclean-local:
 	@if test $(top_srcdir) != ${top_builddir}; then \
-		rm -f Atffile duid0_test.txt duid1_test.txt; \
+		rm -f Atffile Kyuafile; \
+		rm -f duid0_test.txt duid1_test.txt; \
 		rm -f duid2_test.txt duid3_test.txt; \
 	fi
 
