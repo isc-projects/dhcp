@@ -110,6 +110,10 @@ by Eric Young (eay@cryptsoft.com).
   NULL (see manpages for realpath(3)).
   [ISC-Bugs #46957]
 
+- Fixed a build issue when building with embedded BIND9 under OpenBSD that
+  was causing BIND9 build to not generate dns/enumclass.h and dns/enumtype.h.
+  [ISC-Bugs #46971]
+
 		Changes since 4.4.0a1 (New Features)
 
 - Added experimental support for relay port (draft-ietf-dhc-relay-port-10.txt)

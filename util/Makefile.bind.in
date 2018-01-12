@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2009-2012, 2015  Internet Systems Consortium, Inc. ("ISC")
+# Copyright (C) 2009-2018  Internet Systems Consortium, Inc. ("ISC")
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -80,7 +80,7 @@ bind2:
 		for libdir in ${bindlibs} ; do                            \
 		 (cd ${bindsrcdir}/lib/$$libdir ;                         \
 		  echo Building $$libdir library in `pwd` ;               \
-		  $(MAKE) >> ${binddir}/build.log) ;                      \
+		  $(MAKE) all >> ${binddir}/build.log) ;                      \
 		done ;                                                    \
 		                                                          \
 		echo Installing BIND libraries to ${binddir}. ;           \
