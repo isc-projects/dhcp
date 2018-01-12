@@ -87,6 +87,12 @@ ISC DHCP is open source software maintained by Internet Systems
 Consortium.  This product includes cryptographic software written
 by Eric Young (eay@cryptsoft.com).
 
+		Changes since 4.4.0b1 (Bug Fixes)
+
+- Added clarifying text to dhcpd.conf.5 explaining the class match expressions
+  cannot rely on the results of executable statements.
+  [ISC-Bugs #45451]
+
 		Changes since 4.4.0a1 (New Features)
 
 - Added experimental support for relay port (draft-ietf-dhc-relay-port-10.txt)

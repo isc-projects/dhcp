@@ -921,6 +921,12 @@ class "ras-clients" {
 }
 .fi
 .PP
+Please note that the values used in match expressions may only come from
+data or options that are part of the client packet. It is not possible to
+use values constructed through one or more executable statements.  This
+stems from the fact that client classification occurs before any statements
+are executed. Attempting to do so will yield indeterminate results.
+.PP
 Note that whether you use matching expressions or add statements (or
 both) to classify clients, you must always write a class declaration
 for any class that you use.  If there will be no match statement and
