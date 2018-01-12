@@ -607,11 +607,7 @@ main(int argc, char **argv) {
          * to be reopened after chdir() has been called
          */
         if (have_dhcpd_db && path_dhcpd_db[0] != '/') {
-		const char *path = path_dhcpd_db;
-                path_dhcpd_db = realpath(path_dhcpd_db, NULL);
-                if (path_dhcpd_db == NULL)
-                        log_fatal("Failed to get realpath for %s: %s", path,
-                                   strerror(errno));
+                path_dhcpd_db = absolute_path(path_dhcpd_db);
         }
 
 	if (!quiet) {

@@ -103,6 +103,13 @@ by Eric Young (eay@cryptsoft.com).
   cannot rely on the results of executable statements.
   [ISC-Bugs #45451]
 
+- Fixed a bug which causes dhcpd and dhclient to crash on certain
+  systems when given relative path names for lease or pid files on
+  the command line.  Affected systems are those on which the C library
+  function, realpath() does not support a second parameter value of
+  NULL (see manpages for realpath(3)).
+  [ISC-Bugs #46957]
+
 		Changes since 4.4.0a1 (New Features)
 
 - Added experimental support for relay port (draft-ietf-dhc-relay-port-10.txt)

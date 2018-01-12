@@ -3,7 +3,7 @@
    Turn data structures into printable text. */
 
 /*
- * Copyright (c) 2004-2017 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2018 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -132,7 +132,7 @@ char *print_base64 (const unsigned char *buf, unsigned len,
 	b = dmalloc (bl + 1, file, line);
 	if (!b)
 		return (char *)0;
-	
+
 	i = 0;
 	s = b;
 	while (i != len) {
@@ -199,15 +199,15 @@ void print_lease (lease)
 
 	log_debug ("  Lease %s",
 	       piaddr (lease -> ip_addr));
-	
+
 	t = gmtime (&lease -> starts);
 	strftime (tbuf, sizeof tbuf, "%Y/%m/%d %H:%M:%S", t);
 	log_debug ("  start %s", tbuf);
-	
+
 	t = gmtime (&lease -> ends);
 	strftime (tbuf, sizeof tbuf, "%Y/%m/%d %H:%M:%S", t);
 	log_debug ("  end %s", tbuf);
-	
+
 	if (lease -> hardware_addr.hlen)
 		log_debug ("    hardware addr = %s",
 			   print_hw_addr (lease -> hardware_addr.hbuf [0],
@@ -215,7 +215,7 @@ void print_lease (lease)
 					  &lease -> hardware_addr.hbuf [1]));
 	log_debug ("  host %s  ",
 	       lease -> host ? lease -> host -> name : "<none>");
-}	
+}
 
 #if defined (DEBUG_PACKET)
 void dump_packet_option (struct option_cache *oc,
@@ -301,7 +301,7 @@ void dump_raw (buf, len)
 /*
           1         2         3         4         5         6         7
 01234567890123456789012345678901234567890123456789012345678901234567890123
-280: 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00   .................  
+280: 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00   .................
 */
 
 	memset(lbuf, ' ', 79);
@@ -446,7 +446,7 @@ void print_hex_or_string (len, data, limit, buf)
 /*
  * print a string as either hex or text
  * using static buffers to hold the output
- * 
+ *
  * len - length of data
  * data - input data
  * limit - length of buf
@@ -499,7 +499,7 @@ char *print_dotted_quads (len, data)
 	char *s;
 
 	s = &dq_buf [0];
-	
+
 	i = 0;
 
 	/* %Audit% Loop bounds checks to 21 bytes. %2004.06.17,Safe%
@@ -554,7 +554,7 @@ static unsigned print_subexpression (expr, buf, len)
 			return 3;
 		}
 		break;
-		  
+
 	      case expr_match:
 		if (len > 7) {
 			strcpy (buf, "(match)");
@@ -772,7 +772,7 @@ static unsigned print_subexpression (expr, buf, len)
 	      case expr_binary_xor:
 		s = "^";
 		goto binop;
-		
+
 	      case expr_not:
 		if (len > 6) {
 			rv = 5;
@@ -1179,7 +1179,7 @@ void print_expression (name, expr)
 }
 
 int token_print_indent_concat (FILE *file, int col,  int indent,
-			       const char *prefix, 
+			       const char *prefix,
 			       const char *suffix, ...)
 {
 	va_list list;
@@ -1209,7 +1209,7 @@ int token_print_indent_concat (FILE *file, int col,  int indent,
 		s = va_arg (list, char *);
 	}
 	va_end (list);
-	
+
 	col = token_print_indent (file, col, indent,
 				  prefix, suffix, t);
 	dfree (t, MDL);
@@ -1438,4 +1438,44 @@ char *format_lease_id(const unsigned char *s, unsigned len,
 			break;
 	}
 	return (idstr);
+}
+
+/*
+ * Convert a relative path name to an absolute path name
+ *
+ * Not all versions of realpath() support NULL for
+ * the second parameter and PATH_MAX isn't defined
+ * on all systems.  For the latter, we'll make what
+ * ought to be a big enough buffer and let it fly.
+ * If passed an absolute path it should return it
+ * an allocated buffer.
+ */
+char *absolute_path(const char *orgpath) {
+	char *abspath = NULL;
+	if (orgpath) {
+#ifdef PATH_MAX
+		char buf[PATH_MAX];
+#else
+		char buf[2048];
+		int len;
+#endif
+		errno = 0;
+                if (realpath(orgpath, buf) == NULL) {
+			const char* errmsg = strerror(errno);
+                        log_fatal("Failed to get realpath for %s: %s",
+				  orgpath, errmsg);
+		}
+
+		/* dup the result into an allocated buffer */
+		abspath = dmalloc(strlen(buf) + 1, MDL);
+		if (abspath == NULL)  {
+			log_fatal("No memory for filename:%s\n",
+				  buf);
+		}
+
+		memcpy (abspath, buf, strlen(buf));
+		abspath[strlen(buf)] = 0x0;
+	}
+
+	return (abspath);
 }

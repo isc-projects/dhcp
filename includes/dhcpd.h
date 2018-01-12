@@ -2635,6 +2635,7 @@ char *buf_to_hex (const unsigned char *s, unsigned len,
                    const char *file, int line);
 char *format_lease_id(const unsigned char *s, unsigned len, int format,
                       const char *file, int line);
+char *absolute_path(const char *orgpath);
 /* socket.c */
 #if defined (USE_SOCKET_SEND) || defined (USE_SOCKET_RECEIVE) \
 	|| defined (USE_SOCKET_FALLBACK)
