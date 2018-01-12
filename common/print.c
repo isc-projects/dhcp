@@ -1457,7 +1457,6 @@ char *absolute_path(const char *orgpath) {
 		char buf[PATH_MAX];
 #else
 		char buf[2048];
-		int len;
 #endif
 		errno = 0;
                 if (realpath(orgpath, buf) == NULL) {
