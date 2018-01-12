@@ -87,6 +87,16 @@ ISC DHCP is open source software maintained by Internet Systems
 Consortium.  This product includes cryptographic software written
 by Eric Young (eay@cryptsoft.com).
 
+                Changes since 4.4.0b1 (New Features)
+
+- Duplicate address detection when binding to a new IPv6 address was added
+  to the following dhclient scripts: linux,freebsd,netbsd,openbsd, and macos.
+  The scripts will check for DAD errors after binding to a new IPv6 address
+  for at most --dad-wait-time seconds.  If a DAD error is detected the script
+  will exit with a value of 3, instructing dhclient to decline the address. If
+  dad-wait-time is zero (the default), DAD error checking is not peformed.
+  [ISC-Bugs 46805]
+
 		Changes since 4.4.0b1 (Bug Fixes)
 
 - Added clarifying text to dhcpd.conf.5 explaining the class match expressions

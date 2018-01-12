@@ -177,6 +177,55 @@ exit_with_hooks() {
     exit $exit_status
 }
 
+# This function was largely borrowed from dhclient-script that
+# ships with Centos, authored by Jiri Popelka and David Cantrell
+# of Redhat. Thanks guys.
+add_ipv6_addr_with_DAD() {
+    ${ip} -6 addr replace ${new_ip6_address}/${new_ip6_prefixlen} \
+    dev ${interface} scope global valid_lft ${new_max_life} \
+        preferred_lft ${new_preferred_life}
+
+    if [ ${dad_wait_time} -le 0 ]
+    then
+        # if we're not waiting for DAD, assume we're good
+        return 0
+    fi
+
+    # Repeatedly test whether newly added address passed
+    # duplicate address detection (DAD)
+    for i in $(seq 1 ${dad_wait_time}); do
+        sleep 1 # give the DAD some time
+
+        addr=$(${ip} -6 addr show dev ${interface} \
+            | grep ${new_ip6_address}/${new_ip6_prefixlen})
+
+        # tentative flag == DAD is still not complete
+        tentative=$(echo "${addr}" | grep tentative)
+        # dadfailed flag == address is already in use somewhere else
+        dadfailed=$(echo "${addr}" | grep dadfailed)
+
+        if [ -n "${dadfailed}" ] ; then
+            # address was added with valid_lft/preferred_lft 'forever',
+            # remove it
+            ${ip} -6 addr del ${new_ip6_address}/${new_ip6_prefixlen} \
+                dev ${interface}
+
+            exit_with_hooks 3
+        fi
+
+        if [ -z "${tentative}" ] ; then
+            if [ -n "${addr}" ]; then
+                # DAD is over
+                    return 0
+            else
+                # address was auto-removed (or not added at all)
+                exit_with_hooks 3
+            fi
+        fi
+    done
+
+    return 0
+}
 
 # Invoke the local dhcp client enter hooks, if they exist.
 run_hook /etc/dhclient-enter-hooks
@@ -401,8 +450,7 @@ case "$reason" in
     BOUND6|RENEW6|REBIND6)
         if [ "${new_ip6_address}" ] && [ "${new_ip6_prefixlen}" ]; then
             # set leased IP
-            ${ip} -6 addr add ${new_ip6_address}/${new_ip6_prefixlen} \
-                dev ${interface} scope global
+            add_ipv6_addr_with_DAD
         fi
 
         # update /etc/resolv.conf
