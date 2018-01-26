@@ -97,6 +97,14 @@ by Eric Young (eay@cryptsoft.com).
   dad-wait-time is zero (the default), DAD error checking is not peformed.
   [ISC-Bugs 46805]
 
+- Support for sending and receiving additional DHCP4 options has been added
+  to both the dhcpd and dhclient.  Specifically: option codes 93,94, and 97
+  (RFC 4578); code 150 (RFC 5859); and codes 209,219, and 211 (RFC 5071).
+  Beyond configuring, sending, requesting, and receiving these options neither
+  server nor client apply any additional logic based on their values.
+  Thanks to Peter Lewis for requesting this change.
+  [ISC-Bugs 47062]
+
 		Changes since 4.4.0b1 (Bug Fixes)
 
 - Added clarifying text to dhcpd.conf.5 explaining the class match expressions
