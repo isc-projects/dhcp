@@ -29,7 +29,8 @@ EXTRA_DIST = RELNOTES LICENSE configure.ac+lt config+lt \
 	     doc/devel/debug.dox doc/devel/isc-logo.jpg doc/devel/libtool.dox \
 	     doc/devel/mainpage.dox doc/devel/omapi.dox doc/devel/qa.dox \
 	     client/tests/Atffile common/tests/Atffile server/tests/Atffile \
-	     client/tests/Kyuafile common/tests/Kyuafile server/tests/Kyuafile
+	     client/tests/Kyuafile common/tests/Kyuafile server/tests/Kyuafile \
+         m4/README
 
 if HAVE_BINDDIR
 EXTRA_DIST += bind/Makefile.in bind/bind.tar.gz bind/version.tmp

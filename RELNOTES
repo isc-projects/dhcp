@@ -122,6 +122,12 @@ by Eric Young (eay@cryptsoft.com).
   was causing BIND9 build to not generate dns/enumclass.h and dns/enumtype.h.
   [ISC-Bugs #46971]
 
+- Added <dhcp>/m4/README to the distribution tarball.  Some versions of
+  ac_local() treat the absence of the m4 subdirectory as error rather than
+  warning.  This was causing the call to autoreconf, necessary for building
+  with libtool, to fail.
+  [ISC-Bugs #47075]
+
 		Changes since 4.4.0a1 (New Features)
 
 - Added experimental support for relay port (draft-ietf-dhc-relay-port-10.txt)
