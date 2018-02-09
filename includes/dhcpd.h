@@ -821,7 +821,7 @@ struct lease_state {
 #endif
 
 #if !defined (DEFAULT_DELAYED_ACK)
-# define DEFAULT_DELAYED_ACK 0  /* default SO_SNDBUF size / 576 bytes */
+# define DEFAULT_DELAYED_ACK 0  /* default 0 disables delayed acking */
 #endif
 
 #if !defined (DEFAULT_ACK_DELAY_SECS)
