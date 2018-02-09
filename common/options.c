@@ -3,7 +3,7 @@
    DHCP options parsing and reassembly. */
 
 /*
- * Copyright (c) 2004-2017 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2018 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -177,6 +177,8 @@ int parse_option_buffer (options, buffer, length, universe)
 
 		/* If the length is outrageous, the options are bad. */
 		if (offset + len > length) {
+			/* Avoid reference count overflow */
+			option_dereference(&option, MDL);
 			reason = "option length exceeds option buffer length";
 		      bogus:
 			log_error("parse_option_buffer: malformed option "

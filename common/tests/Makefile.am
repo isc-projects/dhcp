@@ -8,7 +8,8 @@ ATF_TESTS =
 
 if HAVE_ATF
 
-ATF_TESTS += alloc_unittest dns_unittest misc_unittest ns_name_unittest
+ATF_TESTS += alloc_unittest dns_unittest misc_unittest ns_name_unittest \
+	option_unittest
 
 alloc_unittest_SOURCES = test_alloc.c $(top_srcdir)/tests/t_api_dhcp.c
 alloc_unittest_LDADD = $(ATF_LDFLAGS)
@@ -37,6 +38,14 @@ misc_unittest_LDADD += ../libdhcp.@A@ ../../omapip/libomapi.@A@ \
 ns_name_unittest_SOURCES = ns_name_test.c $(top_srcdir)/tests/t_api_dhcp.c
 ns_name_unittest_LDADD = $(ATF_LDFLAGS)
 ns_name_unittest_LDADD += ../libdhcp.@A@ ../../omapip/libomapi.@A@ \
+	@BINDLIBIRSDIR@/libirs.@A@ \
+	@BINDLIBDNSDIR@/libdns.@A@ \
+	@BINDLIBISCCFGDIR@/libisccfg.@A@  \
+	@BINDLIBISCDIR@/libisc.@A@
+
+option_unittest_SOURCES = option_unittest.c $(top_srcdir)/tests/t_api_dhcp.c
+option_unittest_LDADD = $(ATF_LDFLAGS)
+option_unittest_LDADD += ../libdhcp.@A@ ../../omapip/libomapi.@A@ \
 	@BINDLIBIRSDIR@/libirs.@A@ \
 	@BINDLIBDNSDIR@/libdns.@A@ \
 	@BINDLIBISCCFGDIR@/libisccfg.@A@  \

@@ -89,13 +89,19 @@ by Eric Young (eay@cryptsoft.com).
 
                 Changes since 4.4.0 (New Features)
 - none
-                Changes since 4.4.0 (Bugs)
+		Changes since 4.4.0 (Bug Fixes)
 
 - A delayed-ack value of 0 (the default), now correctly disables the delayed
   feature.  A change in 4.4.0 prohibited lease updates marking leases active
   from be written to the lease file when delayed-ack is 0. This in turn,
   caused servers to lose active lease assignments upon restart.
   [ISC-Bugs #47141]
+
+! Option reference count was not correctly decremented in error path
+  when parsing buffer for options. Reported by Felix Wilhelm, Google
+  Security Team.
+  [ISC-Bugs #47140]
+  CVE: CVE-2018-xxxx
 
                 Changes since 4.4.0b1 (New Features)
 
