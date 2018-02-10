@@ -1776,7 +1776,8 @@ format_min_length(format, oc)
 
 
 /* Format the specified option so that a human can easily read it. */
-
+/* Maximum pretty printed size */
+#define MAX_OUTPUT_SIZE 32*1024
 const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 	struct option *option;
 	const unsigned char *data;
@@ -1784,8 +1785,9 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 	int emit_commas;
 	int emit_quotes;
 {
-	static char optbuf [32768]; /* XXX */
-	static char *endbuf = &optbuf[sizeof(optbuf)];
+	/* We add 128 byte pad so we don't have to add checks everywhere. */
+	static char optbuf [MAX_OUTPUT_SIZE + 128]; /* XXX */
+	static char *endbuf = optbuf + MAX_OUTPUT_SIZE;
 	int hunksize = 0;
 	int opthunk = 0;
 	int hunkinc = 0;
@@ -2211,7 +2213,14 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 				log_error ("Unexpected format code %c",
 					   fmtbuf [j]);
 			}
+
 			op += strlen (op);
+			if (op >= endbuf) {
+				log_error ("Option data exceeds"
+					   " maximum size %d", MAX_OUTPUT_SIZE);
+					   return ("<error>");
+			}
+
 			if (dp == data + len)
 				break;
 			if (j + 1 < numelem && comma != ':')

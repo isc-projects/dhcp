@@ -43,7 +43,7 @@ ATF_TC_BODY(option_refcnt, tc)
     if (!option_state_allocate(&options, MDL)) {
 	atf_tc_fail("can't allocate option state");
     }
-    
+
     option = NULL;
     code = 15; /* domain-name */
     if (!option_code_hash_lookup(&option, dhcp_universe.code_hash,
@@ -68,12 +68,75 @@ ATF_TC_BODY(option_refcnt, tc)
     }
 }
 
+ATF_TC(pretty_print_option);
+
+ATF_TC_HEAD(pretty_print_option, tc)
+{
+    atf_tc_set_md_var(tc, "descr",
+		      "Verify pretty_print_option does not overrun its buffer.");
+}
+
+
+/*
+ * This test verifies that pretty_print_option() will not overrun its
+ * internal, static buffer when given large 'x/X' format options.
+ *
+ */
+ATF_TC_BODY(pretty_print_option, tc)
+{
+    struct option *option;
+    unsigned code;
+    unsigned char bad_data[32*1024];
+    unsigned char good_data[] = { 1,2,3,4,5,6 };
+    int emit_commas = 1;
+    int emit_quotes = 1;
+    const char *output_buf;
+
+    /* Initialize whole thing to non-printable chars */
+    memset(bad_data, 0x1f, sizeof(bad_data));
+
+    initialize_common_option_spaces();
+
+    /* We'll use dhcp_client_identitifer because it happens to be format X */
+    code = 61;
+    option = NULL;
+    if (!option_code_hash_lookup(&option, dhcp_universe.code_hash,
+				 &code, 0, MDL)) {
+	    atf_tc_fail("can't find option %d", code);
+    }
+
+    if (option == NULL) {
+	    atf_tc_fail("option is NULL");
+    }
+
+    /* First we will try a good value we know should fit. */
+    output_buf = pretty_print_option (option, good_data, sizeof(good_data),
+                                      emit_commas, emit_quotes);
+
+    /* Make sure we get what we expect */
+    if (!output_buf || strcmp(output_buf, "1:2:3:4:5:6")) {
+	    atf_tc_fail("pretty_print_option did not return \"<error>\"");
+    }
+
+
+    /* Now we'll try a data value that's too large */
+    output_buf = pretty_print_option (option, bad_data, sizeof(bad_data),
+                                      emit_commas, emit_quotes);
+
+    /* Make sure we safely get an error */
+    if (!output_buf || strcmp(output_buf, "<error>")) {
+	    atf_tc_fail("pretty_print_option did not return \"<error>\"");
+    }
+}
+
+
 /* This macro defines main() method that will call specified
    test cases. tp and simple_test_case names can be whatever you want
    as long as it is a valid variable identifier. */
 ATF_TP_ADD_TCS(tp)
 {
     ATF_TP_ADD_TC(tp, option_refcnt);
+    ATF_TP_ADD_TC(tp, pretty_print_option);
 
     return (atf_no_error());
 }
