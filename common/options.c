@@ -3,7 +3,7 @@
    DHCP options parsing and reassembly. */
 
 /*
- * Copyright (c) 2004-2017 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2018 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -177,6 +177,8 @@ int parse_option_buffer (options, buffer, length, universe)
 
 		/* If the length is outrageous, the options are bad. */
 		if (offset + len > length) {
+			/* Avoid reference count overflow */
+			option_dereference(&option, MDL);
 			reason = "option length exceeds option buffer length";
 		      bogus:
 			log_error("parse_option_buffer: malformed option "
@@ -1758,7 +1760,8 @@ format_min_length(format, oc)
 
 
 /* Format the specified option so that a human can easily read it. */
-
+/* Maximum pretty printed size */
+#define MAX_OUTPUT_SIZE 32*1024
 const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 	struct option *option;
 	const unsigned char *data;
@@ -1766,8 +1769,9 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 	int emit_commas;
 	int emit_quotes;
 {
-	static char optbuf [32768]; /* XXX */
-	static char *endbuf = &optbuf[sizeof(optbuf)];
+	/* We add 128 byte pad so we don't have to add checks everywhere. */
+	static char optbuf [MAX_OUTPUT_SIZE + 128]; /* XXX */
+	static char *endbuf = optbuf + MAX_OUTPUT_SIZE;
 	int hunksize = 0;
 	int opthunk = 0;
 	int hunkinc = 0;
@@ -2194,6 +2198,12 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 					   fmtbuf [j]);
 			}
 			op += strlen (op);
+			if (op >= endbuf) {
+				log_error ("Option data exceeds"
+					   " maximum size %d", MAX_OUTPUT_SIZE);
+				return ("<error>");
+			}
+
 			if (dp == data + len)
 				break;
 			if (j + 1 < numelem && comma != ':')

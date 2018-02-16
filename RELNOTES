@@ -1,6 +1,6 @@
                 Internet Systems Consortium DHCP Distribution
-                            Version 4.3.6
-                             31 July 2017
+                            Version 4.3.6-P1
+                            28 February 2018
 
                              Release Notes
 
@@ -65,6 +65,25 @@ ISC at info@isc.org or use https://www.isc.org/mission/contact/.
 We welcome comments from DHCP users, about this or anything else we do.
 Email Vicky Risk, Product Manager at vicky@isc.org or discuss on 
 dhcp-users@lists.isc.org.
+
+			Changes since 4.3.6
+
+!- Plugged a socket descriptor leak in OMAPI, that can occur when there is
+  data pending to be written to an OMAPI connection, when the connection
+  is closed by the reader.
+  [ISc-Bugs #46767]
+
+! Corrected an issue where large sized 'X/x' format options were causing
+  option handling logic to overwrite memory when expanding them to human
+  readable form. Reported by Felix Wilhelm, Google Security Team.
+  [ISC-Bugs #47139]
+  CVE: CVE-2018-5732
+
+! Option reference count was not correctly decremented in error path
+  when parsing buffer for options. Reported by Felix Wilhelm, Google
+  Security Team.
+  [ISC-Bugs #47140]
+  CVE: CVE-2018-xxxx
 
 			Changes since 4.3.6b1
 
