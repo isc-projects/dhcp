@@ -78,7 +78,7 @@ dhcp-users@lists.isc.org.
   when parsing buffer for options. Reported by Felix Wilhelm, Google
   Security Team.
   [ISC-Bugs #47140]
-  CVE: CVE-2018-xxxx
+  CVE: CVE-2018-5733
 
 ! Corrected an issue where large sized 'X/x' format options were causing
   option handling logic to overwrite memory when expanding them to human
