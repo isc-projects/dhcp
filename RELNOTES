@@ -1,13 +1,13 @@
               Internet Systems Consortium DHCP Distribution
 
-                          Version 4.1-ESV-R15
-                              31 July 2017
+                          Version 4.1-ESV-R15-P1
+                             21 February 2018
 
                               Release Notes
 
                                NEW FEATURES
 
-Version 4.1-ESV-R15 is a maintenance release of an extended support version
+Version 4.1-ESV-R15-P1 is a security release of an extended support version
 (ESV) release.  ESVs are intended for users who have longer upgrade
 constraints.  Please see our web page
 http://www.isc.org/downloads/software-support-policy/
@@ -71,6 +71,20 @@ ISC at info@isc.org or use https://www.isc.org/mission/contact/.
 We welcome comments from DHCP users, about this or anything else we do.
 Email Vicky Risk, Product Manager at vicky@isc.org or discuss on
 dhcp-users@lists.isc.org.
+
+			Changes since 4.1-ESV-R15
+
+! Option reference count was not correctly decremented in error path
+  when parsing buffer for options. Reported by Felix Wilhelm, Google
+  Security Team.
+  [ISC-Bugs #47140]
+  CVE: CVE-2018-xxxx
+
+! Corrected an issue where large sized 'X/x' format options were causing
+  option handling logic to overwrite memory when expanding them to human
+  readable form. Reported by Felix Wilhelm, Google Security Team.
+  [ISC-Bugs #47139]
+  CVE: CVE-2018-5732
 
 			Changes since 4.1-ESV-R15b1
 
