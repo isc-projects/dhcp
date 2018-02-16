@@ -3,7 +3,7 @@
    DHCP Client. */
 
 /*
- * Copyright (c) 2004-2017 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2018 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -72,7 +72,7 @@ int std_dhcid = 0;
 #define ASSERT_STATE(state_is, state_shouldbe) {}
 
 #ifndef UNIT_TEST
-static const char copyright[] = "Copyright 2004-2017 Internet Systems Consortium.";
+static const char copyright[] = "Copyright 2004-2018 Internet Systems Consortium.";
 static const char arr [] = "All rights reserved.";
 static const char message [] = "Internet Systems Consortium DHCP Client";
 static const char url [] = "For info, please visit https://www.isc.org/software/dhcp/";

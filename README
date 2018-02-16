@@ -1,6 +1,6 @@
               Internet Systems Consortium DHCP Distribution
-                            Version 4.3.6
-                             31 July 2017
+                           Version 4.3.6-P1
+                           28 February 2018
 
                               README FILE
 
@@ -125,8 +125,8 @@ If you wish to run the DHCP Distribution on Linux, please see the
 Linux-specific notes later in this document.  If you wish to run on an
 SCO release, please see the SCO-specific notes later in this document.
 You particularly need to read these notes if you intend to support
-Windows 95 clients.  If you are running HP-UX or Ultrix, please read the 
-notes for those operating systems below.  If you are running NeXTSTEP, 
+Windows 95 clients.  If you are running HP-UX or Ultrix, please read the
+notes for those operating systems below.  If you are running NeXTSTEP,
 please see the notes on NeXTSTEP below.
 
 If you start dhcpd and get a message, "no free bpf", that means you
@@ -142,12 +142,12 @@ information.   On Digital Unix, type ``man pfilt''.
 To build the DHCP Distribution, unpack the compressed tar file using
 the tar utility and the gzip command - type something like:
 
-	gunzip dhcp-4.3.6.tar.gz
-	tar xvf dhcp-4.3.6.tar
+	gunzip dhcp-4.3.6-P1.tar.gz
+	tar xvf dhcp-4.3.6-P1.tar
 
 			    CONFIGURING IT
 
-Now, cd to the dhcp-4.3.6 subdirectory that you've just created and
+Now, cd to the dhcp-4.3.6-P1 subdirectory that you've just created and
 configure the source tree by typing:
 
 	./configure
@@ -414,7 +414,7 @@ Versions of FreeBSD prior to 2.2 have a bug in BPF support in that the
 ethernet driver swaps the ethertype field in the ethernet header
 downstream from BPF, which corrupts the output packet.   If you are
 running a version of FreeBSD prior to 2.2, and you find that dhcpd
-can't communicate with its clients, you should #define BROKEN_FREEBSD_BPF 
+can't communicate with its clients, you should #define BROKEN_FREEBSD_BPF
 in site.h and recompile.
 
 Modern versions of FreeBSD include the ISC DHCP 3.0 client as part of
@@ -437,7 +437,7 @@ The first is that older Sun compilers generate an error on some of
 our uses of the flexible array option.  Newer versions only generate
 a warning, which can be safely ignored.  If you run into this error
 ("type of struct member "buf" can not be derived from structure with
-flexible array member"), upgrade your tools to  Oracle Solaris Studio 
+flexible array member"), upgrade your tools to  Oracle Solaris Studio
 (previously Sun Studio) 12 or something newer.
 
 The second is the interaction between the configure script and the
@@ -546,7 +546,7 @@ interfaces.)
 We have reports of Windows XP clients having difficulty retrieving
 addresses from a server running on an AIX machine.  This issue
 was traced to the client requiring messages be sent to the all ones
-broadcast address (255.255.255.255) while the AIX server was sending 
+broadcast address (255.255.255.255) while the AIX server was sending
 to 192.168.0.255.
 
 You may be able to solve this by including a relay between the client
@@ -594,7 +594,7 @@ configuration.
 			       ATF
 
 Please see the file DHCP/doc/devel/atf.dox for a description of building
-and using these tools.  
+and using these tools.
 
 The optional unit tests use ATF (Automated Testing Framework) including
 the atf-run and atf-report tools. ATF deprecated these tools in
@@ -645,9 +645,9 @@ has been resolved, then we're still working on it.
 
 PLEASE DO NOT REPORT BUGS IN OLD SOFTWARE RELEASES!  Fetch the latest
 release and see if the bug is still in that version of the software,
-and if it is still present, _then_ report it.  ISC release versions 
-always have three numbers, for example: 1.2.3.  The 'major release' is 
-1 here, the 'minor release' is 2, and the 'maintenance release' is 3.  
+and if it is still present, _then_ report it.  ISC release versions
+always have three numbers, for example: 1.2.3.  The 'major release' is
+1 here, the 'minor release' is 2, and the 'maintenance release' is 3.
 ISC will accept bug reports against the most recent two major.minor
 releases: for example, 1.0.0 and 0.9.0, but not 0.8.* or prior.
 
