@@ -1,6 +1,6 @@
               Internet Systems Consortium DHCP Distribution
-                          Version 4.1-ESV-R15
-                            31 July 2017
+                         Version 4.1-ESV-R15-P1
+                           28 February 2018
 
                              README FILE
 
@@ -98,10 +98,10 @@ directory, it may not have up-to-date information).
 
 			    RELEASE STATUS
 
-This is ISC DHCP 4.1-ESV-R15, an extended support (ESV) release that
+This is ISC DHCP 4.1-ESV-R15-P1, an extended support (ESV) release that
 provides patches for several bugs.
 
-ESVs are intended for users who have longer upgrade constraints 
+ESVs are intended for users who have longer upgrade constraints
 Please see our web page http://www.isc.org/downloads/software-support-policy/
 for more information on ESVs
 
@@ -139,12 +139,12 @@ information.   On Digital Unix, type ``man pfilt''.
 To build the DHCP Distribution, unpack the compressed tar file using
 the tar utility and the gzip command - type something like:
 
-	gunzip dhcp-4.1-ESV-R15.tar.gz
-	tar xvf dhcp-4.1-ESV-R15.tar
+	gunzip dhcp-4.1-ESV-R15-P1.tar.gz
+	tar xvf dhcp-4.1-ESV-R15-P1.tar
 
 			    CONFIGURING IT
 
-Now, cd to the dhcp-4.1-ESV-R15 subdirectory that you've just created and
+Now, cd to the dhcp-4.1-ESV-R15-P1 subdirectory that you've just created and
 configure the source tree by typing:
 
 	./configure
@@ -403,7 +403,7 @@ Versions of FreeBSD prior to 2.2 have a bug in BPF support in that the
 ethernet driver swaps the ethertype field in the ethernet header
 downstream from BPF, which corrupts the output packet.   If you are
 running a version of FreeBSD prior to 2.2, and you find that dhcpd
-can't communicate with its clients, you should #define BROKEN_FREEBSD_BPF 
+can't communicate with its clients, you should #define BROKEN_FREEBSD_BPF
 in site.h and recompile.
 
 Modern versions of FreeBSD include the ISC DHCP 3.0 client as part of
@@ -510,7 +510,7 @@ interfaces.)
 We have reports of Windows XP clients having difficulty retrieving
 addresses from a server running on an AIX machine.  This issue
 was traced to the client requiring messages be sent to the all ones
-broadcast address (255.255.255.255) while the AIX server was sending 
+broadcast address (255.255.255.255) while the AIX server was sending
 to 192.168.0.255.
 
 You may be able to solve this by including a relay between the client

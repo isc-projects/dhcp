@@ -58,11 +58,11 @@ ISC DHCP is open source software maintained by Internet Systems
 Consortium.  This product includes cryptographic software written
 by Eric Young (eay@cryptsoft.com).
 
-Our next major version of ISC DHCP, version 4.4.0, will be re-licensed under
+Our next major version of ISC DHCP, version 4.4.1, will be re-licensed under
 the Mozilla Public License, MPL 2.0.  To read the MPL 2.0 license terms, please
 refer to: https://www.mozilla.org/en-US/MPL/2.0/.
 
-This change will apply to ISC DHCP version 4.4.0 and any 4.4.x versions.  Older
+This change will apply to ISC DHCP version 4.4.1 and any 4.4.x versions.  Older
 versions already published under the ISC license will remain under the ISC
 license.  Those unsure whether or not the license change affects their use of
 ISC DHCP, or who wish to discuss how to comply with the license may contact
