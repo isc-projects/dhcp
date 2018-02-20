@@ -1,6 +1,6 @@
                 Internet Systems Consortium DHCP Distribution
-                            Version 4.4.0
-                           31 January 2018
+                            Version 4.4.1
+                           28 February 2018
 
                              Release Notes
 
@@ -10,7 +10,7 @@ Please note that that ISC DHCP is now licensed under the Mozilla Public License,
 MPL 2.0. Please see https://www.mozilla.org/en-US/MPL/2.0/ to read the MPL 2.0
 license terms.
 
-The areas of focus for ISC DHCP 4.4.0 were:
+The areas of focus for ISC DHCP 4.4.x were:
 
 1. Dynamic DNS additions
 2. dhclient improvements
