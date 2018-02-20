@@ -83,7 +83,7 @@ dhcp-users@lists.isc.org.
   when parsing buffer for options. Reported by Felix Wilhelm, Google
   Security Team.
   [ISC-Bugs #47140]
-  CVE: CVE-2018-xxxx
+  CVE: CVE-2018-5733
 
 			Changes since 4.3.6b1
 
