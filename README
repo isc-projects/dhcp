@@ -98,43 +98,6 @@ will not be correct for your operating system until after you iterate
 'make install' (so if you're reading a manpage out of the source
 directory, it may not have up-to-date information).
 
-			    RELEASE STATUS
-
-This is ISC DHCP 4.3.x  The major theme for this release is "ipv6 uplift",
-in which we enhance the v6 code to support many of the features found
-in the v4 code.  These include: support for v6, support for on_commit,
-on_expiry and on_release in v6, support for accessing v6 relay options
-and better log messages for v6 addresses.  Non v6 features include:
-support for the standard DDNS, better OMAPI class and sub-class support
-allowing for dynamic addition and removal of sub-classes, and support for
-DDNS without zone statements.
-
-In this release, the DHCPv6 server should be fully functional on Linux,
-Solaris, or any BSD.  The DHCPv6 client should be similarly functional
-except on Solaris.
-
-The DHCPv4 server, relay, and client, should be fully functional
-on Linux, Solaris, any BSD, HPUX, SCO, NextSTEP, and Irix.
-
-If you are running the DHCP distribution on a machine which is a
-firewall, or if there is a firewall between your DHCP server(s) and
-DHCP clients, please read the section on firewalls which appears later
-in this document.
-
-If you wish to run the DHCP Distribution on Linux, please see the
-Linux-specific notes later in this document.  If you wish to run on an
-SCO release, please see the SCO-specific notes later in this document.
-You particularly need to read these notes if you intend to support
-Windows 95 clients.  If you are running HP-UX or Ultrix, please read the 
-notes for those operating systems below.  If you are running NeXTSTEP, 
-please see the notes on NeXTSTEP below.
-
-If you start dhcpd and get a message, "no free bpf", that means you
-need to configure the Berkeley Packet Filter into your operating
-system kernel.   On NetBSD, FreeBSD and BSD/os, type ``man bpf'' for
-information.   On Digital Unix, type ``man pfilt''.
-
-
 		    BUILDING THE DHCP DISTRIBUTION
 
 			     UNPACKING IT
