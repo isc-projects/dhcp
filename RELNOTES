@@ -87,9 +87,9 @@ ISC DHCP is open source software maintained by Internet Systems
 Consortium.  This product includes cryptographic software written
 by Eric Young (eay@cryptsoft.com).
 
-                Changes since 4.4.0 (New Features)
+            Changes since 4.4.0 (New Features)
 - none
-		Changes since 4.4.0 (Bug Fixes)
+		    Changes since 4.4.0 (Bug Fixes)
 
 - A delayed-ack value of 0 (the default), now correctly disables the delayed
   feature.  A change in 4.4.0 prohibited lease updates marking leases active
@@ -108,6 +108,12 @@ by Eric Young (eay@cryptsoft.com).
   readable form. Reported by Felix Wilhelm, Google Security Team.
   [ISC-Bugs #47139]
   CVE: CVE-2018-5732
+
+- Added use of new Bind9 compatibility header files, that are now necessary
+  to supply type definitions for primitive data types, removed from Bind9
+  proper.  Altered util/bind.sh to pull from Bind9 repo on gitlab.
+  [ISC-Bugs #48072]
+  [ISC-Bugs #48071]
 
                 Changes since 4.4.0b1 (New Features)
 
