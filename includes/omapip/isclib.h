@@ -48,6 +48,9 @@
 #include <string.h>
 #include <netdb.h>
 
+#include <isc/boolean.h>
+#include <isc/int.h>
+
 #include <isc/buffer.h>
 #include <isc/lex.h>
 #include <isc/lib.h>

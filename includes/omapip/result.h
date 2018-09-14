@@ -26,6 +26,7 @@
 #ifndef DHCP_RESULT_H
 #define DHCP_RESULT_H 1
 
+#include <isc/boolean.h>
 #include <isc/lang.h>
 #include <isc/resultclass.h>
 #include <isc/types.h>

@@ -27,11 +27,20 @@
 
 topdir=`pwd`
 binddir=$topdir/bind
-remote=--remote=repo.isc.org:/proj/git/prod/bind9.git
+
+# repo_host and repo_path are used together to from urls for wget calls
+# to fetch the version and kit.sh files, and then also as the --remote
+# argument passed into kit.sh
+repo_host="gitlab.isc.org"
+repo_path="isc-projects/bind9"
 
 case "${1:-}" in
---remote=*)
-        remote="${1}";
+--repo_host=*)
+        repo_host="${1}";
+        shift
+        ;;
+--repo_path=*)
+        repo_path="${1}";
         shift
         ;;
 esac
@@ -95,7 +104,7 @@ case $# in
 	   ;;
 	esac
 	;;
-    *) echo "usage: sh bind.sh [--remote=<path>] [<branch>|<version>]" >&2
+    *) echo "usage: sh bind.sh [--repo_host=<host>] [--repo_path=<project path>] [<branch>|<version>]" >&2
        exit 1
        ;;
 esac
@@ -119,18 +128,27 @@ else
 	cd $binddir
 
 	# Get the bind version file and move it to version.tmp
-	git archive --format tar $remote $BINDTAG version | tar xf -
+    wget https://$repo_host/$repo_path/raw/$BINDTAG/version
 	mv version version.tmp
+    if [ $? -ne 0 ]
+    then
+        echo "Fetch of version file failed"
+        exit -1
+    fi
 
 	# Get the bind release kit shell script
-	git archive --format tar $remote master:util/ | tar xf - kit.sh
+    wget https://$repo_host/$repo_path/raw/master/util/kit.sh
+    if [ $? -ne 0 ]
+    then
+        echo "Fetch of kit.sh failed"
+        exit -1
+    fi
 
 	# Create the bind tarball, which has the side effect of
 	# setting up the bind directory we will use for building
 	# the libraries
 	echo Creating tarball for $BINDTAG
-	sh kit.sh $remote $SNAP $BINDTAG $binddir
-
+	sh kit.sh --remote="git@$repo_host:$repo_path.git" $SNAP $BINDTAG $binddir
 	. ./version.tmp
 
 	version=${MAJORVER}.${MINORVER}.${PATCHVER}${RELEASETYPE}${RELEASEVER}
