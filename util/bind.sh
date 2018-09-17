@@ -34,16 +34,22 @@ binddir=$topdir/bind
 repo_host="gitlab.isc.org"
 repo_path="isc-projects/bind9"
 
-case "${1:-}" in
---repo_host=*)
-        repo_host="${1}";
-        shift
-        ;;
---repo_path=*)
-        repo_path="${1}";
-        shift
-        ;;
-esac
+while :
+do
+	case "${1:-}" in
+	--repo_host=*)
+		repo_host="${1}";
+		shift
+		continue
+		;;
+	--repo_path=*)
+		repo_path="${1}";
+		shift
+		continue
+		;;
+	esac
+	break;
+done
 
 case $# in 
     1)
@@ -104,7 +110,7 @@ case $# in
 	   ;;
 	esac
 	;;
-    *) echo "usage: sh bind.sh [--repo_host=<host>] [--repo_path=<project path>] [<branch>|<version>]" >&2
+    *) echo "usage: sh bind.sh [--repo_host=<host>] [--repo_path=<project path>] ( <branch>|<version> )" >&2
        exit 1
        ;;
 esac
