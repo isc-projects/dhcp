@@ -134,21 +134,33 @@ else
 	cd $binddir
 
 	# Get the bind version file and move it to version.tmp
-    wget https://$repo_host/$repo_path/raw/$BINDTAG/version
+	if type wget
+	then
+		wget https://$repo_host/$repo_path/raw/$BINDTAG/version ||
+		{ echo "Fetch of version file failed" ; exit -1; }
+	elif type fetch
+	then
+		fetch https://$repo_host/$repo_path/raw/$BINDTAG/version ||
+		{ echo "Fetch of version file failed" ; exit -1; }
+	else
+		echo "Fetch of version file failed"
+		exit 1
+	fi
 	mv version version.tmp
-    if [ $? -ne 0 ]
-    then
-        echo "Fetch of version file failed"
-        exit -1
-    fi
 
 	# Get the bind release kit shell script
-    wget https://$repo_host/$repo_path/raw/master/util/kit.sh
-    if [ $? -ne 0 ]
-    then
-        echo "Fetch of kit.sh failed"
-        exit -1
-    fi
+	if type wget
+	then
+		wget https://$repo_host/$repo_path/raw/master/util/kit.sh ||
+		{ echo "Fetch of kit.sh file failed" ; exit -1; }
+	elif type fetch
+	then
+		fetch https://$repo_host/$repo_path/raw/master/util/kit.sh ||
+		{ echo "Fetch of kit.sh failed" ; exit -1; }
+	else
+		echo "Fetch of kit.sh failed"
+		exit 1
+	fi
 
 	# Create the bind tarball, which has the side effect of
 	# setting up the bind directory we will use for building
