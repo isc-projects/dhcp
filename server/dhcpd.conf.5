@@ -3027,6 +3027,36 @@ checking - if its value is false, no ping check is done.
 .RE
 .PP
 The
+.I ping-cltt-secs
+statement
+.RS 0.25i
+.PP
+.B ping-cltt-secs
+.I seconds\fR\fB;\fR
+.PP
+The server will conduct a ping check if all the following conditions are true:
+.PP
+1. Ping checking is enabled.
+.PP
+2. The server is responding to a DISCOVER.
+.PP
+3. The lease to be offered is neither static nor active (i.e. still a valid
+lease).
+.PP
+4. And any of the following are true:
+    a. This will be the first offer of this lease (CLTT is 0).
+    b. The lease is being offered to a client other than its previous owner
+    c. The lease is being offered to its previous owner and more than
+    \fBping-cltt-secs\fR have elapsed since CLTT of the original lease.
+    d. The lease was abandoned and the server is attempting to reclaim it.
+
+.PP
+The \fBping-cltt-secs\fR statement allows the user to specify the amount of
+time that must elaspe after CLTT before a ping check will be conducted.
+The default value is sixty seconds.
+.RE
+.PP
+The
 .I ping-timeout
 statement
 .RS 0.25i

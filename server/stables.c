@@ -291,6 +291,7 @@ static struct option server_options[] = {
 	{ "release-on-roam", "f",	&server_universe,  SV_RELEASE_ON_ROAM, 1 },
 	{ "local-address6", "6",	&server_universe,  SV_LOCAL_ADDRESS6, 1 },
 	{ "bind-local-address6", "f",	&server_universe,  SV_BIND_LOCAL_ADDRESS6, 1 },
+	{ "ping-cltt-secs", "T",	&server_universe,  SV_PING_CLTT_SECS, 1 },
 	{ NULL, NULL, NULL, 0, 0 }
 };
 
