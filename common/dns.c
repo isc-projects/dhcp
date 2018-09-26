@@ -2708,7 +2708,7 @@ ddns_modify_fwd(dhcp_ddns_cb_t *ddns_cb, const char *file, int line)
 			     dns_rdataclass_in, zname,
 			     &prereqlist, &updatelist,
 			     zlist, tsec_key,
-			     DNS_CLIENTRESOPT_ALLOWRUN,
+			     DNS_CLIENTUPDOPT_ALLOWRUN,
 			     dhcp_gbl_ctx.task,
 			     ddns_interlude,
 			     (void *)ddns_cb,
@@ -2903,7 +2903,7 @@ ddns_modify_ptr(dhcp_ddns_cb_t *ddns_cb, const char *file, int line)
 			     dns_rdataclass_in, zname,
 			     NULL, &updatelist,
 			     zlist, tsec_key,
-			     DNS_CLIENTRESOPT_ALLOWRUN,
+			     DNS_CLIENTUPDOPT_ALLOWRUN,
 			     dhcp_gbl_ctx.task,
 			     ddns_interlude, (void *)ddns_cb,
 			     &ddns_cb->transaction);
