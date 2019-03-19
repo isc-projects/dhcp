@@ -104,6 +104,11 @@ by Eric Young (eay@cryptsoft.com).
   reporting the issue.
   [ISC-Bugs #47757]
 
+- Bind9 now defaults to requiring python to build. The Makefile for
+  building Bind9 when bundled with ISC DHCP was modified to turn off
+  this dependency.
+  [ISC-Bugs #3,!1   git #cc35f84943df44dac2499f3e16e8aaba7d54191d]
+
 		Changes since 4.4.0 (New Features)
 - none
 		Changes since 4.4.0 (Bug Fixes)
