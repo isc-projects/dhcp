@@ -3,7 +3,7 @@
    Domain Name Service subroutines. */
 
 /*
- * Copyright (c) 2004-2017 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2019 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2001-2003 by Internet Software Consortium
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -2047,7 +2047,7 @@ build_dsmm_fwd_add3(dhcp_ddns_cb_t   *ddns_cb,
  * When we're In Dual Stack Mixed Mode and ddns-other-guard-is-dynamic is ON
  * we need only determine if a guard record of the other type exists, to know
  * if we can add/replace and address record of our type.   In other words,
- * the presence of a dynamic entry made belonging to the "other" stack means
+ * the presence of a dynamic entry belonging to the "other" stack means
  * all entries for this name should be dynamic and we overwrite an unguarded
  * address record of our type.
  *
@@ -2073,6 +2073,25 @@ build_dsmm_fwd_add3_other(dhcp_ddns_cb_t   *ddns_cb,
 	log_call("build_fwd_add3_other", pname, uname);
 #endif
 	/* Construct the prereq list */
+
+	// If ID matching is on, a result of NXRRSET from add2 means
+	// either there is no guard of my type, or there is but
+	// it does not match this client.  We need to distinguish
+	// between those two cases here and only allow this add
+	// if there is no guard of my type.
+	if (ddns_cb->flags & DDNS_GUARD_ID_MUST_MATCH) {
+		/* No guard record of my type exists */
+		result = make_dns_dataset(dns_rdataclass_none,
+					  ddns_cb->dhcid_class,
+					  dataspace, NULL, 0, 0);
+		if (result != ISC_R_SUCCESS) {
+			return(result);
+		}
+
+		ISC_LIST_APPEND(pname->list, &dataspace->rdataset, link);
+		dataspace++;
+	}
+
 	/* A guard record of the other type exists */
 	result = make_dns_dataset(dns_rdataclass_any,
 				  ddns_cb->other_dhcid_class,

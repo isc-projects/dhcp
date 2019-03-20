@@ -107,7 +107,15 @@ by Eric Young (eay@cryptsoft.com).
 - Bind9 now defaults to requiring python to build. The Makefile for
   building Bind9 when bundled with ISC DHCP was modified to turn off
   this dependency.
-  [ISC-Bugs #3,!1   git #cc35f84943df44dac2499f3e16e8aaba7d54191d]
+  [ISC-Bugs #3,!1	git #cc35f84943df44dac2499f3e16e8aaba7d54191d]
+
+- Corrected a dual-stack mixed-mode issue that occurs when both
+  ddns-guard-id-must-match and ddns-other-guard-is-dynamic
+  are enabled and that caused the server to incorrectly interpret
+  the presence of a guard record belonging to another client as
+  a case of no guard record at all.  Thanks to Fernando Soto
+  from BlueCat Networks for reporting this issue.
+  [ISC-Bugs #1, !2	git TBD]
 
 		Changes since 4.4.0 (New Features)
 - none
