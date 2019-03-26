@@ -1,13 +1,13 @@
-# Kea Contributor's Guide
+# ISC DHCP Contributor's Guide
 
-So you found a bug in Kea or plan to develop an extension and want to send us a patch? Great! This
-page will explain how to contribute your changes smoothly.
+So you found a bug in ISC DHCP or plan to develop an extension and want to send us a patch? Great!
+This page will explain how to contribute your changes smoothly.
 
 ## Writing a patch
 
 Before you start working on a patch or a new feature, it is a good idea to discuss it first with
 DHCP developers. You can post your questions to the [dhcp-workers](https://lists.isc.org/mailman/listinfo/dhcp-workers)
-or [dhcp-users](https://lists.isc.org/mailman/listinfo/dhcp-users) mailing lists. The kea-users is
+or [dhcp-users](https://lists.isc.org/mailman/listinfo/dhcp-users) mailing lists. The dhcp-users is
 intended for users who are not interested in the internal workings or development details: it is
 OK to ask for feedback regarding new design or the best proposed solution to a certain problem.
 This is the best place to get user's feedback. The internal details, questions about the code and
@@ -19,7 +19,7 @@ system, but ISC DHCP is a portable software. Besides Linux, it is compiled and u
 uncommon systems like OpenBSD. Will your code compile and work there? What about endianness? It is
 likely that you used a regular x86 architecture machine to write your patch, but the software is
 expected to run on many other architectures. For a complete list of systems we build on, you may
-take a look at the [Jenkins build farm report](https://jenkins.isc.org/view/Kea_BuildFarm/).
+take a look at the [Jenkins build farm report](https://jenkins.isc.org/view/isc-dhcp/).
 
 ## Running unit-tests
 
@@ -28,6 +28,11 @@ projects, such as Kea, we require unit-test for almost every line of code. For o
 ISC DHCP, that was not developed with testability in mind, it's unfortunately impractical to require
 extensive unit-tests. Having said that, please think thoroughly if there is any way to develop
 unit-tests. The long term goal is to improve the situation.
+
+You should have also conducted some sort of system testing to verify that your changes do what you
+want. It would be extremely helpful if you can attach any configuration files (dhcpd and or
+dhclient), along with a step-by-step procedure to carry out the test(s).  This will help us verify
+your changes as extend our own system tests.
 
 Building ISC DHCP code from the repository is slightly different than the release tarballs. One
 major difference is that it does not have BIND source bundled inside and those have to be
@@ -39,8 +44,9 @@ sh util/bind.sh v4_4
 make
 ```
 
-Make sure you have ATF (Automated Test Framework) installed in your system. To run the unit-tests,
-simply run:
+Make sure you have ATF (Automated Test Framework) installed in your system. For more information
+about ATF, please refer to <dhcp source tree>/doc/devel/atf.dox.  Note, running "make devel" in this
+directory will generate the documentation. To run the unit-tests, simply run:
 
 ```bash
 make check
@@ -80,11 +86,11 @@ process much easier if it is for latest code from the Git master branch.
 Since you won't get write access to the ISC DHCP repository, you should fork it and then commit
 your changes to your own repo. How you organize the work depends entirely on you, but it seems
 reasonable to create a branch rather than working on your master.  Once you feel that your patch
-is ready, please commit your changes and push it to your copy of Kea repo. Then go to Kea project
-and [submit a Merge Request](https://gitlab.isc.org/isc-projects/kea/merge_requests/new).
+is ready, please commit your changes and push it to your copy of ISC DHCP repo. Then go to DHCP project
+and [submit a Merge Request](https://gitlab.isc.org/isc-projects/dhcp/merge_requests/new).
 
 TODO: I don't think this is necessary. If you can't access this link or don't see New Merge Request
-button on the [merge requests page](https://gitlab.isc.org/isc-projects/kea/merge_requests)
+button on the [merge requests page](https://gitlab.isc.org/isc-projects/dhcp/merge_requests)
 or the link gives you 404 error, please ask on dhcp-users and someone will help you out.
 
 Once you submit it, someone from the DHCP development team will look at it and will get back to you.
@@ -112,7 +118,7 @@ your patch being ignored are really high. Anyway, here they are:
 
 Once the MR is in the system, the action is on one of the ISC (and possibly other trusted) engineers.
 
-Sooner or later, one of ISC engineers will do the review. Here's the tricky part. One of Kea
+Sooner or later, one of ISC engineers will do the review. Here's the tricky part. One of ISC DHCP
 developers will review your patch, but it may not happen immediately. Unfortunately, developers
 are usually working under a tight schedule, so any extra unplanned review work may take a while
 sometimes. Having said that, we value external contributions very much and will do whatever we
@@ -121,7 +127,7 @@ after first review. To keep the code quality high, we use the same review proces
 patches as we do for internal code. It may take some cycles of review/updated patch submissions
 before the code is finally accepted. The nature of the review process is that it emphasizes areas
 that need improvement. If you are not used to the review process, you may get the impression that
-the feedback is negative. It is not: even the Kea developers seldom see reviews that say "All OK
+the feedback is negative. It is not: even the ISC developers seldom see reviews that say "All OK
 please merge".
 
 If we happen to have any comments that you as submitter are expected to address (and in the
