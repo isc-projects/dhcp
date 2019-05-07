@@ -2562,7 +2562,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 			int bill = 0;
 
 			for (i = 0; i < packet->class_count; i++) {
-				struct class *billclass, *subclass;
+				struct class *billclass, *superclass;
 
 				billclass = packet->classes[i];
 				if (billclass->lease_limit) {
@@ -2570,9 +2570,9 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 					if (bill_class(lease, billclass))
 						break;
 
-					subclass = billclass->superclass;
-					if (subclass == NULL)
-						cname = subclass->name;
+					superclass = billclass->superclass;
+					if (superclass != NULL)
+						cname = superclass->name;
 					else
 						cname = billclass->name;
 				}

@@ -129,6 +129,10 @@ by Eric Young (eay@cryptsoft.com).
   update ability (e.g. by undefining NSUPDATE).
   [ISC-Bugs, #16,!9 git ddb508ac083dae4ff83279dd240bad7f73a97b7d]
 
+- Corrected an issue that was causing the server, when running in
+  DHPCv4 mode, to segfault when class lease limits are reached.
+  [ISC-Bugs #13, !7  git #TBD]
+
 		Changes since 4.4.0 (New Features)
 - none
 		Changes since 4.4.0 (Bug Fixes)
