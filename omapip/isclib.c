@@ -1,5 +1,5 @@
 /*
- * Copyright(c) 2009-2017 by Internet Systems Consortium, Inc.("ISC")
+ * Copyright(c) 2009-2019 by Internet Systems Consortium, Inc.("ISC")
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -351,6 +351,7 @@ void dhcp_signal_handler(int signal) {
 	}
 }
 
+#if defined (NSUPDATE)
 isc_result_t dns_client_init() {
 	isc_result_t result;
 	if (dhcp_gbl_ctx.dnsclient == NULL) {
@@ -387,3 +388,4 @@ isc_result_t dns_client_init() {
 
 	return ISC_R_SUCCESS;
 }
+#endif // defined (NSUPDATE)

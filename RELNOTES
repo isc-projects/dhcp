@@ -109,6 +109,10 @@ by Eric Young (eay@cryptsoft.com).
   this dependency.
   [ISC-Bugs #3,!1   git #cc35f84943df44dac2499f3e16e8aaba7d54191d]
 
+- Corrected a compilation issue that occurred when building without DNS
+  update ability (e.g. by undefining NSUPDATE).
+  [ISC-Bugs, #16,!9 git #TBD]
+
 		Changes since 4.4.0 (New Features)
 - none
 		Changes since 4.4.0 (Bug Fixes)

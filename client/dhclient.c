@@ -3,7 +3,7 @@
    DHCP Client. */
 
 /*
- * Copyright (c) 2004-2018 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2019 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -120,8 +120,10 @@ static int check_domain_name_list(const char *ptr, size_t len, int dots);
 static int check_option_values(struct universe *universe, unsigned int opt,
 			       const char *ptr, size_t len);
 
+#if defined(NSUPDATE)
 static void dhclient_ddns_cb_free(dhcp_ddns_cb_t *ddns_cb,
                                    char* file, int line);
+#endif
 
 /*!
  *
@@ -5382,6 +5384,7 @@ add_reject(struct packet *packet) {
 	log_info("Server added to list of rejected servers.");
 }
 
+#if defined(NSUPDATE)
 /* Wrapper function around common ddns_cb_free function that ensures
  * we set the client_state pointer to the control block to NULL. */
 static void
@@ -5395,6 +5398,7 @@ dhclient_ddns_cb_free(dhcp_ddns_cb_t *ddns_cb, char* file, int line) {
         ddns_cb_free(ddns_cb, file, line);
     }
 }
+#endif
 
 #if defined(DHCPv6) && defined(DHCP4o6)
 /*
