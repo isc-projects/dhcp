@@ -3,7 +3,7 @@
    Common parser code for dhcpd and dhclient. */
 
 /*
- * Copyright (c) 2004-2017 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2019 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -5567,7 +5567,7 @@ int parse_warn (struct parse *cfile, const char *fmt, ...)
 	va_list list;
 	char lexbuf [256];
 	char mbuf [1024];
-	char fbuf [1024];
+	char fbuf [2048];
 	unsigned i, lix;
 	
 	do_percentm (mbuf, fmt);

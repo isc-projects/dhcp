@@ -135,6 +135,9 @@ by Eric Young (eay@cryptsoft.com).
   and submitting a patch.
   [ISC-Bugs #13,!7  git dfcbe359ab278cad70015994ca73ef50d626b23a]
 
+- Made minor changes to eliminate warnings when compiled with GCC 9.
+  [ISC-Bugs #15,!10]   git #TBD]
+
 		Changes since 4.4.0 (New Features)
 - none
 		Changes since 4.4.0 (Bug Fixes)
