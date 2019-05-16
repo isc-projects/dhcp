@@ -131,6 +131,8 @@ by Eric Young (eay@cryptsoft.com).
 
 - Corrected an issue that was causing the server, when running in
   DHPCv4 mode, to segfault when class lease limits are reached.
+  Thanks to Peter Nagy at Porion-Digital for reporting the matter
+  and submitting a patch.
   [ISC-Bugs #13, !7  git #TBD]
 
 		Changes since 4.4.0 (New Features)
