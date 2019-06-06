@@ -123,7 +123,8 @@ static int check_option_values(struct universe *universe, unsigned int opt,
 #if defined(NSUPDATE)
 static void dhclient_ddns_cb_free(dhcp_ddns_cb_t *ddns_cb,
                                    char* file, int line);
-#endif
+#endif /* defined NSUPDATE */
+
 
 /*!
  *
@@ -1575,7 +1576,8 @@ void bind_lease (client)
 #if defined (NSUPDATE)
 	if (client->config->do_forward_update)
 		dhclient_schedule_updates(client, &client->active->address, 1);
-#endif
+#endif /* defined NSUPDATE */
+
 }
 
 /* state_bound is called when we've successfully bound to a particular
@@ -4801,7 +4803,8 @@ client_dns_remove(struct client_state *client,
 		}
 	}
 }
-#endif
+#endif /* defined NSUPDATE */
+
 
 isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
 				     control_object_state_t newstate)
@@ -4842,7 +4845,8 @@ isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
 				    client_dns_remove(client,
 						      &client->active->address);
 			    }
-#endif
+#endif /* defined NSUPDATE */
+
 			    do_release (client);
 		    }
 		    break;
@@ -5189,7 +5193,7 @@ dhclient_schedule_updates(struct client_state *client,
 			  piaddr(*addr));
 	}
 }
-#endif
+#endif /* defined NSUPDATE */
 
 void
 dhcpv4_client_assignments(void)
@@ -5398,7 +5402,7 @@ dhclient_ddns_cb_free(dhcp_ddns_cb_t *ddns_cb, char* file, int line) {
         ddns_cb_free(ddns_cb, file, line);
     }
 }
-#endif
+#endif /* defined NSUPDATE */
 
 #if defined(DHCPv6) && defined(DHCP4o6)
 /*

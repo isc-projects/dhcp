@@ -143,6 +143,7 @@ extern int shutdown_signal;
 
 #if defined (NSUPDATE)
 isc_result_t dns_client_init();
-#endif
+#endif /* defined NSUPDATE */
+
 
 #endif /* ISCLIB_H */
