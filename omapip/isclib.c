@@ -1,5 +1,5 @@
 /*
- * Copyright(c) 2009-2017 by Internet Systems Consortium, Inc.("ISC")
+ * Copyright(c) 2009-2019 by Internet Systems Consortium, Inc.("ISC")
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -82,7 +82,7 @@ dhcp_dns_client_setservers(void)
 	}
 	return (result);
 }
-#endif
+#endif /* defined NSUPDATE */
 
 void
 isclib_cleanup(void)
@@ -90,7 +90,7 @@ isclib_cleanup(void)
 #if defined (NSUPDATE)
 	if (dhcp_gbl_ctx.dnsclient != NULL)
 		dns_client_destroy((dns_client_t **)&dhcp_gbl_ctx.dnsclient);
-#endif
+#endif /* defined NSUPDATE */
 
 	if (dhcp_gbl_ctx.task != NULL) {
 		isc_task_shutdown(dhcp_gbl_ctx.task);
@@ -171,14 +171,14 @@ dhcp_context_create(int flags,
 		result = dns_lib_init();
 		if (result != ISC_R_SUCCESS)
 			goto cleanup;
-#else
+#else /* defined NSUPDATE */
 		/* The dst library is inited as part of dns_lib_init, we don't
 		 * need it if NSUPDATE is enabled */
 		result = dst_lib_init(dhcp_gbl_ctx.mctx, NULL, 0);
 		if (result != ISC_R_SUCCESS)
 			goto cleanup;
 
-#endif
+#endif /* defined NSUPDATE */
 
 		result = isc_appctx_create(dhcp_gbl_ctx.mctx,
 					   &dhcp_gbl_ctx.actx);
@@ -246,7 +246,7 @@ dhcp_context_create(int flags,
 			result = dns_client_init();
 		}
 	}
-#endif
+#endif /* defined NSUPDATE */
 
 	return(ISC_R_SUCCESS);
 
@@ -351,6 +351,7 @@ void dhcp_signal_handler(int signal) {
 	}
 }
 
+#if defined (NSUPDATE)
 isc_result_t dns_client_init() {
 	isc_result_t result;
 	if (dhcp_gbl_ctx.dnsclient == NULL) {
@@ -387,3 +388,4 @@ isc_result_t dns_client_init() {
 
 	return ISC_R_SUCCESS;
 }
+#endif /* defined (NSUPDATE) */

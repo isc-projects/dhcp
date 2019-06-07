@@ -3,7 +3,7 @@
    DHCP Client. */
 
 /*
- * Copyright (c) 2004-2018 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2019 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -120,8 +120,11 @@ static int check_domain_name_list(const char *ptr, size_t len, int dots);
 static int check_option_values(struct universe *universe, unsigned int opt,
 			       const char *ptr, size_t len);
 
+#if defined(NSUPDATE)
 static void dhclient_ddns_cb_free(dhcp_ddns_cb_t *ddns_cb,
                                    char* file, int line);
+#endif /* defined NSUPDATE */
+
 
 /*!
  *
@@ -1573,7 +1576,8 @@ void bind_lease (client)
 #if defined (NSUPDATE)
 	if (client->config->do_forward_update)
 		dhclient_schedule_updates(client, &client->active->address, 1);
-#endif
+#endif /* defined NSUPDATE */
+
 }
 
 /* state_bound is called when we've successfully bound to a particular
@@ -4799,7 +4803,8 @@ client_dns_remove(struct client_state *client,
 		}
 	}
 }
-#endif
+#endif /* defined NSUPDATE */
+
 
 isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
 				     control_object_state_t newstate)
@@ -4840,7 +4845,8 @@ isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
 				    client_dns_remove(client,
 						      &client->active->address);
 			    }
-#endif
+#endif /* defined NSUPDATE */
+
 			    do_release (client);
 		    }
 		    break;
@@ -5187,7 +5193,7 @@ dhclient_schedule_updates(struct client_state *client,
 			  piaddr(*addr));
 	}
 }
-#endif
+#endif /* defined NSUPDATE */
 
 void
 dhcpv4_client_assignments(void)
@@ -5382,6 +5388,7 @@ add_reject(struct packet *packet) {
 	log_info("Server added to list of rejected servers.");
 }
 
+#if defined(NSUPDATE)
 /* Wrapper function around common ddns_cb_free function that ensures
  * we set the client_state pointer to the control block to NULL. */
 static void
@@ -5395,6 +5402,7 @@ dhclient_ddns_cb_free(dhcp_ddns_cb_t *ddns_cb, char* file, int line) {
         ddns_cb_free(ddns_cb, file, line);
     }
 }
+#endif /* defined NSUPDATE */
 
 #if defined(DHCPv6) && defined(DHCP4o6)
 /*

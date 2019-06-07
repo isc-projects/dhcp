@@ -117,6 +117,10 @@ by Eric Young (eay@cryptsoft.com).
   from BlueCat Networks for reporting this issue.
   [ISC-Bugs #1, !2	git 9ef78585440f568da2a2a0093a8c40c49118e292]
 
+- Corrected a compilation issue that occurred when building without DNS
+  update ability (e.g. by undefining NSUPDATE).
+  [ISC-Bugs, #16,!9 git #TBD]
+
 		Changes since 4.4.0 (New Features)
 - none
 		Changes since 4.4.0 (Bug Fixes)
