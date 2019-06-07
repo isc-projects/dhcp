@@ -3,7 +3,7 @@
    DHCP Protocol engine. */
 
 /*
- * Copyright (c) 2004-2018 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2019 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -3609,10 +3609,13 @@ int do_ping_check(struct packet* packet, struct lease_state* state,
 		  struct lease* lease, TIME original_cltt,
 		  int same_client) {
 	TIME ping_timeout = DEFAULT_PING_TIMEOUT;
+	TIME ping_timeout_ms = DEFAULT_PING_TIMEOUT_MS;
 	struct option_cache *oc = NULL;
 	struct data_string ds;
 	struct timeval tv;
 	int ignorep;
+	int timeout_secs;
+	int timeout_ms;
 
 	// Don't go any further if lease is active or static.
 	if (lease->binding_state == FTS_ACTIVE || lease->flags & STATIC_LEASE) {
@@ -3658,6 +3661,7 @@ int do_ping_check(struct packet* packet, struct lease_state* state,
 
 	/* Determine whether to use configured or default ping timeout. */
 	memset(&ds, 0, sizeof(ds));
+
 	oc = lookup_option (&server_universe, state->options, SV_PING_TIMEOUT);
 	if (oc &&
 	    (evaluate_option_cache (&ds, packet, lease, 0,
@@ -3670,26 +3674,51 @@ int do_ping_check(struct packet* packet, struct lease_state* state,
 		data_string_forget (&ds, MDL);
 	}
 
+	oc = lookup_option (&server_universe, state->options, SV_PING_TIMEOUT_MS);
+	if (oc &&
+	    (evaluate_option_cache (&ds, packet, lease, 0,
+				    packet->options, state->options,
+				    &lease->scope, oc, MDL))) {
+		if (ds.len == sizeof (u_int32_t)) {
+			ping_timeout_ms = getULong (ds.data);
+		}
+
+		data_string_forget (&ds, MDL);
+	}
+
+	/*
+	 * Set the timeout for the ping to the current timeval plus
+	 * the configured time out. Use ping-timeout-ms if it is > 0.
+	 * This overrides ping-timeout allowing users to specify it in
+	 * milliseconds.
+	*/
+	if (ping_timeout_ms > 0) {
+		timeout_secs = ping_timeout_ms / 1000;
+		timeout_ms = ping_timeout_ms % 1000;
+	} else {
+		timeout_secs = ping_timeout;
+		timeout_ms = 0;
+
+	}
+
+	tv.tv_sec = cur_tv.tv_sec + timeout_secs;
+	tv.tv_usec = cur_tv.tv_usec + (timeout_ms * 1000);
+
 #ifdef DEBUG
 	log_debug ("Pinging:%s, state: %d, same client? %s, "
-		   " orig_cltt %s, elasped: %ld" ,
+		   " orig_cltt %s, elasped: %ld, timeout in: %d.%d secs" ,
                    piaddr(lease->ip_addr),
 		   lease->binding_state,
 		   (same_client ? "y" : "n"),
 		   (original_cltt ? print_time(original_cltt) : "0"),
-		   (original_cltt ? (long)(cur_time - original_cltt) : 0));
+		   (original_cltt ? (long)(cur_time - original_cltt) : 0),
+		   timeout_secs, timeout_ms);
+
 #endif
 
-	/*
-	 * Set a timeout for 'ping-timeout' seconds from NOW, including
-	 * current microseconds.  As ping-timeout defaults to 1, the
-	 * exclusion of current microseconds causes a value somewhere
-	 * /between/ zero and one.
-	*/
-	tv.tv_sec = cur_tv.tv_sec + ping_timeout;
-	tv.tv_usec = cur_tv.tv_usec;
 	add_timeout (&tv, lease_ping_timeout, lease, (tvref_t)lease_reference,
 		     (tvunref_t)lease_dereference);
+
 	return (1);
 }
 

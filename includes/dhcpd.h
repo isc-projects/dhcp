@@ -816,15 +816,19 @@ struct lease_state {
 #define SV_LOCAL_ADDRESS6		97
 #define SV_BIND_LOCAL_ADDRESS6		98
 #define SV_PING_CLTT_SECS		99
+#define SV_PING_TIMEOUT_MS		100
 
 #if !defined (DEFAULT_PING_TIMEOUT)
 # define DEFAULT_PING_TIMEOUT 1
 #endif
 
+#if !defined (DEFAULT_PING_TIMEOUT_MS)
+# define DEFAULT_PING_TIMEOUT_MS 0
+#endif
+
 #if !defined (DEFAULT_PING_CLTT_SECS)
 # define DEFAULT_PING_CLTT_SECS 60  /* in seconds */
 #endif
-
 
 #if !defined (DEFAULT_DELAYED_ACK)
 # define DEFAULT_DELAYED_ACK 0  /* default 0 disables delayed acking */
