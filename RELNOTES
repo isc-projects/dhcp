@@ -96,6 +96,14 @@ by Eric Young (eay@cryptsoft.com).
   a more detailed discussion.
   [ISC-Bugs #36283]
 
+- A new configuration parameter, ping-timeout-ms (v4 operation only),
+  has been added that allows the user to specify the amount of time
+  the server waits for a ping-check response in milliseconds rather
+  than in seconds (via ping-timeout). When greater than zero, the value
+  of ping-timeout-ms will override the value of ping-timeout.  Thanks
+  to Jay Doran from Bluecat Networks for suggesting this feature.
+  [ISC-Bugs #10		git ebe4f7ae427fa91f561a0b6e5f242de08d319a16]
+
 		Changes since 4.4.1 (Bug Fixes)
 
 - Corrected a misuse of the BIND9 DDNS API which caused DDNS updates to be
@@ -115,11 +123,11 @@ by Eric Young (eay@cryptsoft.com).
   the presence of a guard record belonging to another client as
   a case of no guard record at all.  Thanks to Fernando Soto
   from BlueCat Networks for reporting this issue.
-  [ISC-Bugs #1, !2	git 9ef78585440f568da2a2a0093a8c40c49118e292]
+  [ISC-Bugs #1,!2	git 9ef78585440f568da2a2a0093a8c40c49118e292]
 
 - Corrected a compilation issue that occurred when building without DNS
   update ability (e.g. by undefining NSUPDATE).
-  [ISC-Bugs, #16,!9 git #TBD]
+  [ISC-Bugs, #16,!9 git ddb508ac083dae4ff83279dd240bad7f73a97b7d]
 
 		Changes since 4.4.0 (New Features)
 - none
