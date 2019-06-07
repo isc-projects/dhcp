@@ -102,7 +102,7 @@ by Eric Young (eay@cryptsoft.com).
   than in seconds (via ping-timeout). When greater than zero, the value
   of ping-timeout-ms will override the value of ping-timeout.  Thanks
   to Jay Doran from Bluecat Networks for suggesting this feature.
-  [ISC-Bugs #10		git ebe4f7ae427fa91f561a0b6e5f242de08d319a16]
+  [ISC-Bugs #10,!6		git ebe4f7ae427fa91f561a0b6e5f242de08d319a16]
 
 		Changes since 4.4.1 (Bug Fixes)
 
@@ -127,13 +127,13 @@ by Eric Young (eay@cryptsoft.com).
 
 - Corrected a compilation issue that occurred when building without DNS
   update ability (e.g. by undefining NSUPDATE).
-  [ISC-Bugs, #16,!9 git ddb508ac083dae4ff83279dd240bad7f73a97b7d]
+  [ISC-Bugs #16,!9  git ddb508ac083dae4ff83279dd240bad7f73a97b7d]
 
 - Corrected an issue that was causing the server, when running in
   DHPCv4 mode, to segfault when class lease limits are reached.
   Thanks to Peter Nagy at Porion-Digital for reporting the matter
   and submitting a patch.
-  [ISC-Bugs #13, !7  git #TBD]
+  [ISC-Bugs #13,!7  git dfcbe359ab278cad70015994ca73ef50d626b23a]
 
 		Changes since 4.4.0 (New Features)
 - none
