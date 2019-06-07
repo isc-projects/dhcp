@@ -3704,9 +3704,6 @@ int do_ping_check(struct packet* packet, struct lease_state* state,
 	tv.tv_sec = cur_tv.tv_sec + timeout_secs;
 	tv.tv_usec = cur_tv.tv_usec + (timeout_ms * 1000);
 
-	add_timeout (&tv, lease_ping_timeout, lease, (tvref_t)lease_reference,
-		     (tvunref_t)lease_dereference);
-
 #ifdef DEBUG
 	log_debug ("Pinging:%s, state: %d, same client? %s, "
 		   " orig_cltt %s, elasped: %ld, timeout in: %d.%d secs" ,
@@ -3718,6 +3715,10 @@ int do_ping_check(struct packet* packet, struct lease_state* state,
 		   timeout_secs, timeout_ms);
 
 #endif
+
+	add_timeout (&tv, lease_ping_timeout, lease, (tvref_t)lease_reference,
+		     (tvunref_t)lease_dereference);
+
 	return (1);
 }
 
