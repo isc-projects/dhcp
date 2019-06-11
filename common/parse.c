@@ -5566,19 +5566,25 @@ int parse_warn (struct parse *cfile, const char *fmt, ...)
 {
 	va_list list;
 	char lexbuf [256];
-	char mbuf [1024];
+	char mbuf [1024];  /* errorwarn.c CVT_BUF_MAX + 1 */
 	char fbuf [2048];
+	char final[4096];
 	unsigned i, lix;
-	
-	do_percentm (mbuf, fmt);
+
+	/* Replace %m in fmt with errno error text */
+	do_percentm (mbuf, sizeof(mbuf), fmt);
+
 	/* %Audit% This is log output. %2004.06.17,Safe%
 	 * If we truncate we hope the user can get a hint from the log.
 	 */
+
+	/* Prepend the file and line number */
 	snprintf (fbuf, sizeof fbuf, "%s line %d: %s",
 		  cfile -> tlname, cfile -> lexline, mbuf);
-	
+
+	/* Now add the var args to the format for the final log message. */
 	va_start (list, fmt);
-	vsnprintf (mbuf, sizeof mbuf, fbuf, list);
+	vsnprintf (final, sizeof final, fbuf, list);
 	va_end (list);
 
 	lix = 0;
@@ -5594,14 +5600,14 @@ int parse_warn (struct parse *cfile, const char *fmt, ...)
 	lexbuf [lix] = 0;
 
 #ifndef DEBUG
-	syslog (LOG_ERR, "%s", mbuf);
+	syslog (LOG_ERR, "%s", final);
 	syslog (LOG_ERR, "%s", cfile -> token_line);
 	if (cfile -> lexchar < 81)
 		syslog (LOG_ERR, "%s^", lexbuf);
 #endif
 
 	if (log_perror) {
-		IGNORE_RET (write (STDERR_FILENO, mbuf, strlen (mbuf)));
+		IGNORE_RET (write (STDERR_FILENO, final, strlen (final)));
 		IGNORE_RET (write (STDERR_FILENO, "\n", 1));
 		IGNORE_RET (write (STDERR_FILENO, cfile -> token_line,
 				   strlen (cfile -> token_line)));

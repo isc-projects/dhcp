@@ -1392,7 +1392,8 @@ struct interface_info {
 					   interface (if any). */
 	unsigned remote_id_len;		/* Length of Remote ID. */
 
-	char name [IFNAMSIZ+1];		/* Its name... */
+	char name [IFNAMSIZ];		/* Its name... */
+
 	int index;			/* Its if_nametoindex(). */
 	int rfdesc;			/* Its read file descriptor. */
 	int wfdesc;			/* Its write file descriptor, if

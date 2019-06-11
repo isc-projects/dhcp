@@ -288,7 +288,8 @@ int log_info (const char *, ...)
 	__attribute__((__format__(__printf__,1,2)));
 int log_debug (const char *, ...)
 	__attribute__((__format__(__printf__,1,2)));
-void do_percentm (char *obuf, const char *ibuf);
+
+void do_percentm (char *obuf, size_t obufsize, const char *ibuf);
 
 isc_result_t uerr2isc (int);
 isc_result_t ns_rcode_to_isc (int);
