@@ -3,7 +3,7 @@
    Parser for dhcpd config file... */
 
 /*
- * Copyright (c) 2004-2017 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2019 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -911,7 +911,7 @@ void parse_failover_peer (cfile, group, type)
 	if (is_identifier (token) || token == STRING) {
 		name = dmalloc (strlen (val) + 1, MDL);
 		if (!name)
-			log_fatal ("no memory for peer name %s", name);
+			log_fatal ("no memory for peer name %s", val);
 		strcpy (name, val);
 	} else {
 		parse_warn (cfile, "expecting failover peer name.");
@@ -1226,7 +1226,7 @@ void parse_failover_state_declaration (struct parse *cfile,
 			name = dmalloc (strlen (val) + 1, MDL);
 			if (!name)
 				log_fatal ("failover peer name %s: no memory",
-					   name);
+					   val);
 			strcpy (name, val);
 		} else {
 			parse_warn (cfile, "expecting failover peer name.");

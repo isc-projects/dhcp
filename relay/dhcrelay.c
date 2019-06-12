@@ -3,7 +3,7 @@
    DHCP/BOOTP Relay Agent. */
 
 /*
- * Copyright(c) 2004-2018 by Internet Systems Consortium, Inc.("ISC")
+ * Copyright(c) 2004-2019 by Internet Systems Consortium, Inc.("ISC")
  * Copyright(c) 1997-2003 by Internet Software Consortium
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -2119,7 +2119,7 @@ void request_v4_interface(const char* name, int flags) {
 		  (flags & INTERFACE_UPSTREAM ? 'Y' : 'N'),
 		  (flags & INTERFACE_DOWNSTREAM ? 'Y' : 'N'));
 
-        strncpy(tmp->name, name, len);
+        memcpy(tmp->name, name, len);
         interface_snorf(tmp, (INTERFACE_REQUESTED | flags));
         interface_dereference(&tmp, MDL);
 }
