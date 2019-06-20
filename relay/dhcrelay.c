@@ -186,6 +186,10 @@ static const char use_v6command[] = "Command not used for DHCPv4: %s";
 
 static void
 usage(const char *sfmt, const char *sarg) {
+        log_info("%s %s", message, PACKAGE_VERSION);
+        log_info(copyright);
+        log_info(arr);
+        log_info(url);
 
 	/* If desired print out the specific error message */
 #ifdef PRINT_SPECIFIC_CL_ERRORS
