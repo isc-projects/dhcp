@@ -72,6 +72,12 @@ We welcome comments from DHCP users, about this or anything else we do.
 Email Vicky Risk, Product Manager at vicky@isc.org or discuss on
 dhcp-users@lists.isc.org.
 
+			Changes since 4.1-ESV-R15
+
+- Corrected dhclient command line parsing for --dad-wait-time that causes
+  even valid values to fail as invalid on some environments.
+  [ISC-Bugs #46535]
+
 			Changes since 4.1-ESV-R15b1
 
 - None
