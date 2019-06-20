@@ -2629,7 +2629,7 @@ void commit_leases_timeout (void *);
 int commit_leases (void);
 int commit_leases_timed (void);
 void db_startup (int);
-int new_lease_file (void);
+int new_lease_file (int test_mode);
 int group_writer (struct group_object *);
 int write_ia(const struct ia_xx *);
 

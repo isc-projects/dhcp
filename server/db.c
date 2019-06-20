@@ -106,7 +106,7 @@ int write_lease (lease)
 	/* If the lease file is corrupt, don't try to write any more leases
 	   until we've written a good lease file. */
 	if (lease_file_is_corrupt)
-		if (!new_lease_file ())
+		if (!new_lease_file (0))
 			return 0;
 
 	if (counting)
@@ -289,7 +289,7 @@ int write_host (host)
 	/* If the lease file is corrupt, don't try to write any more leases
 	   until we've written a good lease file. */
 	if (lease_file_is_corrupt)
-		if (!new_lease_file ())
+		if (!new_lease_file (0))
 			return 0;
 
 	if (!db_printable((unsigned char *)host->name))
@@ -438,7 +438,7 @@ int write_group (group)
 	/* If the lease file is corrupt, don't try to write any more leases
 	   until we've written a good lease file. */
 	if (lease_file_is_corrupt)
-		if (!new_lease_file ())
+		if (!new_lease_file (0))
 			return 0;
 
 	if (!db_printable((unsigned char *)group->name))
@@ -514,7 +514,7 @@ write_ia(const struct ia_xx *ia) {
 	 * leases until we've written a good lease file. 
 	 */
 	if (lease_file_is_corrupt) {
-		if (!new_lease_file()) {
+		if (!new_lease_file(0)) {
 			return 0;
 		}
 	}
@@ -663,7 +663,7 @@ write_server_duid(void) {
 	 * leases until we've written a good lease file. 
 	 */
 	if (lease_file_is_corrupt) {
-		if (!new_lease_file()) {
+		if (!new_lease_file(0)) {
 			return 0;
 		}
 	}
@@ -708,7 +708,7 @@ int write_failover_state (dhcp_failover_state_t *state)
 	const char *tval;
 
 	if (lease_file_is_corrupt)
-		if (!new_lease_file ())
+		if (!new_lease_file (0))
 			return 0;
 
 	errno = 0;
@@ -933,7 +933,7 @@ int write_billing_class (class)
 	int errors = 0;
 
 	if (lease_file_is_corrupt)
-		if (!new_lease_file ())
+		if (!new_lease_file (0))
 			return 0;
 
 	if (!class -> superclass) {
@@ -987,7 +987,7 @@ int commit_leases ()
 	if (count && cur_time - write_time > LEASE_REWRITE_PERIOD) {
 		count = 0;
 		write_time = cur_time;
-		new_lease_file ();
+		new_lease_file (0);
 	}
 	return 1;
 }
@@ -1007,9 +1007,9 @@ int commit_leases_timed()
 	return (1);
 }
 
-void db_startup (testp)
-	int testp;
+void db_startup (int test_mode)
 {
+	const char *current_db_path;
 	isc_result_t status;
 
 #if defined (TRACING)
@@ -1036,22 +1036,26 @@ void db_startup (testp)
 	   append it, so we create one immediately (maybe this isn't
 	   the best solution... */
 	if (trace_playback ()) {
-		new_lease_file ();
+		new_lease_file (0);
 	}
 #endif
-	if (!testp) {
-		db_file = fopen (path_dhcpd_db, "a");
-		if (!db_file)
-			log_fatal ("Can't open %s for append.", path_dhcpd_db);
-		expire_all_pools ();
+	/* expire_all_pools will cause writes to the "current" lease file.
+	* Therefore, in test mode we need to point db_file to a disposable
+	* file to protect the original lease file. */
+	current_db_path = (test_mode ? "/dev/null" : path_dhcpd_db);
+	db_file = fopen (current_db_path, "a");
+	if (!db_file) {
+		log_fatal ("Can't open %s for append.", current_db_path);
+	}
+
+	expire_all_pools ();
 #if defined (TRACING)
-		if (trace_playback ())
-			write_time = cur_time;
-		else
+	if (trace_playback ())
+		write_time = cur_time;
+	else
 #endif
-			time(&write_time);
-		new_lease_file ();
-	}
+	time(&write_time);
+	new_lease_file (test_mode);
 
 #if defined(REPORT_HASH_PERFORMANCE)
 	log_info("Host HW hash:   %s", host_hash_report(host_hw_addr_hash));
@@ -1064,7 +1068,7 @@ void db_startup (testp)
 #endif
 }
 
-int new_lease_file ()
+int new_lease_file (int test_mode)
 {
 	char newfname [512];
 	char backfname [512];
@@ -1153,6 +1157,14 @@ int new_lease_file ()
 	counting = 0;
 	if (!write_leases ())
 		goto fail;
+
+	if (test_mode) {
+		log_debug("Lease file test successful,"
+			  " removing temp lease file: %s",
+			  newfname);
+		(void)unlink (newfname);
+		return (1);
+	}
 
 #if defined (TRACING)
 	if (!trace_playback ()) {

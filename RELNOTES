@@ -84,6 +84,14 @@ dhcp-users@lists.isc.org.
   in the lease file causing issues with DDNS and so forth.
   [ISC-bugs #43786]
 
+- When given the -T command line argument, in addition to reading the
+  current lease file, the server will write the leases to a temporary
+  lease file.  This can help detect issues in server configuration that
+  only surface when leases are written to the file.  The current lease
+  file will not be modified and the temporary lease file is removed upon
+  completion of the test.
+  [ISC-Bugs #22267]
+
 			Changes since 4.1-ESV-R15b1
 
 - None
