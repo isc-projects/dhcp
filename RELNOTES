@@ -78,6 +78,12 @@ dhcp-users@lists.isc.org.
   even valid values to fail as invalid on some environments.
   [ISC-Bugs #46535]
 
+- Added to code ignore empty IPv4 host name option (code 12). While RFC 2132
+  states the option cannot be empty, some clients are apparently capable of
+  sending it. Prior to this the server was attempting to use it and store it
+  in the lease file causing issues with DDNS and so forth.
+  [ISC-bugs #43786]
+
 			Changes since 4.1-ESV-R15b1
 
 - None

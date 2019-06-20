@@ -187,6 +187,14 @@ int parse_option_buffer (options, buffer, length, universe)
 			return 0;
 		}
 
+		if (universe == &dhcp_universe && code == DHO_HOST_NAME &&
+		    len == 0) {
+			/* non-compliant clients can send it
+			* we'll just drop it and go on */
+			log_debug ("Ignoring empty DHO_HOST_NAME option");
+			option_dereference(&option, MDL);
+		}
+
 		/* If the option contains an encapsulation, parse it.   If
 		   the parse fails, or the option isn't an encapsulation (by
 		   far the most common case), or the option isn't entirely
