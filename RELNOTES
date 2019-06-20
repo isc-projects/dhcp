@@ -105,6 +105,10 @@ dhcp-users@lists.isc.org.
   when building with --enable-use-sockets and --enable-ipv4-pktinfo.
   [ISC-Bugs #36118]
 
+- Added clarifying text to dhcpd.conf.5 explaining the class match expressions
+  cannot rely on the results of executable statements.
+  [ISC-Bugs #45451]
+
 			Changes since 4.1-ESV-R15b1
 
 - None
