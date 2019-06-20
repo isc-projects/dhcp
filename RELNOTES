@@ -100,6 +100,11 @@ dhcp-users@lists.isc.org.
   to Fernando Soto at Bluecat for bringing this matter to our attention.
   [ISC-Bugs #46859]
 
+- Removed an "Impossible condition" error upon exit in the dhcpd server that
+  has been shutdown via OMAPI. This condition was only apparent under Solaris
+  when building with --enable-use-sockets and --enable-ipv4-pktinfo.
+  [ISC-Bugs #36118]
+
 			Changes since 4.1-ESV-R15b1
 
 - None

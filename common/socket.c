@@ -404,7 +404,6 @@ void if_deregister_receive (info)
 #if defined(IP_PKTINFO) && defined(IP_RECVPKTINFO) && defined(USE_V4_PKTINFO)
 	/* Dereference the global v4 socket. */
 	if ((info->rfdesc == global_v4_socket) &&
-	    (info->wfdesc == global_v4_socket) &&
 	    (global_v4_socket_references > 0)) {
 		global_v4_socket_references--;
 		info->rfdesc = -1;
