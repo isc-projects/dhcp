@@ -92,6 +92,14 @@ dhcp-users@lists.isc.org.
   completion of the test.
   [ISC-Bugs #22267]
 
+- The server now recognizes environment variables PATH_DHCPD_DB and
+  PATH_DHCPD_PID.  These had been incorrectly compiled out of the code
+  unless DHCPv6 support was disabled. Additionally, the server man
+  pages were corrected to accurately reflect how the server chooses
+  file names (see lease-file-name and pid-file-name statements). Thanks
+  to Fernando Soto at Bluecat for bringing this matter to our attention.
+  [ISC-Bugs #46859]
+
 			Changes since 4.1-ESV-R15b1
 
 - None
