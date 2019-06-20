@@ -336,13 +336,13 @@ which case the server will send a DHCPNAK even though it doesn't know
 about the address.
 .PP
 There may be a host declaration matching the client's identification.
-If that host declaration contains a fixed-address declaration that 
+If that host declaration contains a fixed-address declaration that
 lists an IP address that is valid for the network segment to which the
-client is connected.  In this case, the DHCP server will never do
-dynamic address allocation.  In this case, the client is \fIrequired\fR
-to take the address specified in the host declaration.  If the
-client sends a DHCPREQUEST for some other address, the server will respond
-with a DHCPNAK.
+client is connected, the DHCP server will never do dynamic address
+allocation.  In this case, the client is \fIrequired\fR to take the
+address specified in the host declaration.  If the client sends a
+DHCPREQUEST for some other address, the server will respond with a
+DHCPNAK.
 .PP
 When the DHCP server allocates a new address for a client (remember,
 this only happens if the client has sent a DHCPDISCOVER), it first
