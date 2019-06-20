@@ -325,3 +325,12 @@
  * by dhclient when running in one-try mode (-T) and the attempt to
  * obtain the desired lease(s) fails. Applies to IPv4 mode only. */
 /* #define CALL_SCRIPT_ON_ONETRY_FAIL */
+
+/* Include definitions for various options.  In general these
+    should be left as is, but if you have already defined one
+   of these and prefer your definition you can comment the 
+   of these and prefer your definition you can comment the
+   RFC define out to avoid conflicts */
+#define RFC4578_OPTIONS
+#define RFC5071_OPTIONS
+#define RFC5859_OPTIONS

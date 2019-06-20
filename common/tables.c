@@ -192,9 +192,8 @@ static struct option dhcp_options[] = {
 
 	{ "client-last-transaction-time", "L",  &dhcp_universe,  91, 1 },
 	{ "associated-ip", "Ia",                &dhcp_universe,  92, 1 },
-#if 0
-	/* Defined by RFC 4578 */
-	{ "pxe-system-type", "S",		&dhcp_universe,  93, 1 },
+#if defined(RFC4578_OPTIONS)
+	{ "pxe-system-type", "Sa",		&dhcp_universe,  93, 1 },
 	{ "pxe-interface-id", "BBB",		&dhcp_universe,  94, 1 },
 	{ "pxe-client-id", "BX",		&dhcp_universe,  97, 1 },
 #endif
@@ -220,13 +219,14 @@ static struct option dhcp_options[] = {
 	{ "pxe-undefined-7", "X",		&dhcp_universe, 134, 1 },
 	{ "pxe-undefined-8", "X",		&dhcp_universe, 135, 1 },
 #endif
-#if 0
-	/* Not defined by RFC yet */
+#if defined(RFC5859_OPTIONS)
 	{ "tftp-server-address", "Ia",		&dhcp_universe, 150, 1 },
 #endif
-#if 0
-	/* PXELINUX options: defined by RFC 5071 */
+#if defined(RFC5071_OPTIONS)
+#if  0
+   /* Option 208 has been officially deprecated. Do NOT define it */
 	{ "pxelinux-magic", "BBBB",		&dhcp_universe, 208, 1 },
+#endif
 	{ "loader-configfile", "t",		&dhcp_universe, 209, 1 },
 	{ "loader-pathprefix", "t",		&dhcp_universe, 210, 1 },
 	{ "loader-reboottime", "L",		&dhcp_universe, 211, 1 },

@@ -109,6 +109,14 @@ dhcp-users@lists.isc.org.
   cannot rely on the results of executable statements.
   [ISC-Bugs #45451]
 
+- Support for sending and receiving additional DHCP4 options has been added
+  to both the dhcpd and dhclient.  Specifically: option codes 93,94, and 97
+  (RFC 4578); code 150 (RFC 5859); and codes 209,219, and 211 (RFC 5071).
+  Beyond configuring, sending, requesting, and receiving these options neither
+  server nor client apply any additional logic based on their values.
+  Thanks to Peter Lewis for requesting this change.
+  [ISC-Bugs 47062]
+
 			Changes since 4.1-ESV-R15b1
 
 - None
