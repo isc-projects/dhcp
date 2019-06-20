@@ -117,6 +117,18 @@ dhcp-users@lists.isc.org.
   Thanks to Peter Lewis for requesting this change.
   [ISC-Bugs 47062]
 
+! Option reference count was not correctly decremented in error path
+  when parsing buffer for options. Reported by Felix Wilhelm, Google
+  Security Team.
+  [ISC-Bugs #47140]
+  CVE: CVE-2018-5733
+
+! Corrected an issue where large sized 'X/x' format options were causing
+  option handling logic to overwrite memory when expanding them to human
+  readable form. Reported by Felix Wilhelm, Google Security Team.
+  [ISC-Bugs #47139]
+  CVE: CVE-2018-5732
+
 			Changes since 4.1-ESV-R15b1
 
 - None
