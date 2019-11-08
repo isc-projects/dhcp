@@ -344,7 +344,7 @@ res_nquerydomain(res_state statp,
 		}
 		n--;
 		if (n >= 0 && name[n] == '.') {
-			strncpy(nbuf, name, (unsigned)n);
+			memcpy(nbuf, name, (unsigned)n);
 			nbuf[n] = '\0';
 		} else
 			longname = name;
