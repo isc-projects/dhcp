@@ -78,6 +78,10 @@ dhcp-users@lists.isc.org.
   Thanks to Brett Neumeier for bringing the matter to our attention.
   [Gitlab #15]
 
+- Fixed define flags when using SO_BINDTODEVICE. Thanks to Joe LeVeque for
+  reporting the issue.
+  [ISC-Bugs #19]
+
 			Changes since 4.1-ESV-R15
 
 - Corrected dhclient command line parsing for --dad-wait-time that causes
