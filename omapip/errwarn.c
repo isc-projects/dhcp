@@ -55,7 +55,7 @@ void log_fatal (const char * fmt, ... )
 {
   va_list list;
 
-  do_percentm (fbuf, fmt);
+  do_percentm (fbuf, sizeof(fbuf), fmt);
 
   /* %Audit% This is log output. %2004.06.17,Safe%
    * If we truncate we hope the user can get a hint from the log.
@@ -104,7 +104,7 @@ int log_error (const char * fmt, ...)
 {
   va_list list;
 
-  do_percentm (fbuf, fmt);
+  do_percentm (fbuf, sizeof(fbuf), fmt);
 
   /* %Audit% This is log output. %2004.06.17,Safe%
    * If we truncate we hope the user can get a hint from the log.
@@ -131,7 +131,7 @@ int log_info (const char *fmt, ...)
 {
   va_list list;
 
-  do_percentm (fbuf, fmt);
+  do_percentm (fbuf, sizeof(fbuf), fmt);
 
   /* %Audit% This is log output. %2004.06.17,Safe%
    * If we truncate we hope the user can get a hint from the log.
@@ -158,7 +158,7 @@ int log_debug (const char *fmt, ...)
 {
   va_list list;
 
-  do_percentm (fbuf, fmt);
+  do_percentm (fbuf, sizeof(fbuf), fmt);
 
   /* %Audit% This is log output. %2004.06.17,Safe%
    * If we truncate we hope the user can get a hint from the log.
@@ -181,8 +181,9 @@ int log_debug (const char *fmt, ...)
 
 /* Find %m in the input string and substitute an error message string. */
 
-void do_percentm (obuf, ibuf)
+void do_percentm (obuf, obufsize, ibuf)
      char *obuf;
+     size_t obufsize;
      const char *ibuf;
 {
 	const char *s = ibuf;
@@ -202,13 +203,13 @@ void do_percentm (obuf, ibuf)
 				if (!m)
 					m = "<unknown error>";
 				len += strlen (m);
-				if (len > CVT_BUF_MAX)
+				if (len > obufsize - 1)
 					goto out;
 				strcpy (p - 1, m);
 				p += strlen (p);
 				++s;
 			} else {
-				if (++len > CVT_BUF_MAX)
+				if (++len > obufsize - 1)
 					goto out;
 				*p++ = *s++;
 			}
@@ -216,7 +217,7 @@ void do_percentm (obuf, ibuf)
 		} else {
 			if (*s == '%')
 				infmt = 1;
-			if (++len > CVT_BUF_MAX)
+			if (++len > obufsize - 1)
 				goto out;
 			*p++ = *s++;
 		}

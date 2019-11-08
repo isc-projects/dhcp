@@ -72,6 +72,12 @@ We welcome comments from DHCP users, about this or anything else we do.
 Email Vicky Risk, Product Manager at vicky@isc.org or discuss on
 dhcp-users@lists.isc.org.
 
+			Changes since 4.1-ESV-R15-P1
+
+- Made minor changes to eliminate warnings when compiled with GCC 9.
+  Thanks to Brett Neumeier for bringing the matter to our attention.
+  [Gitlab #15]
+
 			Changes since 4.1-ESV-R15
 
 - Corrected dhclient command line parsing for --dad-wait-time that causes

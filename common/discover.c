@@ -629,7 +629,9 @@ discover_interfaces(int state) {
 				log_fatal("Error allocating interface %s: %s",
 					  info.name, isc_result_totext(status));
 			}
-			strncpy(tmp->name, info.name, sizeof(tmp->name) - 1);
+
+			memcpy(tmp->name, info.name, sizeof(tmp->name));
+
 			interface_snorf(tmp, ir);
 			interface_dereference(&tmp, MDL);
 			tmp = interfaces; /* XXX */
