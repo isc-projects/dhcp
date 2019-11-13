@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004,2007-2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2019 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2001-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -47,6 +47,7 @@ isc_result_t minires_nupdate (res_state, ns_updrec *);
 int minires_ninit (res_state);
 ns_rcode isc_rcode_to_ns (isc_result_t);
 
+int MRns_name_len(const unsigned char *, const unsigned char *);
 int MRns_name_compress(const char *, u_char *, size_t, const unsigned char **,
 		       const unsigned char **);
 int MRns_name_unpack(const unsigned char *, const unsigned char *,
@@ -114,6 +115,7 @@ int MRns_name_compress_list(const char*, int buflen, unsigned char*, size_t);
 #define ns_name_pton MRns_name_pton
 #define ns_name_unpack MRns_name_unpack
 #define ns_name_pack MRns_name_pack
+#define ns_name_len MRns_name_len
 #define ns_name_compress MRns_name_compress
 #define ns_name_skip MRns_name_skip
 #define ns_subdomain MRns_subdomain

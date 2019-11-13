@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004,2009,2014 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2019 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -46,6 +46,39 @@ static int		dn_find(const u_char *, const u_char *,
 				const u_char * const *);
 
 /* Public. */
+
+/*
+ * ns_name_len(eom, src)
+ *	Compute the length of encoded uncompressed domain name.
+ * return:
+ *	-1 if it fails, or to be consumed octets if it succeeds.
+ */
+int
+ns_name_len(const u_char *eom, const u_char *src)
+{
+	const u_char *srcp;
+	unsigned n;
+	int len;
+
+	len = -1;
+	srcp = src;
+	if (srcp >= eom) {
+		errno = EMSGSIZE;
+		return (-1);
+	}
+	/* Fetch next label in domain name. */
+	while ((n = *srcp++) != 0) {
+		/* Limit checks. */
+		if (srcp + n >= eom) {
+			errno = EMSGSIZE;
+			return (-1);
+		}
+		srcp += n;
+	}
+	if (len < 0)
+		len = srcp - src;
+	return (len);
+}
 
 /*
  * ns_name_ntop(src, dst, dstsiz)

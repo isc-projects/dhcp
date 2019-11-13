@@ -35,6 +35,8 @@ struct option *vendor_cfg_option;
 
 static int pretty_text(char **, char *, const unsigned char **,
 			 const unsigned char *, int);
+static int pretty_dname(char **, char *, const unsigned char *,
+			 const unsigned char *);
 static int pretty_domain(char **, char *, const unsigned char **,
 			 const unsigned char *);
 static int prepare_option_buffer(struct universe *universe, struct buffer *bp,
@@ -1601,7 +1603,6 @@ format_has_text(format)
 	p = format;
 	while (*p != '\0') {
 		switch (*p++) {
-		    case 'd':
 		    case 't':
 			return 1;
 
@@ -1615,6 +1616,7 @@ format_has_text(format)
 		    case 'X':
 		    case 'x':
 		    case 'D':
+		    case 'd':
 			return 0;
 
 		    case 'c':
@@ -1857,8 +1859,23 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 			numhunk = -2;
 			break;
 		      case 'd':
-			fmtbuf[l] = 't';
-			/* Fall Through ! */
+			/* Should not be optional, array or compressed */
+			if ((option->format[i+1] == 'o') ||
+			    (option->format[i+1] == 'a') ||
+			    (option->format[i+1] == 'A') ||
+			    (option->format[i+1] == 'c')) {
+				log_error("%s: Illegal use of domain name: %s",
+					  option->name,
+					  &(option->format[i-1]));
+				fmtbuf[l + 1] = 0;
+			}
+			k = MRns_name_len(data + len, data + hunksize);
+			if (k == -1) {
+				log_error("Invalid domain name.");
+				return "<error>";
+			}
+			hunksize += k;
+			break;
 		      case 't':
 			fmtbuf[l + 1] = 0;
 			numhunk = -2;
@@ -2011,6 +2028,18 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 					break;
 				}
 				*op = 0;
+				break;
+			      case 'd': /* RFC1035 format name */
+				k = MRns_name_len(data + len, dp);
+				/* Already tested... */
+				if (k == -1) {
+					log_error("invalid domain name.");
+					return "<error>";
+				}
+				pretty_dname(&op, endbuf-1, dp, data + len);
+				/* pretty_dname does not add the nul */
+				*op = '\0';
+				dp += k;
 				break;
 			      case 'D': /* RFC1035 format name list */
 				for( ; dp < (data + len) ; dp += k) {
@@ -4179,6 +4208,56 @@ pretty_text(char **dst, char *dend, const unsigned char **src,
 		/* Includes quote prior to pretty_escape(); */
 		count += 2;
 	}
+
+	return count;
+}
+
+static int
+pretty_dname(char **dst, char *dend, const unsigned char *src,
+	     const unsigned char *send)
+{
+	const unsigned char *tend;
+	const unsigned char *srcp = src;
+	int count = 0;
+	int tsiz, status;
+
+	if (dst == NULL || dend == NULL || src == NULL || send == NULL ||
+	    *dst == NULL || ((*dst + 1) > dend) || (src >= send))
+		return -1;
+
+	do {
+		/* Continue loop until end of src buffer. */
+		if (srcp >= send)
+			break;
+
+		/* Consume tag size. */
+		tsiz = *srcp;
+		srcp++;
+
+		/* At root, finis. */
+		if (tsiz == 0)
+			break;
+
+		tend = srcp + tsiz;
+
+		/* If the tag exceeds the source buffer, it's illegal.
+		 * This should also trap compression pointers (which should
+		 * not be in these buffers).
+		 */
+		if (tend > send)
+			return -1;
+
+		/* dend-1 leaves room for a trailing dot and quote. */
+		status = pretty_escape(dst, dend-1, &srcp, tend);
+
+		if ((status == -1) || ((*dst + 1) > dend))
+			return -1;
+
+		**dst = '.';
+		(*dst)++;
+		count += status + 1;
+	}
+	while(1);
 
 	return count;
 }

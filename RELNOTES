@@ -82,6 +82,11 @@ dhcp-users@lists.isc.org.
   reporting the issue.
   [ISC-Bugs #19]
 
+- The "d" domain name option format was incorrectly handled as text
+  instead of RFC 1035 wire format. Thanks to Jay Doran at BlueCat Networks
+  for reporting this issue.
+  [Gitlab #2]
+
 			Changes since 4.1-ESV-R15
 
 - Corrected dhclient command line parsing for --dad-wait-time that causes
