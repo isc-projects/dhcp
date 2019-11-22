@@ -75,8 +75,10 @@ int execute_statements (result, packet, lease, client_state,
 #if defined (DEBUG_EXPRESSIONS)
 			log_debug ("exec: statements returns %d", status);
 #endif
-			if (!status)
+			if (!status) {
+				executable_statement_dereference (&r, MDL);
 				return 0;
+			}
 			break;
 
 		      case on_statement:
@@ -147,6 +149,8 @@ int execute_statements (result, packet, lease, client_state,
 				       on_star))) {
 					executable_statement_dereference
 						(&e, MDL);
+					executable_statement_dereference
+						(&r, MDL);
 					return 0;
 				}
 				executable_statement_dereference (&e, MDL);
@@ -176,8 +180,10 @@ int execute_statements (result, packet, lease, client_state,
 			    (result, packet, lease, client_state,
 			     in_options, out_options, scope,
 			     rc ? r->data.ie.tc : r->data.ie.fc,
-			     on_star))
+			     on_star)) {
+				executable_statement_dereference (&r, MDL);
 				return 0;
+			}
 			break;
 
 		      case eval_statement:
@@ -298,6 +304,7 @@ int execute_statements (result, packet, lease, client_state,
 #if defined (DEBUG_EXPRESSIONS)
 			log_debug ("exec: break");
 #endif
+			executable_statement_dereference (&r, MDL);
 			return 1;
 
 		      case supersede_option_statement:

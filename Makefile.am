@@ -40,6 +40,8 @@ endif
 # to fool automake when the bind directory does not exist.
 SUBDIRS = @BINDSUBDIR@ includes tests common omapip client dhcpctl relay server
 
+DIST_SUBDIRS = $(SUBDIRS) keama
+
 nobase_include_HEADERS = dhcpctl/dhcpctl.h
 
 #

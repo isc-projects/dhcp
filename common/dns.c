@@ -1246,7 +1246,7 @@ find_cached_zone(dhcp_ddns_cb_t *ddns_cb, int direction)
 	}
 
 	/* Make sure the zone name will fit. */
-	if (strlen(zone->name) > sizeof(ddns_cb->zone_name)) {
+	if (strlen(zone->name) >= sizeof(ddns_cb->zone_name)) {
 		dns_zone_dereference(&zone, MDL);
 		return (ISC_R_NOSPACE);
 	}
@@ -1374,8 +1374,9 @@ void cache_found_zone(dhcp_ddns_ns_t *ns_cb)
 	/* See if there's already such a zone. */
 	if (dns_zone_lookup(&zone, ns_cb->zname) == ISC_R_SUCCESS) {
 		/* If it's not a dynamic zone, leave it alone. */
-		if (zone->timeout == 0)
-			return;
+		if (zone->timeout == 0) {
+			goto cleanup;
+		}
 
 		/* Remove any old addresses in case they've changed */
 		if (zone->primary)

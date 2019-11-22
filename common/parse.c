@@ -5031,15 +5031,13 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 		break;
 
 	      case 'd': /* Domain name... */
-		val = parse_host_name (cfile);
-		if (!val) {
-			parse_warn (cfile, "not a valid domain name.");
-			skip_to_semi (cfile);
+		t = parse_domain_name(cfile);
+		if (!t) {
+			parse_warn(cfile, "not a valid domain name.");
+			skip_to_semi(cfile);
 			return 0;
 		}
-		len = strlen (val);
-		freeval = ISC_TRUE;
-		goto make_string;
+		break;
 
 	      case 't': /* Text string... */
 		token = next_token (&val, &len, cfile);
@@ -5051,7 +5049,6 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 			}
 			return 0;
 		}
-	      make_string:
 		if (!make_const_data (&t, (const unsigned char *)val,
 				      len, 1, 1, MDL))
 			log_fatal ("No memory for concatenation");
@@ -5703,3 +5700,42 @@ parse_domain_list(struct parse *cfile, int compress)
 	return t;
 }
 
+struct expression *
+parse_domain_name(struct parse *cfile)
+{
+	const char *val;
+	struct expression *t = NULL;
+	unsigned len;
+	int result;
+	unsigned char buf[NS_MAXCDNAME];
+
+	val = parse_host_name(cfile);
+	if (!val) {
+		return NULL;
+	}
+	result = MRns_name_pton(val, buf, sizeof(buf));
+	/* No longer need val */
+	dfree((char *)val, MDL);
+
+	/* result == 1 means the input was fully qualified.
+	 * result == 0 means the input wasn't.
+	 * result == -1 means bad things.
+	 */
+	if (result < 0) {
+		parse_warn(cfile, "Error assembling domain name: %m");
+		return NULL;
+	}
+
+	/* Compute the used length */
+	len = 0;
+	while (buf[len] != 0) {
+		len += buf[len] + 1;
+	}
+	/* Count the last label (0). */
+	len++;
+
+	if (!make_const_data(&t, buf, len, 1, 1, MDL))
+		log_fatal("No memory for domain name object.");
+
+	return t;
+}

@@ -134,6 +134,35 @@ handle_signal(int sig, void (*handler)(int)) {
 	}
 }
 
+/* Callback passed to isc_app_ctxonrun
+ *
+ * BIND9 context code will invoke this handler once the context has
+ * entered the running state.  We use it to set a global marker so that
+ * we can tell if the context is running.  Several of the isc_app_
+ * calls REQUIRE that the context is running and we need a way to
+ * know that.
+ *
+ * We also check to see if we received a shutdown signal prior to
+ * the context entering the run state.  If we did, then we can just
+ * simply shut the context down now.  This closes the relatively
+ * small window between start up and entering run via the call
+ * to dispatch().
+ *
+ */
+static void
+set_ctx_running(isc_task_t *task, isc_event_t *event) {
+    IGNORE_UNUSED(task);
+	dhcp_gbl_ctx.actx_running = ISC_TRUE;
+
+	if (shutdown_signal) {
+		// We got signaled shutdown before we entered running state.
+		// Now that we've reached running state, shut'er down.
+		isc_app_ctxsuspend(dhcp_gbl_ctx.actx);
+	}
+
+        isc_event_free(&event);
+}
+
 isc_result_t
 dhcp_context_create(int flags,
 		    struct in_addr  *local4,
@@ -141,6 +170,9 @@ dhcp_context_create(int flags,
 	isc_result_t result;
 
 	if ((flags & DHCP_CONTEXT_PRE_DB) != 0) {
+		dhcp_gbl_ctx.actx_started = ISC_FALSE;
+		dhcp_gbl_ctx.actx_running = ISC_FALSE;
+
 		/*
 		 * Set up the error messages, this isn't the right place
 		 * for this call but it is convienent for now.
@@ -204,14 +236,23 @@ dhcp_context_create(int flags,
 		if (result != ISC_R_SUCCESS)
 			goto cleanup;
 
-		result = isc_task_create(dhcp_gbl_ctx.taskmgr, 0, &dhcp_gbl_ctx.task);
+		result = isc_task_create(dhcp_gbl_ctx.taskmgr, 0,
+					 &dhcp_gbl_ctx.task);
 		if (result != ISC_R_SUCCESS)
 			goto cleanup;
 
 		result = isc_app_ctxstart(dhcp_gbl_ctx.actx);
 		if (result != ISC_R_SUCCESS)
-			return (result);
+			goto cleanup;
+
 		dhcp_gbl_ctx.actx_started = ISC_TRUE;
+
+		// Install the onrun callback.
+		result = isc_app_ctxonrun(dhcp_gbl_ctx.actx, dhcp_gbl_ctx.mctx,
+					  dhcp_gbl_ctx.task, set_ctx_running,
+					  dhcp_gbl_ctx.actx);
+		if (result != ISC_R_SUCCESS)
+			goto cleanup;
 
 		/* Not all OSs support suppressing SIGPIPE through socket
 		 * options, so set the sigal action to be ignore.  This allows
@@ -335,19 +376,17 @@ isclib_make_dst_key(char          *inname,
  * @param signal signal code that we received
  */
 void dhcp_signal_handler(int signal) {
-	isc_appctx_t *ctx = dhcp_gbl_ctx.actx;
-	int prev = shutdown_signal;
-
-	if (prev != 0) {
+	if (shutdown_signal != 0) {
 		/* Already in shutdown. */
 		return;
 	}
+
 	/* Possible race but does it matter? */
 	shutdown_signal = signal;
 
-	/* Use reload (aka suspend) for easier dispatch() reenter. */
-	if (ctx && ctx->methods && ctx->methods->ctxsuspend) {
-		(void) isc_app_ctxsuspend(ctx);
+	/* If the application context is running tell it to shut down */
+	if (dhcp_gbl_ctx.actx_running == ISC_TRUE) {
+		(void) isc_app_ctxsuspend(dhcp_gbl_ctx.actx);
 	}
 }
 

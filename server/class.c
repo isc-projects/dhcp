@@ -174,7 +174,6 @@ int check_collection (packet, lease, collection)
 				}
 				data_string_copy (&nc -> hash_string, &data,
 						  MDL);
-				data_string_forget (&data, MDL);
 				if (!class -> hash)
 				    class_new_hash(&class->hash,
 						   SCLASS_HASH_SIZE, MDL);
@@ -186,6 +185,8 @@ int check_collection (packet, lease, collection)
 				classify (packet, nc);
 				class_dereference (&nc, MDL);
 			}
+
+			data_string_forget (&data, MDL);
 		}
 	}
 	return matched;

@@ -94,7 +94,8 @@
 typedef struct dhcp_context {
 	isc_mem_t	*mctx;
 	isc_appctx_t	*actx;
-	int              actx_started;
+	int              actx_started; // ISC_TRUE if ctxstart has been called
+	int              actx_running; // ISC_TRUE if ctxrun has been called
 	isc_taskmgr_t	*taskmgr;
 	isc_task_t	*task;
 	isc_socketmgr_t *socketmgr;

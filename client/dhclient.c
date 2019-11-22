@@ -51,6 +51,8 @@ static char path_dhclient_script_array[] = _PATH_DHCLIENT_SCRIPT;
 char *path_dhclient_script = path_dhclient_script_array;
 const char *path_dhclient_duid = NULL;
 
+static void add_to_tail(struct client_lease** lease_list, struct client_lease* lease);
+
 /* False (default) => we write and use a pid file */
 isc_boolean_t no_pid_file = ISC_FALSE;
 
@@ -1556,8 +1558,16 @@ void bind_lease (client)
 		write_client_lease(client, client->new, 0, 1);
 
 	/* Replace the old active lease with the new one. */
-	if (client->active)
-		destroy_client_lease(client->active);
+	if (client->active) {
+		if (client->active->is_static) {
+			// We need to preserve the fallback lease in case
+			// we lose DHCP service again.
+			add_to_tail(&client->leases, client->active);
+		} else {
+			destroy_client_lease(client->active);
+		}
+	}
+
 	client->active = client->new;
 	client->new = NULL;
 
@@ -2458,6 +2468,99 @@ void send_discover (cpp)
 	add_timeout(&tv, send_discover, client, 0, 0);
 }
 
+
+/*
+ * \brief Remove leases from a list of leases which duplicate a given lease
+ *
+ * Searches through a linked-list of leases, remove the first one matches the
+ * given lease's address and value of is_static.   The latter test is done
+ * so we only remove leases that are from the same source (i.e server/lease file
+ *  vs config file).  This ensures we do not discard "fallback" config file leases
+ * that happen to match non-config file leases.
+ *
+ * \param lease_list list of leases to clean
+ * \param lease lease for which duplicates should be removed
+ */
+void discard_duplicate (struct client_lease** lease_list, struct client_lease* lease) {
+	struct client_lease *cur, *prev, *next;
+
+	if (!lease_list || !lease) {
+		return;
+	}
+
+	prev = (struct client_lease *)0;
+	for (cur = *lease_list; cur; cur = next) {
+		next = cur->next;
+		if ((cur->is_static == lease->is_static) &&
+		    (cur->address.len == lease->address.len &&
+		     !memcmp (cur->address.iabuf, lease->address.iabuf,
+			      lease->address.len))) {
+			if (prev)
+				prev->next = next;
+			else
+				*lease_list = next;
+
+			destroy_client_lease (cur);
+			break;
+		} else {
+			prev = cur;
+		}
+	}
+}
+
+/*
+ * \brief Add a given lease to the end of list of leases
+ *
+ * Searches through a linked-list of leases, removing any that match the
+ * given lease's address and value of is_static.  The latter test is done
+ * so we only remove leases that are from the same source (i.e server/lease file
+ *  vs config file).  This ensures we do not discard "fallback" config file leases
+ * that happen to match non-config file leases.
+ *
+ * \param lease_list list of leases to clean
+ * \param lease lease for which duplicates should be removed
+ */
+void add_to_tail(struct client_lease** lease_list,
+		 struct client_lease* lease)
+{
+	if (!lease_list || !lease) {
+		return;
+	}
+
+	/* If there is already a lease for this address and
+	* is_static value, toss discard it.  This ensures
+	* we only keep one dynamic and/or one static lease
+	* for a given address. */
+	discard_duplicate(lease_list, lease);
+
+	/* Find the tail */
+	struct client_lease* tail;
+	for (tail = *lease_list; tail && tail->next; tail = tail->next){};
+
+	/* Ensure the tail points nowhere. */
+	lease->next = NULL;
+
+	/* Add to the tail. */
+	if (!tail) {
+		*lease_list = lease;
+	} else {
+		tail->next = lease;
+	}
+}
+
+#if 0
+void dbg_print_lease(char *text, struct client_lease* lease) {
+	if (!lease) {
+		log_debug("%s, lease is null", text);
+	} else {
+		log_debug ("%s: %p addr:%s expires:%ld :is_static? %d",
+			   text, lease, piaddr (lease->address),
+                           (lease->expiry - cur_time),
+			   lease->is_static);
+	}
+}
+#endif
+
 /* state_panic gets called if we haven't received any offers in a preset
    amount of time.   When this happens, we try to use existing leases that
    haven't yet expired, and failing that, we call the client script and
@@ -2483,8 +2586,10 @@ void state_panic (cpp)
 	/* Run through the list of leases and see if one can be used. */
 	while (client -> active) {
 		if (client -> active -> expiry > cur_time) {
-			log_info ("Trying recorded lease %s",
-			      piaddr (client -> active -> address));
+			log_info ("Trying %s lease %s",
+				  (client -> active -> is_static
+				   ? "fallback" : "recorded"),
+				  piaddr (client -> active -> address));
 			/* Run the client script with the existing
 			   parameters. */
 			script_init(client, "TIMEOUT",
@@ -2531,12 +2636,8 @@ void state_panic (cpp)
 	activate_next:
 		/* Otherwise, put the active lease at the end of the
 		   lease list, and try another lease.. */
-		for (lp = client -> leases; lp -> next; lp = lp -> next)
-			;
-		lp -> next = client -> active;
-		if (lp -> next) {
-			lp -> next -> next = (struct client_lease *)0;
-		}
+		add_to_tail(&client->leases, client->active);
+
 		client -> active = client -> leases;
 		client -> leases = client -> leases -> next;
 
@@ -4078,9 +4179,10 @@ void client_option_envadd (struct option_cache *oc,
 						  "option - discarded",
 						  name);
 				}
-				data_string_forget (&data, MDL);
 			}
 		}
+
+		data_string_forget (&data, MDL);
 	}
 }
 

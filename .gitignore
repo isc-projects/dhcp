@@ -1,6 +1,5 @@
 *.lo
 *.o
-bind
 doc/html
 .deps
 Makefile

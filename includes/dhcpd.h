@@ -2311,7 +2311,7 @@ int parse_auth_key (struct data_string *, struct parse *);
 int parse_warn (struct parse *, const char *, ...)
 	__attribute__((__format__(__printf__,2,3)));
 struct expression *parse_domain_list(struct parse *cfile, int);
-
+struct expression *parse_domain_name(struct parse *cfile);
 
 /* tree.c */
 extern struct binding_scope *global_scope;

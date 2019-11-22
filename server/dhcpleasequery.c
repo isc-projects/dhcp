@@ -873,15 +873,9 @@ valid_query_msg(struct lq6_state *lq) {
 
 exit:
 	if (!ret_val) {
-		if (lq->client_id.len > 0) {
-			data_string_forget(&lq->client_id, MDL);
-		}
-		if (lq->server_id.len > 0) {
-			data_string_forget(&lq->server_id, MDL);
-		}
-		if (lq->lq_query.len > 0) {
-			data_string_forget(&lq->lq_query, MDL);
-		}
+		data_string_forget(&lq->client_id, MDL);
+		data_string_forget(&lq->server_id, MDL);
+		data_string_forget(&lq->lq_query, MDL);
 	}
 	return ret_val;
 }

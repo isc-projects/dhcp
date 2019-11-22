@@ -3,7 +3,7 @@
    BSD socket interface code... */
 
 /*
- * Copyright (c) 2004-2017 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2019 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -877,7 +877,13 @@ ssize_t send_packet6(struct interface_info *interface,
 	m.msg_name = &dst;
 	m.msg_namelen = sizeof(dst);
 	ifindex = if_nametoindex(interface->name);
+
+// Per OpenBSD patch-common_socket_c,v 1.7 2018/03/06 08:37:39 sthen Exp
+// always set the scope id.  We'll leave the test for no global socket
+// in place for all others.
+#ifndef __OpenBSD__
 	if (no_global_v6_socket)
+#endif
 		dst.sin6_scope_id = ifindex;
 
 	/*

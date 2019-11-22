@@ -1009,6 +1009,7 @@ AC_CONFIG_FILES([
   dhcpctl/Makefile.am
   dhcpctl/Makefile
   includes/Makefile
+  keama/Makefile
   omapip/Makefile.am
   omapip/Makefile
   relay/Makefile

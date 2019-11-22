@@ -1285,9 +1285,10 @@ ddns_update_lease_ptr(struct lease    *lease,
 					    file, line);
 #endif
 			/*
-			 * never reached. update_lease_failed
-			 * calls log_fatal.
+			 * not reached when update_lease_failed is called,
+			 * it calls log_fatal.
 			 */
+			ipv6_pool_dereference(&pool, MDL);
 			return(ISC_R_FAILURE);
 		}
 		ipv6_pool_dereference(&pool, MDL);

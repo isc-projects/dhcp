@@ -1085,9 +1085,11 @@ create_lease6(struct ipv6_pool *pool, struct iasubopt **addr,
 		case D6O_IA_PD:
 			/* prefix */
 			log_error("create_lease6: prefix pool.");
+			data_string_forget(&ds, MDL);
 			return DHCP_R_INVALIDARG;
 		default:
 			log_error("create_lease6: untyped pool.");
+			data_string_forget(&ds, MDL);
 			return DHCP_R_INVALIDARG;
 		}
 

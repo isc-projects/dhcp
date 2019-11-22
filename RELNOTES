@@ -92,7 +92,7 @@ by Eric Young (eay@cryptsoft.com).
 - A new configuration parameter, ping-cltt-secs (v4 operation only), has
   been added to allow the user to specify the number of seconds that must
   elapse since CLTT before a ping check is conducted.  Prior to this, the
-  value was hard coded at 60 seconds. Please see the server man pages for
+  value was hard coded at 60 seconds.  Please see the server man pages for
   a more detailed discussion.
   [ISC-Bugs #36283]
 
@@ -102,7 +102,7 @@ by Eric Young (eay@cryptsoft.com).
   than in seconds (via ping-timeout). When greater than zero, the value
   of ping-timeout-ms will override the value of ping-timeout.  Thanks
   to Jay Doran from Bluecat Networks for suggesting this feature.
-  [ISC-Bugs #10,!6	git ebe4f7ae427fa91f561a0b6e5f242de08d319a16]
+  [Gitlab #10]
 
 		Changes since 4.4.1 (Bug Fixes)
 
@@ -115,7 +115,7 @@ by Eric Young (eay@cryptsoft.com).
 - Bind9 now defaults to requiring python to build. The Makefile for
   building Bind9 when bundled with ISC DHCP was modified to turn off
   this dependency.
-  [ISC-Bugs #3,!1	git cc35f84943df44dac2499f3e16e8aaba7d54191d]
+  [Gitlab #3]
 
 - Corrected a dual-stack mixed-mode issue that occurs when both
   ddns-guard-id-must-match and ddns-other-guard-is-dynamic
@@ -123,21 +123,71 @@ by Eric Young (eay@cryptsoft.com).
   the presence of a guard record belonging to another client as
   a case of no guard record at all.  Thanks to Fernando Soto
   from BlueCat Networks for reporting this issue.
-  [ISC-Bugs #1,!2	git 9ef78585440f568da2a2a0093a8c40c49118e292]
+  [Gitlab #1]
 
 - Corrected a compilation issue that occurred when building without DNS
   update ability (e.g. by undefining NSUPDATE).
-  [ISC-Bugs #16,!9	git ddb508ac083dae4ff83279dd240bad7f73a97b7d]
+  [Gitlab #16]
 
 - Corrected an issue that was causing the server, when running in
   DHPCv4 mode, to segfault when class lease limits are reached.
   Thanks to Peter Nagy at Porion-Digital for reporting the matter
   and submitting a patch.
-  [ISC-Bugs #13,!7	git dfcbe359ab278cad70015994ca73ef50d626b23a]
+  [Gitlab #13]
 
 - Made minor changes to eliminate warnings when compiled with GCC 9.
   Thanks to Brett Neumeier for bringing the matter to our attention.
-  [ISC-Bugs #15,!10	git c138f38bd00ceca4e1e51a4db7542a15ef79babd]
+  [Gitlab #15]
+
+- Fixed potential memory leaks in parser error message generation
+  spotted by Coverity, CIDs: 1448191, 1448193, 1448194, 1448195
+  [Gitlab #30]
+
+- Updated URL of IEEE oui.txt in contrib/dhcp-lease-list.pl. Thanks
+  to Tommy Smith for contributing the patch.
+  [Gitlab #26]
+
+- Fixed define flags when using SO_BINDTODEVICE. Thanks to Joe LeVeque for
+  reporting the issue.
+  [GitLab #19]
+
+- Applied a patch from OpenBSD to always set the scope id of outbound
+  DHPCv6 packets.  Note this change only applies when compiling under
+  OpenBSD.  Thanks to Brad Smith at OpenBSD from bringing it to our
+  attention.
+  [Gitlab #33]
+
+- Modified dhclient to not discard config file leases that are
+  duplicates of server-provided leases and to retain such leases
+  after they have been used as the fallback active lease and
+  DHCP service has been restored.  This allows them to be used
+  more than once during the lifetime of a dhclient instance. 
+  This applies to DHCPv4 operation only.
+  [Gitlab #9]
+
+- Corrected a number of reference counter and zero-length buffer leaks.
+  [Gitlab #57]
+
+- Closed a small window of time between the installation of graceful
+  shutdown signal handlers and application context startup, during which
+  the receipt of shutdown signal would cause a REQUIRE() assertion to
+  occur.  Note this issue is only visible when compiling with
+  ENABLE_GENTLE_SHUTDOWN defined.
+  [Gitlab #53]
+
+- Corrected a buffer overflow that can occur when retrieving zone
+  names that are more than 255 characters in length.
+  [Gitlab #20]
+
+- The "d" domain name option format was incorrectly handled as text
+  instead of RFC 1035 wire format. Thanks to Jay Doran at BlueCat Networks
+  for reporting this issue.
+  [Gitlab #2]
+
+- Improved the error message issued when a host declaration has both
+  a uid and a dhcp-client-identifier. Server configuration parsing will
+  now fail if a host declaration specifies more than one uid.
+  [Gitlab #7]
 
 		Changes since 4.4.0 (New Features)
 - none
