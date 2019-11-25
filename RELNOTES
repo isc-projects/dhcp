@@ -104,6 +104,11 @@ by Eric Young (eay@cryptsoft.com).
   to Jay Doran from Bluecat Networks for suggesting this feature.
   [Gitlab #10]
 
+- An experimental tool called, Keama (KEA Migration Assistant), which helps
+  translate ISC DHCP configurations to Kea configurations, is now included
+  in the distribution.
+  [Gitlab #34]
+
 		Changes since 4.4.1 (Bug Fixes)
 
 - Corrected a misuse of the BIND9 DDNS API which caused DDNS updates to be

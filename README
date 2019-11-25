@@ -78,6 +78,9 @@ referred to for information about DHCP options.
 DHCP relay agent documentation is in the dhcrelay man page, the source
 for which is distributed in the relay/ subdirectory.
 
+KEA Migration Assistant documentation, including how to build, install
+and use it, is including in the keama directory.
+
 To read installed manual pages, use the man command.  Type "man page"
 where page is the name of the manual page.   This will only work if
 you have installed the ISC DHCP distribution using the ``make install''
