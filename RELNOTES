@@ -194,6 +194,11 @@ by Eric Young (eay@cryptsoft.com).
   now fail if a host declaration specifies more than one uid.
   [Gitlab #7]
 
+- Updated developer's documentation on building and running unit tests.
+  Removed support for --with-atf=bind as BIND9 no longer bundles in ATF
+  source.
+  [Gitlab #35]
+
 		Changes since 4.4.0 (New Features)
 - none
 		Changes since 4.4.0 (Bug Fixes)

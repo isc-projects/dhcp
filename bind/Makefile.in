@@ -26,15 +26,13 @@ bindconfig = --without-openssl --without-libxml2 --without-libjson \
 	--includedir=@includedir@ --libdir=@libdir@  --without-python\
 	@BINDLT@ @BINDIOMUX@ @BINDCONFIG@ --enable-full-report
 
-@BIND_ATF_FALSE@cleandirs = ./lib ./include
-@BIND_ATF_TRUE@cleandirs = ./lib ./include ./atf
+cleandirs = ./lib ./include
 cleanfiles = ./configure.log ./build.log ./install.log
 
 bindlibs = isc dns isccfg irs
 installdirs = includedir=${binddir}/include libdir=${binddir}/lib
 
-@BIND_ATF_FALSE@all: bind1 bind2
-@BIND_ATF_TRUE@all: bind1 atf bind2
+all: bind1 bind2
 
 bind1:
 # Extract the source from the tarball, if it hasn't been already.
