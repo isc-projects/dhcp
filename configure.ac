@@ -254,7 +254,6 @@ atf_path="no"
 AC_ARG_WITH([atf],
     AS_HELP_STRING([--with-atf=PATH],[specify location where atf was installed]),
     [atf_path="$withval"])
-
 if test "$atf_path" != "no" ; then
     DISTCHECK_ATF_CONFIGURE_FLAG="--with-atf=$atf_path"
     # Config path for pkg-config

@@ -56,7 +56,7 @@ Kyua may be found here: https://github.com/jmmv/kyua
 This section describes how to install and use pre-Kyua ATF release to run
 ISC DHCP unit tests.  The most recent release of ATF that can be used without
 also needing Kyua, is ATF version 0.19.  While this version is still available
-and using it is least software to install to to run ISC DHCP unit tests, there
+and using it is least software to install to run ISC DHCP unit tests, there
 may come a point in time when this version is no longer available. It may be
 downloaded here: https://github.com/jmmv/atf/releases/tag/atf-0.19
 
@@ -162,7 +162,7 @@ ATF, and lutok
 $ apt-get install liblua5.1-0-dev
 $ apt-get install libsqlite3-dev
 
-# Fetch, build, and install the lastest version of ATF
+# Fetch, build, and install the latest version of ATF
 
 $ git clone https://github.com/jmmv/atf.git
 $ cd atf
@@ -172,7 +172,7 @@ $ make
 $ sudo make install
 $ cd ..
 
-# Fetch, build, and install the lastest version lutok
+# Fetch, build, and install the latest version lutok
 
 $ git clone https://github.com/jmmv/lutok.git
 $ cd lutok
@@ -185,7 +185,7 @@ $ make
 $ sudo make install
 $ cd ..
 
-# Finally, we fetch, build and install the lastest kyua
+# Finally, we fetch, build and install the latest kyua
 
 $ git clone https://github.com/jmmv/kyua.git
 $ cd kyua
@@ -241,13 +241,6 @@ $ git clone https://github.com/jmmv/kyua.git
 $ cd kyua
 $ autoreconf --install -s -I/opt/atf/share/aclocal
 $ ./configure --prefix=/opt/kyua
-$ make
-$ sudo make install
-$ cd ..
-
-# reconfigure atf with kyua
-$ cd atf
-$ PATH=$PATH:/opt/kyua/bin ./configure --prefix=/opt/atf
 $ make
 $ sudo make install
 $ cd ..
