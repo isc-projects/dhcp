@@ -71,7 +71,7 @@ $ cd /opt/atf
 $ tar -xvf $HOME/Downloads/atf-0.19.tar.gz
 
 # While the --prefix is optional, you must specify --enable-tools
-#as a configure option
+# as a configure option
 
 $ ./configure --prefix=/opt/atf/atf-0.19/local --enable-tools
 $ make
@@ -146,8 +146,8 @@ ISC DHCP with Kyua. Instructions are included for both Ubuntu 18.04 and MacOS.
 
 @subsubsection KyuaLinux Kyua Ubuntu 18.04 Instructions
 
-The following instructions are for based on Ubuntu 18.04, but
-are typical of a linux installation. It installs all software
+The following instructions are based on Ubuntu 18.04, but
+are typical of a linux distribution/installation. It installs all software
 into default locations for simplicity.  If you want to use
 custom installation paths, you may have to set additional environment
 variables, library paths, and the like.
@@ -163,7 +163,6 @@ $ apt-get install liblua5.1-0-dev
 $ apt-get install libsqlite3-dev
 
 # Fetch, build, and install the lastest version of ATF
-#
 
 $ git clone https://github.com/jmmv/atf.git
 $ cd atf
@@ -173,13 +172,12 @@ $ make
 $ sudo make install
 $ cd ..
 
-# Fetch fetch, build, and install the lastest version lutok
-#
+# Fetch, build, and install the lastest version lutok
 
 $ git clone https://github.com/jmmv/lutok.git
 $ cd lutok
 
-# We must use -I argument to tell auotreconf where to find the ATF .m4 files
+# We must use -I argument to tell autoreconf where to find the ATF .m4 files
 $ autoreconf --install -s -I/usr/local/share/aclocal
 
 $ ./configure
@@ -192,7 +190,7 @@ $ cd ..
 $ git clone https://github.com/jmmv/kyua.git
 $ cd kyua
 
-# We must use -I argument to tell auotreconf where to find the ATF .m4 files
+# We must use -I argument to tell autoreconf where to find the ATF .m4 files
 $ autoreconf --install -s -I/usr/local/share/aclocal
 
 $ ./configure
@@ -230,29 +228,29 @@ $ brew install pkgconfig
 $ brew install lutok
 
 # install atf so we can build kyua and dhcp with unit tests
-git clone https://github.com/jmmv/atf.git
-cd atf
-autoreconf --install --force
-./configure --prefix=/opt/atf
-make
-sudo make install
-cd ..
+$ git clone https://github.com/jmmv/atf.git
+$ cd atf
+$ autoreconf --install --force
+$ ./configure --prefix=/opt/atf
+$ make
+$ sudo make install
+$ cd ..
 
 # configure kyua with atf
-git clone https://github.com/jmmv/kyua.git
-cd kyua
-autoreconf --install -s -I/opt/atf/share/aclocal
-./configure --prefix=/opt/kyua
-make
-sudo make install
-cd ..
+$ git clone https://github.com/jmmv/kyua.git
+$ cd kyua
+$ autoreconf --install -s -I/opt/atf/share/aclocal
+$ ./configure --prefix=/opt/kyua
+$ make
+$ sudo make install
+$ cd ..
 
 # reconfigure atf with kyua
-cd atf
-PATH=$PATH:/opt/kyua/bin ./configure --prefix=/opt/atf
-make
-sudo make install
-cd ..
+$ cd atf
+$ PATH=$PATH:/opt/kyua/bin ./configure --prefix=/opt/atf
+$ make
+$ sudo make install
+$ cd ..
 @endverbatim
 
 To build ISC DHCP with Kyua and run all the unit tests is the same:
