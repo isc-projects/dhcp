@@ -172,7 +172,7 @@ $ make
 $ sudo make install
 $ cd ..
 
-# Fetch, build, and install the latest version lutok
+# Fetch, build, and install the latest version of lutok
 
 $ git clone https://github.com/jmmv/lutok.git
 $ cd lutok
@@ -185,7 +185,7 @@ $ make
 $ sudo make install
 $ cd ..
 
-# Finally, we fetch, build and install the latest kyua
+# Finally, we fetch, build and install the latest version of kyua
 
 $ git clone https://github.com/jmmv/kyua.git
 $ cd kyua
