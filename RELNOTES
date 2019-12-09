@@ -203,6 +203,11 @@ by Eric Young (eay@cryptsoft.com).
   18.04.1/gcc 7.4.0. Thanks to Charles Hedrick for pointing it out.
   [Gitlab #51]
 
+- Added clarification to dhcp-options.5 section on ip-address values
+  describing the first-use DNS resolution of options with hostnames as
+  values (e.g. next-server).
+  [Gitlab #28]
+
 		Changes since 4.4.0 (New Features)
 - none
 		Changes since 4.4.0 (Bug Fixes)
