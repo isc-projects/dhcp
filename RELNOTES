@@ -199,6 +199,10 @@ by Eric Young (eay@cryptsoft.com).
   source.
   [Gitlab #35]
 
+- Fixed a syntax error in ldap.c which cropped up under Ubuntu
+  18.04.1/gcc 7.4.0. Thanks to Charles Hedrick for pointing it out.
+  [Gitlab #51]
+
 		Changes since 4.4.0 (New Features)
 - none
 		Changes since 4.4.0 (Bug Fixes)

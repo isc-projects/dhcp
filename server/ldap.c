@@ -925,7 +925,7 @@ ldap_parse_failover (struct ldap_config_stack *item, struct parse *cfile)
     ldap_value_free_len (tempbv);
 
 
-  if (primary == -1 || srvaddr[0] == '\0' || srvaddr[1] == '\0')
+  if (primary == -1 || *srvaddr[0] == '\0' || *srvaddr[1] == '\0')
     {
       log_error("Could not decide if the server type is primary"
                 " or secondary for failover peering '%s'.", peername[0]->bv_val);
