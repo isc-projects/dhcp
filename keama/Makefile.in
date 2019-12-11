@@ -322,9 +322,9 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 keama_SOURCES = keama.c data.c conflex.c json.c confparse.c parse.c \
-	options.c reduce.c print.c eval.c
+	options.c data.h dhctoken.h keama.h reduce.c print.c eval.c
 man_MANS = keama.8
-EXTRA_DIST = $(man_MANS)
+EXTRA_DIST = $(man_MANS) tests ChangeLog.md doc.txt README.md
 all: all-am
 
 .SUFFIXES:
