@@ -867,8 +867,7 @@ dhc6_parse_ia_na(struct dhc6_ia **pia, struct packet *packet,
 		} else {
 			log_error("Invalid IA_NA option cache.");
 			dfree(ia, MDL);
-			if (ds.len != 0)
-				data_string_forget(&ds, MDL);
+			data_string_forget(&ds, MDL);
 			return ISC_R_UNEXPECTED;
 		}
 	}
@@ -970,8 +969,7 @@ dhc6_parse_ia_ta(struct dhc6_ia **pia, struct packet *packet,
 		} else {
 			log_error("Invalid IA_TA option cache.");
 			dfree(ia, MDL);
-			if (ds.len != 0)
-				data_string_forget(&ds, MDL);
+			data_string_forget(&ds, MDL);
 			return ISC_R_UNEXPECTED;
 		}
 	}
@@ -1093,8 +1091,7 @@ dhc6_parse_ia_pd(struct dhc6_ia **pia, struct packet *packet,
 		} else {
 			log_error("Invalid IA_PD option cache.");
 			dfree(ia, MDL);
-			if (ds.len != 0)
-				data_string_forget(&ds, MDL);
+			data_string_forget(&ds, MDL);
 			return ISC_R_UNEXPECTED;
 		}
 	}
@@ -1209,8 +1206,7 @@ dhc6_parse_addrs(struct dhc6_addr **paddr, struct packet *packet,
 		} else {
 			log_error("Invalid IAADDR option cache.");
 			dfree(addr, MDL);
-			if (ds.len != 0)
-				data_string_forget(&ds, MDL);
+			data_string_forget(&ds, MDL);
 			return ISC_R_UNEXPECTED;
 		}
 	}
@@ -1334,8 +1330,7 @@ dhc6_parse_prefixes(struct dhc6_addr **ppfx, struct packet *packet,
 		} else {
 			log_error("Invalid IAPREFIX option cache.");
 			dfree(pfx, MDL);
-			if (ds.len != 0)
-				data_string_forget(&ds, MDL);
+			data_string_forget(&ds, MDL);
 			return ISC_R_UNEXPECTED;
 		}
 	}
@@ -1357,9 +1352,7 @@ dhc6_lease_destroy(struct dhc6_lease **src, const char *file, int line)
 	}
 	lease = *src;
 
-	if (lease->server_id.len != 0)
-		data_string_forget(&lease->server_id, file, line);
-
+	data_string_forget(&lease->server_id, file, line);
 	for (ia = lease->bindings ; ia != NULL ; ia = nia) {
 		nia = ia->next;
 

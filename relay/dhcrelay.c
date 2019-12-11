@@ -1603,7 +1603,7 @@ process_down6(struct packet *packet) {
 				   &global_scope, oc, MDL) ||
 	    (relay_msg.len < offsetof(struct dhcpv6_packet, options))) {
 		log_error("Can't evaluate relay-msg.");
-		return;
+		goto cleanup;
 	}
 	msg = (const struct dhcpv6_packet *) relay_msg.data;
 

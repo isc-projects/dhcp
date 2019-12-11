@@ -3248,9 +3248,10 @@ void client_option_envadd (struct option_cache *oc,
 						  "option - discarded",
 						  name);
 				}
-				data_string_forget (&data, MDL);
 			}
 		}
+
+		data_string_forget (&data, MDL);
 	}
 }
 

@@ -87,6 +87,9 @@ dhcp-users@lists.isc.org.
   for reporting this issue.
   [Gitlab #2]
 
+- Corrected a number of reference counter and zero-length buffer leaks.
+  [Gitlab #57]
+
 			Changes since 4.1-ESV-R15
 
 - Corrected dhclient command line parsing for --dad-wait-time that causes

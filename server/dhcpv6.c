@@ -488,13 +488,9 @@ valid_client_msg(struct packet *packet, struct data_string *client_id) {
 	ret_val = 1;
 
 exit:
-	if (data.len > 0) {
-		data_string_forget(&data, MDL);
-	}
+	data_string_forget(&data, MDL);
 	if (!ret_val) {
-		if (client_id->len > 0) {
-			data_string_forget(client_id, MDL);
-		}
+		data_string_forget(client_id, MDL);
 	}
 	return ret_val;
 }
@@ -579,12 +575,8 @@ valid_client_resp(struct packet *packet,
 
 exit:
 	if (!ret_val) {
-		if (server_id->len > 0) {
-			data_string_forget(server_id, MDL);
-		}
-		if (client_id->len > 0) {
-			data_string_forget(client_id, MDL);
-		}
+		data_string_forget(server_id, MDL);
+		data_string_forget(client_id, MDL);
 	}
 	return ret_val;
 }
@@ -696,9 +688,7 @@ valid_client_info_req(struct packet *packet, struct data_string *server_id) {
 
 exit:
 	if (!ret_val) {
-		if (server_id->len > 0) {
-			data_string_forget(server_id, MDL);
-		}
+		data_string_forget(server_id, MDL);
 	}
 	return ret_val;
 }

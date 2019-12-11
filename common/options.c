@@ -220,6 +220,7 @@ int parse_option_buffer (options, buffer, length, universe)
 					log_error("parse_option_buffer: "
 						  "No memory.");
 					buffer_dereference(&bp, MDL);
+					option_dereference(&option, MDL);
 					return 0;
 				}
 				/* Copy old option to new data object. */
@@ -245,6 +246,7 @@ int parse_option_buffer (options, buffer, length, universe)
 					log_error("parse_option_buffer: "
 						  "No memory.");
 					buffer_dereference(&bp, MDL);
+					option_dereference(&option, MDL);
 					return 0;
 				}
 
@@ -1382,8 +1384,9 @@ store_options(int *ocount,
 				(option_space_encapsulate
 				 (&encapsulation, packet, lease, client_state,
 				  in_options, cfg_options, scope, &name));
-			data_string_forget (&name, MDL);
 		    }
+
+		    data_string_forget (&name, MDL);
 		}
 	    }
 
@@ -3388,8 +3391,7 @@ int fqdn_option_space_encapsulate (result, packet, lease, client_state,
 	}
       exit:
 	for (i = 1; i <= FQDN_SUBOPTION_COUNT; i++) {
-		if (results [i].len)
-			data_string_forget (&results [i], MDL);
+		data_string_forget (&results[i], MDL);
 	}
 	buffer_dereference (&bp, MDL);
 	if (!status)
@@ -3548,8 +3550,7 @@ fqdn6_option_space_encapsulate(struct data_string *result,
 
       exit:
 	for (i = 1 ; i <= FQDN_SUBOPTION_COUNT ; i++) {
-		if (results[i].len)
-			data_string_forget(&results[i], MDL);
+		data_string_forget(&results[i], MDL);
 	}
 
 	return rval;

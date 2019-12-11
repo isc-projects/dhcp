@@ -400,15 +400,19 @@ void cache_found_zone (ns_class class,
 	/* See if there's already such a zone. */
 	if (dns_zone_lookup (&zone, zname) == ISC_R_SUCCESS) {
 		/* If it's not a dynamic zone, leave it alone. */
-		if (!zone -> timeout)
+		if (!zone -> timeout) {
+			dns_zone_dereference (&zone, MDL);
 			return;
+		}
+
 		/* Address may have changed, so just blow it away. */
 		if (zone -> primary)
 			option_cache_dereference (&zone -> primary, MDL);
 		if (zone -> secondary)
 			option_cache_dereference (&zone -> secondary, MDL);
-	} else if (!dns_zone_allocate (&zone, MDL))
+	} else if (!dns_zone_allocate (&zone, MDL)) {
 		return;
+	}
 
 	if (!zone -> name) {
 		zone -> name =
@@ -445,6 +449,7 @@ void cache_found_zone (ns_class class,
 	zone -> primary -> data.len = naddrs * sizeof *addrs;
 
 	enter_dns_zone (zone);
+	dns_zone_dereference (&zone, MDL);
 }
 
 /* Have to use TXT records for now. */
