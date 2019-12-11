@@ -1,6 +1,6 @@
                 Internet Systems Consortium DHCP Distribution
-                            Version 4.4.1
-                           28 February 2018
+                            Version 4.4.2b1
+                           18 December 2019
 
                              Release Notes
 
@@ -10,7 +10,24 @@ Please note that that ISC DHCP is now licensed under the Mozilla Public License,
 MPL 2.0. Please see https://www.mozilla.org/en-US/MPL/2.0/ to read the MPL 2.0
 license terms.
 
-The areas of focus for ISC DHCP 4.4 were:
+While release 4.4.2b1 is primarily a maintenance release that addresses a number
+of defects, it does introduce a few new features:
+
+- Keama - Keama is a migration utility that assists in converting ISC DHCP server
+  configuration files to Kea configuration files.  It is found in the keama
+  subdirectory and includes a README.md file with instructions on how to build it
+  as well as a manpage on its usage.
+
+- Two new server parameters related to ping checking were added:
+
+1. ping-cltt-secs which allows the user to specify the number of seconds that must
+   elapse since CLTT before a ping check is conducted.
+
+2. ping-timeout-ms which allows the user to specify the amount of time the server
+   waits for a ping-check response in milliseconds rather than in seconds.
+
+
+In general, the areas of focus for ISC DHCP 4.4 were:
 
 1. Dynamic DNS additions
 2. dhclient improvements
@@ -166,7 +183,7 @@ by Eric Young (eay@cryptsoft.com).
   duplicates of server-provided leases and to retain such leases
   after they have been used as the fallback active lease and
   DHCP service has been restored.  This allows them to be used
-  more than once during the lifetime of a dhclient instance. 
+  more than once during the lifetime of a dhclient instance.
   This applies to DHCPv4 operation only.
   [Gitlab #9]
 
