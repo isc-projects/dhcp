@@ -250,6 +250,9 @@ fi
 
 # Testing section
 
+# Bind Makefile needs to know ATF is not included.
+AM_CONDITIONAL(BIND_ATF, 0)
+
 DISTCHECK_ATF_CONFIGURE_FLAG=
 atf_path="no"
 AC_ARG_WITH([atf],

@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2009-2018  Internet Systems Consortium, Inc. ("ISC")
+# Copyright (C) 2009-2019  Internet Systems Consortium, Inc. ("ISC")
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -26,13 +26,15 @@ bindconfig = --without-openssl --without-libxml2 --without-libjson \
 	--includedir=@includedir@ --libdir=@libdir@  --without-python\
 	@BINDLT@ @BINDIOMUX@ @BINDCONFIG@ --enable-full-report
 
-cleandirs = ./lib ./include
+@BIND_ATF_FALSE@cleandirs = ./lib ./include
+@BIND_ATF_TRUE@cleandirs = ./lib ./include ./atf
 cleanfiles = ./configure.log ./build.log ./install.log
 
 bindlibs = isc dns isccfg irs
 installdirs = includedir=${binddir}/include libdir=${binddir}/lib
 
-all: bind1 bind2
+@BIND_ATF_FALSE@all: bind1 bind2
+@BIND_ATF_TRUE@all: bind1 atf bind2
 
 bind1:
 # Extract the source from the tarball, if it hasn't been already.
