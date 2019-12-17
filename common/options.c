@@ -1607,6 +1607,7 @@ format_has_text(format)
 	while (*p != '\0') {
 		switch (*p++) {
 		    case 't':
+		    case 'k':
 			return 1;
 
 			/* These symbols are arbitrary, not fixed or
@@ -1738,6 +1739,7 @@ format_min_length(format, oc)
 		    case 'A': /* Array of all that precedes. */
 		    case 'a': /* Array of preceding symbol. */
 		    case 'Z': /* nothing. */
+		    case 'k': /* key name. */
 			return min_len;
 
 		    case 'c': /* Compress flag for D atom. */
@@ -1880,6 +1882,7 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 			hunksize += k;
 			break;
 		      case 't':
+		      case 'k':
 			fmtbuf[l + 1] = 0;
 			numhunk = -2;
 			break;
@@ -2023,6 +2026,7 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 		for (; j < numelem; j++) {
 			switch (fmtbuf [j]) {
 			      case 't':
+			      case 'k':
 				/* endbuf-1 leaves room for NULL. */
 				k = pretty_text(&op, endbuf - 1, &dp,
 						data + len, emit_quotes);

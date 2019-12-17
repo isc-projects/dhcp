@@ -5293,7 +5293,32 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 			POST(freeval);
 		}
 		break;
-		
+
+	      case 'k': /* key name */ 
+		token = peek_token (&val, &len, cfile);
+		if (token == STRING) {
+			token = next_token (&val, &len, cfile);
+		} else {
+			val = parse_host_name(cfile);
+			if (!val) {
+				parse_warn(cfile, "not a valid key name.");
+				skip_to_semi(cfile);
+				return 0;
+			}
+			freeval = ISC_TRUE;
+		}
+
+		if (!make_const_data (&t, (const unsigned char *)val,
+				      strlen(val), 1, 1, MDL)) {
+			log_fatal ("No memory key name");
+		}
+
+		if (freeval == ISC_TRUE) {
+			dfree((char *)val, MDL);
+			freeval = ISC_FALSE;
+		}
+		break;
+
 	      case 'N':
 		f = (*fmt) + 1;
 		g = strchr (*fmt, '.');

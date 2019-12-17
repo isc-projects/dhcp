@@ -210,7 +210,7 @@ static struct option server_options[] = {
 	{ "limited-broadcast-address", "I",	&server_universe,  33, 1 },
 	{ "remote-port", "S",			&server_universe,  34, 1 },
 	{ "local-address", "I",			&server_universe,  35, 1 },
-	{ "omapi-key", "d",			&server_universe,  36, 1 },
+	{ "omapi-key", "k",			&server_universe,  36, 1 },
 	{ "stash-agent-options", "f",		&server_universe,  37, 1 },
 	{ "ddns-ttl", "T",			&server_universe,  38, 1 },
 	{ "ddns-update-style", "Nddns-styles.",	&server_universe,  39, 1 },
