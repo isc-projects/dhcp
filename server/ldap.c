@@ -1137,7 +1137,7 @@ _do_lookup_dhcp_int_option (struct option_state *options, int option_name)
 {
   struct option_cache *oc;
   struct data_string db;
-  int ret;
+  int ret = 0;
 
   memset (&db, 0, sizeof (db));
   oc = lookup_option (&server_universe, options, option_name);
@@ -1147,13 +1147,14 @@ _do_lookup_dhcp_int_option (struct option_state *options, int option_name)
                              (struct client_state *) NULL, options,
                              (struct option_state *) NULL,
                              &global_scope, oc, MDL) &&
-      db.data != NULL && *db.data != '\0')
+      db.data != NULL)
     {
-      ret = strtol ((const char *) db.data, NULL, 10);
+      if (db.len == 4) {
+         ret = getULong(db.data);
+      } 
+
       data_string_forget (&db, MDL);
     }
-  else
-    ret = 0;
 
   return (ret);
 }

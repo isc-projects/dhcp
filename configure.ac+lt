@@ -251,7 +251,7 @@ fi
 # Testing section
 
 # Bind Makefile needs to know ATF is not included.
-AM_CONDITIONAL(BIND_ATF, 0)
+AM_CONDITIONAL(BIND_ATF, test "foo" = "barr")
 
 DISTCHECK_ATF_CONFIGURE_FLAG=
 atf_path="no"

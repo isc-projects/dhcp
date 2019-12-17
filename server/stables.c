@@ -211,7 +211,7 @@ static struct option server_options[] = {
 	{ "limited-broadcast-address", "I",	&server_universe,  33, 1 },
 	{ "remote-port", "S",			&server_universe,  34, 1 },
 	{ "local-address", "I",			&server_universe,  35, 1 },
-	{ "omapi-key", "d",			&server_universe,  36, 1 },
+	{ "omapi-key", "k",			&server_universe,  36, 1 },
 	{ "stash-agent-options", "f",		&server_universe,  37, 1 },
 	{ "ddns-ttl", "T",			&server_universe,  38, 1 },
 	{ "ddns-update-style", "Nddns-styles.",	&server_universe,  39, 1 },
@@ -241,7 +241,7 @@ static struct option server_options[] = {
 #endif
 #if defined(LDAP_CONFIGURATION)
 	{ "ldap-server", "t",			&server_universe,  60, 1 },
-	{ "ldap-port", "d",			&server_universe,  61, 1 },
+	{ "ldap-port", "L",			&server_universe,  61, 1 },
 	{ "ldap-username", "t",			&server_universe,  62, 1 },
 	{ "ldap-password", "t",			&server_universe,  63, 1 },
 	{ "ldap-base-dn", "t",			&server_universe,  64, 1 },
@@ -259,7 +259,7 @@ static struct option server_options[] = {
 	{ "ldap-tls-crlcheck", "Nldap-tls-crlcheck.",	&server_universe,  75, 1 },
 	{ "ldap-tls-ciphers", "t",		&server_universe,  76, 1 },
 	{ "ldap-tls-randfile", "t",		&server_universe,  77, 1 },
-	{ "ldap-init-retry", "d",       	&server_universe,  SV_LDAP_INIT_RETRY, 1 },
+	{ "ldap-init-retry", "L",       	&server_universe,  SV_LDAP_INIT_RETRY, 1 },
 #endif /* LDAP_USE_SSL */
 #if defined(LDAP_USE_GSSAPI)
 	{ "ldap-gssapi-keytab", "t",        &server_universe,  SV_LDAP_GSSAPI_KEYTAB, 1},
