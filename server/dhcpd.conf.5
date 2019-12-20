@@ -2077,6 +2077,12 @@ that the server is authoritative for some subnets within a shared
 network, but not authoritative for others, nor is it meaningful to
 specify that the server is authoritative for some host declarations
 and not others.
+.PP
+In order for DHCPINFORMs to be responded to by the server,
+they must match to subnets over which the server has authority;
+otherwise they will be ignored and logged.  To minimize the
+impact on logging volume, only the first and every subsequent 100th
+occurrence of an ignored DHCPINFORM is logged.
 .RE
 .PP
 The \fIboot-unknown-clients\fR statement
