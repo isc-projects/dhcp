@@ -107,22 +107,30 @@ struct stream_list {
 	int id;
 } *downstreams, *upstreams;
 
+#ifndef UNIT_TEST
 static struct stream_list *parse_downstream(char *);
 static struct stream_list *parse_upstream(char *);
 static void setup_streams(void);
+#endif /* UNIT_TEST */
 #endif
 
+#ifndef UNIT_TEST
 static void do_relay4(struct interface_info *, struct dhcp_packet *,
 	              unsigned int, unsigned int, struct iaddr,
 		      struct hardware *);
-static int add_relay_agent_options(struct interface_info *,
+
+#endif /* UNIT_TEST */
+
+extern int add_relay_agent_options(struct interface_info *,
 				   struct dhcp_packet *, unsigned,
 				   struct in_addr);
-static int find_interface_by_agent_option(struct dhcp_packet *,
+extern int find_interface_by_agent_option(struct dhcp_packet *,
 			       struct interface_info **, u_int8_t *, int);
-static int strip_relay_agent_options(struct interface_info *,
+extern int strip_relay_agent_options(struct interface_info *,
 				     struct interface_info **,
 				     struct dhcp_packet *, unsigned);
+
+#ifndef UNIT_TEST
 static void request_v4_interface(const char* name, int flags);
 
 static const char copyright[] =
@@ -796,11 +804,13 @@ do_relay4(struct interface_info *ip, struct dhcp_packet *packet,
 				 
 }
 
+#endif /* UNIT TEST */
+
 /* Strip any Relay Agent Information options from the DHCP packet
    option buffer.   If there is a circuit ID suboption, look up the
    outgoing interface based upon it. */
 
-static int
+int
 strip_relay_agent_options(struct interface_info *in,
 			  struct interface_info **out,
 			  struct dhcp_packet *packet,
@@ -937,7 +947,7 @@ strip_relay_agent_options(struct interface_info *in,
    we find a circuit ID that matches an existing interface do we tell
    the caller to go ahead and process the packet. */
 
-static int
+int
 find_interface_by_agent_option(struct dhcp_packet *packet,
 			       struct interface_info **out,
 			       u_int8_t *buf, int len) {
@@ -1001,7 +1011,7 @@ find_interface_by_agent_option(struct dhcp_packet *packet,
  * Agent Information option tacked onto its tail.   If it is, tack
  * the option on.
  */
-static int
+int
 add_relay_agent_options(struct interface_info *ip, struct dhcp_packet *packet,
 			unsigned length, struct in_addr giaddr) {
 	int is_dhcp = 0, mms;
@@ -1212,6 +1222,8 @@ add_relay_agent_options(struct interface_info *ip, struct dhcp_packet *packet,
 
 	return (length);
 }
+
+#ifndef UNIT_TEST
 
 #ifdef DHCPv6
 /*
@@ -1815,3 +1827,5 @@ void request_v4_interface(const char* name, int flags) {
         interface_snorf(tmp, (INTERFACE_REQUESTED | flags));
         interface_dereference(&tmp, MDL);
 }
+
+#endif /* UNIT_TEST */
