@@ -1004,6 +1004,7 @@ AC_CONFIG_FILES([
   omapip/Makefile.am
   omapip/Makefile
   relay/Makefile
+  relay/tests/Makefile
   server/Makefile
   tests/Makefile.am
   tests/Makefile
