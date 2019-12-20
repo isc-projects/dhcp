@@ -880,8 +880,13 @@ strip_relay_agent_options(struct interface_info *in,
 				return (0);
 
 			if (sp != op) {
-				memmove(sp, op, op[1] + 2);
-				sp += op[1] + 2;
+				size_t mlen = op[1] + 2;
+				memmove(sp, op, mlen);
+				sp += mlen;
+				if (sp > max) {
+					return (0);
+				}
+
 				op = nextop;
 			} else
 				op = sp = nextop;
@@ -1104,8 +1109,13 @@ add_relay_agent_options(struct interface_info *ip, struct dhcp_packet *packet,
 			end_pad = NULL;
 
 			if (sp != op) {
-				memmove(sp, op, op[1] + 2);
-				sp += op[1] + 2;
+				size_t mlen = op[1] + 2;
+				memmove(sp, op, mlen);
+				sp += mlen;
+				if (sp > max) {
+					return (0);
+				}
+
 				op = nextop;
 			} else
 				op = sp = nextop;
