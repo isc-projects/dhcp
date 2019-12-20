@@ -41,7 +41,7 @@ check: $(ATF_TESTS)
 
 distclean-local:
 	@if test $(top_srcdir) != ${top_builddir}; then \
-		rm -f Atffile Kyuafile;
+		rm -f Atffile Kyuafile; \
 	fi
 
 endif
