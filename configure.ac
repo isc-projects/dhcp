@@ -659,6 +659,7 @@ AC_OUTPUT([
   minires/Makefile
   omapip/Makefile
   relay/Makefile
+  relay/tests/Makefile
   server/Makefile
   tests/Makefile
   tests/unittest.sh
