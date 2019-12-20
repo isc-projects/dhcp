@@ -6,3 +6,4 @@ dhcrelay_LDADD = ../common/libdhcp.a ../omapip/libomapi.a ../dst/libdst.a ../min
 man_MANS = dhcrelay.8
 EXTRA_DIST = $(man_MANS)
 
+SUBDIRS = . tests

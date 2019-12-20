@@ -6710,7 +6710,7 @@ $as_echo "#define FLEXIBLE_ARRAY_MEMBER /**/" >>confdefs.h
   fi
 
 
-ac_config_files="$ac_config_files Makefile client/Makefile common/Makefile common/tests/Makefile dhcpctl/Makefile dst/Makefile includes/Makefile minires/Makefile omapip/Makefile relay/Makefile server/Makefile tests/Makefile tests/unittest.sh server/tests/Makefile doc/devel/doxyfile"
+ac_config_files="$ac_config_files Makefile client/Makefile common/Makefile common/tests/Makefile dhcpctl/Makefile dst/Makefile includes/Makefile minires/Makefile omapip/Makefile relay/Makefile relay/tests/Makefile server/Makefile tests/Makefile tests/unittest.sh server/tests/Makefile doc/devel/doxyfile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -7458,6 +7458,7 @@ do
     "minires/Makefile") CONFIG_FILES="$CONFIG_FILES minires/Makefile" ;;
     "omapip/Makefile") CONFIG_FILES="$CONFIG_FILES omapip/Makefile" ;;
     "relay/Makefile") CONFIG_FILES="$CONFIG_FILES relay/Makefile" ;;
+    "relay/tests/Makefile") CONFIG_FILES="$CONFIG_FILES relay/tests/Makefile" ;;
     "server/Makefile") CONFIG_FILES="$CONFIG_FILES server/Makefile" ;;
     "tests/Makefile") CONFIG_FILES="$CONFIG_FILES tests/Makefile" ;;
     "tests/unittest.sh") CONFIG_FILES="$CONFIG_FILES tests/unittest.sh" ;;

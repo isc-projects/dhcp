@@ -15,7 +15,8 @@ DHCPSRC = ../dhcrelay.c
 
 DHCPLIBS = $(top_builddir)/common/libdhcp.a \
 	  $(top_builddir)/omapip/libomapi.a \
-	  $(top_builddir)/dst/libdst.a
+	  $(top_builddir)/dst/libdst.a \
+	  $(top_builddir)/minires/libres.a
 
 ATF_TESTS =
 if HAVE_ATF
