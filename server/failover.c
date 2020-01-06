@@ -6572,8 +6572,12 @@ const char *printable(const char* value) {
  * \param lease the lease to scrub
  */
 void scrub_lease(struct lease* lease, const char *file, int line) {
+#if defined (DEBUG_FAILOVER_MESSAGES)
+	/* While technically not associated with FO messaging this log statement
+	 * draws more questions then it helps, so we'll ifdef it out */
 	log_debug ("%s(%d):scrubbing lease for %s, hostname: %s", file, line,
 		   piaddr(lease->ip_addr), printable(lease->client_hostname));
+#endif 
 
         if (lease->client_hostname) {
                 dfree (lease->client_hostname, MDL);

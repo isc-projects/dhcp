@@ -110,6 +110,10 @@ by Eric Young (eay@cryptsoft.com).
   dhcpd.conf.5
   [Gitlab #37]
 
+- Only emit lease scrubbing log messages when DEBUG_FAILOVER_MESSAGES
+  is defined.
+  [Gitlab #72]
+
 		Changes since 4.4.1 (New Features)
 
 - A new configuration parameter, ping-cltt-secs (v4 operation only), has
