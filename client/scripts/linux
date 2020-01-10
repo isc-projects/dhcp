@@ -419,7 +419,7 @@ case "$reason" in
         interface_up_wait_time=5
         for i in $(seq 0 ${interface_up_wait_time})
         do
-            ifconfig ${interface} | grep RUNNING >/dev/null 2>&1
+            ${ip} link show dev ${interface} | grep -q LOWER_UP 2>&1
             if [ $? -eq 0 ]; then
                 break;
             fi
