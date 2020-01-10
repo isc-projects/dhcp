@@ -104,7 +104,7 @@ ISC DHCP is open source software maintained by Internet Systems
 Consortium.  This product includes cryptographic software written
 by Eric Young (eay@cryptsoft.com).
 
-		Changes since 4.4.2b1
+		Changes since 4.4.2b1 (Bug Fixes)
 
 - Added a clarification on DHCPINFORMs and server authority to
   dhcpd.conf.5
@@ -113,6 +113,11 @@ by Eric Young (eay@cryptsoft.com).
 - Only emit lease scrubbing log messages when DEBUG_FAILOVER_MESSAGES
   is defined.
   [Gitlab #72]
+
+- Added the interface name to socket initialization failure log messages.
+  Prior to this the log messages stated only the error reason without
+  stating the target interface.
+  [Gitlab #75]
 
 		Changes since 4.4.1 (New Features)
 

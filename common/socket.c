@@ -3,7 +3,7 @@
    BSD socket interface code... */
 
 /*
- * Copyright (c) 2004-2019 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2020 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -211,7 +211,7 @@ if_register_socket(struct interface_info *info, int family,
 	/* Make a socket... */
 	sock = socket(domain, SOCK_DGRAM, IPPROTO_UDP);
 	if (sock < 0) {
-		log_fatal("Can't create dhcp socket: %m");
+		log_fatal("Can't create dhcp socket for %s: %m", info->name);
 	}
 
 	/* Set the REUSEADDR option so that we don't fail to start if
@@ -219,7 +219,8 @@ if_register_socket(struct interface_info *info, int family,
 	flag = 1;
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR,
 			(char *)&flag, sizeof(flag)) < 0) {
-		log_fatal("Can't set SO_REUSEADDR option on dhcp socket: %m");
+		log_fatal("Can't set SO_REUSEADDR on dhcp socket for"
+			  " %s: %m", info->name);
 	}
 
 	/* Set the BROADCAST option so that we can broadcast DHCP responses.
@@ -228,7 +229,8 @@ if_register_socket(struct interface_info *info, int family,
 	if (info->ifp &&
 	    (setsockopt(sock, SOL_SOCKET, SO_BROADCAST,
 			 (char *)&flag, sizeof(flag)) < 0)) {
-		log_fatal("Can't set SO_BROADCAST option on dhcp socket: %m");
+		log_fatal("Can't set SO_BROADCAST on dhcp socket for"
+			  " %s: %m", info->name);
 	}
 
 #if defined(DHCPv6) && defined(SO_REUSEPORT)
@@ -246,8 +248,8 @@ if_register_socket(struct interface_info *info, int family,
 		if ((setsockopt(sock, SOL_SOCKET, SO_REUSEPORT,
 			        (char *)&flag, sizeof(flag)) < 0) &&
 		    (errno != ENOPROTOOPT)) {
-			log_fatal("Can't set SO_REUSEPORT option on dhcp "
-				  "socket: %m");
+			log_fatal("Can't set SO_REUSEPORT on dhcp socket for"
+				  " %s: %m", info->name);
 		}
 	}
 #endif
@@ -266,8 +268,9 @@ if_register_socket(struct interface_info *info, int family,
 	/* Bind this socket to this interface. */
 	if ((local_family != AF_INET6) && (info->ifp != NULL) &&
 	    setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE,
-			(char *)(info -> ifp), sizeof(*(info -> ifp))) < 0) {
-		log_fatal("setsockopt: SO_BINDTODEVICE: %m");
+		       (char *)(info -> ifp), sizeof(*(info -> ifp))) < 0) {
+		log_fatal("Can't set SO_BINDTODEVICE on dhcp socket for"
+			  " %s : %m", (char *)(info->ifp));
 	}
 #endif
 
@@ -282,7 +285,8 @@ if_register_socket(struct interface_info *info, int family,
         if (info->address_count &&
 	    setsockopt(sock, IPPROTO_IP, IP_BROADCAST_IF, &info->addresses[0],
 		       sizeof(info->addresses[0])) < 0)
-		log_fatal("Can't set IP_BROADCAST_IF on dhcp socket: %m");
+		log_fatal("Can't set IP_BROADCAST_IF on dhcp socket for"
+			  " %s: %m", info->name);
 #endif
 
 #if defined(IP_PKTINFO) && defined(IP_RECVPKTINFO)  && defined(USE_V4_PKTINFO)
@@ -294,7 +298,8 @@ if_register_socket(struct interface_info *info, int family,
 		int on = 1;
 		if (setsockopt(sock, IPPROTO_IP, IP_RECVPKTINFO, 
 		               &on, sizeof(on)) != 0) {
-			log_fatal("setsockopt: IPV_RECVPKTINFO: %m");
+			log_fatal("Can't set IP_RECVPTKINFO on dhcp socket for"
+				  " %s: %m", info->name);
 		}
 	}
 #endif
