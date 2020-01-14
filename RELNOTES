@@ -120,7 +120,8 @@ by Eric Young (eay@cryptsoft.com).
   [Gitlab #75]
 
 - Corrected buffer pointer logic in dhcrelay functions that manipulate
-  agent relay options.
+  agent relay options. Thanks to Thomas Imbert of MSRC Vulnerabilities
+  & Mitigations for reporting the issue.
   [#71]
 
 		Changes since 4.4.1 (New Features)
@@ -207,6 +208,8 @@ by Eric Young (eay@cryptsoft.com).
   [Gitlab #9]
 
 - Corrected a number of reference counter and zero-length buffer leaks.
+  Thanks to Christopher Ertl of MSRC Vulnerabilities & Mitigations for
+  pointing them out.
   [Gitlab #57]
 
 - Closed a small window of time between the installation of graceful

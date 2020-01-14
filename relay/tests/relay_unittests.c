@@ -129,7 +129,9 @@ ATF_TC_BODY(strip_relay_agent_options_test, tc) {
     memset(&packet, 0x0, sizeof(packet));
     len = 0;
 
-    /* Make sure an empty packet is harmless */
+    /* Make sure an empty packet is harmless. We set add_agent_options = 1
+     * to avoid early return when it's 0.  */
+    add_agent_options = 1;
     ret = strip_relay_agent_options(&ifaces, &matched, &packet, len);
     if (ret != 0) {
        atf_tc_fail("empty packet failed");
@@ -140,17 +142,15 @@ ATF_TC_BODY(strip_relay_agent_options_test, tc) {
          * Uses valid input option data to verify that:
          * - When add_agent_options is false, the output option data is the
          *   the same as the input option data (i.e. nothing removed)
-         * - When add_agent_options is true, the relay agent option has
-         *   been removed from the output option data
          * - When add_agent_options is true, 0 length relay agent option has
+         *   been removed from the output option data
+         * - When add_agent_options is true, a relay agent option has
          *   been removed from the output option data
          *
         */
 
         unsigned char input_data[] = {
             0x35, 0x00,                   /* DHCP_TYPE = DISCOVER */
-            0x52, 0x00,                   /* Relay Agent Option, len = 0 */
-
             0x52, 0x08, 0x01, 0x06, 0x65, /* Relay Agent Option, len = 8 */
             0x6e, 0x70, 0x30, 0x73, 0x4f,
 
@@ -189,12 +189,13 @@ ATF_TC_BODY(strip_relay_agent_options_test, tc) {
             atf_tc_fail("expected unchanged data, does not match");
         }
 
-        /* When add_agent_options = 1, it should remove the eight byte  */
-        /* relay agent option. */
+        /* When add_agent_options = 1, it should remove the eight byte
+         * relay agent option. */
         add_agent_options = 1;
 
-        /* Because the option data is less is small, the packet should be */
-        /* padded out to BOOTP_MIN_LEN */
+        /* Beause the inbound option data is less than the BOOTP_MIN_LEN,
+         * the output data  should get padded out to BOOTP_MIN_LEN
+         * padded out to BOOTP_MIN_LEN */
         ret = strip_relay_agent_options(&ifaces, &matched, &packet, len);
         if (ret != BOOTP_MIN_LEN) {
             atf_tc_fail("input_data: len of %d, returned %d",
@@ -206,14 +207,15 @@ ATF_TC_BODY(strip_relay_agent_options_test, tc) {
             atf_tc_fail("input_data: expected data does not match");
         }
 
-        // Now let's repeat it with a relay agent option 0 bytes in length.
+        /* Now let's repeat it with a relay agent option 0 bytes in length. */
         len = set_packet_options(&packet, input_data2, sizeof(input_data2), pad);
         if (len == 0) {
             atf_tc_fail("input_data2 set_packet_options failed");
         }
 
-        /* Because the option data is less is small, the packet should be */
-        /* padded out to BOOTP_MIN_LEN */
+        /* Because the inbound option data is less than the BOOTP_MIN_LEN,
+         * the output data should get padded out to BOOTP_MIN_LEN
+         * padded out to BOOTP_MIN_LEN */
         ret = strip_relay_agent_options(&ifaces, &matched, &packet, len);
         if (ret != BOOTP_MIN_LEN) {
             atf_tc_fail("input_data2: len of %d, returned %d",
@@ -227,26 +229,26 @@ ATF_TC_BODY(strip_relay_agent_options_test, tc) {
     }
 
     {
-        /* Verify that oversized pack filled with long options does not */
-        /* cause overrun */
+        /* Verify that oversized packet filled with long options does not
+         * cause overrun */
 
         /* We borrowed this union from discover.c:got_one() */
         union {
                 unsigned char packbuf [4095]; /* Packet input buffer.
-                                                 Must be as large as largest
-                                                 possible MTU. */
+                                               * Must be as large as largest
+                                               * possible MTU. */
                 struct dhcp_packet packet;
         } u;
 
         unsigned char input_data[] = {
-            0x35, 0x00,             // DHCP_TYPE = DISCOVER
-            0x52, 0x00,             // Relay Agent Option, len = 0
-            0x42, 0x02, 0x00, 0x10, // Opt 0x42, len = 2
-            0x43, 0x00              // Opt 0x43, len = 0
+            0x35, 0x00,             /* DHCP_TYPE = DISCOVER        */
+            0x52, 0x00,             /* Relay Agent Option, len = 0 */
+            0x42, 0x02, 0x00, 0x10, /* Opt 0x42, len = 2           */
+            0x43, 0x00              /* Opt 0x43, len = 0           */
         };
 
-        /* We'll pad it 0xFE, that way wherever we hit for "length" we'll */
-        /* have length of 254. Increasing the odds we'll push over the end. */
+        /* We'll pad it 0xFE, that way wherever we hit for "length" we'll
+         * have length of 254. Increasing the odds we'll push over the end. */
         unsigned char pad = 0xFE;
         memset(u.packbuf, pad, 4095);
 
@@ -255,10 +257,10 @@ ATF_TC_BODY(strip_relay_agent_options_test, tc) {
             atf_tc_fail("overrun: set_packet_options failed");
         }
 
-        // With add_agent_options = 1, it should remove the two byte
-        // relay agent option.
+        /* Enable option stripping by setting add_agent_options = 1 */
         add_agent_options = 1;
 
+        /* strip_relay_agent_options() should detect the overrun and return 0 */
         ret = strip_relay_agent_options(&ifaces, &matched, &u.packet, 4095);
         if (ret != 0) {
             atf_tc_fail("overrun expected return len = 0, we got %d", ret);
@@ -281,7 +283,7 @@ ATF_TC_BODY(add_relay_agent_options_test, tc) {
     int ret;
     struct in_addr giaddr;
 
-	giaddr.s_addr = inet_addr("192.0.1.1");
+    giaddr.s_addr = inet_addr("192.0.1.1");
 
     u_int8_t circuit_id[] = { 0x01,0x02,0x03,0x04,0x05,0x06 };
     u_int8_t remote_id[] = { 0x11,0x22,0x33,0x44,0x55,0x66 };
@@ -315,11 +317,8 @@ ATF_TC_BODY(add_relay_agent_options_test, tc) {
 
         unsigned char input_data[] = {
             0x35, 0x00,                   /* DHCP_TYPE = DISCOVER */
-            0x52, 0x00,                   /* Relay Agent Option, len = 0 */
-
             0x52, 0x08, 0x01, 0x06, 0x65, /* Relay Agent Option, len = 8 */
             0x6e, 0x70, 0x30, 0x73, 0x4f,
-
             0x42, 0x02, 0x00, 0x10,       /* Opt 0x42, len = 2 */
             0x43, 0x00                    /* Opt 0x43, len = 0 */
         };
@@ -360,12 +359,13 @@ ATF_TC_BODY(add_relay_agent_options_test, tc) {
             atf_tc_fail("expected unchanged data, does not match");
         }
 
-        /* When add_agent_options = 1, it should remove the eight byte  */
-        /* relay agent option. */
+        /* When add_agent_options = 1, it should remove the eight byte
+         * relay agent option. */
         add_agent_options = 1;
 
-        /* Because the option data is less is small, the packet should be */
-        /* padded out to BOOTP_MIN_LEN */
+        /* Because the inbound option data is less than the BOOTP_MIN_LEN,
+         * the output data should get padded out to BOOTP_MIN_LEN
+         * padded out to BOOTP_MIN_LEN */
         ret = add_relay_agent_options(&ifc, &packet, len, giaddr);
         if (ret != BOOTP_MIN_LEN) {
             atf_tc_fail("input_data: len of %d, returned %d",
@@ -377,15 +377,16 @@ ATF_TC_BODY(add_relay_agent_options_test, tc) {
             atf_tc_fail("input_data: expected data does not match");
         }
 
-        // Now let's repeat it with a relay agent option 0 bytes in length.
+        /* Now let's repeat it with a relay agent option 0 bytes in length. */
         len = set_packet_options(&packet, input_data2, sizeof(input_data2),
                                  pad);
         if (len == 0) {
             atf_tc_fail("input_data2 set_packet_options failed");
         }
 
-        /* Because the option data is less is small, the packet should be */
-        /* padded out to BOOTP_MIN_LEN */
+        /* Because the inbound option data is less than the BOOTP_MIN_LEN,
+         * the output data should get padded out to BOOTP_MIN_LEN
+         * padded out to BOOTP_MIN_LEN */
         ret = add_relay_agent_options(&ifc, &packet, len, giaddr);
         if (ret != BOOTP_MIN_LEN) {
             atf_tc_fail("input_data2: len of %d, returned %d",
