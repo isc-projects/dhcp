@@ -24,9 +24,9 @@ DHCPLIBS = $(top_builddir)/common/libdhcp.@A@ \
 ATF_TESTS =
 if HAVE_ATF
 
-ATF_TESTS += relay_unittests 
+ATF_TESTS += relay_unittests
 
-relay_unittests_SOURCES = $(DHCPSRC) 
+relay_unittests_SOURCES = $(DHCPSRC)
 relay_unittests_SOURCES += relay_unittests.c
 
 relay_unittests_LDADD = $(ATF_LDFLAGS)
