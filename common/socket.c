@@ -316,13 +316,15 @@ if_register_socket(struct interface_info *info, int family,
 		/* RFC3542 */
 		if (setsockopt(sock, IPPROTO_IPV6, IPV6_RECVPKTINFO, 
 		               &on, sizeof(on)) != 0) {
-			log_fatal("setsockopt: IPV6_RECVPKTINFO: %m");
+			log_fatal("setsockopt: IPV6_RECVPKTINFO for %s: %m",
+				  info->name);
 		}
 #else
 		/* RFC2292 */
 		if (setsockopt(sock, IPPROTO_IPV6, IPV6_PKTINFO, 
 		               &on, sizeof(on)) != 0) {
-			log_fatal("setsockopt: IPV6_PKTINFO: %m");
+			log_fatal("setsockopt: IPV6_PKTINFO for %s: %m",
+				  info->name);
 		}
 #endif
 	}
@@ -336,7 +338,8 @@ if_register_socket(struct interface_info *info, int family,
 void set_multicast_hop_limit(struct interface_info* info, int hop_limit) {
 	if (setsockopt(info->wfdesc, IPPROTO_IPV6, IPV6_MULTICAST_HOPS,
 		       &hop_limit, sizeof(int)) < 0) {
-		log_fatal("setMulticaseHopLimit: IPV6_MULTICAST_HOPS: %m");
+		log_fatal("setsocketopt: IPV6_MULTICAST_HOPS for %s: %m",
+			  info->name);
 	}
 
 	log_debug("Setting hop count limit to %d for interface %s",
