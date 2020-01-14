@@ -118,7 +118,6 @@ static void setup_streams(void);
 static void do_relay4(struct interface_info *, struct dhcp_packet *,
 	              unsigned int, unsigned int, struct iaddr,
 		      struct hardware *);
-
 #endif /* UNIT_TEST */
 
 extern int add_relay_agent_options(struct interface_info *,

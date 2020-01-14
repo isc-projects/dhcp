@@ -72,6 +72,13 @@ We welcome comments from DHCP users, about this or anything else we do.
 Email Vicky Risk, Product Manager at vicky@isc.org or discuss on
 dhcp-users@lists.isc.org.
 
+			Changes since 4.1-ESV-R16b1
+
+- Corrected buffer pointer logic in dhcrelay functions that manipulate
+  agent relay options. Thanks to Thomas Imbert of MSRC Vulnerabilities &
+  Mitigations for reporting the issue.
+  [#71]
+
 			Changes since 4.1-ESV-R15-P1
 
 - Made minor changes to eliminate warnings when compiled with GCC 9.
@@ -88,6 +95,8 @@ dhcp-users@lists.isc.org.
   [Gitlab #2]
 
 - Corrected a number of reference counter and zero-length buffer leaks.
+  Thanks to Christopher Ertl of MSRC Vulnerabilities & Mitigations for
+  pointing them out.
   [Gitlab #57]
 
 - The option format for the server option omapi-key was changed to a
