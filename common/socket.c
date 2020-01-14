@@ -338,7 +338,7 @@ if_register_socket(struct interface_info *info, int family,
 void set_multicast_hop_limit(struct interface_info* info, int hop_limit) {
 	if (setsockopt(info->wfdesc, IPPROTO_IPV6, IPV6_MULTICAST_HOPS,
 		       &hop_limit, sizeof(int)) < 0) {
-		log_fatal("setsocketopt: IPV6_MULTICAST_HOPS for %s: %m",
+		log_fatal("setsockopt: IPV6_MULTICAST_HOPS for %s: %m",
 			  info->name);
 	}
 
@@ -480,7 +480,8 @@ if_register_multicast(struct interface_info *info) {
 	mreq.ipv6mr_interface = if_nametoindex(info->name);
 	if (setsockopt(sock, IPPROTO_IPV6, IPV6_JOIN_GROUP, 
 		       &mreq, sizeof(mreq)) < 0) {
-		log_fatal("setsockopt: IPV6_JOIN_GROUP: %m");
+		log_fatal("setsockopt: IPV6_JOIN_GROUP for %s: %m",
+			  info->name);
 	}
 
 	/*
@@ -499,7 +500,8 @@ if_register_multicast(struct interface_info *info) {
 		mreq.ipv6mr_interface = if_nametoindex(info->name);
 		if (setsockopt(sock, IPPROTO_IPV6, IPV6_JOIN_GROUP, 
 			       &mreq, sizeof(mreq)) < 0) {
-			log_fatal("setsockopt: IPV6_JOIN_GROUP: %m");
+			log_fatal("setsockopt: IPV6_JOIN_GROUP for %s: %m",
+				  info->name);
 		}
 	}
 }
@@ -733,7 +735,8 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 			if (setsockopt(interface->wfdesc, IPPROTO_IP,
 				       IP_PKTINFO, (char *)&pktinfo,
 				       sizeof(pktinfo)) < 0) 
-				log_fatal("setsockopt: IP_PKTINFO: %m");
+				log_fatal("setsockopt: IP_PKTINFO for %s: %m",
+					  (char*)(interface->ifp));
 		}
 #endif
 		result = sendto (interface -> wfdesc, (char *)raw, len, 0,
