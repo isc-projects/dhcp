@@ -406,3 +406,29 @@ ATF_TP_ADD_TCS(tp) {
 
     return (atf_no_error());
 }
+
+/* Below are dummy function definitions to satisfy "required" symbols */
+isc_result_t find_class (struct class **c, const char *s,
+                         const char *file, int line) {
+	return 0;
+}
+
+int check_collection (struct packet *packet, struct lease *lease,
+                      struct collection *collection) {
+	return 0;
+}
+
+void classify (struct packet *packet, struct class *class){}
+void bootp(struct packet *packet){}
+void dhcp(struct packet *packet){}
+void dhcpv6(struct packet *packet){}
+
+int parse_allow_deny (struct option_cache **oc, struct parse *cfile,
+                      int flag) {
+    return 0;
+}
+
+isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
+                                     control_object_state_t newstate) {
+    return (ISC_R_SUCCESS);
+}
