@@ -1,4 +1,4 @@
-AC_INIT([DHCP],[4.4.2b1],[dhcp-users@isc.org])
+AC_INIT([DHCP],[4.4.2],[dhcp-users@isc.org])
 
 @BEGIN WITH LIBTOOL
 # for libtool

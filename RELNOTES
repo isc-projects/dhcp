@@ -1,7 +1,6 @@
                 Internet Systems Consortium DHCP Distribution
-                            Version 4.4.2b1
-                           18 December 2019
-
+                            Version 4.4.2
+                            22 January 2020
                              Release Notes
 
                               NEW FEATURES
@@ -10,7 +9,7 @@ Please note that that ISC DHCP is now licensed under the Mozilla Public License,
 MPL 2.0. Please see https://www.mozilla.org/en-US/MPL/2.0/ to read the MPL 2.0
 license terms.
 
-While release 4.4.2b1 is primarily a maintenance release that addresses a number
+While release 4.4.2 is primarily a maintenance release that addresses a number
 of defects, it does introduce a few new features:
 
 - Keama - Keama is a migration utility that assists in converting ISC DHCP

@@ -3,7 +3,7 @@
    Find and identify the network interfaces. */
 
 /*
- * Copyright (c) 2004-2019 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2020 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -39,7 +39,10 @@
 # include <net/if6.h>
 #endif
 
-struct interface_info *interfaces, *dummy_interfaces, *fallback_interface;
+struct interface_info *interfaces = 0;
+struct interface_info *dummy_interfaces = 0;
+struct interface_info *fallback_interface = 0;
+
 int interfaces_invalidated;
 int quiet_interface_discovery;
 u_int16_t local_port;

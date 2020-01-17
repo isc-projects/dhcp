@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Copyright (C) 2009-2019  Internet Systems Consortium, Inc. ("ISC")
+# Copyright (C) 2009-2020  Internet Systems Consortium, Inc. ("ISC")
 #
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -73,6 +73,7 @@ case $# in
 	### For ease of use, this records the sticky tag of versions
 	### released with each point release.
 	###
+	4.4.2) noSNAP=snapshot BINDTAG=v9_11_14 ;;
 	4.4.2b1) noSNAP=snapshot BINDTAG=v9_11_14 ;;
 	4.4.2-dev) noSNAP=snapshot BINDTAG=v9_11_8 ;;
 	4.4.1) noSNAP=snapshot BINDTAG=v9_11_2_P1 ;;

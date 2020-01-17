@@ -3,7 +3,7 @@
    DHCP/BOOTP Relay Agent. */
 
 /*
- * Copyright(c) 2004-2019 by Internet Systems Consortium, Inc.("ISC")
+ * Copyright(c) 2004-2020 by Internet Systems Consortium, Inc.("ISC")
  * Copyright(c) 1997-2003 by Internet Software Consortium
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -149,7 +149,7 @@ extern int strip_relay_agent_options(struct interface_info *,
 static void request_v4_interface(const char* name, int flags);
 
 static const char copyright[] =
-"Copyright 2004-2019 Internet Systems Consortium.";
+"Copyright 2004-2020 Internet Systems Consortium.";
 static const char arr[] = "All rights reserved.";
 static const char message[] =
 "Internet Systems Consortium DHCP Relay Agent";
