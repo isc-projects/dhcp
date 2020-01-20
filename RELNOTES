@@ -1,16 +1,18 @@
               Internet Systems Consortium DHCP Distribution
 
-                          Version 4.1-ESV-R16b1
-                              18 December 2019
+                           Version 4.1-ESV-R16
+                             01 January 2020
 
                               Release Notes
 
                                NEW FEATURES
 
-Version 4.1-ESV-R16b1 is a maintenance release of an extended support version
+Version 4.1-ESV-R16 is a maintenance release of an extended support version
 (ESV) release.  ESVs are intended for users who have longer upgrade
-constraints.  Please see our web page
+constraints.  Please see our web page:
+
 http://www.isc.org/downloads/software-support-policy/
+
 for more information on ESVs.
 
 ISC DHCP 4.1.x includes several new DHCPv6 features that were not included
