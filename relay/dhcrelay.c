@@ -1433,9 +1433,8 @@ add_relay_agent_options(struct interface_info *ip, struct dhcp_packet *packet,
 	return (length);
 }
 
-#ifndef UNIT_TEST
-
 #ifdef DHCPv6
+#ifndef UNIT_TEST
 /*
  * Parse a downstream argument: [address%]interface[#index].
  */
@@ -2020,12 +2019,14 @@ process_down6(struct packet *packet) {
 	if (if_id.data != NULL)
 		data_string_forget(&if_id, MDL);
 }
+#endif /* UNIT_TEST */
 
 /*
  * Called by the dispatch packet handler with a decoded packet.
  */
 void
 dhcpv6(struct packet *packet) {
+#ifndef UNIT_TEST
 	struct stream_list *dp;
 
 	/* Try all relay-replies downwards. */
@@ -2048,8 +2049,9 @@ dhcpv6(struct packet *packet) {
 
 	log_info("Can't process packet from interface '%s'.",
 		 packet->interface->name);
+#endif /* UNIT_TEST */
 }
-#endif
+#endif /* DHCPv6 */
 
 /* Stub routines needed for linking with DHCP libraries. */
 void
@@ -2147,4 +2149,3 @@ void request_v4_interface(const char* name, int flags) {
         interface_snorf(tmp, (INTERFACE_REQUESTED | flags));
         interface_dereference(&tmp, MDL);
 }
-#endif /* UNIT_TEST */
