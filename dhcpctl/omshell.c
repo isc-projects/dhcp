@@ -208,6 +208,7 @@ main(int argc, char **argv) {
 		    printf ("  server <server address>\n");
 		    printf ("  key <key name> <key value>\n");
 		    printf ("  connect\n");
+		    printf ("  disconnect\n");
 		    printf ("  new <object-type>\n");
 		    printf ("  set <name> = <value>\n");
 		    printf ("  create\n");
@@ -425,6 +426,28 @@ main(int argc, char **argv) {
 			    break;
 		    }
 		    connected = 1;
+		    break;
+
+		  case DISCONNECT:
+		    token = next_token (&val, (unsigned *)0, cfile);
+		    if (token != END_OF_FILE && token != EOL) {
+			    printf ("usage: disconnect\n");
+			    skip_to_semi (cfile);
+			    break;
+		    }
+
+		    if (!connected || !connection) {
+			fprintf (stderr, "not connected\n");
+			break;
+		    }
+
+		    status = dhcpctl_disconnect (&connection, 0);
+		    if (status != ISC_R_SUCCESS) {
+			    fprintf (stderr, "dhcpctl_disconnect: %s\n",
+				     isc_result_totext (status));
+			    break;
+		    }
+		    connected = 0;
 		    break;
 
 		  case TOKEN_NEW:

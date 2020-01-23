@@ -60,6 +60,9 @@
 #include <dst/dst.h>
 #include "result.h"
 
+/* Uncomment this to enable protocol level debug logs */
+/* #define DEBUG_PROTOCOL 1 */
+
 #include <omapip/convert.h>
 #include <omapip/hash.h>
 #include <omapip/omapip.h>

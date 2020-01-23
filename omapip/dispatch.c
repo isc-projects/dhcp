@@ -413,13 +413,26 @@ isc_result_t omapi_unregister_io_object (omapi_object_t *h)
 
 isc_result_t omapi_dispatch (struct timeval *t)
 {
+#ifdef DEBUG_PROTOCOL
+	log_debug("omapi_dispatch()");
+#endif
 	return omapi_wait_for_completion ((omapi_object_t *)&omapi_io_states,
+
 					  t);
 }
 
 isc_result_t omapi_wait_for_completion (omapi_object_t *object,
 					struct timeval *t)
 {
+#ifdef DEBUG_PROTOCOL
+	if (t) {
+        	log_debug ("omapi_wait_for_completion(%u.%u secs)",
+			   (unsigned int)(t->tv_sec),
+			   (unsigned int)(t->tv_usec));
+	} else {
+        	log_debug ("omapi_wait_for_completion(no timeout)");
+	}
+#endif
 	isc_result_t status;
 	omapi_waiter_object_t *waiter;
 	omapi_object_t *inner;
@@ -453,9 +466,16 @@ isc_result_t omapi_wait_for_completion (omapi_object_t *object,
 
 	do {
 		status = omapi_one_dispatch ((omapi_object_t *)waiter, t);
-		if (status != ISC_R_SUCCESS)
-			return status;
+		if (status != ISC_R_SUCCESS) {
+#ifdef DEBUG_PROTOCOL
+			log_debug ("- call to omapi_one_dispatch failed: %s",
+				   isc_result_totext (status));
+#endif
+			/* Break out on failure, to ensure we free up the waiter(s) */
+			break;
+		}
 	} while (!waiter || !waiter -> ready);
+
 
 	if (waiter -> outer) {
 		if (waiter -> outer -> inner) {
@@ -471,7 +491,12 @@ isc_result_t omapi_wait_for_completion (omapi_object_t *object,
 	if (waiter -> inner)
 		omapi_object_dereference (&waiter -> inner, MDL);
 
-	status = waiter -> waitstatus;
+	if (status == ISC_R_SUCCESS) {
+		/* If the invocation worked, return the server's
+		 * execution status */
+		status = waiter -> waitstatus;
+	}
+
 	omapi_waiter_dereference (&waiter, MDL);
 	return status;
 }
@@ -479,6 +504,9 @@ isc_result_t omapi_wait_for_completion (omapi_object_t *object,
 isc_result_t omapi_one_dispatch (omapi_object_t *wo,
 				 struct timeval *t)
 {
+#ifdef DEBUG_PROTOCOL
+        log_debug ("omapi_one_dispatch()");
+#endif
 	fd_set r, w, x, rr, ww, xx;
 	int max = 0;
 	int count;
@@ -549,6 +577,25 @@ isc_result_t omapi_one_dispatch (omapi_object_t *wo,
 		/* Same deal for write fdets. */
 		if (io -> writefd && io -> inner &&
 		    (desc = (*(io -> writefd)) (io -> inner)) >= 0) {
+			/* This block avoids adding writefds that are already connected
+			 * but that do not have data waiting to write.  This avoids
+			 * select() calls dropping immediately simply because the
+			 * the writefd is ready to write.  Without this synchronous
+			 * waiting becomes CPU intensive polling */
+			if (io->inner && io->inner->type == omapi_type_connection) {
+				omapi_connection_object_t* c;
+				c = (omapi_connection_object_t *)(io->inner);
+				if (c->state == omapi_connection_connected && c->out_bytes == 0) {
+					/* We are already connected and have no data waiting to
+					 * be written, so we avoid registering the fd. */
+#ifdef DEBUG_PROTOCOL
+					log_debug ("--- Connected, nothing to write, skip writefd\n");
+#endif
+					continue;
+				}
+			}
+
+
 			FD_SET (desc, &w);
 			if (desc > max)
 				max = desc;
@@ -571,6 +618,14 @@ isc_result_t omapi_one_dispatch (omapi_object_t *wo,
 		r = rr;
 		w = ww;
 		x = xx;
+
+#ifdef DEBUG_PROTOCOL
+		if (t) {
+			log_debug ("  calling select with timout: %u.%u secs",
+			   	   (unsigned int)(to.tv_sec),
+			   	   (unsigned int)(to.tv_usec));
+		}
+#endif
 		count = select(max + 1, &r, &w, &x, t ? &to : NULL);
 	}
 
@@ -681,16 +736,18 @@ isc_result_t omapi_one_dispatch (omapi_object_t *wo,
 		   see if we got input on that socket. */
 		if (io -> readfd &&
 		    (desc = (*(io -> readfd)) (tmp)) >= 0) {
-			if (FD_ISSET (desc, &r))
+			if (FD_ISSET (desc, &r)) {
 				((*(io -> reader)) (tmp));
+			}
 		}
 
 		/* Same deal for write descriptors. */
 		if (io -> writefd &&
 		    (desc = (*(io -> writefd)) (tmp)) >= 0)
 		{
-			if (FD_ISSET (desc, &w))
+			if (FD_ISSET (desc, &w)) {
 				((*(io -> writer)) (tmp));
+			}
 		}
 		omapi_object_dereference (&tmp, MDL);
 	}
@@ -837,6 +894,9 @@ isc_result_t omapi_io_destroy (omapi_object_t *h, const char *file, int line)
 isc_result_t omapi_io_signal_handler (omapi_object_t *h,
 				      const char *name, va_list ap)
 {
+#ifdef DEBUG_PROTOCOL
+        log_debug ("omapi_io_signal_handler(%s)", name);
+#endif
 	if (h -> type != omapi_type_io_object)
 		return DHCP_R_INVALIDARG;
 
@@ -864,6 +924,9 @@ isc_result_t omapi_waiter_signal_handler (omapi_object_t *h,
 {
 	omapi_waiter_object_t *waiter;
 
+#ifdef DEBUG_PROTOCOL
+        log_debug ("omapi_waiter_signal_handler(%s)", name);
+#endif
 	if (h -> type != omapi_type_waiter)
 		return DHCP_R_INVALIDARG;
 

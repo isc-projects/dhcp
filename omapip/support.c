@@ -308,7 +308,7 @@ isc_result_t omapi_set_value (omapi_object_t *h,
 	omapi_object_t *outer;
 	isc_result_t status;
 
-#if defined (DEBUG)
+#if defined (DEBUG_PROTOCOL)
 	if (!value) {
 		log_info ("omapi_set_value (%.*s, NULL)",
 			  (int)name -> len, name -> value);
@@ -343,7 +343,7 @@ isc_result_t omapi_set_value (omapi_object_t *h,
 							  id, name, value);
 	else
 		status = ISC_R_NOTFOUND;
-#if defined (DEBUG)
+#if defined (DEBUG_PROTOCOL)
 	log_info (" ==> %s", isc_result_totext (status));
 #endif
 	return status;

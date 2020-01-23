@@ -461,7 +461,7 @@ isc_result_t omapi_disconnect (omapi_object_t *h,
 	omapi_connection_object_t *c;
 
 #ifdef DEBUG_PROTOCOL
-	log_debug ("omapi_disconnect(%s)", force ? "force" : "");
+	log_debug ("omapi_disconnect(force=%d)", force);
 #endif
 
 	c = (omapi_connection_object_t *)h;

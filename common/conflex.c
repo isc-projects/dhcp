@@ -954,6 +954,8 @@ intern(char *atom, enum dhcp_token dfv) {
 			if (!atom [6])
 				return DEFINE;
 		}
+		if (!strcasecmp (atom + 1, "isconnect"))
+			return DISCONNECT;
 		break;
 	      case 'e':
 		if (isascii (atom [1]) &&

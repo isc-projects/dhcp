@@ -63,6 +63,11 @@ dhcpctl_status dhcpctl_initialize (void);
 dhcpctl_status dhcpctl_connect (dhcpctl_handle *,
 				const char *, int, dhcpctl_handle);
 dhcpctl_status dhcpctl_wait_for_completion (dhcpctl_handle, dhcpctl_status *);
+
+dhcpctl_status dhcpctl_timed_wait_for_completion (dhcpctl_handle h,
+                                                  dhcpctl_status *s,
+                                                  struct timeval *t);
+
 dhcpctl_status dhcpctl_get_value (dhcpctl_data_string *,
 				  dhcpctl_handle, const char *);
 dhcpctl_status dhcpctl_get_boolean (int *, dhcpctl_handle, const char *);
@@ -116,4 +121,7 @@ isc_result_t dhcpctl_remote_stuff_values (omapi_object_t *,
 					  omapi_object_t *);
 isc_result_t dhcpctl_data_string_dereference (dhcpctl_data_string *,
 					      const char *, int);
+
+dhcpctl_status dhcpctl_disconnect (dhcpctl_handle *, int);
+
 #endif /* _DHCPCTL_H_ */
