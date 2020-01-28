@@ -4,8 +4,7 @@
 .\" File:         dhcpctl.3
 .\" RCSId:        $Id: dhcpctl.3,v 1.9 2011/04/25 23:43:16 sar Exp $
 .\"
-.\" Copyright (c) 2011,2014 by Internet Systems Consortium, Inc. ("ISC")
-.\" Copyright (c) 2004,2009 by Internet Systems Consortium, Inc. ("ISC")
+.\" Copyright (c) 2004-2022 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 2000-2003 by Internet Software Consortium
 .\" Copyright (c) 2000 Nominum, Inc.
 .\"
@@ -61,8 +60,25 @@
 .\"
 .\"
 .Ft dhcpctl_status
+.Fo dhcpctl_disconnect
+.Fa "dhcpctl_handle *cxn"
+.Fa "int force"
+.Fc
+.\"
+.\"
+.\"
+.Ft dhcpctl_status
 .Fo dhcpctl_wait_for_completion
 .Fa "dhcpctl_handle object"
+.Fa "dhcpctl_status *status"
+.Fc
+.\"
+.\"
+.\"
+.Ft dhcpctl_status
+.Fo dhcpctl_timed_wait_for_completion
+.Fa "dhcpctl_handle object"
+.Fa "struct timeval *timeout"
 .Fa "dhcpctl_status *status"
 .Fc
 .\"
@@ -235,6 +251,27 @@ OMAPI port). No authentication is used for the connection.
 .\"
 .\"
 .Pp
+
+.Fn dhcpctl_disconnect
+closes the open connection specified by the first parameter, \fBcxn\fR.  Note
+that this call will free the connection object and \fBcxn\fR will be set to
+ nul.  If the second parameter,\fBforce\fR, is nonzero, the connection will be
+closed immediately. Otherwise the receiving end will be shut down but any
+unsent data will be sent before actually closing the socket.  Note that
+disconnecting only destroys the connection object, any other objects previously
+created will still exist.
+.Pp
+For example:
+.Bd -literal -offset indent
+s = dhcpctl_disconnect(&cxn, 1);
+.Ed
+.Pp
+will close the connection immediately.  This funcion should be considered
+\fBEXPERIMENTAL\fR.
+.\"
+.\"
+.\"
+.Pp
 .Fn dhcpctl_wait_for_completion
 flushes a pending message to the server and waits for the response. The result
 of the request as processed on the server is returned via the second
@@ -251,6 +288,43 @@ The call to
 .Fn dhcpctl_wait_for_completion
 won't return until the remote message processing completes or the connection
 to the server is lost.
+.\"
+.\"
+.\"
+.Pp
+
+.Fn dhcpctl_timed_wait_for_completion
+flushes a pending message to the server and waits for the response.  How long
+the function waits for a response is dictated by the value of the second
+parameter, \fBtimeout\fR. If the value is null, it will wait indefinetly or
+until the connection is lost. Otherwise it will wait for the amount of time
+specified by \fBtimeout\fR (tv_sec:tv_usec). Values of zero for both fields
+are valid but not recommended.  The result of the request as processed on the
+server is returned via the third parameter.  An example is shown below:
+.Bd -literal -offset indent
+
+struct timeval timeout;
+timeout.tv_sec = 5;   /* wait for 5 seconds */
+timeout.tv_usec = 0;
+
+s = dhcpctl_wait_for_completion(cxn, &timeout, &wv);
+if (s != ISC_R_SUCCESS) {
+	local_failure(s);
+} else if (wv != ISC_R_SUCCESS) {
+	server_failure(wc);
+}
+.Ed
+.Pp
+If the function times out, the status returned will be ISC_R_TIMEDOUT. Please
+note that even though the function is no longer waiting for a response, the
+server does not abandon the request and may still respond by writing the
+response to the socket. A subsequent call to either this function or
+\fBdhcpctl_wait_for_completion()\fR will see that data and read it. Depending
+on the application logic flow this may or may not be desired.  Currently though
+only mechanism for "flushing" this data is to close the connection by calling
+\fBdisconnet()\fR, and then reconnecting via \fBconnect()\fR.  Please note
+this function should be considered \fBEXPERIMENTAL\fR.
+
 .\"
 .\"
 .\"
