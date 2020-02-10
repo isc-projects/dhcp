@@ -68,6 +68,9 @@ void print_object(char *msg, dhcpctl_handle handle);
  * 5. Disconnect
  * 6. Reconnect
  * 7. Refresh the host object
+ * 8. Disconnect
+ * 9. Time connect
+ * 10. Time connect retry
  *
  * Note that this program tests dhcpctl_timed_wait_for_completion() by calling
  * it with extremely small timeouts.
@@ -143,7 +146,6 @@ int main (argc, argv)
             break;
     }
 
-
 	/* Now we'll test disconnect */
 	status = dhcpctl_disconnect(&connection, 0);
 	fail_on_error(status, "can't disconnect");
@@ -160,6 +162,29 @@ int main (argc, argv)
     fail_on_error(status , "wait after refresh failed");
 
     print_object("After reconnect/refresh", host);
+
+	/* Now we'll disconnect */
+	status = dhcpctl_disconnect(&connection, 0);
+	fail_on_error(status, "can't disconnect");
+
+    /* Try a timed connect */
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 1;
+	status = dhcpctl_timed_connect (&connection, ip_address, port, 0, &timeout);
+
+    /* Try again if we time out */
+    if (status == ISC_R_TIMEDOUT) {
+        printf ("Retry timed connect\n");
+        timeout.tv_sec = 10;
+	    status = dhcpctl_timed_connect (&connection, ip_address, port, 0,
+                                        &timeout);
+    }
+
+    fail_on_error(status ,"can't reconnect");
+
+    /* Lastly we'll disconnect to clean up */
+	status = dhcpctl_disconnect(&connection, 0);
+    fail_on_error(status ,"can't disconnect");
 
 	exit (0);
 }

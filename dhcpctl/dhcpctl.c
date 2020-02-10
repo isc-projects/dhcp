@@ -31,7 +31,6 @@
 #include "dhcpctl.h"
 #include <sys/time.h>
 
-
 /* #define DEBUG_DHCPCTL  1 */
 
 omapi_object_type_t *dhcpctl_callback_type;
@@ -144,6 +143,59 @@ dhcpctl_status dhcpctl_connect (dhcpctl_handle *connection,
 	return status;
 }
 
+/* dhcpctl_timed_connect
+
+   synchronous
+   returns nonzero status code if it didn't connect, zero otherwise
+   stores connection handle through connection, which can be used
+   for subsequent access to the specified server.
+   server_name is the name of the server, and port is the TCP
+   port on which it is listening.
+   authinfo is the handle to an object containing authentication
+   information.
+   How long the function waits for the connection to complete is
+   dictated by the value of the parameter, t. If the value is nul,
+   it will wait indefinetly. Otherwise it will wait for the amount
+   of time specified by t (tv_sec:tv_usec). Values of zero for both
+   fields are valid but not recommended. */
+dhcpctl_status dhcpctl_timed_connect (dhcpctl_handle *connection,
+				      const char *server_name, int port,
+				      dhcpctl_handle authinfo,
+				      struct timeval *t)
+{
+	isc_result_t status;
+#ifdef DEBUG_DHCPCTL
+	log_debug("dhcpctl_timed_connect(%s:%d)", server_name, port);
+#endif
+	status = omapi_generic_new (connection, MDL);
+	if (status != ISC_R_SUCCESS) {
+		return status;
+	}
+
+	status = omapi_protocol_connect (*connection, server_name,
+					 (unsigned)port, authinfo);
+
+	if (status == ISC_R_SUCCESS) {
+		return status;
+	}
+
+	if (status == DHCP_R_INCOMPLETE) {
+		isc_result_t wait_status = ISC_R_SUCCESS;
+
+		/* Wait for it to complete */
+		status = dhcpctl_timed_wait_for_completion(*connection,
+							   &wait_status, t);
+		if (status == ISC_R_SUCCESS) {
+			status = wait_status;
+		}
+	}
+
+	if (status != ISC_R_SUCCESS) {
+		omapi_object_dereference (connection, MDL);
+	}
+	return status;
+}
+
 /* dhcpctl_wait_for_completion
 
    synchronous
@@ -174,15 +226,20 @@ dhcpctl_status dhcpctl_wait_for_completion (dhcpctl_handle h,
 	return ISC_R_SUCCESS;
 }
 
-/* dhcpctl_wait_for_completion
+/* dhcpctl_timed_wait_for_completion
 
    synchronous
    returns zero if the callback completes, a nonzero status if
    there was some problem relating to the wait operation.   The
    status of the queued request will be stored through s, and
    will also be either zero for success or nonzero for some kind
-   of failure.    Never returns until completion or until the
-   connection to the server is lost.   This performs the same
+   of failure.  How long the function waits for a response is
+   dictated by the value of the parameter, t. If the value is nul,
+   it will wait indefinetly or until the connection is lost.
+   Otherwise it will wait for the amount of time specified by t
+  (tv_sec:tv_usec). Values of zero for both fields are valid
+   but not recommended.  The result of the request as processed on the
+   server is returned via the parameter, s.  This performs the same
    function as dhcpctl_set_callback and the subsequent callback,
    for programs that want to do inline execution instead of using
    callbacks. */
@@ -196,7 +253,8 @@ dhcpctl_status dhcpctl_timed_wait_for_completion (dhcpctl_handle h,
 
 #ifdef DEBUG_DHCPCTL
         if (t) {
-                log_debug ("dhcpctl_timed_wait_for_completion(%u.%u secs.usecs)",
+		log_debug ("dhcpctl_timed_wait_for_completion"
+			   "(%u.%u secs.usecs)",
                            (unsigned int)(t->tv_sec),
                            (unsigned int)(t->tv_usec));
         } else {
@@ -212,10 +270,14 @@ dhcpctl_status dhcpctl_timed_wait_for_completion (dhcpctl_handle h,
 	}
 
 	status = omapi_wait_for_completion (h, (t ? &adjusted_t : 0));
-	if (status != ISC_R_SUCCESS)
+	if (status != ISC_R_SUCCESS) {
 		return status;
-	if (h -> type == dhcpctl_remote_type)
-		*s = ((dhcpctl_remote_object_t *)h) -> waitstatus;
+	}
+
+	if (h->type == dhcpctl_remote_type) {
+		*s = ((dhcpctl_remote_object_t *)h)->waitstatus;
+	}
+
 	return ISC_R_SUCCESS;
 }
 
@@ -309,7 +371,7 @@ dhcpctl_status dhcpctl_get_boolean (int *result,
 	isc_result_t status;
 	dhcpctl_data_string data = (dhcpctl_data_string)0;
 	int rv;
-	
+
 #ifdef DEBUG_DHCPCTL
 	log_debug("dhcpctl_get_boolean(%s)", value_name);
 #endif
@@ -703,8 +765,8 @@ dhcpctl_status dhcpctl_disconnect (dhcpctl_handle *connection,
 #ifdef DEBUG_DHCPCTL
 	log_debug("dhcpctl_disconnect()");
 #endif
-	if (!connection || !((*connection)->outer) || 
-	    !((*connection)->outer->type) || 
+	if (!connection || !((*connection)->outer) ||
+	    !((*connection)->outer->type) ||
 	     ((*connection)->outer->type != omapi_type_protocol) ||
 	     !((*connection)->outer->outer)) {
 		log_debug("dhcpctl_disconnect detected invalid arg");

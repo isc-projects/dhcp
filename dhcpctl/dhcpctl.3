@@ -60,6 +60,17 @@
 .\"
 .\"
 .Ft dhcpctl_status
+.Fo dhcpctl_timed_connect
+.Fa "dhcpctl_handle *cxn"
+.Fa "const char *host"
+.Fa "int port"
+.Fa "dhcpctl_handle auth"
+.Fa "dhcpctl_status *status"
+.Fc
+.\"
+.\"
+.\"
+.Ft dhcpctl_status
 .Fo dhcpctl_disconnect
 .Fa "dhcpctl_handle *cxn"
 .Fa "int force"
@@ -78,8 +89,8 @@
 .Ft dhcpctl_status
 .Fo dhcpctl_timed_wait_for_completion
 .Fa "dhcpctl_handle object"
-.Fa "struct timeval *timeout"
 .Fa "dhcpctl_status *status"
+.Fa "struct timeval *timeout"
 .Fc
 .\"
 .\"
@@ -251,7 +262,33 @@ OMAPI port). No authentication is used for the connection.
 .\"
 .\"
 .Pp
+.Fn dhcpctl_timed_connect
+opens a connection to the DHCP server at the given host and port. If an
+authenticator has been created for the connection, then it is given as the 4th
+argument. On a successful return the address pointed at by the first
+argument will have a new connection object assigned to it.
+How long the function waits for complete the connection is dictated by the value
+of the parameter, \fBtimeout\fR. If the value is null, it will wait indefinetly
+Otherwise it will wait for the amount of time specified by \fBtimeout\fR
+(tv_sec:tv_usec). Values of zero for both fields are valid but not recommended.
+An example is shown below:
+.Pp
+For example:
+.Bd -literal -offset indent
+struct timeval timeout;
+timeout.tv_sec = 5;   /* wait for 5 seconds */
+timeout.tv_usec = 0;
 
+s = dhcpctl_connect(&cxn, "127.0.0.1", 7911, NULL, &timeout);
+.Ed
+.Pp
+connects to the DHCP server on the localhost via port 7911 (the standard
+OMAPI port). No authentication is used for the connection.  It allows
+5 seconds for the connect to complete.
+.\"
+.\"
+.\"
+.Pp
 .Fn dhcpctl_disconnect
 closes the open connection specified by the first parameter, \fBcxn\fR.  Note
 that this call will free the connection object and \fBcxn\fR will be set to
@@ -295,19 +332,19 @@ to the server is lost.
 
 .Fn dhcpctl_timed_wait_for_completion
 flushes a pending message to the server and waits for the response.  How long
-the function waits for a response is dictated by the value of the second
+the function waits for a response is dictated by the value of the third
 parameter, \fBtimeout\fR. If the value is null, it will wait indefinetly or
 until the connection is lost. Otherwise it will wait for the amount of time
 specified by \fBtimeout\fR (tv_sec:tv_usec). Values of zero for both fields
 are valid but not recommended.  The result of the request as processed on the
-server is returned via the third parameter.  An example is shown below:
+server is returned via the second parameter.  An example is shown below:
 .Bd -literal -offset indent
 
 struct timeval timeout;
 timeout.tv_sec = 5;   /* wait for 5 seconds */
 timeout.tv_usec = 0;
 
-s = dhcpctl_wait_for_completion(cxn, &timeout, &wv);
+s = dhcpctl_wait_for_completion(cxn, &wv, &timeout);
 if (s != ISC_R_SUCCESS) {
 	local_failure(s);
 } else if (wv != ISC_R_SUCCESS) {

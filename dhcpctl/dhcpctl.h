@@ -62,6 +62,10 @@ extern omapi_object_type_t *dhcpctl_remote_type;
 dhcpctl_status dhcpctl_initialize (void);
 dhcpctl_status dhcpctl_connect (dhcpctl_handle *,
 				const char *, int, dhcpctl_handle);
+
+dhcpctl_status dhcpctl_timed_connect (dhcpctl_handle *, const char *,
+				      int, dhcpctl_handle, struct timeval *);
+
 dhcpctl_status dhcpctl_wait_for_completion (dhcpctl_handle, dhcpctl_status *);
 
 dhcpctl_status dhcpctl_timed_wait_for_completion (dhcpctl_handle h,
