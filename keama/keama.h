@@ -35,7 +35,9 @@ enum resolve {
 	perform = 0,	/* resolve */
 	fatal,		/* raise a fatal error */
 	pass		/* pass the string wth a warning */
-} resolve;
+};
+
+extern enum resolve resolve;
 
 /* From includes/dhcp.h */
 
@@ -57,8 +59,6 @@ enum resolve {
 extern int local_family;
 
 /* A parsing context. */
-
-TAILQ_HEAD(parses, parse) parses;
 
 struct parse {
 	int lexline;
@@ -119,6 +119,8 @@ struct parse {
 	TAILQ_ENTRY(parse) next;
 
 };
+
+extern TAILQ_HEAD(parses, parse) parses;
 
 #define PARAMETER	0
 #define TOPLEVEL	1

@@ -47,6 +47,9 @@ usage(const char *sfmt, const char *sarg) {
 	exit(1);
 }
 
+enum resolve resolve;
+struct parses parses;
+
 int local_family = 0;
 char *hook_library_path = NULL;
 char *input_file = NULL;
