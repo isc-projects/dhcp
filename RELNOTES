@@ -115,6 +115,10 @@ and the client Linux script sample was updated.
 - Minor corrections to allow compilation under gcc 10.
   [Gitlab #117]
 
+- Corrected logic in dhclient that causes it to decline DHCPv4 leases if the
+  client script exits abnormally (i.e. crashes).
+  [Gitlab #123]
+
 		Changes since 4.4.2b1 (Bug Fixes)
 
 - Added a clarification on DHCPINFORMs and server authority to

@@ -1635,9 +1635,12 @@ void bind_lease (client)
 		script_write_params(client, "alias_", client->alias);
 
 	/* If the BOUND/RENEW code detects another machine using the
-	   offered address, it exits nonzero.  We need to send a
-	   DHCPDECLINE and toss the lease. */
-	if (script_go(client)) {
+	   offered address, then per our man page it should exit with
+       a non-zero status, to which we send a DHCPDECLINE and toss
+       the lease. A return value of less than zero indicates
+       the script crashed (e.g. segfault) which script_go will log
+       but we will ignore here. */
+	if (script_go(client) > 0)  {
 		make_decline(client, client->new);
 		send_decline(client);
 		destroy_client_lease(client->new);
@@ -4557,8 +4560,14 @@ int script_go(struct client_state *client)
 	}
 	dfree (envp, MDL);
 	gettimeofday(&cur_tv, NULL);
-	return (WIFEXITED (wstatus) ?
-		WEXITSTATUS (wstatus) : -WTERMSIG (wstatus));
+
+    if (!WIFEXITED(wstatus)) {
+        int sigval = WTERMSIG(wstatus);
+        log_error ("script_go script: %s was terminated by signal %d", scriptName, sigval);
+        return  (-sigval);
+    }
+
+    return (WEXITSTATUS(wstatus));
 }
 
 void client_envadd (struct client_state *client,
