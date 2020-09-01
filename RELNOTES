@@ -119,6 +119,10 @@ and the client Linux script sample was updated.
   client script exits abnormally (i.e. crashes).
   [Gitlab #123]
 
+- The limit on the size of lease file that can be loaded at start up
+  is now only enforced on 32-bit systems.
+  [Gitlab #64]
+
 		Changes since 4.4.2b1 (Bug Fixes)
 
 - Added a clarification on DHCPINFORMs and server authority to

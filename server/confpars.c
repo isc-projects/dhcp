@@ -3,7 +3,7 @@
    Parser for dhcpd config file... */
 
 /*
- * Copyright (c) 2004-2019 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2020 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -142,7 +142,7 @@ isc_result_t read_conf_file (const char *filename, struct group *group,
 	if (lseek (file, (off_t)0, SEEK_SET) < 0)
 		goto boom;
 	/* Can't handle files greater than 2^31-1. */
-	if (flen > 0x7FFFFFFFUL)
+	if ((sizeof(void*) < 8) && flen > 0x7FFFFFFFUL)
 		log_fatal ("%s: file is too long to buffer.", filename);
 	ulen = flen;
 
