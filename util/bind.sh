@@ -154,11 +154,11 @@ else
 	# Get the bind release kit shell script
 	if type wget
 	then
-		wget https://$repo_host/$repo_path/raw/main/util/kit.sh ||
+		wget https://$repo_host/$repo_path/raw/master/util/kit.sh ||
 		{ echo "Fetch of kit.sh file failed" ; exit -1; }
 	elif type fetch
 	then
-		fetch https://$repo_host/$repo_path/raw/main/util/kit.sh ||
+		fetch https://$repo_host/$repo_path/raw/master/util/kit.sh ||
 		{ echo "Fetch of kit.sh failed" ; exit -1; }
 	else
 		echo "Fetch of kit.sh failed"
