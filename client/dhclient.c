@@ -1242,6 +1242,73 @@ void state_init (cpp)
 	send_discover (client);
 }
 
+/* v6only_timeout is called when the V6ONLY_WAIT timer expired. */
+
+void finish_v6only(cpp)
+	void *cpp;
+{
+	struct client_state *client = cpp;
+	client->state = S_INIT;
+	state_init(cpp);
+}
+
+/*
+ * state_v6only is called when a requested v6-only-preferred option was
+ * returned by the server. */
+
+void start_v6only(packet, client)
+	struct packet *packet;
+	struct client_state *client;
+{
+	struct option_cache *oc;
+	struct data_string data;
+	uint32_t v6only_wait = 0;
+	struct timeval tv;
+
+	/* Get the V6ONLY_WAIT timer. */
+	oc = lookup_option(&dhcp_universe, packet->options,
+			   DHO_V6_ONLY_PREFERRED);
+	if (!oc) {
+		/* Should not happen... */
+		return;
+	}
+
+	memset(&data, 0, sizeof(data));
+
+	if (evaluate_option_cache(&data, packet, (struct lease *)0, client,
+				  packet->options, (struct option_state *)0,
+				  &global_scope, oc, MDL)) {
+		if (data.len > 3)
+			v6only_wait = getULong(data.data);
+		data_string_forget(&data, MDL);
+	}
+
+	if (v6only_wait < MIN_V6ONLY_WAIT)
+		v6only_wait = MIN_V6ONLY_WAIT;
+
+	/* Enter V6ONLY state. */
+
+	client->state = S_V6ONLY;
+
+	/* Run the client script. */
+	script_init(client, "V6ONLY", NULL);
+	if (client->active) {
+		script_write_params(client, "old_", client->active);
+		destroy_client_lease(client->active);
+		client->active = NULL;
+	}
+	script_write_requested(client);
+	client_envadd(client, "", "v6-only-preferred", "%lu",
+		      (long unsigned)v6only_wait);
+	script_go(client);
+
+	/* Trigger finish_v6only after V6ONLY_WAIT seconds. */
+	tv.tv_sec = cur_tv.tv_sec + v6only_wait;
+	tv.tv_usec = cur_tv.tv_usec;
+
+	add_timeout(&tv, finish_v6only, client, 0, 0);
+}
+
 /*
  * state_selecting is called when one or more DHCPOFFER packets have been
  * received and a configurable period of time has passed.
@@ -1650,6 +1717,7 @@ void state_stop (cpp)
 	cancel_timeout(send_discover, client);
 	cancel_timeout(send_request, client);
 	cancel_timeout(state_bound, client);
+	cancel_timeout(finish_v6only, client);
 
 	/* If we have an address, unconfigure it. */
 	if (client->active) {
@@ -4623,6 +4691,7 @@ void client_location_changed ()
 			      case S_REBINDING:
 			      case S_STOPPED:
 			      case S_DECLINING:
+			      case S_V6ONLY:
 				break;
 			}
 			client -> state = S_INIT;
@@ -4701,6 +4770,7 @@ void do_release(client)
 	cancel_timeout (state_init, client);
 	cancel_timeout (send_request, client);
 	cancel_timeout (state_reboot, client);
+	cancel_timeout (finish_v6only, client);
 	client -> state = S_STOPPED;
 
 #if defined(DHCPv6) && defined(DHCP4o6)

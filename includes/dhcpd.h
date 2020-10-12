@@ -877,6 +877,10 @@ struct lease_state {
 # define DEFAULT_ABANDON_LEASE_TIME 86400
 #endif
 
+#if !defined (MIN_V6ONLY_WAIT)
+# define MIN_V6ONLY_WAIT 300
+#endif
+
 #define PLM_IGNORE 0
 #define PLM_PREFER 1
 #define PLM_EXACT 2
@@ -1204,7 +1208,8 @@ enum dhcp_state {
 	S_RENEWING = 6,
 	S_REBINDING = 7,
 	S_DECLINING = 8,
-	S_STOPPED = 9
+	S_STOPPED = 9,
+	S_V6ONLY = 10
 };
 
 /* Possible pending client operations. */
@@ -3002,6 +3007,9 @@ void state_requesting (void *);
 void state_bound (void *);
 void state_stop (void *);
 void state_panic (void *);
+
+void start_v6only (struct packet *, struct client_state *);
+void finish_v6only (void *);
 
 void bind_lease (struct client_state *);
 
