@@ -170,6 +170,7 @@ struct option_def options4[] = {
         { "geoconf-civic", "X",                 "dhcp",  99, 2},
 	{ "pcode", "t",				"dhcp", 100, 2},
 	{ "tcode", "t",				"dhcp", 101, 2},
+	{ "v6-only-preferred", "L",		"dhcp", 108, 2},
 	{ "netinfo-server-address", "Ia",	"dhcp", 112, 2},
 	{ "netinfo-server-tag", "t",		"dhcp", 113, 2},
 	{ "default-url", "t",			"dhcp", 114, 2},

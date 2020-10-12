@@ -209,6 +209,9 @@ static struct option dhcp_options[] = {
 	{ "pcode", "t",				&dhcp_universe, 100, 1 },
 	{ "tcode", "t",				&dhcp_universe, 101, 1 },
 #endif
+#if defined(RFC8925_OPTIONS)
+	{ "v6-only-preferred", "L",		&dhcp_universe, 108, 1 },
+#endif
 	{ "netinfo-server-address", "Ia",	&dhcp_universe, 112, 1 },
 	{ "netinfo-server-tag", "t",		&dhcp_universe, 113, 1 },
 	{ "default-url", "t",			&dhcp_universe, 114, 1 },
