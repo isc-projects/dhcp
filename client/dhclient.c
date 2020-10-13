@@ -1242,7 +1242,61 @@ void state_init (cpp)
 	send_discover (client);
 }
 
-/* v6only_timeout is called when the V6ONLY_WAIT timer expired. */
+/* check_v6only is called by dhcpoffer and dhcpack. It checks if a
+ * requested v6-only-preferred option is present and returned the
+ * V6ONLY_WAIT delay to suspend DHCPv4. */
+
+uint32_t check_v6only(packet, client)
+	struct packet *packet;
+	struct client_state *client;
+{
+	int i;
+	struct option **req;
+	isc_boolean_t found = ISC_FALSE;
+	struct option_cache *oc;
+	struct data_string data;
+	uint32_t v6only_wait = 0;
+
+	/* Check if the v6-only-preferred was requested. */
+	req = client->config->requested_options;
+
+	if (req == NULL)
+		return 0;
+
+	for (i = 0 ; req[i] != NULL ; i++) {
+		if ((req[i]->universe == &dhcp_universe) &&
+		    (req[i]->code == DHO_V6_ONLY_PREFERRED)) {
+			found = ISC_TRUE;
+			break;
+		}
+	}
+
+	if (found == ISC_FALSE)
+		return 0;
+	
+	/* Get the V6ONLY_WAIT timer. */
+	oc = lookup_option(&dhcp_universe, packet->options,
+			   DHO_V6_ONLY_PREFERRED);
+	if (!oc)
+		return 0;
+
+	memset(&data, 0, sizeof(data));
+
+	if (evaluate_option_cache(&data, packet, (struct lease *)0, client,
+				  packet->options, (struct option_state *)0,
+				  &global_scope, oc, MDL)) {
+		if (data.len > 3) {
+			v6only_wait = getULong(data.data);
+			if (v6only_wait < MIN_V6ONLY_WAIT)
+				v6only_wait = MIN_V6ONLY_WAIT;
+		}
+		data_string_forget(&data, MDL);
+	}
+
+	return (v6only_wait);
+}
+
+/* finish_v6only is called when the V6ONLY_WAIT timer expired. */
 
 void finish_v6only(cpp)
 	void *cpp;
@@ -1253,38 +1307,14 @@ void finish_v6only(cpp)
 }
 
 /*
- * state_v6only is called when a requested v6-only-preferred option was
+ * start_v6only is called when a requested v6-only-preferred option was
  * returned by the server. */
 
-void start_v6only(packet, client)
-	struct packet *packet;
+void start_v6only(client, v6only_wait)
 	struct client_state *client;
+	uint32_t v6only_wait;
 {
-	struct option_cache *oc;
-	struct data_string data;
-	uint32_t v6only_wait = 0;
 	struct timeval tv;
-
-	/* Get the V6ONLY_WAIT timer. */
-	oc = lookup_option(&dhcp_universe, packet->options,
-			   DHO_V6_ONLY_PREFERRED);
-	if (!oc) {
-		/* Should not happen... */
-		return;
-	}
-
-	memset(&data, 0, sizeof(data));
-
-	if (evaluate_option_cache(&data, packet, (struct lease *)0, client,
-				  packet->options, (struct option_state *)0,
-				  &global_scope, oc, MDL)) {
-		if (data.len > 3)
-			v6only_wait = getULong(data.data);
-		data_string_forget(&data, MDL);
-	}
-
-	if (v6only_wait < MIN_V6ONLY_WAIT)
-		v6only_wait = MIN_V6ONLY_WAIT;
 
 	/* Enter V6ONLY state. */
 
@@ -1404,6 +1434,7 @@ void dhcpack (packet)
 {
 	struct interface_info *ip = packet -> interface;
 	struct client_state *client;
+	uint32_t v6only_wait;
 	struct client_lease *lease;
 	struct option_cache *oc;
 	struct data_string ds;
@@ -1438,6 +1469,15 @@ void dhcpack (packet)
 	log_info ("DHCPACK of %s from %s",
 		  inet_ntoa(packet->raw->yiaddr),
 		  piaddr (packet->client_addr));
+
+	/* Check v6only first. */
+	v6only_wait = check_v6only(packet, client);
+	if (v6only_wait > 0) {
+		log_info("v6 only preferred for %lu.",
+			 (long unsigned)v6only_wait);
+		start_v6only(client, v6only_wait);
+		return;
+	}
 
 	lease = packet_to_lease (packet, client);
 	if (!lease) {
@@ -2077,6 +2117,7 @@ void dhcpoffer (packet)
 {
 	struct interface_info *ip = packet -> interface;
 	struct client_state *client;
+	uint32_t v6only_wait;
 	struct client_lease *lease, *lp;
 	struct option **req;
 	int i;
@@ -2111,6 +2152,15 @@ void dhcpoffer (packet)
 	sprintf (obuf, "%s of %s from %s", name,
 		 inet_ntoa(packet->raw->yiaddr),
 		 piaddr(packet->client_addr));
+
+	/* Check v6only first. */
+	v6only_wait = check_v6only(packet, client);
+	if (v6only_wait > 0) {
+		log_info("%s: v6 only preferred for %lu.", obuf,
+			 (long unsigned)v6only_wait);
+		start_v6only(client, v6only_wait);
+		return;
+	}
 
 	/* If this lease doesn't supply the minimum required DHCPv4 parameters,
 	 * ignore it.

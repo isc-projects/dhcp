@@ -3008,7 +3008,8 @@ void state_bound (void *);
 void state_stop (void *);
 void state_panic (void *);
 
-void start_v6only (struct packet *, struct client_state *);
+uint32_t check_v6only (struct packet *, struct client_state *);
+void start_v6only (struct client_state *, uint32_t);
 void finish_v6only (void *);
 
 void bind_lease (struct client_state *);
