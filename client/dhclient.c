@@ -1302,6 +1302,8 @@ void finish_v6only(cpp)
 	void *cpp;
 {
 	struct client_state *client = cpp;
+
+	cancel_timeout(finish_v6only, client);
 	client->state = S_INIT;
 	state_init(cpp);
 }
@@ -1475,6 +1477,7 @@ void dhcpack (packet)
 	if (v6only_wait > 0) {
 		log_info("v6 only preferred for %lu.",
 			 (long unsigned)v6only_wait);
+		cancel_timeout(send_request, client);
 		start_v6only(client, v6only_wait);
 		return;
 	}
@@ -2158,6 +2161,7 @@ void dhcpoffer (packet)
 	if (v6only_wait > 0) {
 		log_info("%s: v6 only preferred for %lu.", obuf,
 			 (long unsigned)v6only_wait);
+		cancel_timeout(send_discover, client);
 		start_v6only(client, v6only_wait);
 		return;
 	}
