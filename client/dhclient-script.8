@@ -199,6 +199,12 @@ been passed in as with BOUND.   The client configuration script should
 test these parameters and, if it has reason to believe they are valid,
 should exit with a value of zero.   If not, it should exit with a
 nonzero value.
+.SH V6ONLY
+The DHCPv4 client has received a requested valid v6-only-preferred
+option. The system should disable IPv4 on the interface. On its side
+the dhclient waits for V6ONLY_WAIT seconds (the timer is carried by
+the option with a minimum of MIN_V6ONLY_WAIT) before returning in
+the INIT state.
 .PP
 The usual way to test a lease is to set up the network as with REBIND
 (since this may be called to test more than one lease) and then ping
