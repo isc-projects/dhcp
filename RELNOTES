@@ -103,6 +103,13 @@ ISC DHCP is open source software maintained by Internet Systems
 Consortium.  This product includes cryptographic software written
 by Eric Young (eay@cryptsoft.com).
 
+		Changes since 4.4.2 (New Features)
+
+- Added support of the new DHCPv4 option v6-only-preferred specified in
+RFC 8925. A new reason V6ONLY was added to the client script and the
+client Linux script sample was updated.
+  [Gitlab #132]
+
 		Changes since 4.4.2 (Bug Fixes)
 
 - Minor corrections to allow compilation under gcc 10.
