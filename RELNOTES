@@ -117,6 +117,12 @@ and the client Linux script sample was updated.
 
 		Changes since 4.4.2 (Bug Fixes)
 
+- Removed hard-coded MD5 algorithm name in OMAPI connection logic. Prior
+  to this using any other algorithm via key-algorithm statement would
+  allow OMAPI connections to made but subsequent actions such as updating
+  an object to fail.
+  [Gitlab #148]
+
 - Minor corrections to allow compilation under gcc 10.
   [Gitlab #117]
 

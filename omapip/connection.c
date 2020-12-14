@@ -3,7 +3,7 @@
    Subroutines for dealing with connections. */
 
 /*
- * Copyright (c) 2004-2017 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2020 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -43,6 +43,9 @@ trace_type_t *trace_disconnect;
 extern omapi_array_t *trace_listeners;
 #endif
 static isc_result_t omapi_connection_connect_internal (omapi_object_t *);
+
+static isc_result_t ctring_from_attribute(omapi_object_t *obj, char *attr_name,
+                                          char **cstr);
 
 OMAPI_OBJECT_ALLOC (omapi_connection,
 		    omapi_connection_object_t, omapi_type_connection)
@@ -763,64 +766,41 @@ isc_result_t omapi_connection_reaper (omapi_object_t *h)
 }
 
 static isc_result_t make_dst_key (dst_key_t **dst_key, omapi_object_t *a) {
-	omapi_value_t *name      = (omapi_value_t *)0;
-	omapi_value_t *algorithm = (omapi_value_t *)0;
-	omapi_value_t *key       = (omapi_value_t *)0;
-	char *name_str = NULL;
+	omapi_value_t *key = 0;
+	char *name_str = 0;
+	char *algorithm_str = 0;
 	isc_result_t status = ISC_R_SUCCESS;
 
-	if (status == ISC_R_SUCCESS)
-		status = omapi_get_value_str
-			(a, (omapi_object_t *)0, "name", &name);
-
-	if (status == ISC_R_SUCCESS)
-		status = omapi_get_value_str
-			(a, (omapi_object_t *)0, "algorithm", &algorithm);
-
-	if (status == ISC_R_SUCCESS)
-		status = omapi_get_value_str
-			(a, (omapi_object_t *)0, "key", &key);
-
+	/* Get the key name as a C string. */
+	status = ctring_from_attribute(a, "name", &name_str);
 	if (status == ISC_R_SUCCESS) {
-		if ((algorithm->value->type != omapi_datatype_data &&
-		     algorithm->value->type != omapi_datatype_string) ||
-		    strncasecmp((char *)algorithm->value->u.buffer.value,
-				NS_TSIG_ALG_HMAC_MD5 ".",
-				algorithm->value->u.buffer.len) != 0) {
-			status = DHCP_R_INVALIDARG;
+		/* Get the algorithm name as a C string. */
+		status = ctring_from_attribute(a, "algorithm", &algorithm_str);
+		if (status == ISC_R_SUCCESS) {
+			/* Get the key secret value */
+			status = omapi_get_value_str(a, 0, "key", &key);
+			if (status == ISC_R_SUCCESS) {
+				/* Now let's try and create the key */
+				status = isclib_make_dst_key(
+						name_str,
+						algorithm_str,
+						key->value->u.buffer.value,
+						key->value->u.buffer.len,
+						dst_key);
+
+				if (*dst_key == NULL) {
+					status = ISC_R_NOMEMORY;
+				}
+			}
 		}
-	}
-
-	if (status == ISC_R_SUCCESS) {
-		name_str = dmalloc (name -> value -> u.buffer.len + 1, MDL);
-		if (!name_str)
-			status = ISC_R_NOMEMORY;
-	}
-
-	if (status == ISC_R_SUCCESS) {
-		memcpy (name_str,
-			name -> value -> u.buffer.value,
-			name -> value -> u.buffer.len);
-		name_str [name -> value -> u.buffer.len] = 0;
-
-		status = isclib_make_dst_key(name_str,
-					     DHCP_HMAC_MD5_NAME,
-					     key->value->u.buffer.value,
-					     key->value->u.buffer.len,
-					     dst_key);
-
-		if (*dst_key == NULL)
-			status = ISC_R_NOMEMORY;
 	}
 
 	if (name_str)
 		dfree (name_str, MDL);
+	if (algorithm_str)
+		dfree (algorithm_str, MDL);
 	if (key)
 		omapi_value_dereference (&key, MDL);
-	if (algorithm)
-		omapi_value_dereference (&algorithm, MDL);
-	if (name)
-		omapi_value_dereference (&name, MDL);
 
 	return status;
 }
@@ -1102,4 +1082,51 @@ isc_result_t omapi_connection_stuff_values (omapi_object_t *c,
 		return (*(m -> inner -> type -> stuff_values)) (c, id,
 								m -> inner);
 	return ISC_R_SUCCESS;
+}
+
+/* @brief Fetches the value of an attribute in an object as an allocated
+ * C string
+ *
+ * @param obj ompapi object containing the desire attribute
+ * @param attr_name  name of the desired attribute
+ * @param[out] cstr pointer in which to place the allocated C string's address
+ *
+ * Caller is responsible for freeing (via dfree) the allocated string.
+ *
+ * @return ISC_R_SUCCESS if successful, otherwise indicates the type of failure
+*/
+static isc_result_t ctring_from_attribute(omapi_object_t *obj, char *attr_name,
+                                          char **cstr) {
+	isc_result_t status = ISC_R_SUCCESS;
+	omapi_value_t *attr = 0;
+
+	/* Find the attribute in the object. */
+	status = omapi_get_value_str(obj, (omapi_object_t *)0, attr_name,
+                                 &attr);
+	if (status != ISC_R_SUCCESS) {
+		return (status);
+	}
+
+	/* Got it, let's make sure it's either data or string type. */
+	if (attr->value->type != omapi_datatype_data &&
+            attr->value->type != omapi_datatype_string) {
+		return (DHCP_R_INVALIDARG);
+        }
+
+	/* Make a C string from the attribute value. */
+	*cstr = dmalloc (attr->value->u.buffer.len + 1, MDL);
+	if (!(*cstr)) {
+		status = ISC_R_NOMEMORY;
+        } else {
+	        memcpy (*cstr, attr->value->u.buffer.value,
+		            attr->value->u.buffer.len);
+	        (*cstr)[attr->value->u.buffer.len] = 0;
+	}
+
+	/* Get rid of the attribute reference */
+	if (attr) {
+		omapi_value_dereference (&attr, MDL);
+	}
+
+	return (status);
 }
