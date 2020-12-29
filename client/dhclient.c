@@ -1285,7 +1285,7 @@ uint32_t check_v6only(packet, client)
 	if (evaluate_option_cache(&data, packet, (struct lease *)0, client,
 				  packet->options, (struct option_state *)0,
 				  &global_scope, oc, MDL)) {
-		if (data.len > 3) {
+		if (data.len == 4) {
 			v6only_wait = getULong(data.data);
 			if (v6only_wait < MIN_V6ONLY_WAIT)
 				v6only_wait = MIN_V6ONLY_WAIT;
@@ -1475,7 +1475,7 @@ void dhcpack (packet)
 	/* Check v6only first. */
 	v6only_wait = check_v6only(packet, client);
 	if (v6only_wait > 0) {
-		log_info("v6 only preferred for %lu.",
+		log_info("v6 only preferred for %lu seconds.",
 			 (long unsigned)v6only_wait);
 		cancel_timeout(send_request, client);
 		start_v6only(client, v6only_wait);
