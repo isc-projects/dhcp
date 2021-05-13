@@ -27,7 +27,7 @@ ISC DHCP is open source software maintained by Internet Systems
 Consortium.  This product includes cryptographic software written
 by Eric Young (eay@cryptsoft.com).
 
-		Changes since 4.4.2 (New Features)
+		Changes since 4.4.2-P1 (New Features)
 
 - BIND libraries updated to the latest version, 9.11.36. This fixes a number
   of compilation issues on various systems, including OpenWRT. Thanks to
@@ -39,7 +39,7 @@ by Eric Young (eay@cryptsoft.com).
   and the client Linux script sample was updated.
   [Gitlab #132]
 
-		Changes since 4.4.2 (Bug Fixes)
+		Changes since 4.4.2-P1 (Bug Fixes)
 
 - Minor corrections to allow compilation under gcc 10.
   [Gitlab #117]
@@ -72,6 +72,13 @@ by Eric Young (eay@cryptsoft.com).
   allow OMAPI connections to made but subsequent actions such as updating
   an object to fail.
   [Gitlab #148]
+
+		Changes since 4.4.2 (Bug Fixes)
+
+- Corrected a buffer overwrite possible when parsing hexadecimal
+  literals with more than 1024 octets.
+  [Gitlab #182]
+  CVE: CVE-2021-25217
 
 		Changes since 4.4.2b1 (Bug Fixes)
 

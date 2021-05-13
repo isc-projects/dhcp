@@ -5556,13 +5556,14 @@ int parse_X (cfile, buf, max)
 				skip_to_semi (cfile);
 				return 0;
 			}
-			convert_num (cfile, &buf [len], val, 16, 8);
-			if (len++ > max) {
+			if (len >= max) {
 				parse_warn (cfile,
 					    "hexadecimal constant too long.");
 				skip_to_semi (cfile);
 				return 0;
 			}
+			convert_num (cfile, &buf [len], val, 16, 8);
+			len++;
 			token = peek_token (&val, (unsigned *)0, cfile);
 			if (token == COLON)
 				token = next_token (&val,
