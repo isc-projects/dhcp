@@ -1,6 +1,6 @@
                 Internet Systems Consortium DHCP Distribution
-                            Version 4.4.2
-                            22 January 2020
+                            Version 4.4.2-P1
+                              26 May 2021
                              Release Notes
 
                               NEW FEATURES
@@ -102,6 +102,13 @@ work on other platforms. Please report any problems and suggested fixes to
 ISC DHCP is open source software maintained by Internet Systems
 Consortium.  This product includes cryptographic software written
 by Eric Young (eay@cryptsoft.com).
+
+		Changes since 4.4.2 (Bug Fixes)
+
+- Corrected a buffer overwrite possible when parsing hexadecimal
+  literals with more than 1024 octets.
+  [Gitlab #182]
+  CVE: CVE-2021-25217
 
 		Changes since 4.4.2b1 (Bug Fixes)
 
