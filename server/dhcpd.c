@@ -27,7 +27,7 @@
  */
 
 static const char copyright[] =
-"Copyright 2004-2020 Internet Systems Consortium.";
+"Copyright 2004-2021 Internet Systems Consortium.";
 static const char arr [] = "All rights reserved.";
 static const char message [] = "Internet Systems Consortium DHCP Server";
 static const char url [] =
