@@ -73,6 +73,7 @@ case $# in
 	### For ease of use, this records the sticky tag of versions
 	### released with each point release.
 	###
+	4.4.2-P1) noSNAP=snapshot BINDTAG=v9_11_14 ;;
 	4.4.2) noSNAP=snapshot BINDTAG=v9_11_14 ;;
 	4.4.2b1) noSNAP=snapshot BINDTAG=v9_11_14 ;;
 	4.4.2-dev) noSNAP=snapshot BINDTAG=v9_11_8 ;;
