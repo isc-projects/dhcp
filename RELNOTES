@@ -29,10 +29,11 @@ by Eric Young (eay@cryptsoft.com).
 
 		Changes since 4.4.2 (Bug Fixes)
 
-- Corrected a buffer overwrite possible when parsing hexadecimal
-  literals with more than 1024 octets.
-  [Gitlab #182]
-  CVE: CVE-2021-25217
+- ! Corrected a buffer overwrite possible when parsing hexadecimal
+    literals with more than 1024 octets. Reported by Jon Franklin from Dell,
+    and also by Pawel Wieczorkiewicz from Amazon Web Services.
+    [Gitlab #182]
+    CVE: CVE-2021-25217
 
 		Changes since 4.4.2b1 (Bug Fixes)
 
