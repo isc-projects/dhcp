@@ -9,7 +9,7 @@ Please note that that ISC DHCP is now licensed under the Mozilla Public License,
 MPL 2.0. Please see https://www.mozilla.org/en-US/MPL/2.0/ to read the MPL 2.0
 license terms.
 
-Release 4.4.2-P1 is security release fixing possible buffer overwrite error
+Release 4.4.2-P1 is a security release fixing possible buffer overwrite error
 in client and server while parsing haxadecimal literals in lease file.
 
 For information on how to install, configure and run this software, as
@@ -29,11 +29,11 @@ by Eric Young (eay@cryptsoft.com).
 
 		Changes since 4.4.2 (Bug Fixes)
 
-- ! Corrected a buffer overwrite possible when parsing hexadecimal
-    literals with more than 1024 octets. Reported by Jon Franklin from Dell,
-    and also by Pawel Wieczorkiewicz from Amazon Web Services.
-    [Gitlab #182]
-    CVE: CVE-2021-25217
+ ! Corrected a buffer overwrite possible when parsing hexadecimal
+   literals with more than 1024 octets. Reported by Jon Franklin from Dell,
+   and also by Pawel Wieczorkiewicz from Amazon Web Services.
+   [Gitlab #182]
+   CVE: CVE-2021-25217
 
 		Changes since 4.4.2b1 (Bug Fixes)
 
