@@ -59,7 +59,7 @@ bind1:
                  ./configure ${bindconfig} > ${binddir}/configure.log); \
 	fi
 
-atf:
+atf: bind1
 # Build and copy the ATF support if not yet installed.
 	@if test -d ./atf ; then                      \
 		echo ATF support already installed ;  \
@@ -70,7 +70,8 @@ atf:
 		 cp -rp atf ${binddir}) ;             \
 	fi
 
-bind2:
+@BIND_ATF_TRUE@bind2: atf
+bind2: bind1
 # Build and install the libraries
 # No need to do anything if we already have something installed.
 	@if test -d ${binddir}/lib ; then                                 \
