@@ -653,7 +653,7 @@ else
 	else
 		AC_MSG_RESULT($use_randomdev)
 		AC_CHECK_FILE($use_randomdev,
-		    AC_DEFINE_UNQUOTED([ISC_PATH_RANDOMDEV], [$use_randomdev], 
+		    AC_DEFINE_UNQUOTED([ISC_PATH_RANDOMDEV], ["$use_randomdev"], 
 			[Define if you have the /dev/random or other configured file.]),
 		    AC_MSG_ERROR(cannot find $use_randomdev))
 	fi

@@ -6814,7 +6814,7 @@ $as_echo "$ac_res" >&6; }
 if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
 
 cat >>confdefs.h <<_ACEOF
-#define ISC_PATH_RANDOMDEV $use_randomdev
+#define ISC_PATH_RANDOMDEV "$use_randomdev"
 _ACEOF
 
 else
