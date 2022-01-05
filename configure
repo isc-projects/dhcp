@@ -6762,7 +6762,7 @@ if test "$have_nanosleep" = "rt"; then
 	LIBS="-lrt $LIBS"
 fi
 
-# check for /dev/random (declares HAVE_DEV_RANDOM)
+# check for /dev/random (declares ISC_PATH_RANDOMDEV)
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for random device" >&5
 $as_echo_n "checking for random device... " >&6; }
 
@@ -6813,7 +6813,9 @@ eval ac_res=\$$as_ac_File
 $as_echo "$ac_res" >&6; }
 if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
 
-$as_echo "#define HAVE_DEV_RANDOM 1" >>confdefs.h
+cat >>confdefs.h <<_ACEOF
+#define ISC_PATH_RANDOMDEV $use_randomdev
+_ACEOF
 
 else
   as_fn_error $? "cannot find $use_randomdev" "$LINENO" 5
