@@ -3,7 +3,7 @@
    DHCP Client. */
 
 /*
- * Copyright (c) 2004-2020 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2022 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -829,21 +829,36 @@ main(int argc, char **argv) {
 			    ? DISCOVER_REQUESTED
 			    : DISCOVER_RUNNING);
 
-	/* Make up a seed for the random number generator from current
-	   time plus the sum of the last four bytes of each
-	   interface's hardware address interpreted as an integer.
-	   Not much entropy, but we're booting, so we're not likely to
-	   find anything better. */
+	/* PLEASE PREFER the random device: not all systems use random
+	 * process identifiers so the alternative can be predictable. */
 	seed = 0;
-	for (ip = interfaces; ip; ip = ip->next) {
-		int junk;
-		memcpy(&junk,
-		       &ip->hw_address.hbuf[ip->hw_address.hlen -
-					    sizeof seed], sizeof seed);
-		seed += junk;
+	size_t nrnd = 0;
+#ifdef ISC_PATH_RANDOMDEV
+	FILE *frnd = fopen(ISC_PATH_RANDOMDEV, "r");
+	if (frnd) {
+		nrnd = fread(&seed, sizeof(seed), 1, frnd);
+		fclose(frnd);
 	}
-	srandom(seed + cur_time + (unsigned)getpid());
+#endif
+	/* Please leave the compiler to emit a warning about a constant
+	 * condition in the if test. */
+	if (!nrnd) {
+		/* Make up a seed for the random number generator from current
+		   time plus the sum of the last four bytes of each
+		   interface's hardware address interpreted as an integer.
+		   Not much entropy, but we're booting, so we're not likely to
+		   find anything better. */
 
+		for (ip = interfaces; ip; ip = ip->next) {
+			int junk;
+			memcpy(&junk,
+			       &ip->hw_address.hbuf[ip->hw_address.hlen -
+						    sizeof seed], sizeof seed);
+			seed += junk;
+		}
+		seed += cur_time + (unsigned)getpid();
+	}
+	srandom(seed);
 
 	/*
 	 * Establish a default DUID.  We always do so for v6 and
