@@ -123,6 +123,13 @@ and the client Linux script sample was updated.
   is now only enforced on 32-bit systems.
   [Gitlab #64]
 
+- After a report about predictable seeding of transaction identifier
+  pseudo-random generation on systems where process identifiers are not
+  random the already existing --with-randomdev configure argument was
+  extended. Please remember its default is "/dev/random" which is not
+  convenient on all systems.
+  [Gitlab #197]
+
 		Changes since 4.4.2b1 (Bug Fixes)
 
 - Added a clarification on DHCPINFORMs and server authority to
