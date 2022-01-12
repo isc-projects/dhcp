@@ -121,7 +121,7 @@ and the client Linux script sample was updated.
 
 - The limit on the size of lease file that can be loaded at start up
   is now only enforced on 32-bit systems.
-  [Gitlab #64]
+  [Gitlab #92]
 
 - After a report about predictable seeding of transaction identifier
   pseudo-random generation on systems where process identifiers are not
