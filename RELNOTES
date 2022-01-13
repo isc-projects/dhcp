@@ -130,6 +130,9 @@ and the client Linux script sample was updated.
   convenient on all systems.
   [Gitlab #197]
 
+- Minor dhclient code fix to remove compilation warnings.
+  [Gitlab #190]
+
 		Changes since 4.4.2b1 (Bug Fixes)
 
 - Added a clarification on DHCPINFORMs and server authority to

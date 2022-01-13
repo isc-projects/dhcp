@@ -235,10 +235,10 @@ char *progname;
  * the description of the command line.  The arguments provide
  * a way for the caller to request more specific information about
  * the error be printed as well.  Mostly this will be that some
- * comamnd doesn't include its argument.
+ * command doesn't include its argument.
  *
  * \param sfmt - The basic string and format for the specific error
- * \param sarg - Generally the offending argument from the comamnd line.
+ * \param sarg - Generally the offending argument from the command line.
  *
  * \return Nothing
  */

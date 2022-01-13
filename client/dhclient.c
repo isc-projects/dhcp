@@ -137,10 +137,10 @@ static void dhclient_ddns_cb_free(dhcp_ddns_cb_t *ddns_cb,
  * the description of the command line.  The arguments provide
  * a way for the caller to request more specific information about
  * the error be printed as well.  Mostly this will be that some
- * comamnd doesn't include its argument.
+ * command doesn't include its argument.
  *
  * \param sfmt - The basic string and format for the specific error
- * \param sarg - Generally the offending argument from the comamnd line.
+ * \param sarg - Generally the offending argument from the command line.
  *
  * \return Nothing
  */
@@ -567,7 +567,7 @@ main(int argc, char **argv) {
 		} else if (argv[i][0] == '-') {
 			usage("Unknown command: %s", argv[i]);
 		} else if (interfaces_requested < 0) {
-			usage("No interfaces comamnd -n and "
+			usage("No interfaces command -n and "
 			      " requested interface %s", argv[i]);
 		} else {
 		    struct interface_info *tmp = NULL;
@@ -3399,12 +3399,12 @@ make_client_options(struct client_state *client, struct client_lease *lease,
 			hw_idx = 0;
 			hw_len = client->interface->hw_address.hlen;
 		}
-		memcpy(&client_identifier.buffer->data + 5 - hw_len,
+		memcpy(client_identifier.buffer->data + 5 - hw_len,
 		       client->interface->hw_address.hbuf + hw_idx,
 		       hw_len);
 
 		/* Add the default duid */
-		memcpy(&client_identifier.buffer->data+(1+4),
+		memcpy(client_identifier.buffer->data + (1 + 4),
 		       default_duid.data, default_duid.len);
 
 		/* And save the option */
