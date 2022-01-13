@@ -1,5 +1,7 @@
 *.lo
 *.o
+*.a
+*.log
 doc/html
 .deps
 Makefile
@@ -36,3 +38,6 @@ server/tests/test-suite.log
 tests/libt_api.a
 tests/libt_api.la
 tests/unittest.sh
+
+bind/bind-*
+bind/include
