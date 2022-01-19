@@ -85,7 +85,7 @@ void icmp_startup (routep, handler)
 		proto = getprotobyname ("icmp");
 		if (proto)
 			protocol = proto -> p_proto;
-		
+
 		/* Get a raw socket for the ICMP protocol. */
 		icmp_state -> socket = socket (AF_INET, SOCK_RAW, protocol);
 		if (icmp_state -> socket < 0) {

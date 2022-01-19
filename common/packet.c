@@ -61,7 +61,7 @@ u_int32_t checksum (buf, nbytes, sum)
 		/* Add carry. */
 		if (sum > 0xFFFF)
 			sum -= 0xFFFF;
-	}	
+	}
 
 	/* If there's a single byte left over, checksum it, too.   Network
 	   byte order is big-endian, so the remaining byte is the high byte. */
@@ -74,7 +74,7 @@ u_int32_t checksum (buf, nbytes, sum)
 		if (sum > 0xFFFF)
 			sum -= 0xFFFF;
 	}
-	
+
 	return sum;
 }
 
@@ -91,7 +91,7 @@ u_int32_t wrapsum (sum)
 #ifdef DEBUG_CHECKSUM_VERBOSE
 	log_debug ("sum = %x", sum);
 #endif
-	
+
 #ifdef DEBUG_CHECKSUM
 	log_debug ("wrapsum returns %x", htons (sum));
 #endif
@@ -156,10 +156,10 @@ void assemble_udp_ip_header (interface, buf, bufix,
 	ip.ip_sum = 0;
 	ip.ip_src.s_addr = from;
 	ip.ip_dst.s_addr = to;
-	
+
 	/* Checksum the IP header... */
 	ip.ip_sum = wrapsum (checksum ((unsigned char *)&ip, sizeof ip, 0));
-	
+
 	/* Copy the ip header into the buffer... */
 	memcpy (&buf [*bufix], &ip, sizeof ip);
 	*bufix += sizeof ip;
@@ -181,7 +181,7 @@ void assemble_udp_ip_header (interface, buf, bufix,
 
 	udp.uh_sum =
 		wrapsum (checksum ((unsigned char *)&udp, sizeof udp,
-				   checksum (data, len, 
+				   checksum (data, len,
 					     checksum ((unsigned char *)
 						       &ip.ip_src,
 						       2 * sizeof ip.ip_src,

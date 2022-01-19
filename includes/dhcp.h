@@ -202,4 +202,3 @@ struct dhcp_packet {
 #define VENDOR_ISC_SUBOPTIONS		2495
 
 #endif /* DHCP_H */
-

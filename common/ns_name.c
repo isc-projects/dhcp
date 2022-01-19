@@ -491,7 +491,7 @@ cleanup:
 			*lpp = NULL;
 		errno = EMSGSIZE;
 		return (-1);
-	} 
+	}
 	return (dstp - dst);
 }
 
@@ -509,7 +509,7 @@ MRns_name_uncompress(const u_char *msg, const u_char *eom, const u_char *src,
 {
 	u_char tmp[NS_MAXCDNAME];
 	int n;
-	
+
 	if ((n = MRns_name_unpack(msg, eom, src, tmp, sizeof tmp)) == -1)
 		return (-1);
 	if (MRns_name_ntop(tmp, dst, dstsiz) == -1)

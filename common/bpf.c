@@ -520,7 +520,7 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 		   physical layer that supports this, but WTH), skip this
 		   packet. */
 		if (offset < 0) {
-			interface->rbuf_offset = 
+			interface->rbuf_offset =
 				BPF_WORDALIGN(interface->rbuf_offset +
 					      hdr.bh_caplen);
 			continue;
@@ -535,7 +535,7 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 
 		/* If the IP or UDP checksum was bad, skip the packet... */
 		if (offset < 0) {
-			interface->rbuf_offset = 
+			interface->rbuf_offset =
 				BPF_WORDALIGN(interface->rbuf_offset +
 					      hdr.bh_caplen);
 			continue;
@@ -614,7 +614,7 @@ get_hw_addr(const char *name, struct hardware *hw) {
 	 */
 	sa = NULL;
 	for (p=ifa; (p != NULL) && (sa == NULL); p = p->ifa_next) {
-		if ((p->ifa_addr->sa_family == AF_LINK) && 
+		if ((p->ifa_addr->sa_family == AF_LINK) &&
 		    !strcmp(p->ifa_name, name)) {
 		    	sa = (struct sockaddr_dl *)p->ifa_addr;
 		}

@@ -1905,7 +1905,7 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 			}
 			hunksize += k;
 			break;
-	  		
+
 		      case 't':
 		      case 'k':
 			fmtbuf[l + 1] = 0;

@@ -355,7 +355,7 @@ reduce_boolean_expression(struct element *expr)
  * data_expression :== SUBSTRING LPAREN data-expression COMMA
  *                                      numeric-expression COMMA
  *                                      numeric-expression RPAREN |
- *                     CONCAT LPAREN data-expression COMMA 
+ *                     CONCAT LPAREN data-expression COMMA
  *                                      data-expression RPAREN
  *                     SUFFIX LPAREN data_expression COMMA
  *                                   numeric-expression RPAREN |
@@ -504,7 +504,7 @@ reduce_data_expression(struct element *expr)
 		concatString(result, stringValue(string));
 		snprintf(buf, sizeof(buf), ",-%u,all)", (unsigned)len);
 		appendString(result, buf);
-		return createString(result);			
+		return createString(result);
 	}
 
 	/* lowercase */

@@ -122,7 +122,7 @@ isc_result_t omapi_array_set (omapi_array_t *array, void *ptr, int index,
 		if (array -> data [index]) {
 			status = ((*array -> deref) (&array -> data [index],
 						     file, line));
-		
+
 			if (status != ISC_R_SUCCESS)
 				return status;
 		}
@@ -153,4 +153,3 @@ isc_result_t omapi_array_lookup (char **ptr, omapi_array_t *array, int index,
 					array -> data [index], file, line);
 	return ISC_R_NOTFOUND;
 }
-

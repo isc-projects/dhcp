@@ -66,7 +66,7 @@ struct failover_option_info ft_options [] =
 	  FM_OFFSET(ip_flags), FTB_IP_FLAGS },
 	{ FTO_LEASE_EXPIRY, "lease-expiration-time", FT_UINT32, 1,
 	  FM_OFFSET(expiry), FTB_LEASE_EXPIRY },
-	{ FTO_MAX_UNACKED, "max-unacked-bndupd", FT_UINT32, 1, 
+	{ FTO_MAX_UNACKED, "max-unacked-bndupd", FT_UINT32, 1,
 	  FM_OFFSET(max_unacked), FTB_MAX_UNACKED },
 	{ FTO_MCLT, "MCLT", FT_UINT32, 1, FM_OFFSET(mclt), FTB_MCLT },
 	{ FTO_MESSAGE, "message", FT_TEXT, 0,

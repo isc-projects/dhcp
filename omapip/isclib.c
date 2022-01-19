@@ -40,7 +40,7 @@ int shutdown_signal = 0;
  * It may be moved to be part of the dns client code instead
  * of being in the DHCP code
  */
-isc_result_t 
+isc_result_t
 dhcp_dns_client_setservers(void)
 {
 	isc_result_t result;
@@ -183,7 +183,7 @@ dhcp_context_create(int flags,
 		}
 
 		memset(&dhcp_gbl_ctx, 0, sizeof (dhcp_gbl_ctx));
-	
+
 		isc_lib_register();
 
 		/* get the current time for use as the random seed */
@@ -318,7 +318,7 @@ dhcp_isc_name(unsigned char   *namestr,
 	isc_buffer_t b;
 	isc_result_t result;
 
-	namelen = strlen((char *)namestr); 
+	namelen = strlen((char *)namestr);
 	isc_buffer_init(&b, namestr, namelen);
 	isc_buffer_add(&b, namelen);
 	dns_fixedname_init(namefix);

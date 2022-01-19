@@ -52,7 +52,7 @@ typedef struct _omapi_buffer {
 	u_int16_t head, tail;		/* Buffers are organized in a ring. */
 	char buf [OMAPI_BUF_SIZE];	/* The actual buffer is included in
 					   the buffer data structure. */
-} omapi_buffer_t;	
+} omapi_buffer_t;
 
 #define BUFFER_BYTES_FREE(x)	\
 	((x) -> tail > (x) -> head \
@@ -74,4 +74,3 @@ isc_result_t omapi_connection_get_uint32 (omapi_object_t *, u_int32_t *);
 isc_result_t omapi_connection_put_uint32 (omapi_object_t *, u_int32_t);
 isc_result_t omapi_connection_get_uint16 (omapi_object_t *, u_int16_t *);
 isc_result_t omapi_connection_put_uint16 (omapi_object_t *, u_int32_t);
-

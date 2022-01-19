@@ -44,7 +44,7 @@ void trace_interface_register (trace_type_t *ttype, struct interface_info *ip)
 		tipkt.index = htonl (ip -> index);
 
 		trace_write_packet (ttype, sizeof tipkt, (char *)&tipkt, MDL);
-	}	
+	}
 }
 
 void trace_interface_input (trace_type_t *ttype, unsigned len, char *buf)
@@ -61,7 +61,7 @@ void trace_interface_input (trace_type_t *ttype, unsigned len, char *buf)
 		return;
 	}
 	tipkt = (trace_interface_packet_t *)buf;
-	
+
 	ip = (struct interface_info *)0;
 	status = interface_allocate (&ip, MDL);
 	if (status != ISC_R_SUCCESS) {
@@ -85,7 +85,7 @@ void trace_interface_input (trace_type_t *ttype, unsigned len, char *buf)
 	ip->address_count = ip->address_max = 1;
 	ip->addresses = dmalloc(sizeof(*ip->addresses), MDL);
 	if (!ip->addresses) {
-		dfree(ip->ifp, MDL); 
+		dfree(ip->ifp, MDL);
 		ip->ifp = NULL;
 		interface_dereference (&ip, MDL);
 		status = ISC_R_NOMEMORY;
@@ -183,7 +183,7 @@ void trace_inpacket_input (trace_type_t *ttype, unsigned len, char *buf)
 	tip = (trace_inpacket_t *)buf;
 	index = ntohl (tip -> index);
 	tip -> from.len = ntohl (tip -> from.len);
-	
+
 	if (index > interface_count ||
 	    index < 0 ||
 	    !interface_vector [index]) {
@@ -259,7 +259,7 @@ void trace_outpacket_input (trace_type_t *ttype, unsigned len, char *buf)
 	}
 	tip = (trace_outpacket_t *)buf;
 	index = ntohl (tip -> index);
-	
+
 	if (index > interface_count ||
 	    index < 0 ||
 	    !interface_vector [index]) {

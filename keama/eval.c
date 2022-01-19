@@ -456,7 +456,7 @@ eval_boolean_expression(struct element *expr, isc_boolean_t *modifiedp)
  * data_expression :== SUBSTRING LPAREN data-expression COMMA
  *                                      numeric-expression COMMA
  *                                      numeric-expression RPAREN |
- *                     CONCAT LPAREN data-expression COMMA 
+ *                     CONCAT LPAREN data-expression COMMA
  *                                      data-expression RPAREN
  *                     SUFFIX LPAREN data_expression COMMA
  *                                   numeric-expression RPAREN |
@@ -1155,7 +1155,7 @@ eval_data_expression(struct element *expr, isc_boolean_t *modifiedp)
 				fmt = "%x";
 				break;
 			}
-			
+
 			for (i = 0; i < buf->length; i++) {
 				uint8_t val;
 				char num[4];
@@ -1172,7 +1172,7 @@ eval_data_expression(struct element *expr, isc_boolean_t *modifiedp)
 
 			if ((buf->length % 2) != 0)
 				return expr;
-			
+
 			switch (b) {
 			case 8:
 				fmt = "%o";
@@ -1185,11 +1185,11 @@ eval_data_expression(struct element *expr, isc_boolean_t *modifiedp)
 				fmt = "%x";
 				break;
 			}
-			
+
 			for (i = 0; i < buf->length; i += 2) {
 				uint16_t val;
 				char num[8];
-				
+
 				if (i != 0)
 					concatString(r, sep);
 				memcpy(&val, buf->content + i, 2);
@@ -1203,7 +1203,7 @@ eval_data_expression(struct element *expr, isc_boolean_t *modifiedp)
 
 			if ((buf->length % 4) != 0)
 				return expr;
-			
+
 			switch (b) {
 			case 8:
 				fmt = "%llo";
@@ -1216,11 +1216,11 @@ eval_data_expression(struct element *expr, isc_boolean_t *modifiedp)
 				fmt = "%llx";
 				break;
 			}
-			
+
 			for (i = 0; i < buf->length; i += 4) {
 				uint32_t val;
 				char num[40];
-				
+
 				if (i != 0)
 					concatString(r, sep);
 				memcpy(&val, buf->content + i, 4);

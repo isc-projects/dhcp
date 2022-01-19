@@ -3910,4 +3910,3 @@ void lc_delete_all(struct leasechain *lc);
 #define FIND_POND6_PERCENT(count, percent)	\
 	((count) > (POND_TRACK_MAX / 100) ?	\
 	 ((count) / 100) * (percent) : ((count) * (percent)) / 100)
-

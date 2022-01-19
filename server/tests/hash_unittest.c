@@ -536,7 +536,7 @@ ATF_TC_BODY(lease_hash_basic_3hosts, tc) {
    the code from using an improper client id earlier and restoring
    the hash code to its previous state.  As we may choose to
    redo the hash code again this test hasn't been deleted.
-*/   
+*/
 /* this test is a direct reproduction of 29851 issue */
 ATF_TC(uid_hash_rt29851);
 

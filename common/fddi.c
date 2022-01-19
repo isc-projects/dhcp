@@ -77,7 +77,7 @@ ssize_t decode_fddi_header (interface, buf, bufix, from)
 {
 	struct fddi_header   fh;
 	struct llc     lh;
-	
+
 	from -> hbuf [0] = HTYPE_FDDI;
 	memcpy (&from -> hbuf [1], fh.fddi_shost, sizeof fh.fddi_shost);
 	return FDDI_HEADER_SIZE + LLC_SNAP_LEN;

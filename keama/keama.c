@@ -63,7 +63,7 @@ isc_boolean_t json = ISC_FALSE;
 static const char use_noarg[] = "No argument for command: %s";
 static const char bad_resolve[] = "Bad -r argument: %s";
 
-int 
+int
 main(int argc, char **argv) {
 	int i, fd;
 	char *inbuf = NULL;
@@ -107,7 +107,7 @@ main(int argc, char **argv) {
 			if (++i == argc)
 				usage(use_noarg, argv[i -  1]);
 			output_file = argv[i];
- 		} else 
+ 		} else
 			usage("Unknown command: %s", argv[i]);
 	}
 
@@ -201,10 +201,10 @@ parse_error(struct parse *cfile, const char *fmt, ...)
 	char mbuf[1024];
 	char fbuf[1024];
 	unsigned i, lix;
-	
+
 	snprintf(fbuf, sizeof(fbuf), "%s line %d: %s",
 		 cfile->tlname, cfile->lexline, fmt);
-	
+
 	va_start(list, fmt);
 	vsnprintf(mbuf, sizeof(mbuf), fbuf, list);
 	va_end(list);

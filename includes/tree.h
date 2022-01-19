@@ -47,7 +47,7 @@ struct enumeration {
 	const char *name;
 	unsigned width;
 	struct enumeration_value *values;
-};	
+};
 
 /* Tree node types... */
 #define TREE_CONCAT		1
@@ -69,7 +69,7 @@ struct buffer {
    XXX ephemeral by default and be made a persistent reference explicitly. */
 /* XXX on the other hand, it seems to work pretty nicely, so maybe the
    XXX above comment is meshuggenah. */
-/* XXX I think the above comment tries to say this: 
+/* XXX I think the above comment tries to say this:
    XXX    http://tinyurl.com/2tjqre */
 
 /* A string of data bytes, possibly accompanied by a larger buffer. */
@@ -281,7 +281,7 @@ struct expression {
 	} data;
 	int flags;
 #	define EXPR_EPHEMERAL	1
-};		
+};
 
 /* DNS host entry structure... */
 struct dns_host_entry {

@@ -66,7 +66,7 @@ isc_result_t omapi_auth_key_destroy (omapi_object_t *h,
 		omapi_data_string_dereference(&a->key, MDL);
 	if (a->tsec_key != NULL)
 		dns_tsec_destroy(&a->tsec_key);
-	
+
 	return ISC_R_SUCCESS;
 }
 
@@ -100,7 +100,7 @@ isc_result_t omapi_auth_key_enter (omapi_auth_key_t *a)
 
 	/*
 	 * If possible create a tsec structure for this key,
-	 * if we can't create the structure we put out a warning 
+	 * if we can't create the structure we put out a warning
 	 * and continue.
 	 */
 	status = isclib_make_dst_key(a->name, a->algorithm,

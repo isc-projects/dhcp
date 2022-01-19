@@ -134,7 +134,7 @@ typedef struct __omapi_remote_auth {
 
 typedef struct __omapi_protocol_object {
 	OMAPI_OBJECT_PREAMBLE;
-	u_int32_t header_size;		
+	u_int32_t header_size;
 	u_int32_t protocol_version;
 	u_int32_t next_xid;
 

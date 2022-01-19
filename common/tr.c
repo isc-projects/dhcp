@@ -152,7 +152,7 @@ ssize_t decode_tr_header (interface, buf, bufix, from)
                         && llc->protid[1] == 0
                         && llc->protid[2] == 0) {
                 /* say there is source routing information present */
-                trh->saddr[0] |= TR_RII;	
+                trh->saddr[0] |= TR_RII;
         }
 
 	if (trh->saddr[0] & TR_RII)
@@ -199,7 +199,7 @@ static int insert_source_routing (trh, interface)
 	/* single route broadcasts as per rfc 1042 */
 	if (memcmp(trh->daddr, tr_broadcast,TR_ALEN) == 0) {
 		trh->saddr[0] |= TR_RII;
-		trh->rcf = ((sizeof(trh->rcf)) << 8) & TR_RCF_LEN_MASK;  
+		trh->rcf = ((sizeof(trh->rcf)) << 8) & TR_RCF_LEN_MASK;
                 trh->rcf |= (TR_RCF_FRAME2K | TR_RCF_LIMITED_BROADCAST);
 		trh->rcf = htons(trh->rcf);
 	} else {
@@ -214,7 +214,7 @@ static int insert_source_routing (trh, interface)
                         if ((rover->rcf & TR_RCF_LEN_MASK) >> 8) {
                                 u_int16_t rcf = rover->rcf;
 				memcpy(trh->rseg,rover->rseg,sizeof(trh->rseg));
-				rcf ^= TR_RCF_DIR_BIT;	
+				rcf ^= TR_RCF_DIR_BIT;
 				rcf &= ~TR_RCF_BROADCAST_MASK;
                                 trh->rcf = htons(rcf);
 				trh->saddr[0] |= TR_RII;
@@ -224,7 +224,7 @@ static int insert_source_routing (trh, interface)
                         /* we don't have any routing information so send a
                          * limited broadcast */
                         trh->saddr[0] |= TR_RII;
-                        trh->rcf = ((sizeof(trh->rcf)) << 8) & TR_RCF_LEN_MASK;  
+                        trh->rcf = ((sizeof(trh->rcf)) << 8) & TR_RCF_LEN_MASK;
                         trh->rcf |= (TR_RCF_FRAME2K | TR_RCF_LIMITED_BROADCAST);
                         trh->rcf = htons(trh->rcf);
 		}

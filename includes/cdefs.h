@@ -61,7 +61,7 @@
 #endif
 
 /* This macro is defined to avoid unused-but-set-variable warning
- * that is enabled in gcc 4.6 
+ * that is enabled in gcc 4.6
  */
 
 #define IGNORE_UNUSED(x) { x = x; }

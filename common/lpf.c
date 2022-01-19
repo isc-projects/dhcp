@@ -307,7 +307,7 @@ static void lpf_tr_filter_setup (info)
         /* Patch the server port into the LPF  program...
 	   XXX changes to filter program may require changes
 	   XXX to the insn number(s) used below!
-	   XXX Token ring filter is null - when/if we have a filter 
+	   XXX Token ring filter is null - when/if we have a filter
 	   XXX that's not, we'll need this code.
 	   XXX dhcp_bpf_filter [?].k = ntohs (local_port); */
 
@@ -539,7 +539,7 @@ get_hw_addr(const char *name, struct hardware *hw) {
 	memset(&tmp, 0, sizeof(tmp));
 	strcpy(tmp.ifr_name, name);
 	if (ioctl(sock, SIOCGIFHWADDR, &tmp) < 0) {
-		log_fatal("Error getting hardware address for \"%s\": %m", 
+		log_fatal("Error getting hardware address for \"%s\": %m",
 			  name);
 	}
 

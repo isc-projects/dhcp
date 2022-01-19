@@ -31,7 +31,7 @@
 #include <time.h>
 
 /* Resolution of FQDNs into IPv4 addresses */
-enum resolve { 
+enum resolve {
 	perform = 0,	/* resolve */
 	fatal,		/* raise a fatal error */
 	pass		/* pass the string wth a warning */

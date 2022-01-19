@@ -94,7 +94,7 @@ int if_register_upf (info)
 		       info -> name);
 
 	/* We only know how to do ethernet. */
-	if (param.end_dev_type != ENDT_10MB)	
+	if (param.end_dev_type != ENDT_10MB)
 		log_fatal ("Invalid device type on network interface %s: %d",
 		       info -> name, param.end_dev_type);
 

@@ -1,7 +1,7 @@
 /* result.c
  */
 
-/* 
+/*
  * Copyright (c) 2004-2017 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *

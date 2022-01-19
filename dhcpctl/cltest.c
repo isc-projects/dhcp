@@ -99,7 +99,7 @@ int main (argc, argv)
 	int mode = undefined;
 	const char *interface = 0;
 	const char *action;
-	
+
 	for (i = 1; i < argc; i++) {
 		if (!strcmp (argv[i], "-u")) {
 			mode = up;

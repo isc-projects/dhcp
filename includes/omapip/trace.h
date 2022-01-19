@@ -29,7 +29,7 @@
 #define TRACEFILE_MAGIC		0x64484370UL	/* dHCp */
 #define TRACEFILE_VERSION	1
 
-/* The first thing in a trace file is the header, which basically just 
+/* The first thing in a trace file is the header, which basically just
    defines the version of the file. */
 typedef struct {
 	u_int32_t magic;	/* Magic number for trace file. */

@@ -56,7 +56,7 @@ struct iaddrmatch {
 };
 
 /* its list ... */
- 
+
 struct iaddrmatchlist {
 	struct iaddrmatchlist *next;
 	struct iaddrmatch match;
@@ -76,4 +76,3 @@ struct iaddrcidrnetlist {
 	struct iaddrcidrnetlist *next;
 	struct iaddrcidrnet cidrnet;
 };
-

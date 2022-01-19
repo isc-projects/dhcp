@@ -47,7 +47,7 @@
    next handle should go, and if necessary create additional nodes in
    the tree to contain the new handle.  The pointer to the object is
    then stored in the correct position.
-   
+
    Theoretically, we could have some code here to free up handle
    tables as they go out of use, but by and large handle tables won't
    go out of use, so this is being skipped for now.  It shouldn't be
@@ -77,7 +77,7 @@ isc_result_t omapi_object_handle (omapi_handle_t *h, omapi_object_t *o)
 		*h = o -> handle;
 		return ISC_R_SUCCESS;
 	}
-	
+
 	if (!omapi_handle_table) {
 		omapi_handle_table = dmalloc (sizeof *omapi_handle_table, MDL);
 		if (!omapi_handle_table)
@@ -96,7 +96,7 @@ isc_result_t omapi_object_handle (omapi_handle_t *h, omapi_object_t *o)
 
 	while (omapi_next_handle >= omapi_handle_table -> limit) {
 		omapi_handle_table_t *new;
-		
+
 		new = dmalloc (sizeof *new, MDL);
 		if (!new)
 			return ISC_R_NOMEMORY;
@@ -145,7 +145,7 @@ static isc_result_t omapi_object_handle_in_table (omapi_handle_t h,
 
 	if (table -> first > h || table -> limit <= h)
 		return ISC_R_NOSPACE;
-	
+
 	/* If this is a leaf table, just stash the object in the
 	   appropriate place. */
 	if (table -> leafp) {
@@ -249,7 +249,7 @@ static isc_result_t omapi_handle_lookup_in (omapi_object_t **o,
 
 	if (!table || table->first > h || table->limit <= h)
 		return(ISC_R_NOTFOUND);
-	
+
 	/* If this is a leaf table, just grab the object. */
 	if (table->leafp) {
 		/* Not there? */

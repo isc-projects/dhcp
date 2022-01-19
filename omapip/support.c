@@ -745,18 +745,18 @@ isc_result_t omapi_make_object_value (omapi_value_t **vp,
 				      const char *file, int line)
 {
 	isc_result_t status;
-	
+
 	status = omapi_value_new (vp, file, line);
 	if (status != ISC_R_SUCCESS)
 		return status;
-	
+
 	status = omapi_data_string_reference (&(*vp) -> name,
                                               name, file, line);
 	if (status != ISC_R_SUCCESS) {
 		omapi_value_dereference (vp, file, line);
 		return status;
 	}
-	
+
 	if (value) {
 		status = omapi_typed_data_new (file, line, &(*vp) -> value,
 					       omapi_datatype_object, value);
@@ -765,7 +765,7 @@ isc_result_t omapi_make_object_value (omapi_value_t **vp,
 			return status;
 		}
 	}
-	
+
 	return ISC_R_SUCCESS;
 }
 

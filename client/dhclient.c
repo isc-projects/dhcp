@@ -1288,7 +1288,7 @@ uint32_t check_v6only(packet, client)
 
 	if (found == ISC_FALSE)
 		return 0;
-	
+
 	/* Get the V6ONLY_WAIT timer. */
 	oc = lookup_option(&dhcp_universe, packet->options,
 			   DHO_V6_ONLY_PREFERRED);

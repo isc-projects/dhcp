@@ -179,7 +179,7 @@ struct name_server *first_name_server ()
 		}
 		if (st.st_mtime > rcdate) {
 			rcdate = cur_time + 1;
-			
+
 			read_resolv_conf (rcdate);
 		}
 	}

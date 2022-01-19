@@ -1061,7 +1061,7 @@ get_config_comments(unsigned code)
 	log_threshold:
 		comment = createComment("/// Reference Kea #222");
                 TAILQ_INSERT_TAIL(&comments, comment);
-                break;		
+                break;
 
 	case 84: /* log-threshold-high */
 		comment = createComment("/// log-threshold-high is not (yet?) "

@@ -61,7 +61,7 @@ void trace_inpacket_stop (trace_type_t *);
 void trace_outpacket_input (trace_type_t *, unsigned, char *);
 void trace_outpacket_stop (trace_type_t *);
 ssize_t trace_packet_send (struct interface_info *,
-			   struct packet *, struct dhcp_packet *, size_t, 
+			   struct packet *, struct dhcp_packet *, size_t,
 			   struct in_addr,
 			   struct sockaddr_in *, struct hardware *);
 void trace_icmp_input_input (trace_type_t *, unsigned, char *);

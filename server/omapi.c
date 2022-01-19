@@ -1301,7 +1301,7 @@ isc_result_t dhcp_host_stuff_values (omapi_object_t *c,
 
 		status = omapi_connection_copyin (c,
 						  ip_addrs.data, ip_addrs.len);
-		if (status != ISC_R_SUCCESS) { 
+		if (status != ISC_R_SUCCESS) {
 			data_string_forget (&ip_addrs, MDL);
 			return status;
 		}
@@ -1744,7 +1744,7 @@ isc_result_t dhcp_pool_stuff_values (omapi_object_t *c,
 	if (status != ISC_R_SUCCESS)
 		return (status);
 
-	status = omapi_connection_put_named_uint32(c, "backup-leases", 
+	status = omapi_connection_put_named_uint32(c, "backup-leases",
 						   ((u_int32_t)
 						    pool->backup_leases));
 	if (status != ISC_R_SUCCESS)

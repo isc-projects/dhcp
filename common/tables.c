@@ -86,7 +86,7 @@ HASH_FUNCTIONS (option_code, const unsigned *, struct option,
        named enumeration.   Named enumerations are tracked in parse.c.
    d - Domain name (e.g., FOO or FOO.BAR) no quotes,
        on-wire format is RFC 1035.
-   D - Domain list (e.g., "example.com eng.example.com") quoted, 
+   D - Domain list (e.g., "example.com eng.example.com") quoted,
        on-wire format is RFC 1035.
    c - When following a 'D' atom, enables compression pointers.
    Z - Zero-length option
