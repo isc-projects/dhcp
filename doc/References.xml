@@ -109,10 +109,11 @@
 
       <address>
 	<postal>
-	  <street>950 Charter Street</street>
-	  <city>Redwood City</city>
-	  <region>CA</region>
-	  <code>94063</code>
+	  <street>PO Box 360</street>
+	  <city>Newmarket</city>
+	  <region>NH</region>
+	  <code>03857</code>
+	  <country>USA</country>
 	</postal>
       </address>
     </author>
@@ -124,14 +125,12 @@
 
       <address>
 	<postal>
-	  <street>950 Charter Street</street>
-	  <city>Redwood City</city>
-	  <region>CA</region>
-	  <code>94063</code>
+	  <street>PO Box 360</street>
+	  <city>Newmarket</city>
+	  <region>NH</region>
+	  <code>03857</code>
+	  <country>USA</country>
 	</postal>
-
-	<phone>+1 650 423 1345</phone>
-	<email>Tomasz_Mrugalski@isc.org</email>
       </address>
     </author>
 
