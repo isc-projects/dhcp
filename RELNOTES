@@ -1,6 +1,6 @@
                 Internet Systems Consortium DHCP Distribution
-                            Version 4.4.2
-                            22 January 2020
+                            Version 4.4.3
+                            26 January 2022
                              Release Notes
 
                               NEW FEATURES
@@ -9,84 +9,35 @@ Please note that that ISC DHCP is now licensed under the Mozilla Public License,
 MPL 2.0. Please see https://www.mozilla.org/en-US/MPL/2.0/ to read the MPL 2.0
 license terms.
 
-While release 4.4.2 is primarily a maintenance release that addresses a number
-of defects, it does introduce a few new features:
+NOTE: The client and relay components are reaching their End-Of-Life cycle.
+4.4.3 is the final release that features them.
 
-- Keama - Keama is a migration utility that assists in converting ISC DHCP
-  server configuration files to Kea configuration files.  It is found in the
-  keama subdirectory and includes a README.md file with instructions on how
-  to build it as well as a manpage on its usage.
+While release 4.4.3 is primarily a maintenance release that addresses a number
+of issues, it does introduce a few of small new features:
 
-- Two new server parameters related to ping checking were added:
+1. BIND libraries updated to the latest 9.11.36. This fixes a number of compilation
+  issues on various systems, including OpenWRT.
+   [gitlab #218, #171, #180, #192]
 
-1. ping-cltt-secs which allows the user to specify the number of seconds
-   that must elapse since CLTT before a ping check is conducted.
+2. Improve PRNG initialization. There is now a new configure flag --with-randomdev=PATH
+  that specifies the device to read the initial seed from. That is typically
+  /dev/random (the default value) or /dev/urandom, but may be other as preferred on
+  your system. If this option is enabled, dhclient will use the file as a seed. If
+  not, the earlier algorithm (get last 4 bytes of hardware addresses from all network
+  interfaces that have them, use current time and process ID).
 
-2. ping-timeout-ms which allows the user to specify the amount of time the
-   server waits for a ping-check response in milliseconds rather than in
-   seconds.
+3. The IPv6-only preferred option, defined in RFC8925, is now supported.
+   [gitlab #132]
 
-In general, the areas of focus for ISC DHCP 4.4 were:
+4. Compilation fixed for gcc-10.
+   [gitlab #117]
 
-1. Dynamic DNS additions
-2. dhclient improvements
-3. Support for dynamic shared libraries
+5. Client fix: wrong argument to memcpy()
+   [gitlab #190]
 
-Dynamic DNS Improvements:
-
-- We added three new server configuration parameters which influence DDNS
-  conflict resolution:
-
-    1. ddns-dual-stack-mixed-mode - alters DNS conflict resolution behavior
-    to mitigate issues with non-compliant clients in dual stack environments.
-
-    2. ddns-guard-id-must-match - relaxes the DHCID RR client id matching
-    requirement of DNS conflict resolution.
-
-    3. ddns-other-guard-is-dynamic - alters dual-stack-mixed-mode behavior to
-    allow unguarded DNS entries to be overwritten in certain cases
-
-- The server now honors update-static-leases parameter for static DHCPv6
-  hosts.
-
-dhclient Improvements:
-
-  - We've added three command line parameters to dhclient:
-
-    1. --prefix-len-hint - directs dhclient to use the given length as
-    the prefix length hint when requesting prefixes
-
-    2. --decline-wait-time - instructs the client to wait the given number
-    of seconds after declining an IPv4 address before issuing a discover
-
-    3. --address-prefix-len - specifies the prefix length passed by dhclient
-    into the client script (via the environment variable ip6_prefixlen) with
-    each IPv6 address.  We added this parameter because we have changed the
-    default value from 64 to 128 in order to be compliant with RFC3315bis
-    draft (-09, page 64) and RFC5942, Section 4, point 1.
-    **WARNING**: The new default value of 128 may not be backwardly compatible
-    with your environment. If you are operating without a router, such as
-    between VMs on a host, you may find they cannot see each other with prefix
-    length of 128. In such cases, you'll need to either provide routing or use
-    the command line parameter to set the value to 64. Alternatively you may
-    change the default at compile time by setting DHCLIENT_DEFAULT_PREFIX_LEN
-    in includes/site.h.
-
-  - dhclient will now generate a DHCPv6 DECLINE message when the client script
-    indicates a DAD failure
-
-Dynamic shared library support:
-
-  Configure script, configure.ac+lt, which supports libtool is now provided
-  with the source tar ball.  This script can be used to configure ISC DHCP
-  to build with libtool and thus use dynamic shared libraries.
-
-Other Highlights:
-
- - The server now supports dhcp-cache-threshold for DHCPv6 operations
- - The server now supports DHPv6 address allocation based on EUI-64 DUIDs
- - Experimental support for alternate relay port in the both the server
-   and relay for IPv4, IPv6 and 4o6 (see: draft-ietf-dhc-relay-port-10.txt)
+6. The server's limit on the size of lease file that can be loaded at start up
+   is now only enforced on 32-bit systems.
+   [gitlab #64]
 
 For information on how to install, configure and run this software, as
 well as how to find documentation and report bugs, please consult the
