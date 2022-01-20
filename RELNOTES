@@ -103,7 +103,6 @@ ISC DHCP is open source software maintained by Internet Systems
 Consortium.  This product includes cryptographic software written
 by Eric Young (eay@cryptsoft.com).
 
-
 		Changes since 4.4.2 (New Features)
 
 - BIND9 version updated to latest 9.11.36. Thanks to Philip Prindeville
@@ -116,12 +115,6 @@ and the client Linux script sample was updated.
   [Gitlab #132]
 
 		Changes since 4.4.2 (Bug Fixes)
-
-- Removed hard-coded MD5 algorithm name in OMAPI connection logic. Prior
-  to this using any other algorithm via key-algorithm statement would
-  allow OMAPI connections to made but subsequent actions such as updating
-  an object to fail.
-  [Gitlab #148]
 
 - Minor corrections to allow compilation under gcc 10.
   [Gitlab #117]
@@ -143,6 +136,12 @@ and the client Linux script sample was updated.
 
 - Minor dhclient code fix to remove compilation warnings.
   [Gitlab #190]
+
+- Removed hard-coded MD5 algorithm name in OMAPI connection logic. Prior
+  to this using any other algorithm via key-algorithm statement would
+  allow OMAPI connections to made but subsequent actions such as updating
+  an object to fail.
+  [Gitlab #148]
 
 		Changes since 4.4.2b1 (Bug Fixes)
 
