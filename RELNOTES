@@ -106,7 +106,8 @@ by Eric Young (eay@cryptsoft.com).
 
 		Changes since 4.4.2 (New Features)
 
-- BIND9 version updated to latest 9.11.36.
+- BIND9 version updated to latest 9.11.36. Thanks to Philip Prindeville
+  for testing on OpenWRT.
   [Gitlab #218]
 
 - Added support of the new DHCPv4 option v6-only-preferred specified
