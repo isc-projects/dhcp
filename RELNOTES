@@ -9,22 +9,22 @@ Please note that that ISC DHCP is now licensed under the Mozilla Public License,
 MPL 2.0. Please see https://www.mozilla.org/en-US/MPL/2.0/ to read the MPL 2.0
 license terms.
 
-NOTE: The client and relay components are reaching their End-Of-Life cycle.
-4.4.3 is the final release that features them.
+NOTE: The client and relay components are now End-Of-Life.
+4.4.3 is the final release for those components. 
 
 While release 4.4.3 is primarily a maintenance release that addresses a number
-of issues, it does introduce a few of small new features:
+of issues, it does introduce a few new features:
 
-1. BIND libraries updated to the latest 9.11.36. This fixes a number of compilation
-  issues on various systems, including OpenWRT.
+1. BIND libraries updated to the latest version, 9.11.36. This fixes a number 
+  of compilation issues on various systems, including OpenWRT.
    [gitlab #218, #171, #180, #192]
 
-2. Improve PRNG initialization. There is now a new configure flag --with-randomdev=PATH
-  that specifies the device to read the initial seed from. That is typically
+2. Improved PRNG initialization. There is now a new configure flag --with-randomdev=PATH
+  that specifies the device from which to read the initial seed. That is typically
   /dev/random (the default value) or /dev/urandom, but may be other as preferred on
   your system. If this option is enabled, dhclient will use the file as a seed. If
-  not, the earlier algorithm (get last 4 bytes of hardware addresses from all network
-  interfaces that have them, use current time and process ID).
+  not, the previous algorithm (get last 4 bytes of hardware addresses from all network
+  interfaces that have them, use current time and process ID) will be used.
 
 3. The IPv6-only preferred option, defined in RFC8925, is now supported.
    [gitlab #132]
@@ -60,7 +60,7 @@ by Eric Young (eay@cryptsoft.com).
   for testing on OpenWRT.
   [Gitlab #218]
 
-- Added support of the new DHCPv4 option v6-only-preferred specified
+- Added support for the new DHCPv4 option v6-only-preferred specified
 in RFC 8925. A new reason code, V6ONLY, was added to the client script
 and the client Linux script sample was updated.
   [Gitlab #132]
