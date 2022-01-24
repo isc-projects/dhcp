@@ -1,43 +1,16 @@
                 Internet Systems Consortium DHCP Distribution
-                            Version 4.4.3
+                             Version 4.4.3
                             26 January 2022
                              Release Notes
 
                               NEW FEATURES
 
-Please note that that ISC DHCP is now licensed under the Mozilla Public License,
-MPL 2.0. Please see https://www.mozilla.org/en-US/MPL/2.0/ to read the MPL 2.0
-license terms.
+Please note that that ISC DHCP is now licensed under the Mozilla Public
+License, MPL 2.0. Please see https://www.mozilla.org/en-US/MPL/2.0/ to read
+the MPL 2.0 license terms.
 
 NOTE: The client and relay components are now End-Of-Life.
-4.4.3 is the final release for those components. 
-
-While release 4.4.3 is primarily a maintenance release that addresses a number
-of issues, it does introduce a few new features:
-
-1. BIND libraries updated to the latest version, 9.11.36. This fixes a number 
-  of compilation issues on various systems, including OpenWRT.
-   [gitlab #218, #171, #180, #192]
-
-2. Improved PRNG initialization. There is now a new configure flag --with-randomdev=PATH
-  that specifies the device from which to read the initial seed. That is typically
-  /dev/random (the default value) or /dev/urandom, but may be other as preferred on
-  your system. If this option is enabled, dhclient will use the file as a seed. If
-  not, the previous algorithm (get last 4 bytes of hardware addresses from all network
-  interfaces that have them, use current time and process ID) will be used.
-
-3. The IPv6-only preferred option, defined in RFC8925, is now supported.
-   [gitlab #132]
-
-4. Compilation fixed for gcc-10.
-   [gitlab #117]
-
-5. Client fix: wrong argument to memcpy()
-   [gitlab #190]
-
-6. The server's limit on the size of lease file that can be loaded at start up
-   is now only enforced on 32-bit systems.
-   [gitlab #64]
+4.4.3 is the final release for those components.
 
 For information on how to install, configure and run this software, as
 well as how to find documentation and report bugs, please consult the
@@ -46,8 +19,8 @@ README file.
 ISC DHCP uses standard GNU configure for installation. Please review the
 output of "./configure --help" to see what options are available.
 
-The system has only been tested on Linux, FreeBSD, and Solaris, and may not
-work on other platforms. Please report any problems and suggested fixes to
+The system has only been tested on Linux, and FreeBSD, and may not work on
+other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
 ISC DHCP is open source software maintained by Internet Systems
@@ -56,13 +29,14 @@ by Eric Young (eay@cryptsoft.com).
 
 		Changes since 4.4.2 (New Features)
 
-- BIND9 version updated to latest 9.11.36. Thanks to Philip Prindeville
-  for testing on OpenWRT.
-  [Gitlab #218]
+- BIND libraries updated to the latest version, 9.11.36. This fixes a number
+  of compilation issues on various systems, including OpenWRT. Thanks to
+  Philip Prindeville for testing on OpenWRT.
+  [Gitlab #218, #171, #180, #192]
 
 - Added support for the new DHCPv4 option v6-only-preferred specified
-in RFC 8925. A new reason code, V6ONLY, was added to the client script
-and the client Linux script sample was updated.
+  in RFC 8925. A new reason code, V6ONLY, was added to the client script
+  and the client Linux script sample was updated.
   [Gitlab #132]
 
 		Changes since 4.4.2 (Bug Fixes)
@@ -78,11 +52,16 @@ and the client Linux script sample was updated.
   is now only enforced on 32-bit systems.
   [Gitlab #92]
 
-- After a report about predictable seeding of transaction identifier
-  pseudo-random generation on systems where process identifiers are not
-  random the already existing --with-randomdev configure argument was
-  extended. Please remember its default is "/dev/random" which is not
-  convenient on all systems.
+- The PRNG initialization has been improved. It now uses the configure flag
+  `--with-randomdev=PATH`, which specifies the device from which to read the
+  initial seed. That is typically `/dev/random` (the default value) or
+  `/dev/urandom`, but may be specified otherwise on the local system. If not
+  explicitly specified, the default device (`/dev/random`) is used. The old
+  behavior can be forced by disabling this feature (`--with-randomdev=no`).
+  If the initialization is disabled or reading from the random device fails,
+  the previous algorithm (retrieve the last four bytes of hardware addresses
+  from all network interfaces that have them, and use the current time and
+  process ID) is used.
   [Gitlab #197]
 
 - Minor dhclient code fix to remove compilation warnings.
@@ -112,11 +91,11 @@ and the client Linux script sample was updated.
 - Corrected buffer pointer logic in dhcrelay functions that manipulate
   agent relay options. Thanks to Thomas Imbert of MSRC Vulnerabilities
   & Mitigations for reporting the issue.
-  [#71]
+  [Gitlab #71]
 
 - Corrected unresolved symbol errors building relay_unittests when
   configured to build using libtool.
-  [#80]
+  [Gitlab #80]
 
 		Changes since 4.4.1 (New Features)
 
