@@ -70,7 +70,7 @@ for which is distributed in the relay/ subdirectory. The relay component
 is End-of-Life and will not be part of future releases.
 
 KEA Migration Assistant documentation, including how to build, install
-and use it, is including in the keama/ directory.
+and use it, is included in the keama/ directory.
 
 To read installed manual pages, use the man command.  Type "man page"
 where page is the name of the manual page.   This will only work if
@@ -94,9 +94,9 @@ directory, it may not have up-to-date information).
 
 				RELEASE STATUS
 
-Version 4.4.3 is a maintenance release of the DHCP client, relay and 
-server. It is the final release for the client and relay components, 
-which have reached end-of-life and will no longer be maintained. 
+Version 4.4.3 is a maintenance release of the DHCP client, relay and
+server. It is the final release for the client and relay components,
+which have reached end-of-life and will no longer be maintained.
 
 		    BUILDING THE DHCP DISTRIBUTION
 
