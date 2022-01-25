@@ -32,7 +32,7 @@
  */
 
 /*
- * Portions Copyright (c) 2004,2009 by Internet Systems Consortium, Inc. ("ISC")
+ * Portions Copyright (C) 2004-2022 Internet Systems Consortium, Inc. ("ISC")
  * Portions Copyright (c) 2000-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any

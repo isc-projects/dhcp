@@ -1,7 +1,7 @@
 /* dhc6.c - DHCPv6 client routines. */
 
 /*
- * Copyright (c) 2012-2017 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2012-2022 Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2006-2010 by Internet Systems Consortium, Inc. ("ISC")
  *
  * This Source Code Form is subject to the terms of the Mozilla Public

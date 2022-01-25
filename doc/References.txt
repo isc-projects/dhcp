@@ -17,7 +17,7 @@ Abstract
 
 Copyright Notice
 
-   Copyright (c) 2006-2017 by Internet Systems Consortium,
+   Copyright (C) 2006-2022 Internet Systems Consortium,
    Inc. ("ISC")
 
    This Source Code Form is subject to the terms of the Mozilla Public
