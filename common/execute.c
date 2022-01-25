@@ -3,7 +3,7 @@
    Support for executable statements. */
 
 /*
- * Copyright (c) 2004-2017 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2022 Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1998-2003 by Internet Software Consortium
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -19,8 +19,8 @@
  * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
  *   Internet Systems Consortium, Inc.
- *   950 Charter Street
- *   Redwood City, CA 94063
+ *   PO Box 360
+ *   Newmarket, NH 03857 USA
  *   <info@isc.org>
  *   https://www.isc.org/
  *
@@ -167,7 +167,7 @@ int execute_statements (result, packet, lease, client_state,
 				  (&rc, packet,
 				   lease, client_state, in_options,
 				   out_options, scope, r->data.ie.expr));
-			
+
 #if defined (DEBUG_EXPRESSIONS)
 			log_debug ("exec: if %s", (status
 					      ? (rc ? "true" : "false")
@@ -219,7 +219,7 @@ int execute_statements (result, packet, lease, client_state,
                         }
 
                         log_debug("execute_statement argv[0] = %s", argv[0]);
- 
+
                         for (i = 1, expr = r->data.execute.arglist; expr;
                              expr = expr->data.arg.next, i++) {
                                 memset (&ds, 0, sizeof(ds));
@@ -509,7 +509,7 @@ int execute_statements (result, packet, lease, client_state,
 				  (&ds, packet,
 				   lease, client_state, in_options,
 				   out_options, scope, r->data.log.expr, MDL));
-			
+
 #if defined (DEBUG_EXPRESSIONS)
 			log_debug ("exec: log");
 #endif
@@ -936,7 +936,7 @@ void write_statements (file, statements, indent)
 				token_indent_data_string
 					(file, col, indent + 8, "", "",
 					 &r -> data.option -> data);
-					 
+
 			fprintf (file, ";"); /* XXX */
 			break;
 
@@ -952,7 +952,7 @@ void write_statements (file, statements, indent)
 			(void) token_print_indent (file, col, indent + 4,
 						  " ", "", ";");
 			break;
-			
+
 		      case unset_statement:
 			indent_spaces (file, indent);
 			fprintf (file, "unset ");
@@ -1021,7 +1021,7 @@ void write_statements (file, statements, indent)
                                   "is not defined).", MDL);
 #endif /* ENABLE_EXECUTE */
                         break;
-			
+
 		      case vendor_opt_statement:
 			indent_spaces (file, indent);
 			fprintf (file, "parse-vendor-option;");

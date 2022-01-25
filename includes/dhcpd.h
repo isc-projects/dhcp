@@ -3,7 +3,7 @@
    Definitions for dhcpd... */
 
 /*
- * Copyright (c) 2004-2019 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2022 Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -19,8 +19,8 @@
  * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
  *   Internet Systems Consortium, Inc.
- *   950 Charter Street
- *   Redwood City, CA 94063
+ *   PO Box 360
+ *   Newmarket, NH 03857 USA
  *   <info@isc.org>
  *   https://www.isc.org/
  *
@@ -877,6 +877,10 @@ struct lease_state {
 # define DEFAULT_ABANDON_LEASE_TIME 86400
 #endif
 
+#if !defined (MIN_V6ONLY_WAIT)
+# define MIN_V6ONLY_WAIT 300
+#endif
+
 #define PLM_IGNORE 0
 #define PLM_PREFER 1
 #define PLM_EXACT 2
@@ -1204,7 +1208,8 @@ enum dhcp_state {
 	S_RENEWING = 6,
 	S_REBINDING = 7,
 	S_DECLINING = 8,
-	S_STOPPED = 9
+	S_STOPPED = 9,
+	S_V6ONLY = 10
 };
 
 /* Possible pending client operations. */
@@ -3003,6 +3008,10 @@ void state_bound (void *);
 void state_stop (void *);
 void state_panic (void *);
 
+uint32_t check_v6only (struct packet *, struct client_state *);
+void start_v6only (struct client_state *, uint32_t);
+void finish_v6only (void *);
+
 void bind_lease (struct client_state *);
 
 void make_client_options (struct client_state *,
@@ -3901,4 +3910,3 @@ void lc_delete_all(struct leasechain *lc);
 #define FIND_POND6_PERCENT(count, percent)	\
 	((count) > (POND_TRACK_MAX / 100) ?	\
 	 ((count) / 100) * (percent) : ((count) * (percent)) / 100)
-

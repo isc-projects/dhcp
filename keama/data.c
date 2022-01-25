@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2017-2022 Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,8 +14,8 @@
  * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
  *   Internet Systems Consortium, Inc.
- *   950 Charter Street
- *   Redwood City, CA 94063
+ *   PO Box 360
+ *   Newmarket, NH 03857 USA
  *   <info@isc.org>
  *   http://www.isc.org/
  */
@@ -199,7 +199,7 @@ makeStringExt(int l, const char *s, char fmt)
 
 	case 'I': {
 		/* IPv4 address to text */
-		char buf[40 /* INET_ADDRSTRLEN == 26 */]; 
+		char buf[40 /* INET_ADDRSTRLEN == 26 */];
 
 		assert(l > 3);
 		assert(inet_ntop(AF_INET, s, buf, sizeof(buf)) != NULL);
@@ -263,7 +263,7 @@ makeStringExt(int l, const char *s, char fmt)
 		assert(0);
 	}
 }
-	
+
 struct string *
 makeStringArray(int l, const char *s, char fmt)
 {
@@ -542,7 +542,7 @@ resetInt(struct element *e, int64_t i)
 	e->type = ELEMENT_INTEGER;
 	e->value.int_value = i;
 }
-	
+
 void
 resetDouble(struct element *e, double d)
 {
@@ -677,7 +677,7 @@ listSet(struct element *l, struct element *e, int i)
 		TAILQ_INSERT_HEAD(&l->value.list_value, e);
 	} else {
 		struct element *prev;
-		
+
 		prev = TAILQ_FIRST(&l->value.list_value);
 		assert(prev != NULL);
 		assert(prev->key == NULL);
@@ -964,7 +964,7 @@ addIndent(FILE *fp, int skip, unsigned indent)
 	} else
 		for (sp = 0; sp < indent; ++sp)
 			fprintf(fp, " ");
-}	
+}
 
 void
 printList(FILE *fp, const struct list *l, isc_boolean_t skip, unsigned indent)

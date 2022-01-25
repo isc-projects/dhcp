@@ -3,7 +3,7 @@
    Subroutines that support the generic object. */
 
 /*
- * Copyright (c) 2004-2017 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2022 Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -19,8 +19,8 @@
  * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
  *   Internet Systems Consortium, Inc.
- *   950 Charter Street
- *   Redwood City, CA 94063
+ *   PO Box 360
+ *   Newmarket, NH 03857 USA
  *   <info@isc.org>
  *   https://www.isc.org/
  *
@@ -98,7 +98,7 @@ isc_result_t omapi_generic_set_value (omapi_object_t *h,
 		/* Notice a free slot if we pass one. */
 		else if (vfree == -1 && !g -> values [i])
 			vfree = i;
-	}			
+	}
 
 	/* If the name isn't already attached to this object, see if an
 	   inner object has it. */
@@ -176,7 +176,7 @@ isc_result_t omapi_generic_get_value (omapi_object_t *h,
 	if (h -> type != omapi_type_generic)
 		return DHCP_R_INVALIDARG;
 	g = (omapi_generic_object_t *)h;
-	
+
 	/* Look up the specified name in our list of objects. */
 	for (i = 0; i < g -> nvalues; i++) {
 		if (!g -> values[i])
@@ -191,7 +191,7 @@ isc_result_t omapi_generic_get_value (omapi_object_t *h,
 			return omapi_value_reference (value,
 						      g -> values [i], MDL);
 		}
-	}			
+	}
 
 	if (h -> inner && h -> inner -> type -> get_value)
 		return (*(h -> inner -> type -> get_value))
@@ -208,7 +208,7 @@ isc_result_t omapi_generic_destroy (omapi_object_t *h,
 	if (h -> type != omapi_type_generic)
 		return ISC_R_UNEXPECTED;
 	g = (omapi_generic_object_t *)h;
-	
+
 	if (g -> values) {
 		for (i = 0; i < g -> nvalues; i++) {
 			if (g -> values [i])
@@ -230,7 +230,7 @@ isc_result_t omapi_generic_signal_handler (omapi_object_t *h,
 {
 	if (h -> type != omapi_type_generic)
 		return DHCP_R_INVALIDARG;
-	
+
 	if (h -> inner && h -> inner -> type -> signal_handler)
 		return (*(h -> inner -> type -> signal_handler)) (h -> inner,
 								  name, ap);
@@ -251,7 +251,7 @@ isc_result_t omapi_generic_stuff_values (omapi_object_t *c,
 	if (g -> type != omapi_type_generic)
 		return DHCP_R_INVALIDARG;
 	src = (omapi_generic_object_t *)g;
-	
+
 	for (i = 0; i < src -> nvalues; i++) {
 		if (src -> values [i] && src -> values [i] -> name -> len &&
 		    src -> changed [i]) {
@@ -270,7 +270,7 @@ isc_result_t omapi_generic_stuff_values (omapi_object_t *c,
 			if (status != ISC_R_SUCCESS)
 				return status;
 		}
-	}			
+	}
 
 	if (g -> inner && g -> inner -> type -> stuff_values)
 		return (*(g -> inner -> type -> stuff_values)) (c, id,

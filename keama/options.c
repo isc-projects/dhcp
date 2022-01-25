@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2017-2022 Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,8 +14,8 @@
  * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
  *   Internet Systems Consortium, Inc.
- *   950 Charter Street
- *   Redwood City, CA 94063
+ *   PO Box 360
+ *   Newmarket, NH 03857 USA
  *   <info@isc.org>
  *   https://www.isc.org/
  *
@@ -170,6 +170,7 @@ struct option_def options4[] = {
         { "geoconf-civic", "X",                 "dhcp",  99, 2},
 	{ "pcode", "t",				"dhcp", 100, 2},
 	{ "tcode", "t",				"dhcp", 101, 2},
+	{ "v6-only-preferred", "L",		"dhcp", 108, 2},
 	{ "netinfo-server-address", "Ia",	"dhcp", 112, 2},
 	{ "netinfo-server-tag", "t",		"dhcp", 113, 2},
 	{ "default-url", "t",			"dhcp", 114, 2},
@@ -1060,7 +1061,7 @@ get_config_comments(unsigned code)
 	log_threshold:
 		comment = createComment("/// Reference Kea #222");
                 TAILQ_INSERT_TAIL(&comments, comment);
-                break;		
+                break;
 
 	case 84: /* log-threshold-high */
 		comment = createComment("/// log-threshold-high is not (yet?) "

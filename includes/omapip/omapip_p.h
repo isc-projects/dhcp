@@ -3,7 +3,7 @@
    Private master include file for the OMAPI library. */
 
 /*
- * Copyright (c) 2004-2019 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2022 Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -19,8 +19,8 @@
  * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
  *   Internet Systems Consortium, Inc.
- *   950 Charter Street
- *   Redwood City, CA 94063
+ *   PO Box 360
+ *   Newmarket, NH 03857 USA
  *   <info@isc.org>
  *   https://www.isc.org/
  *
@@ -59,6 +59,9 @@
 
 #include <dst/dst.h>
 #include "result.h"
+
+/* Uncomment this to enable protocol level debug logs */
+/* #define DEBUG_PROTOCOL 1 */
 
 #include <omapip/convert.h>
 #include <omapip/hash.h>
@@ -134,7 +137,7 @@ typedef struct __omapi_remote_auth {
 
 typedef struct __omapi_protocol_object {
 	OMAPI_OBJECT_PREAMBLE;
-	u_int32_t header_size;		
+	u_int32_t header_size;
 	u_int32_t protocol_version;
 	u_int32_t next_xid;
 

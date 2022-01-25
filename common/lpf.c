@@ -4,7 +4,7 @@
    Support Services in Vancouver, B.C. */
 
 /*
- * Copyright (c) 2004-2017 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2022 Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -20,8 +20,8 @@
  * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
  *   Internet Systems Consortium, Inc.
- *   950 Charter Street
- *   Redwood City, CA 94063
+ *   PO Box 360
+ *   Newmarket, NH 03857 USA
  *   <info@isc.org>
  *   https://www.isc.org/
  */
@@ -307,7 +307,7 @@ static void lpf_tr_filter_setup (info)
         /* Patch the server port into the LPF  program...
 	   XXX changes to filter program may require changes
 	   XXX to the insn number(s) used below!
-	   XXX Token ring filter is null - when/if we have a filter 
+	   XXX Token ring filter is null - when/if we have a filter
 	   XXX that's not, we'll need this code.
 	   XXX dhcp_bpf_filter [?].k = ntohs (local_port); */
 
@@ -539,7 +539,7 @@ get_hw_addr(const char *name, struct hardware *hw) {
 	memset(&tmp, 0, sizeof(tmp));
 	strcpy(tmp.ifr_name, name);
 	if (ioctl(sock, SIOCGIFHWADDR, &tmp) < 0) {
-		log_fatal("Error getting hardware address for \"%s\": %m", 
+		log_fatal("Error getting hardware address for \"%s\": %m",
 			  name);
 	}
 

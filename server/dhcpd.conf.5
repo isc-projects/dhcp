@@ -1,6 +1,6 @@
 .\"	dhcpd.conf.5
 .\"
-.\" Copyright (c) 2004-2019 by Internet Systems Consortium, Inc. ("ISC")
+.\" Copyright (C) 2004-2022 Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
 .\"
 .\" This Source Code Form is subject to the terms of the Mozilla Public
@@ -16,8 +16,8 @@
 .\" OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
 .\"   Internet Systems Consortium, Inc.
-.\"   950 Charter Street
-.\"   Redwood City, CA 94063
+.\"   PO Box 360
+.\"   Newmarket, NH 03857 USA
 .\"   <info@isc.org>
 .\"   https://www.isc.org/
 .\"
@@ -322,7 +322,7 @@ Currently it is only allowed within a \fBsubnet6\fR declaration, and
 may not be included directly in a shared network declaration.
 In addition to the \fBrange6\fR statement it allows the \fBprefix6\fR
 statement to be included.  You may include \fBrange6\fR statements
-for both NA and TA and \fBprefixy6\fR statements in a single
+for both NA and TA and \fBprefix6\fR statements in a single
 \fBpool6\fR statement.
 .SH DYNAMIC ADDRESS ALLOCATION
 Address allocation is actually only done when a client is in the INIT

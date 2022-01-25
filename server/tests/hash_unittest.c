@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2012-2022 Internet Systems Consortium, Inc. ("ISC")
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -14,8 +14,8 @@
  * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
  *   Internet Systems Consortium, Inc.
- *   950 Charter Street
- *   Redwood City, CA 94063
+ *   PO Box 360
+ *   Newmarket, NH 03857 USA
  *   <info@isc.org>
  *   https://www.isc.org/
  *
@@ -536,7 +536,7 @@ ATF_TC_BODY(lease_hash_basic_3hosts, tc) {
    the code from using an improper client id earlier and restoring
    the hash code to its previous state.  As we may choose to
    redo the hash code again this test hasn't been deleted.
-*/   
+*/
 /* this test is a direct reproduction of 29851 issue */
 ATF_TC(uid_hash_rt29851);
 

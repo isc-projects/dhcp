@@ -1,5 +1,7 @@
 *.lo
 *.o
+*.a
+*.log
 doc/html
 .deps
 Makefile
@@ -9,6 +11,7 @@ client/tests/duid_unittests
 client/tests/test-suite.log
 common/tests/alloc_unittest
 common/tests/dns_unittest
+common/tests/domain_name_unittest
 common/tests/misc_unittest
 common/tests/ns_name_unittest
 common/tests/option_unittest
@@ -24,6 +27,7 @@ libtool
 ltmain.sh
 omapip/svtest
 relay/dhcrelay
+relay/tests/relay_unittests
 server/dhcpd
 server/tests/dhcpd_unittests
 server/tests/hash_unittests
@@ -34,3 +38,6 @@ server/tests/test-suite.log
 tests/libt_api.a
 tests/libt_api.la
 tests/unittest.sh
+
+bind/bind-*
+bind/include

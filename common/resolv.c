@@ -3,7 +3,7 @@
    Parser for /etc/resolv.conf file. */
 
 /*
- * Copyright (c) 2004-2017 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2022 Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -19,8 +19,8 @@
  * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
  *   Internet Systems Consortium, Inc.
- *   950 Charter Street
- *   Redwood City, CA 94063
+ *   PO Box 360
+ *   Newmarket, NH 03857 USA
  *   <info@isc.org>
  *   https://www.isc.org/
  *
@@ -179,7 +179,7 @@ struct name_server *first_name_server ()
 		}
 		if (st.st_mtime > rcdate) {
 			rcdate = cur_time + 1;
-			
+
 			read_resolv_conf (rcdate);
 		}
 	}

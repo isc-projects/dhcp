@@ -3,7 +3,7 @@
    Tables of information only used by server... */
 
 /*
- * Copyright (c) 2004-2019 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2022 Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -19,8 +19,8 @@
  * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
  *   Internet Systems Consortium, Inc.
- *   950 Charter Street
- *   Redwood City, CA 94063
+ *   PO Box 360
+ *   Newmarket, NH 03857 USA
  *   <info@isc.org>
  *   https://www.isc.org/
  *
@@ -66,7 +66,7 @@ struct failover_option_info ft_options [] =
 	  FM_OFFSET(ip_flags), FTB_IP_FLAGS },
 	{ FTO_LEASE_EXPIRY, "lease-expiration-time", FT_UINT32, 1,
 	  FM_OFFSET(expiry), FTB_LEASE_EXPIRY },
-	{ FTO_MAX_UNACKED, "max-unacked-bndupd", FT_UINT32, 1, 
+	{ FTO_MAX_UNACKED, "max-unacked-bndupd", FT_UINT32, 1,
 	  FM_OFFSET(max_unacked), FTB_MAX_UNACKED },
 	{ FTO_MCLT, "MCLT", FT_UINT32, 1, FM_OFFSET(mclt), FTB_MCLT },
 	{ FTO_MESSAGE, "message", FT_TEXT, 0,

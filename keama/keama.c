@@ -1,5 +1,5 @@
 /*
- * Copyright(c) 2017-2019 by Internet Systems Consortium, Inc.("ISC")
+ * Copyright(C) 2017-2022 Internet Systems Consortium, Inc.("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,8 +14,8 @@
  * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
  *   Internet Systems Consortium, Inc.
- *   950 Charter Street
- *   Redwood City, CA 94063
+ *   PO Box 360
+ *   Newmarket, NH 03857 USA
  *   <info@isc.org>
  *   https://www.isc.org/
  *
@@ -47,6 +47,9 @@ usage(const char *sfmt, const char *sarg) {
 	exit(1);
 }
 
+enum resolve resolve;
+struct parses parses;
+
 int local_family = 0;
 char *hook_library_path = NULL;
 char *input_file = NULL;
@@ -60,7 +63,7 @@ isc_boolean_t json = ISC_FALSE;
 static const char use_noarg[] = "No argument for command: %s";
 static const char bad_resolve[] = "Bad -r argument: %s";
 
-int 
+int
 main(int argc, char **argv) {
 	int i, fd;
 	char *inbuf = NULL;
@@ -104,7 +107,7 @@ main(int argc, char **argv) {
 			if (++i == argc)
 				usage(use_noarg, argv[i -  1]);
 			output_file = argv[i];
- 		} else 
+ 		} else
 			usage("Unknown command: %s", argv[i]);
 	}
 
@@ -198,10 +201,10 @@ parse_error(struct parse *cfile, const char *fmt, ...)
 	char mbuf[1024];
 	char fbuf[1024];
 	unsigned i, lix;
-	
+
 	snprintf(fbuf, sizeof(fbuf), "%s line %d: %s",
 		 cfile->tlname, cfile->lexline, fmt);
-	
+
 	va_start(list, fmt);
 	vsnprintf(mbuf, sizeof(mbuf), fbuf, list);
 	va_end(list);

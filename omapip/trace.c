@@ -5,7 +5,7 @@
    transactions... */
 
 /*
- * Copyright (c) 2004-2017 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2022 Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2001-2003 by Internet Software Consortium
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -21,8 +21,8 @@
  * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
  *   Internet Systems Consortium, Inc.
- *   950 Charter Street
- *   Redwood City, CA 94063
+ *   PO Box 360
+ *   Newmarket, NH 03857 USA
  *   <info@isc.org>
  *   https://www.isc.org/
  *
@@ -157,7 +157,7 @@ isc_result_t trace_begin (const char *filename,
 	tfh.version = htonl (TRACEFILE_VERSION);
 	tfh.hlen = htonl (sizeof (tracefile_header_t));
 	tfh.phlen = htonl (sizeof (tracepacket_t));
-	
+
 	status = write (traceoutfile, &tfh, sizeof tfh);
 	if (status < 0) {
 		log_error ("%s(%d): trace_begin write failed: %m", file, line);
@@ -184,7 +184,7 @@ isc_result_t trace_begin (const char *filename,
 			}
 		}
 	}
-	
+
 	return ISC_R_SUCCESS;
 }
 
@@ -222,7 +222,7 @@ isc_result_t trace_write_packet_iov (trace_type_t *ttype,
 			   file ? file : "<unknown file>", line);
 		return DHCP_R_INVALIDARG;
 	}
-	
+
 	/* Compute the total length of the iov. */
 	length = 0;
 	for (i = 0; i < count; i++)
@@ -266,7 +266,7 @@ isc_result_t trace_write_packet_iov (trace_type_t *ttype,
 	if (length % 8) {
 	    static char zero [] = { 0, 0, 0, 0, 0, 0, 0 };
 	    unsigned padl = 8 - (length % 8);
-		
+
 	    status = write (traceoutfile, zero, padl);
 	    if (status < 0) {
 		log_error ("%s(%d): trace_write_packet write failed: %m",
@@ -330,7 +330,7 @@ trace_type_t *trace_type_register (const char *name,
 	strcpy (ttmp -> name, name);
 	ttmp -> have_packet = have_packet;
 	ttmp -> stop_tracing = stop_tracing;
-	
+
 	if (traceoutfile) {
 		status = trace_type_record (ttmp, slen, file, line);
 		if (status != ISC_R_SUCCESS) {
@@ -345,7 +345,7 @@ trace_type_t *trace_type_register (const char *name,
 
 	return ttmp;
 }
-						   
+
 static isc_result_t trace_type_record (trace_type_t *ttmp, unsigned slen,
 				       const char *file, int line)
 {
@@ -403,7 +403,7 @@ void trace_index_map_input (trace_type_t *ttype, unsigned length, char *buf)
 		}
 		prev = &tptr -> next;
 	}
-	
+
 	log_error ("No registered trace type for type name %.*s",
 		   (int)length - TRACE_INDEX_MAPPING_SIZE, tmap -> name);
 	return;
@@ -544,7 +544,7 @@ isc_result_t trace_get_next_packet (trace_type_t **ttp,
 		tpkt->type_index = ntohl(tpkt -> type_index);
 		tpkt->length = ntohl(tpkt -> length);
 		tpkt->when = ntohl(tpkt -> when);
-	
+
 		/* See if there's a handler for this packet type. */
 		if (tpkt->type_index < trace_type_count &&
 		    trace_types[tpkt->type_index])
@@ -575,7 +575,7 @@ isc_result_t trace_get_next_packet (trace_type_t **ttp,
 					  "tracefile");
 				return DHCP_R_PROTOCOLERROR;
 			}
-				
+
 			status = fsetpos(traceinfile, &curpos);
 			if (status < 0) {
 				log_error("fsetpos in tracefile failed: %m");

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2017-2022 Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,8 +14,8 @@
  * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
  *   Internet Systems Consortium, Inc.
- *   950 Charter Street
- *   Redwood City, CA 94063
+ *   PO Box 360
+ *   Newmarket, NH 03857 USA
  *   <info@isc.org>
  *   https://www.isc.org/
  *
@@ -355,7 +355,7 @@ reduce_boolean_expression(struct element *expr)
  * data_expression :== SUBSTRING LPAREN data-expression COMMA
  *                                      numeric-expression COMMA
  *                                      numeric-expression RPAREN |
- *                     CONCAT LPAREN data-expression COMMA 
+ *                     CONCAT LPAREN data-expression COMMA
  *                                      data-expression RPAREN
  *                     SUFFIX LPAREN data_expression COMMA
  *                                   numeric-expression RPAREN |
@@ -504,7 +504,7 @@ reduce_data_expression(struct element *expr)
 		concatString(result, stringValue(string));
 		snprintf(buf, sizeof(buf), ",-%u,all)", (unsigned)len);
 		appendString(result, buf);
-		return createString(result);			
+		return createString(result);
 	}
 
 	/* lowercase */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2019-2022 Internet Systems Consortium, Inc. ("ISC")
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -14,8 +14,8 @@
  * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
  *   Internet Systems Consortium, Inc.
- *   950 Charter Street
- *   Redwood City, CA 94063
+ *   PO Box 360
+ *   Newmarket, NH 03857 USA
  *   <info@isc.org>
  *   https://www.isc.org/
  *
@@ -405,30 +405,4 @@ ATF_TP_ADD_TCS(tp) {
     ATF_TP_ADD_TC(tp, add_relay_agent_options_test);
 
     return (atf_no_error());
-}
-
-/* Below are dummy function definitions to satisfy "required" symbols */
-isc_result_t find_class (struct class **c, const char *s,
-                         const char *file, int line) {
-	return 0;
-}
-
-int check_collection (struct packet *packet, struct lease *lease,
-                      struct collection *collection) {
-	return 0;
-}
-
-void classify (struct packet *packet, struct class *class){}
-void bootp(struct packet *packet){}
-void dhcp(struct packet *packet){}
-void dhcpv6(struct packet *packet){}
-
-int parse_allow_deny (struct option_cache **oc, struct parse *cfile,
-                      int flag) {
-    return 0;
-}
-
-isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
-                                     control_object_state_t newstate) {
-    return (ISC_R_SUCCESS);
 }

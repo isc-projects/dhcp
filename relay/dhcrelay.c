@@ -3,7 +3,7 @@
    DHCP/BOOTP Relay Agent. */
 
 /*
- * Copyright(c) 2004-2021 by Internet Systems Consortium, Inc.("ISC")
+ * Copyright(c) 2004-2022 by Internet Systems Consortium, Inc.("ISC")
  * Copyright(c) 1997-2003 by Internet Software Consortium
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -19,8 +19,8 @@
  * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
  *   Internet Systems Consortium, Inc.
- *   950 Charter Street
- *   Redwood City, CA 94063
+ *   PO Box 360
+ *   Newmarket, NH 03857 USA
  *   <info@isc.org>
  *   https://www.isc.org/
  *
@@ -95,8 +95,8 @@ enum { forward_and_append,	/* Forward and append our own relay option. */
        forward_untouched,	/* Forward without changes. */
        discard } agent_relay_mode = forward_and_replace;
 
-u_int16_t local_port;
-u_int16_t remote_port;
+extern u_int16_t local_port;
+extern u_int16_t remote_port;
 
 /* Relay agent server list. */
 struct server_list {
@@ -149,7 +149,7 @@ extern int strip_relay_agent_options(struct interface_info *,
 static void request_v4_interface(const char* name, int flags);
 
 static const char copyright[] =
-"Copyright 2004-2021 Internet Systems Consortium.";
+"Copyright 2004-2022 Internet Systems Consortium.";
 static const char arr[] = "All rights reserved.";
 static const char message[] =
 "Internet Systems Consortium DHCP Relay Agent";
@@ -235,10 +235,10 @@ char *progname;
  * the description of the command line.  The arguments provide
  * a way for the caller to request more specific information about
  * the error be printed as well.  Mostly this will be that some
- * comamnd doesn't include its argument.
+ * command doesn't include its argument.
  *
  * \param sfmt - The basic string and format for the specific error
- * \param sarg - Generally the offending argument from the comamnd line.
+ * \param sarg - Generally the offending argument from the command line.
  *
  * \return Nothing
  */
@@ -1433,9 +1433,8 @@ add_relay_agent_options(struct interface_info *ip, struct dhcp_packet *packet,
 	return (length);
 }
 
-#ifndef UNIT_TEST
-
 #ifdef DHCPv6
+#ifndef UNIT_TEST
 /*
  * Parse a downstream argument: [address%]interface[#index].
  */
@@ -2020,12 +2019,14 @@ process_down6(struct packet *packet) {
 	if (if_id.data != NULL)
 		data_string_forget(&if_id, MDL);
 }
+#endif /* UNIT_TEST */
 
 /*
  * Called by the dispatch packet handler with a decoded packet.
  */
 void
 dhcpv6(struct packet *packet) {
+#ifndef UNIT_TEST
 	struct stream_list *dp;
 
 	/* Try all relay-replies downwards. */
@@ -2048,8 +2049,9 @@ dhcpv6(struct packet *packet) {
 
 	log_info("Can't process packet from interface '%s'.",
 		 packet->interface->name);
+#endif /* UNIT_TEST */
 }
-#endif
+#endif /* DHCPv6 */
 
 /* Stub routines needed for linking with DHCP libraries. */
 void
@@ -2147,4 +2149,3 @@ void request_v4_interface(const char* name, int flags) {
         interface_snorf(tmp, (INTERFACE_REQUESTED | flags));
         interface_dereference(&tmp, MDL);
 }
-#endif /* UNIT_TEST */

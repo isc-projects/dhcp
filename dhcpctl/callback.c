@@ -3,7 +3,7 @@
    The dhcpctl callback object. */
 
 /*
- * Copyright (c) 2004-2017 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2022 Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -19,8 +19,8 @@
  * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
  *   Internet Systems Consortium, Inc.
- *   950 Charter Street
- *   Redwood City, CA 94063
+ *   PO Box 360
+ *   Newmarket, NH 03857 USA
  *   <info@isc.org>
  *   https://www.isc.org/
  *
@@ -66,7 +66,7 @@ dhcpctl_status dhcpctl_set_callback (dhcpctl_handle h, void *data,
 	omapi_object_reference (&callback -> object, h, MDL);
 	callback -> data = data;
 	callback -> callback = func;
-	
+
 	return ISC_R_SUCCESS;
 }
 
@@ -93,7 +93,7 @@ isc_result_t dhcpctl_callback_get_value (omapi_object_t *h,
 {
 	if (h -> type != dhcpctl_callback_type)
 		return DHCP_R_INVALIDARG;
-	
+
 	if (h -> inner && h -> inner -> type -> get_value)
 		return (*(h -> inner -> type -> get_value))
 			(h -> inner, id, name, value);
@@ -159,4 +159,3 @@ isc_result_t dhcpctl_callback_stuff_values (omapi_object_t *c,
 								p -> inner);
 	return ISC_R_SUCCESS;
 }
-

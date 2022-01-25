@@ -3,7 +3,7 @@
    Definitions for omapi tracing facility... */
 
 /*
- * Copyright (c) 2004-2017 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2022 Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2001-2003 by Internet Software Consortium
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -19,8 +19,8 @@
  * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
  *   Internet Systems Consortium, Inc.
- *   950 Charter Street
- *   Redwood City, CA 94063
+ *   PO Box 360
+ *   Newmarket, NH 03857 USA
  *   <info@isc.org>
  *   https://www.isc.org/
  *
@@ -29,7 +29,7 @@
 #define TRACEFILE_MAGIC		0x64484370UL	/* dHCp */
 #define TRACEFILE_VERSION	1
 
-/* The first thing in a trace file is the header, which basically just 
+/* The first thing in a trace file is the header, which basically just
    defines the version of the file. */
 typedef struct {
 	u_int32_t magic;	/* Magic number for trace file. */

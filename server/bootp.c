@@ -3,7 +3,7 @@
    BOOTP Protocol support. */
 
 /*
- * Copyright (c) 2004-2017 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2022 Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -19,8 +19,8 @@
  * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
  *   Internet Systems Consortium, Inc.
- *   950 Charter Street
- *   Redwood City, CA 94063
+ *   PO Box 360
+ *   Newmarket, NH 03857 USA
  *   <info@isc.org>
  *   https://www.isc.org/
  *
@@ -174,7 +174,7 @@ void bootp (packet)
 					    &lease->scope, hp->group,
 					    lease->subnet->group, NULL);
 	}
-	
+
 	/* Drop the request if it's not allowed for this client. */
 	if ((oc = lookup_option (&server_universe, options, SV_ALLOW_BOOTP)) &&
 	    !evaluate_boolean_option_cache(&ignorep, packet, lease,
@@ -184,7 +184,7 @@ void bootp (packet)
 		if (!ignorep)
 			log_info ("%s: bootp disallowed", msgbuf);
 		goto out;
-	} 
+	}
 
 	if ((oc = lookup_option(&server_universe,
 				 options, SV_ALLOW_BOOTING)) &&

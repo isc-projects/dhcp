@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Copyright (C) 2009-2020  Internet Systems Consortium, Inc. ("ISC")
+# Copyright (C) 2009-2022  Internet Systems Consortium, Inc. ("ISC")
 #
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -73,7 +73,7 @@ case $# in
 	### For ease of use, this records the sticky tag of versions
 	### released with each point release.
 	###
-	4.4.2-P1) noSNAP=snapshot BINDTAG=v9_11_14 ;;
+	4.4.3) noSNAP=snapshot BINDTAG=v9_11_36 ;;
 	4.4.2) noSNAP=snapshot BINDTAG=v9_11_14 ;;
 	4.4.2b1) noSNAP=snapshot BINDTAG=v9_11_14 ;;
 	4.4.2-dev) noSNAP=snapshot BINDTAG=v9_11_8 ;;
@@ -135,6 +135,7 @@ else
 	# Make and move to our directory for all things bind
 	mkdir $binddir
 	cp util/Makefile.bind.in bind/Makefile.in
+	cp util/bind-kit.sh bind/kit.sh
 	cd $binddir
 
 	# Get the bind version file and move it to version.tmp
@@ -152,19 +153,7 @@ else
 	fi
 	mv version version.tmp
 
-	# Get the bind release kit shell script
-	if type wget
-	then
-		wget https://$repo_host/$repo_path/raw/master/util/kit.sh ||
-		{ echo "Fetch of kit.sh file failed" ; exit -1; }
-	elif type fetch
-	then
-		fetch https://$repo_host/$repo_path/raw/master/util/kit.sh ||
-		{ echo "Fetch of kit.sh failed" ; exit -1; }
-	else
-		echo "Fetch of kit.sh failed"
-		exit 1
-	fi
+	# Now the bind release kit shell script is distributed
 
 	# Create the bind tarball, which has the side effect of
 	# setting up the bind directory we will use for building

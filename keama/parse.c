@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2017-2022 Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,8 +14,8 @@
  * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
  *   Internet Systems Consortium, Inc.
- *   950 Charter Street
- *   Redwood City, CA 94063
+ *   PO Box 360
+ *   Newmarket, NH 03857 USA
  *   <info@isc.org>
  *   https://www.isc.org/
  *
@@ -88,7 +88,7 @@ skip_to_semi(struct parse *cfile)
 	statement foo bar { }
 	statement foo bar { statement { } }
 	statement}
- 
+
 	...et cetera. */
 void
 skip_to_rbrace(struct parse *cfile, int brace_count)
@@ -176,7 +176,7 @@ parse_host_name(struct parse *cfile)
 	const char *val;
 	enum dhcp_token token;
 	struct string *s = NULL;
-	
+
 	/* Read a dotted hostname... */
 	do {
 		/* Read a token, which should be an identifier. */
@@ -204,7 +204,7 @@ parse_host_name(struct parse *cfile)
 
 /* ip-addr-or-hostname :== ip-address | hostname
    ip-address :== NUMBER DOT NUMBER DOT NUMBER DOT NUMBER
-   
+
    Parse an ip address or a hostname.
 
    Note that RFC1123 permits hostnames to consist of all digits,
@@ -282,7 +282,7 @@ parse_ip_addr_or_hostname(struct parse *cfile, isc_boolean_t check_multi)
 
 	return makeStringExt(bin->length, bin->content, 'I');
 }
-	
+
 /*
  * ip-address :== NUMBER DOT NUMBER DOT NUMBER DOT NUMBER
  */
@@ -294,7 +294,7 @@ parse_ip_addr(struct parse *cfile)
 	unsigned len = sizeof(addr);
 
 	return parse_numeric_aggregate(cfile, addr, &len, DOT, 10, 8);
-}	
+}
 
 /*
  * Return true if every character in the string is hexadecimal.
@@ -316,7 +316,7 @@ is_hex_string(const char *s)
  *
  * See section 2.2 of RFC 1884 for details.
  *
- * We are lazy for this. We pull numbers, names, colons, and dots 
+ * We are lazy for this. We pull numbers, names, colons, and dots
  * together and then throw the resulting string at the inet_pton()
  * function.
  */
@@ -332,7 +332,7 @@ parse_ip6_addr(struct parse *cfile)
 	int v6_len;
 
 	/*
-	 * First token is non-raw. This way we eat any whitespace before 
+	 * First token is non-raw. This way we eat any whitespace before
 	 * our IPv6 address begins, like one would expect.
 	 */
 	token = peek_token(&val, NULL, cfile);
@@ -655,7 +655,7 @@ parse_option_name(struct parse *cfile,
 	if (!is_identifier(token))
 		parse_error(cfile,
 			    "expecting identifier after option keyword.");
-	
+
 	uname = strdup(val);
 	if (!uname)
 		parse_error(cfile, "no memory for uname information.");
@@ -792,7 +792,7 @@ parse_option_space_decl(struct parse *cfile)
 	universe->old = strdup(val);
 	universe->name = universe->old;
 	push_space(universe);
-	
+
 	do {
 		token = next_token(&val, NULL, cfile);
 		switch(token) {
@@ -951,7 +951,7 @@ parse_option_code_definition(struct parse *cfile, struct option *option)
 	struct string *saved;
 	struct string *format;
 	struct element *optdef;
-	
+
 	if (option->space->status == special) {
 		parse_vendor_code_definition(cfile, option);
 		return;
@@ -1451,7 +1451,7 @@ parse_base64(struct parse *cfile)
 	struct string *t;
 	struct string *r;
 	isc_boolean_t valid_base64;
-	
+
 	r = allocString();
 
 	/* It's possible for a + or a / to cause a base64 quantity to be
@@ -1582,7 +1582,7 @@ parse_executable_statements(struct element *statements,
 	}
 	if (!*lose)
 		return ISC_TRUE;
-		
+
 	return ISC_FALSE;
 }
 
@@ -1731,7 +1731,7 @@ parse_executable_statement(struct element *result,
 	case ON:
 		skip_token(&val, NULL, cfile);
 		return parse_on_statement(result, cfile, lose);
-			
+
 	case SWITCH:
 		skip_token(&val, NULL, cfile);
 		return parse_switch_statement(result, cfile, lose);
@@ -1755,7 +1755,7 @@ parse_executable_statement(struct element *result,
 		cfile->issue_counter++;
 		mapSet(result, st, "default");
 		return ISC_TRUE;
-			
+
 	case DEFINE:
 	case TOKEN_SET:
 		skip_token(&val, NULL, cfile);
@@ -2028,7 +2028,7 @@ parse_executable_statement(struct element *result,
 		if (!parse_zone(zone, cfile))
 			goto badzone;
 		return ISC_TRUE;
-		
+
 		/* Also not really a statement, but same idea as above. */
 	case KEY:
 		skip_token(&val, NULL, cfile);
@@ -2116,7 +2116,7 @@ parse_zone(struct element *zone, struct parse *cfile)
 		    values = createList();
 		    mapSet(zone, values, "primary");
 		    goto consemup;
-		    
+
 	    case SECONDARY:
 		    if (mapContains(zone, "secondary"))
 			    parse_error(cfile, "more than one secondary.");
@@ -2183,7 +2183,7 @@ parse_zone(struct element *zone, struct parse *cfile)
 		    mapSet(zone, createString(key_name), "key");
 		    parse_semi(cfile);
 		    break;
-		    
+
 	    default:
 		    done = 1;
 		    break;
@@ -2256,7 +2256,7 @@ parse_key(struct element* result, struct parse *cfile)
 			if (!s)
 				appendString(alg, ".SIG-ALG.REG.INT.");
 			/* If there is no trailing '.', hack one in. */
-			else 
+			else
 				appendString(alg, ".");
 			mapSet(key, createString(alg), "algorithm");
 			break;
@@ -2329,7 +2329,7 @@ parse_on_statement(struct element *result,
 		case COMMIT:
 		case RELEASE:
 		case TRANSMISSION:
-			appendString(cond, val);      
+			appendString(cond, val);
 			break;
 
 		default:
@@ -2339,7 +2339,7 @@ parse_on_statement(struct element *result,
 		if (token == OR)
 			appendString(cond, " or ");
 	} while (token == OR);
-		
+
 	mapSet(statement, createString(cond), "condition");
 
 	/* Semicolon means no statements. */
@@ -2567,7 +2567,7 @@ parse_if_statement(struct element *result,
 		}
 		mapSet(statement, branch, "else");
 	}
-	
+
 	return ISC_TRUE;
 }
 
@@ -2581,7 +2581,7 @@ parse_if_statement(struct element *result,
  *			  boolean-expression OR boolean-expression
  *			  EXISTS OPTION-NAME
  */
-   			  
+
 isc_boolean_t
 parse_boolean_expression(struct element *expr,
 			 struct parse *cfile,
@@ -2625,7 +2625,7 @@ parse_boolean(struct parse *cfile)
  * data_expression :== SUBSTRING LPAREN data-expression COMMA
  *					numeric-expression COMMA
  *					numeric-expression RPAREN |
- *		       CONCAT LPAREN data-expression COMMA 
+ *		       CONCAT LPAREN data-expression COMMA
  *					data-expression RPAREN
  *		       SUFFIX LPAREN data_expression COMMA
  *		       		     numeric-expression RPAREN |
@@ -3181,14 +3181,14 @@ parse_non_binary(struct element *expr,
 		if (token != RPAREN)
 			goto norparen;
 		break;
-		
+
 	case STRING:
 		skip_token(&val, &len, cfile);
 		resetString(expr, makeString(len, val));
 		break;
 
 	case EXTRACT_INT:
-		skip_token(&val, NULL, cfile);	
+		skip_token(&val, NULL, cfile);
 		nexp = createMap();
 		nexp->skip = ISC_TRUE;
 		cfile->issue_counter++;
@@ -3232,9 +3232,9 @@ parse_non_binary(struct element *expr,
 		if (token != RPAREN)
 			parse_error(cfile, "right parenthesis expected.");
 		break;
-	
+
 	case ENCODE_INT:
-		skip_token(&val, NULL, cfile);	
+		skip_token(&val, NULL, cfile);
 		nexp = createMap();
 		nexp->skip = ISC_TRUE;
 		cfile->issue_counter++;
@@ -3274,7 +3274,7 @@ parse_non_binary(struct element *expr,
 		if (token != RPAREN)
 			parse_error(cfile, "right parenthesis expected.");
 		break;
-	
+
 	case NUMBER:
 		/* If we're in a numeric context, this should just be a
 		   number, by itself. */
@@ -3535,7 +3535,7 @@ parse_non_binary(struct element *expr,
 		nexp->skip = ISC_TRUE;
 		cfile->issue_counter++;
 		mapSet(expr, nexp, "v6relay");
-		
+
 		token = next_token(&val, NULL, cfile);
 		if (token != LPAREN)
 			goto nolparen;
@@ -3736,7 +3736,7 @@ new_rhs:
 			resetBy(expr, rhs);
 			return ISC_TRUE;
 		}
-		
+
 		lhs = rhs;
 		rhs = NULL;
 		binop = next_op;
@@ -3775,7 +3775,7 @@ new_rhs:
 		rhs_context = expression_context(rhs);
 		lhs_context = expression_context(lhs);
 
-		if ((rhs_context != context_any) && 
+		if ((rhs_context != context_any) &&
 		    (lhs_context != context_any) &&
 		    (rhs_context != lhs_context))
 			parse_error(cfile, "illegal expression relating "
@@ -3876,20 +3876,20 @@ new_rhs:
 	/* Now combine the LHS and the RHS using binop. */
 	tmp = createMap();
 	tmp->skip = ISC_TRUE;
-	
+
 	/* Store the LHS and RHS. */
 	mapSet(tmp, lhs, "left");
 	mapSet(tmp, rhs, "right");
 
 	lhs = createMap();
 	mapSet(lhs, tmp, binop_name);
-	
+
 	tmp = NULL;
 	rhs = NULL;
 
 	binop = next_op;
 	goto new_rhs;
-}	
+}
 
 /* Escape embedded commas, detected heading and leading space */
 struct string *
@@ -4296,7 +4296,7 @@ parse_option_statement(struct element *result,
 	if ((token == SEMI) && (option->format[0] != 'Z')) {
 		/* Eat the semicolon... */
 		/*
-		 * XXXSK: I'm not sure why we should ever get here, but we 
+		 * XXXSK: I'm not sure why we should ever get here, but we
 		 * 	  do during our startup. This confuses things if
 		 * 	  we are parsing a zero-length option, so don't
 		 * 	  eat the semicolon token in that case.
@@ -4335,7 +4335,7 @@ parse_option_statement(struct element *result,
 
 			r = makeStringExt(s->length, s->content, 'X');
 			data = createString(r);
-			mapSet(opt_data, data, "data"); 
+			mapSet(opt_data, data, "data");
 		} else if ((expr->type == ELEMENT_MAP) &&
 			   mapContains(expr, "const-data")) {
 			struct element *value;
@@ -4819,7 +4819,7 @@ parse_config_data(struct element *expr,
 		parse_error(cfile, "Bad format '%c' in parse_config_data.",
 			    option->format[0]);
 	}
-				
+
 	mapSet(expr, elem, "value");
 
         return ISC_TRUE;
@@ -4888,7 +4888,7 @@ parse_config_statement(struct element *result,
 	if ((token == SEMI) && (option->format[0] != 'Z')) {
 		/* Eat the semicolon... */
 		/*
-		 * XXXSK: I'm not sure why we should ever get here, but we 
+		 * XXXSK: I'm not sure why we should ever get here, but we
 		 * 	  do during our startup. This confuses things if
 		 * 	  we are parsing a zero-length option, so don't
 		 * 	  eat the semicolon token in that case.

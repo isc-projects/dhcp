@@ -3,7 +3,7 @@
    Subroutines that support the generic listener object. */
 
 /*
- * Copyright (c) 2004-2017 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2022 Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -19,8 +19,8 @@
  * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
  *   Internet Systems Consortium, Inc.
- *   950 Charter Street
- *   Redwood City, CA 94063
+ *   PO Box 360
+ *   Newmarket, NH 03857 USA
  *   <info@isc.org>
  *   https://www.isc.org/
  *
@@ -181,7 +181,7 @@ isc_result_t omapi_listen_addr (omapi_object_t *h,
 error_exit:
 	if (obj != NULL) {
 		if (h->outer == (omapi_object_t *)obj) {
-			omapi_object_dereference((omapi_object_t **)&h->outer, 
+			omapi_object_dereference((omapi_object_t **)&h->outer,
 						 MDL);
 		}
 		if (obj->inner == h) {
@@ -205,7 +205,7 @@ int omapi_listener_readfd (omapi_object_t *h)
 	if (h -> type != omapi_type_listener)
 		return -1;
 	l = (omapi_listener_object_t *)h;
-	
+
 	return l -> socket;
 }
 
@@ -287,7 +287,7 @@ isc_result_t omapi_listener_connect (omapi_connection_object_t **obj,
 #ifdef DEBUG_PROTOCOL
 	log_debug ("omapi_accept()");
 #endif
-	
+
 	/* Get the handle. */
 	status = omapi_connection_allocate (obj, MDL);
 	if (status != ISC_R_SUCCESS)
@@ -417,7 +417,7 @@ isc_result_t omapi_listener_set_value (omapi_object_t *h,
 {
 	if (h -> type != omapi_type_listener)
 		return DHCP_R_INVALIDARG;
-	
+
 	if (h -> inner && h -> inner -> type -> set_value)
 		return (*(h -> inner -> type -> set_value))
 			(h -> inner, id, name, value);
@@ -431,7 +431,7 @@ isc_result_t omapi_listener_get_value (omapi_object_t *h,
 {
 	if (h -> type != omapi_type_listener)
 		return DHCP_R_INVALIDARG;
-	
+
 	if (h -> inner && h -> inner -> type -> get_value)
 		return (*(h -> inner -> type -> get_value))
 			(h -> inner, id, name, value);
@@ -450,7 +450,7 @@ isc_result_t omapi_listener_destroy (omapi_object_t *h,
 #ifdef DEBUG_PROTOCOL
 	log_debug ("omapi_listener_destroy()");
 #endif
-	
+
 	if (l -> socket != -1) {
 		close (l -> socket);
 		l -> socket = -1;
@@ -463,7 +463,7 @@ isc_result_t omapi_listener_signal_handler (omapi_object_t *h,
 {
 	if (h -> type != omapi_type_listener)
 		return DHCP_R_INVALIDARG;
-	
+
 	if (h -> inner && h -> inner -> type -> signal_handler)
 		return (*(h -> inner -> type -> signal_handler)) (h -> inner,
 								  name, ap);
@@ -485,4 +485,3 @@ isc_result_t omapi_listener_stuff_values (omapi_object_t *c,
 								l -> inner);
 	return ISC_R_SUCCESS;
 }
-

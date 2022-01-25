@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2017-2022 Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,8 +14,8 @@
  * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
  *   Internet Systems Consortium, Inc.
- *   950 Charter Street
- *   Redwood City, CA 94063
+ *   PO Box 360
+ *   Newmarket, NH 03857 USA
  *   <info@isc.org>
  *   https://www.isc.org/
  *
@@ -31,11 +31,13 @@
 #include <time.h>
 
 /* Resolution of FQDNs into IPv4 addresses */
-enum resolve { 
+enum resolve {
 	perform = 0,	/* resolve */
 	fatal,		/* raise a fatal error */
 	pass		/* pass the string wth a warning */
-} resolve;
+};
+
+extern enum resolve resolve;
 
 /* From includes/dhcp.h */
 
@@ -57,8 +59,6 @@ enum resolve {
 extern int local_family;
 
 /* A parsing context. */
-
-TAILQ_HEAD(parses, parse) parses;
 
 struct parse {
 	int lexline;
@@ -119,6 +119,8 @@ struct parse {
 	TAILQ_ENTRY(parse) next;
 
 };
+
+extern TAILQ_HEAD(parses, parse) parses;
 
 #define PARAMETER	0
 #define TOPLEVEL	1
