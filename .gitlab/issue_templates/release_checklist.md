@@ -29,19 +29,21 @@ about: Create a new issue using this checklist for each release.
   1. [ ] regenerate makefiles `aclocal && autoheader && automake && autoconf`
   1. [ ] review and push changes
 1. Build tarball
-  1. [ ] go to [tarball](https://jenkins.aws.isc.org/view/isc-dhcp-dev/job/dhcp-dev/job/dhcp-tarball/) > Build with Parameters, in field `dhcpBranch` put in release branch and run job, this will build release tarball and save it as artifact of the job.
-  1. [ ] wait for other jobs to finish testing (unit-tests and system-tests) and check their results.
-  1. [ ] upload tarball to repo.isc.org `/data/shared/sweng/dhcp/`p there are 3 directories, in regular release please use `release` dir.
-  1. [ ] create directory for current release at repo.isc.org in `/data/shared/sweng/dhcp/` (relular releases goes to `releases`
-  1. [ ] upload tarball to created directory
-  1. [ ] make sure that new release directory allow group write e.g. `chmod 775 /data/shared/sweng/dhcp/releases/4.3.2b1`
+  1. [ ] go to [tarball](https://jenkins.aws.isc.org/view/isc-dhcp-dev/job/dhcp-dev/job/dhcp-tarball/) > Build with Parameters, in field `dhcpBranch` put in release branch and run job, this will build release tarball and save it as artifact of the job
+  1. [ ] wait for other jobs to finish testing (unit-tests and system-tests) and check their results
+  1. [ ] before tarball will be deemed as ready to release it will be `release candidate`. Each consecutive respin will have it's own name starting from `-rc1`
+  1. [ ] prepare directory for current release at repo.isc.org with correct prefix for release candidate e.g. `/data/shared/sweng/dhcp/releases/4.4.3b1.rc1`
+  1. [ ] upload tarball and release notes (even if release notes are included into tarball, it should be also in separate file) to created directory for sanity checks
 1. Sanity Checks
-  1. [ ] open a ticket in dhcp repo called `release X.Y.Z sanity checks` and put there location of release tarball and it's sha256 sum
-  1. [ ] wait for team input about new tarball, if respin is needed go back to `Build tarball` point
-  1. [ ] If tarball is accepted create a tag of this version on a last commit in release branch
+  1. [ ] open a ticket in dhcp repo called `release X.Y.Z-rcX sanity checks` and put there location of release tarball and it's sha256 sum
+  1. [ ] wait for team input about new tarball, if respin is needed go back to `Build tarball` point also increasing release candidate number
+  1. [ ] if tarball is accepted create a tag of this version on a last commit in release branch
+  1. [ ] move tarball and release notes to non release candidate location (e.g. moving from /data/shared/sweng/dhcp/releases/4.3.2b1.rc1 to /data/shared/sweng/dhcp/releases/4.3.2b1)
+  1. [ ] make sure that new release directory allow group write e.g. `chmod 665 /data/shared/sweng/dhcp/releases/4.3.2b1`
+  1. [ ] open tickets to address issues mentioned in sanity checks IF those were not already fixed and close sanity check ticket
 1. Signing and notification
-  1. [ ] it's time to [open a signing ticket](https://gitlab.isc.org/isc-private/signing/-/issues)
-  1. [ ] notify support about redines of release, at this point QA and dev team work is done
+  1. [ ] it's time to [open a signing ticket](https://gitlab.isc.org/isc-private/signing/-/issues) that include location and sha256 of the tarball
+  1. [ ] notify support about readiness of release, at this point QA and dev team work is done
 1. Releasing tarball
 - [ ] ***(Support)*** Wait for clearance from Security Officer to proceed with the public release (if applicable).
  - [ ] ***(Support)*** Wait for the signing ticket from the release engineer.
@@ -56,6 +58,7 @@ about: Create a new issue using this checklist for each release.
  - [ ] ***(Support)*** Update tickets in case of waiting for support customers.
  - [ ] ***(Marketing)*** Announce on social media.
  - [ ] ***(Marketing)*** Write blog article (if a major release).
+ - [ ] ***(Marketing)*** Translate the man pages, reformat and upload to the DHCP documentation pages in the KB.
 
 
 
