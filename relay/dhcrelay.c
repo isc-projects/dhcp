@@ -105,6 +105,8 @@ struct server_list {
 } *servers;
 
 struct interface_info *uplink = NULL;
+static isc_boolean_t fake_gw = ISC_FALSE;
+static struct in_addr gw ;
 
 #ifdef DHCPv6
 struct stream_list {
@@ -169,7 +171,7 @@ char *progname;
 "                     [-i interface0 [ ... -i interfaceN]\n" \
 "                     [-iu interface0 [ ... -iu interfaceN]\n" \
 "                     [-id interface0 [ ... -id interfaceN]\n" \
-"                     [-U interface]\n" \
+"                     [-U interface] [-g <ip_address>]\n" \
 "                     server0 [ ... serverN]\n\n" \
 "       %s -6   [-d] [-q] [-I] [-c <hops>]\n" \
 "                     [-p <port> | -rp <relay-port>]\n" \
@@ -189,7 +191,7 @@ char *progname;
 "                     [-i interface0 [ ... -i interfaceN]\n" \
 "                     [-iu interface0 [ ... -iu interfaceN]\n" \
 "                     [-id interface0 [ ... -id interfaceN]\n" \
-"                     [-U interface]\n" \
+"                     [-U interface] [-g <ip_address>]\n" \
 "                     server0 [ ... serverN]\n\n" \
 "       %s -6   [-d] [-q] [-I] [-c <hops>] [-p <port>]\n" \
 "                     [-pf <pid-file>] [--no-pid]\n" \
@@ -210,7 +212,7 @@ char *progname;
 "                [-i interface0 [ ... -i interfaceN]\n" \
 "                [-iu interface0 [ ... -iu interfaceN]\n" \
 "                [-id interface0 [ ... -id interfaceN]\n" \
-"                [-U interface]\n" \
+"                [-U interface] [-g <ip_address>]\n" \
 "                server0 [ ... serverN]\n\n" \
 "       %s {--version|--help|-h}"
 #else
@@ -221,7 +223,7 @@ char *progname;
 "                [-i interface0 [ ... -i interfaceN]\n" \
 "                [-iu interface0 [ ... -iu interfaceN]\n" \
 "                [-id interface0 [ ... -id interfaceN]\n" \
-"                [-U interface]\n" \
+"                [-U interface] [-g <ip_address>]\n" \
 "                server0 [ ... serverN]\n\n" \
 "       %s {--version|--help|-h}"
 #endif
@@ -547,6 +549,21 @@ main(int argc, char **argv) {
 			/* Turn on -a, in case they don't do so explicitly */
 			add_agent_options = 1;
 			add_rfc3527_suboption = 1;
+		} else if (!strcmp(argv[i], "-g")) {
+			if (++i == argc)
+				usage(use_noarg, argv[i-1]);
+#ifdef DHCPv6
+			if (local_family_set && (local_family == AF_INET6)) {
+				usage(use_v4command, argv[i]);
+			}
+			local_family_set = 1;
+			local_family = AF_INET;
+#endif
+			if (inet_pton(AF_INET, argv[i], &gw) <= 0) {
+				usage("Invalid gateway address '%s'", argv[i]);
+			} else {
+				fake_gw = ISC_TRUE;
+			}
 		} else if (!strcmp(argv[i], "-D")) {
 #ifdef DHCPv6
 			if (local_family_set && (local_family == AF_INET6)) {
@@ -878,6 +895,7 @@ do_relay4(struct interface_info *ip, struct dhcp_packet *packet,
 			return;
 		}
 
+		log_debug("BOOTREPLY giaddr: %s\n", inet_ntoa(packet->giaddr));
 		if (!(packet->flags & htons(BOOTP_BROADCAST)) &&
 			can_unicast_without_arp(out)) {
 			to.sin_addr = packet->yiaddr;
@@ -916,6 +934,9 @@ do_relay4(struct interface_info *ip, struct dhcp_packet *packet,
 			return;
 		}
 
+		if (fake_gw) {
+			packet->giaddr = gw;
+		}
 		if (send_packet(out, NULL, packet, length, out->addresses[0],
 				&to, htop) < 0) {
 			++server_packet_errors;

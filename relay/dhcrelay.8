@@ -103,6 +103,10 @@ dhcrelay - Dynamic Host Configuration Protocol Relay Agent
 .B -U
 .I interface
 ]
+[
+.B -g
+.I ipaddr
+]
 .I server0
 [
 .I ...serverN
@@ -233,6 +237,12 @@ Drop packets from upstream servers if they contain Relay Agent
 Information options that indicate they were generated in response to
 a query that came via a different relay agent.  If this option is not
 specified, such packets will be relayed anyway.
+.TP
+-g \fIipaddr\fR
+When a package gets sent back to the client, replace the gateway's IP
+address (giaddr) with the given \fIipaddr\fR. This can be used as a
+workaround for bogus clients like Solaris 11 grub, which use the giaddr
+instead of the announced router (3) to setup its default route.
 .TP
 -i \fIifname\fR
 Listen for DHCPv4/BOOTP traffic on interface \fIifname\fR.  Multiple
