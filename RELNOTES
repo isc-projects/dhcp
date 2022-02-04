@@ -73,6 +73,11 @@ by Eric Young (eay@cryptsoft.com).
   an object to fail.
   [Gitlab #148]
 
+- The parallel build has been improved. Thanks to Sergei Trofimovich for
+  the patch. The parallel build is still experimental, as officially the
+  BIND 9 code does not support parallel build for the libraries.
+  [Gitlab #91]
+
 		Changes since 4.4.2 (Bug Fixes)
 
 - Corrected a buffer overwrite possible when parsing hexadecimal
