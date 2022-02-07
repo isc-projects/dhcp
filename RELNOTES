@@ -78,6 +78,11 @@ by Eric Young (eay@cryptsoft.com).
   BIND 9 code does not support parallel build for the libraries.
   [Gitlab #91]
 
+- LDAP options (ldap-gssapi-principal and ldap-gssapi-keytab) handling
+  improved. This is a contributed code that was not tested by ISC. Thank
+  you to Petr Mensik and Pavel Zhukov for the patches!
+  [Gitlab !56,!75]
+
 		Changes since 4.4.2 (Bug Fixes)
 
 - Corrected a buffer overwrite possible when parsing hexadecimal
