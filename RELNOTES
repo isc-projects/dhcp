@@ -83,6 +83,12 @@ by Eric Young (eay@cryptsoft.com).
   you to Petr Mensik and Pavel Zhukov for the patches!
   [Gitlab !56,!75]
 
+- Use option -g ipaddr in the dhcrelay to replace the giaddr sent to
+  clients with the given ipaddr to workaround bogus clients like Solaris 11
+  grub which use giaddr instead of the announced router (3) to setup its
+  default route. Thanks to Jens Elkner for the patch!
+  [Gitlab #223, !86, !92]
+
 		Changes since 4.4.2 (Bug Fixes)
 
 - Corrected a buffer overwrite possible when parsing hexadecimal
