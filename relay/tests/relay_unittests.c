@@ -406,13 +406,13 @@ ATF_TC_HEAD(gwaddr_override_test, tc) {
     atf_tc_set_md_var(tc, "descr", "tests that gateway addr (giaddr) field can be overridden");
 }
 
-extern isc_boolean_t fake_gw;
+extern isc_boolean_t use_fake_gw;
 extern struct in_addr gw;
 
 /* This basic test checks if the new gwaddr override (-g) option is disabled by default */
 ATF_TC_BODY(gwaddr_override_test, tc) {
 
-    if (fake_gw == ISC_TRUE) {
+    if (use_fake_gw == ISC_TRUE) {
         atf_tc_fail("the gwaddr override should be disabled by default");
     }
     char txt[48] = {0};

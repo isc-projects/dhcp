@@ -105,7 +105,7 @@ struct server_list {
 } *servers;
 
 struct interface_info *uplink = NULL;
-isc_boolean_t fake_gw = ISC_FALSE;
+isc_boolean_t use_fake_gw = ISC_FALSE;
 struct in_addr gw = {0};
 
 #ifdef DHCPv6
@@ -562,7 +562,7 @@ main(int argc, char **argv) {
 			if (inet_pton(AF_INET, argv[i], &gw) <= 0) {
 				usage("Invalid gateway address '%s'", argv[i]);
 			} else {
-				fake_gw = ISC_TRUE;
+				use_fake_gw = ISC_TRUE;
 			}
 		} else if (!strcmp(argv[i], "-D")) {
 #ifdef DHCPv6
@@ -934,9 +934,10 @@ do_relay4(struct interface_info *ip, struct dhcp_packet *packet,
 			return;
 		}
 
-		if (fake_gw) {
+		if (use_fake_gw) {
 			packet->giaddr = gw;
 		}
+
 		if (send_packet(out, NULL, packet, length, out->addresses[0],
 				&to, htop) < 0) {
 			++server_packet_errors;
