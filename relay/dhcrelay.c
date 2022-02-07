@@ -105,8 +105,8 @@ struct server_list {
 } *servers;
 
 struct interface_info *uplink = NULL;
-static isc_boolean_t fake_gw = ISC_FALSE;
-static struct in_addr gw ;
+isc_boolean_t fake_gw = ISC_FALSE;
+struct in_addr gw = {0};
 
 #ifdef DHCPv6
 struct stream_list {
