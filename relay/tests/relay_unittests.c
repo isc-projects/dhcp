@@ -400,9 +400,32 @@ ATF_TC_BODY(add_relay_agent_options_test, tc) {
     }
 }
 
+ATF_TC(gwaddr_override_test);
+
+ATF_TC_HEAD(gwaddr_override_test, tc) {
+    atf_tc_set_md_var(tc, "descr", "tests that gateway addr (giaddr) field can be overridden");
+}
+
+extern isc_boolean_t fake_gw;
+extern struct in_addr gw;
+
+/* This basic test checks if the new gwaddr override (-g) option is disabled by default */
+ATF_TC_BODY(gwaddr_override_test, tc) {
+
+    if (fake_gw == ISC_TRUE) {
+        atf_tc_fail("the gwaddr override should be disabled by default");
+    }
+    char txt[48] = {0};
+    inet_ntop(AF_INET, &gw, txt, sizeof(txt));
+    if (strncmp(txt, "0.0.0.0", 9) != 0) {
+        atf_tc_fail("the default gwaddr override value should be 0.0.0.0, but is %s", txt);
+    }
+}
+
 ATF_TP_ADD_TCS(tp) {
     ATF_TP_ADD_TC(tp, strip_relay_agent_options_test);
     ATF_TP_ADD_TC(tp, add_relay_agent_options_test);
+    ATF_TP_ADD_TC(tp, gwaddr_override_test);
 
     return (atf_no_error());
 }
