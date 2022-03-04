@@ -171,7 +171,7 @@ char *progname;
 "                     [-i interface0 [ ... -i interfaceN]\n" \
 "                     [-iu interface0 [ ... -iu interfaceN]\n" \
 "                     [-id interface0 [ ... -id interfaceN]\n" \
-"                     [-U interface] [-g <ip_address>]\n" \
+"                     [-U interface] [-g <ip-address>]\n" \
 "                     server0 [ ... serverN]\n\n" \
 "       %s -6   [-d] [-q] [-I] [-c <hops>]\n" \
 "                     [-p <port> | -rp <relay-port>]\n" \
@@ -191,7 +191,7 @@ char *progname;
 "                     [-i interface0 [ ... -i interfaceN]\n" \
 "                     [-iu interface0 [ ... -iu interfaceN]\n" \
 "                     [-id interface0 [ ... -id interfaceN]\n" \
-"                     [-U interface] [-g <ip_address>]\n" \
+"                     [-U interface] [-g <ip-address>]\n" \
 "                     server0 [ ... serverN]\n\n" \
 "       %s -6   [-d] [-q] [-I] [-c <hops>] [-p <port>]\n" \
 "                     [-pf <pid-file>] [--no-pid]\n" \
@@ -212,7 +212,7 @@ char *progname;
 "                [-i interface0 [ ... -i interfaceN]\n" \
 "                [-iu interface0 [ ... -iu interfaceN]\n" \
 "                [-id interface0 [ ... -id interfaceN]\n" \
-"                [-U interface] [-g <ip_address>]\n" \
+"                [-U interface] [-g <ip-address>]\n" \
 "                server0 [ ... serverN]\n\n" \
 "       %s {--version|--help|-h}"
 #else
