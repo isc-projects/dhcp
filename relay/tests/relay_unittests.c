@@ -415,9 +415,9 @@ ATF_TC_BODY(gwaddr_override_test, tc) {
     if (use_fake_gw == ISC_TRUE) {
         atf_tc_fail("the gwaddr override should be disabled by default");
     }
-    char txt[48] = {0};
+    char txt[16] = {0};
     inet_ntop(AF_INET, &gw, txt, sizeof(txt));
-    if (strncmp(txt, "0.0.0.0", 9) != 0) {
+    if (strncmp(txt, "0.0.0.0", 8) != 0) {
         atf_tc_fail("the default gwaddr override value should be 0.0.0.0, but is %s", txt);
     }
 }
