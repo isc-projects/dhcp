@@ -223,7 +223,7 @@ char *progname;
 "                [-i interface0 [ ... -i interfaceN]\n" \
 "                [-iu interface0 [ ... -iu interfaceN]\n" \
 "                [-id interface0 [ ... -id interfaceN]\n" \
-"                [-U interface] [-g <ip_address>]\n" \
+"                [-U interface] [-g <ip-address>]\n" \
 "                server0 [ ... serverN]\n\n" \
 "       %s {--version|--help|-h}"
 #endif
