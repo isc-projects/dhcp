@@ -20,8 +20,9 @@ ISC DHCP uses the standard GNU configure command for installation. Please review
 output of `./configure --help` to see what options are available.
 
 The system has only been tested on Linux and FreeBSD, and may not work on
-other platforms. Please report any problems and suggested fixes to
-<dhcp-users@isc.org>.
+other platforms. Please subscribe to the dhcp-users mailing list at
+https://lists.isc.org/mailman/listinfo/dhcp-users and report any problems
+and/or suggested fixes to dhcp-users@lists.isc.org.
 
 ISC DHCP is open source software maintained by Internet Systems
 Consortium.  This product includes cryptographic software written
