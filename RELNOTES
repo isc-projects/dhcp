@@ -29,6 +29,12 @@ by Eric Young (eay@cryptsoft.com).
 
 		Changes since 4.4.2-P1 (New Features)
 
+- Two new OMAPI function calls were added, dhcpctl_timed_connect()
+  and dhcpctl_timed_wait_for_completion(). These provide timed
+  versions of creating a connection and waiting for an operation
+  to complete.
+  [Gitlab #76]
+
 - BIND libraries updated to the latest version, 9.11.36. This fixes a number
   of compilation issues on various systems, including OpenWRT. Thanks to
   Philip Prindeville for testing on OpenWRT.
