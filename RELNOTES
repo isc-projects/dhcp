@@ -5,21 +5,21 @@
 
                             NEW FEATURES
 
-Please note that that ISC DHCP is now licensed under the Mozilla Public
+Please note that that ISC DHCP is licensed under the Mozilla Public
 License, MPL 2.0. Please see https://www.mozilla.org/en-US/MPL/2.0/ to read
 the MPL 2.0 license terms.
 
 NOTE: The client and relay components are now End-Of-Life.
 4.4.3 is the final release for those components.
 
-For information on how to install, configure and run this software, as
+For information on how to install, configure, and run this software, as
 well as how to find documentation and report bugs, please consult the
 README file.
 
-ISC DHCP uses standard GNU configure for installation. Please review the
-output of "./configure --help" to see what options are available.
+ISC DHCP uses the standard GNU configure command for installation. Please review the
+output of `./configure --help` to see what options are available.
 
-The system has only been tested on Linux, and FreeBSD, and may not work on
+The system has only been tested on Linux and FreeBSD, and may not work on
 other platforms. Please report any problems and suggested fixes to
 <dhcp-users@isc.org>.
 
@@ -29,71 +29,70 @@ by Eric Young (eay@cryptsoft.com).
 
 		Changes since 4.4.2-P1 (New Features)
 
-- Two new OMAPI function calls were added, dhcpctl_timed_connect()
-  and dhcpctl_timed_wait_for_completion(). These provide timed
+- Two new OMAPI function calls were added, `dhcpctl_timed_connect()`
+  and `dhcpctl_timed_wait_for_completion()`. These provide timed
   versions of creating a connection and waiting for an operation
   to complete.
-  [Gitlab #76]
+  [GitLab #76]
 
-- BIND libraries updated to the latest version, 9.11.36. This fixes a number
+- The BIND libraries have been updated to the latest version, 9.11.36. This fixes a number
   of compilation issues on various systems, including OpenWRT. Thanks to
   Philip Prindeville for testing on OpenWRT.
-  [Gitlab #218, #171, #180, #192]
+  [GitLab #218, #171, #180, #192]
 
-- Added support for the new DHCPv4 option v6-only-preferred specified
+- Support was added for the new DHCPv4 option v6-only-preferred, specified
   in RFC 8925. A new reason code, V6ONLY, was added to the client script
   and the client Linux script sample was updated.
-  [Gitlab #132]
+  [GitLab #132]
 
 		Changes since 4.4.2-P1 (Bug Fixes)
 
-- Minor corrections to allow compilation under gcc 10.
-  [Gitlab #117]
+- Minor corrections were made to allow compilation under gcc 10.
+  [GitLab #117]
 
-- Corrected logic in dhclient that causes it to decline DHCPv4 leases if the
-  client script exits abnormally (i.e. crashes).
-  [Gitlab #123]
+- The logic in dhclient that causes it to decline DHCPv4 leases if the
+  client script exits abnormally (i.e. crashes) has been corrected.
+  [GitLab #123]
 
-- The limit on the size of lease file that can be loaded at start up
+- The limit on the size of a lease file that can be loaded at startup
   is now only enforced on 32-bit systems.
-  [Gitlab #92]
+  [GitLab #92]
 
 - The PRNG initialization has been improved. It now uses the configure flag
   `--with-randomdev=PATH`, which specifies the device from which to read the
   initial seed. That is typically `/dev/random` (the default value) or
-  `/dev/urandom`, but may be specified otherwise on the local system. If not
-  explicitly specified, the default device (`/dev/random`) is used. The old
+  `/dev/urandom`, but may be specified otherwise on the local system. The old
   behavior can be forced by disabling this feature (`--with-randomdev=no`).
   If the initialization is disabled or reading from the random device fails,
   the previous algorithm (retrieve the last four bytes of hardware addresses
   from all network interfaces that have them, and use the current time and
   process ID) is used.
-  [Gitlab #197]
+  [GitLab #197]
 
-- Minor dhclient code fix to remove compilation warnings.
-  [Gitlab #190]
+- A minor dhclient code fix was made to remove compilation warnings.
+  [GitLab #190]
 
-- Removed hard-coded MD5 algorithm name in OMAPI connection logic. Prior
-  to this using any other algorithm via key-algorithm statement would
-  allow OMAPI connections to made but subsequent actions such as updating
-  an object to fail.
-  [Gitlab #148]
+- The hard-coded MD5 algorithm name was removed in OMAPI connection logic.
+  Previously, using any other algorithm via a key-algorithm statement would
+  allow OMAPI connections to be made, but subsequent actions such as updating
+  an object would fail.
+  [GitLab #148]
 
 - The parallel build has been improved. Thanks to Sergei Trofimovich for
   the patch. The parallel build is still experimental, as officially the
-  BIND 9 code does not support parallel build for the libraries.
-  [Gitlab #91]
+  BIND 9 code does not support the parallel build for libraries.
+  [GitLab #91]
 
-- LDAP options (ldap-gssapi-principal and ldap-gssapi-keytab) handling
-  improved. This is a contributed code that was not tested by ISC. Thank
+- Handling of LDAP options (`ldap-gssapi-principal` and `ldap-gssapi-keytab`)
+  has been improved. This is contributed code that has not been tested by ISC. Thank
   you to Petr Mensik and Pavel Zhukov for the patches!
-  [Gitlab !56,!75]
+  [GitLab !56,!75]
 
-- Use option -g ipaddr in the dhcrelay to replace the giaddr sent to
-  clients with the given ipaddr to workaround bogus clients like Solaris 11
-  grub which use giaddr instead of the announced router (3) to setup its
+- It is now possible to use `option -g ipaddr` in the dhcrelay to replace the giaddr sent to
+  clients with the given ipaddr, to work around bogus clients like Solaris 11
+  grub which use giaddr instead of the announced router (3) to set up their
   default route. Thanks to Jens Elkner for the patch!
-  [Gitlab #223, !86, !92]
+  [GitLab #223, !86, !92]
 
 		Changes since 4.4.2 (Bug Fixes)
 
