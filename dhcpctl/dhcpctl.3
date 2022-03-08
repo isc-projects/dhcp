@@ -268,7 +268,7 @@ authenticator has been created for the connection, then it is given as the 4th
 argument. On a successful return the address pointed at by the first
 argument will have a new connection object assigned to it.
 How long the function waits for complete the connection is dictated by the value
-of the parameter, \fBtimeout\fR. If the value is null, it will wait indefinetly
+of the parameter, \fBtimeout\fR. If the value is null, it will wait indefinitely
 Otherwise it will wait for the amount of time specified by \fBtimeout\fR
 (tv_sec:tv_usec). Values of zero for both fields are valid but not recommended.
 An example is shown below:
@@ -333,7 +333,7 @@ to the server is lost.
 .Fn dhcpctl_timed_wait_for_completion
 flushes a pending message to the server and waits for the response.  How long
 the function waits for a response is dictated by the value of the third
-parameter, \fBtimeout\fR. If the value is null, it will wait indefinetly or
+parameter, \fBtimeout\fR. If the value is null, it will wait indefinitely or
 until the connection is lost. Otherwise it will wait for the amount of time
 specified by \fBtimeout\fR (tv_sec:tv_usec). Values of zero for both fields
 are valid but not recommended.  The result of the request as processed on the

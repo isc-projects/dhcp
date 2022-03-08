@@ -155,7 +155,7 @@ dhcpctl_status dhcpctl_connect (dhcpctl_handle *connection,
    information.
    How long the function waits for the connection to complete is
    dictated by the value of the parameter, t. If the value is nul,
-   it will wait indefinetly. Otherwise it will wait for the amount
+   it will wait indefinitely. Otherwise it will wait for the amount
    of time specified by t (tv_sec:tv_usec). Values of zero for both
    fields are valid but not recommended. */
 dhcpctl_status dhcpctl_timed_connect (dhcpctl_handle *connection,
@@ -235,7 +235,7 @@ dhcpctl_status dhcpctl_wait_for_completion (dhcpctl_handle h,
    will also be either zero for success or nonzero for some kind
    of failure.  How long the function waits for a response is
    dictated by the value of the parameter, t. If the value is nul,
-   it will wait indefinetly or until the connection is lost.
+   it will wait indefinitely or until the connection is lost.
    Otherwise it will wait for the amount of time specified by t
   (tv_sec:tv_usec). Values of zero for both fields are valid
    but not recommended.  The result of the request as processed on the

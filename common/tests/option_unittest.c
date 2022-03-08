@@ -134,7 +134,7 @@ ATF_TC(parse_X);
 ATF_TC_HEAD(parse_X, tc)
 {
     atf_tc_set_md_var(tc, "descr",
-		      "Verify parse_X survices option too big.");
+		      "Verify parse_X services option too big.");
 }
 
 /* Initializes a parse struct from an input buffer of data. */
