@@ -105,6 +105,7 @@ struct server_list {
 } *servers;
 
 struct interface_info *uplink = NULL;
+char *loopback = NULL;
 
 #ifdef DHCPv6
 struct stream_list {
@@ -444,6 +445,43 @@ main(int argc, char **argv) {
 			}
 
 			request_v4_interface(argv[i], INTERFACE_STREAMS);
+
+			struct hostent *he;
+			struct in_addr ia, *iap = NULL;
+			if (i+1 == argc) {
+				usage(use_noarg, argv[i]);
+			}
+
+#ifdef DHCPv6
+			if (local_family_set && (local_family == AF_INET6)) {
+				usage(use_v4command, argv[i+1]);
+			}
+			local_family_set = 1;
+			local_family = AF_INET;
+#endif
+			if (inet_aton(argv[i+1], &ia)) {
+				iap = &ia;
+				i++;
+			} else {
+				he = gethostbyname(argv[i+1]);
+				if (!he) {
+					log_error("%s: host unknown", argv[i+1]);
+				} else {
+					iap = ((struct in_addr *)
+						   he->h_addr_list[0]);
+					i++;
+				}
+			}
+
+			if (iap) {
+				sp = ((struct server_list *)
+					  dmalloc(sizeof *sp, MDL));
+				if (!sp)
+					log_fatal("no memory for server.\n");
+				sp->next = servers;
+				servers = sp;
+				memcpy(&sp->to.sin_addr, iap, sizeof *iap);
+			}
 		} else if (!strcmp(argv[i], "-iu")) {
 #ifdef DHCPv6
 			if (local_family_set && (local_family == AF_INET6)) {
@@ -523,6 +561,13 @@ main(int argc, char **argv) {
 			if (uplink) {
 				usage("more than one uplink (-U) specified: %s"
 				      ,argv[i]);
+			}
+
+			struct in_addr *tmp_addr = NULL;
+			if (inet_aton(argv[i], tmp_addr)){
+				loopback = argv[i];
+				if (++i == argc)
+					usage(use_noarg, argv[i-1]);
 			}
 
 			/* Allocate the uplink interface */
@@ -608,37 +653,6 @@ main(int argc, char **argv) {
  		} else if (argv[i][0] == '-') {
 			usage("Unknown command: %s", argv[i]);
  		} else {
-			struct hostent *he;
-			struct in_addr ia, *iap = NULL;
-
-#ifdef DHCPv6
-			if (local_family_set && (local_family == AF_INET6)) {
-				usage(use_v4command, argv[i]);
-			}
-			local_family_set = 1;
-			local_family = AF_INET;
-#endif
-			if (inet_aton(argv[i], &ia)) {
-				iap = &ia;
-			} else {
-				he = gethostbyname(argv[i]);
-				if (!he) {
-					log_error("%s: host unknown", argv[i]);
-				} else {
-					iap = ((struct in_addr *)
-					       he->h_addr_list[0]);
-				}
-			}
-
-			if (iap) {
-				sp = ((struct server_list *)
-				      dmalloc(sizeof *sp, MDL));
-				if (!sp)
-					log_fatal("no memory for server.\n");
-				sp->next = servers;
-				servers = sp;
-				memcpy(&sp->to.sin_addr, iap, sizeof *iap);
-			}
  		}
 	}
 
@@ -758,6 +772,20 @@ main(int argc, char **argv) {
 
 	/* Discover all the network interfaces. */
 	discover_interfaces(DISCOVER_RELAY);
+
+	if (loopback) {
+		int found = 0;
+		int i = 0;
+		while (i < uplink->address_count){
+			if (strcmp(loopback, inet_ntoa(uplink->addresses[i])) == 0){
+				found = 1;
+				break;
+			}
+			i++;
+		}
+		if (!found)
+			log_fatal("Invalid loopback %s\n", loopback);
+	}
 
 #ifdef DHCPv6
 	if (local_family == AF_INET6)
@@ -1394,6 +1422,8 @@ add_relay_agent_options(struct interface_info *ip, struct dhcp_packet *packet,
 			memcpy(sp, &giaddr.s_addr, 4);
 			sp += 4;
 			packet->giaddr = uplink->addresses[0];
+			if (loopback)
+				inet_aton(loopback, &packet->giaddr);
 			log_debug ("Adding link selection suboption"
 				   " with addr: %s", inet_ntoa(giaddr));
 		}
