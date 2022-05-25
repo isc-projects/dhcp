@@ -774,6 +774,8 @@ main(int argc, char **argv) {
 	discover_interfaces(DISCOVER_RELAY);
 
 	if (loopback) {
+		if (loopback[0] == '1' && loopback[1] == '2' && loopback[2] == '7')
+			log_fatal("Invalid loopback %s\n", loopback);
 		int found = 0;
 		int i = 0;
 		while (i < uplink->address_count){
