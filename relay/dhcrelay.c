@@ -775,7 +775,7 @@ main(int argc, char **argv) {
 
 	if (loopback) {
 		if (loopback[0] == '1' && loopback[1] == '2' && loopback[2] == '7')
-			log_fatal("Invalid loopback %s\n", loopback);
+			log_fatal("Loopback address from 127.0.0.0/8 is forbidden\n");
 		int found = 0;
 		int i = 0;
 		while (i < uplink->address_count){
