@@ -83,8 +83,8 @@ int if_register_lpf (info)
 	if ((sock = socket(PF_PACKET, SOCK_RAW,
 			   htons((short)ETH_P_ALL))) < 0) {
 		if (errno == ENOPROTOOPT || errno == EPROTONOSUPPORT ||
-		    errno == ESOCKTNOSUPPORT || errno == EPFNOSUPPORT ||
-		    errno == EAFNOSUPPORT || errno == EINVAL) {
+			errno == ESOCKTNOSUPPORT || errno == EPFNOSUPPORT ||
+			errno == EAFNOSUPPORT || errno == EINVAL) {
 			log_error ("socket: %m - make sure");
 			log_error ("CONFIG_PACKET (Packet socket) %s",
 				   "and CONFIG_FILTER");
@@ -107,8 +107,8 @@ int if_register_lpf (info)
 	sa.ll.sll_ifindex = ifr.ifr_ifindex;
 	if (bind (sock, &sa.common, sizeof sa)) {
 		if (errno == ENOPROTOOPT || errno == EPROTONOSUPPORT ||
-		    errno == ESOCKTNOSUPPORT || errno == EPFNOSUPPORT ||
-		    errno == EAFNOSUPPORT || errno == EINVAL) {
+			errno == ESOCKTNOSUPPORT || errno == EPFNOSUPPORT ||
+			errno == EAFNOSUPPORT || errno == EINVAL) {
 			log_error ("socket: %m - make sure");
 			log_error ("CONFIG_PACKET (Packet socket) %s",
 				   "and CONFIG_FILTER");
@@ -139,13 +139,13 @@ void if_register_send (info)
 #endif
 	if (!quiet_interface_discovery)
 		log_info ("Sending on   LPF/%s/%s%s%s",
-		      info -> name,
-		      print_hw_addr (info -> hw_address.hbuf [0],
-				     info -> hw_address.hlen - 1,
-				     &info -> hw_address.hbuf [1]),
-		      (info -> shared_network ? "/" : ""),
-		      (info -> shared_network ?
-		       info -> shared_network -> name : ""));
+			  info -> name,
+			  print_hw_addr (info -> hw_address.hbuf [0],
+					 info -> hw_address.hlen - 1,
+					 &info -> hw_address.hbuf [1]),
+			  (info -> shared_network ? "/" : ""),
+			  (info -> shared_network ?
+			   info -> shared_network -> name : ""));
 }
 
 void if_deregister_send (info)
@@ -161,13 +161,13 @@ void if_deregister_send (info)
 	info -> wfdesc = -1;
 	if (!quiet_interface_discovery)
 		log_info ("Disabling output on LPF/%s/%s%s%s",
-		      info -> name,
-		      print_hw_addr (info -> hw_address.hbuf [0],
-				     info -> hw_address.hlen - 1,
-				     &info -> hw_address.hbuf [1]),
-		      (info -> shared_network ? "/" : ""),
-		      (info -> shared_network ?
-		       info -> shared_network -> name : ""));
+			  info -> name,
+			  print_hw_addr (info -> hw_address.hbuf [0],
+					 info -> hw_address.hlen - 1,
+					 &info -> hw_address.hbuf [1]),
+			  (info -> shared_network ? "/" : ""),
+			  (info -> shared_network ?
+			   info -> shared_network -> name : ""));
 }
 #endif /* USE_LPF_SEND */
 
@@ -201,7 +201,7 @@ void if_register_receive (info)
 	int val = 1;
 
 	if (setsockopt(info->rfdesc, SOL_PACKET, PACKET_AUXDATA,
-		       &val, sizeof(val)) < 0) {
+			   &val, sizeof(val)) < 0) {
 		if (errno != ENOPROTOOPT) {
 			log_fatal ("Failed to set auxiliary packet data: %m");
 		}
@@ -258,7 +258,7 @@ static void lpf_gen_filter_setup (info)
 	p.len = dhcp_bpf_filter_len;
 	p.filter = dhcp_bpf_filter;
 
-        /* Patch the server port into the LPF  program...
+		/* Patch the server port into the LPF  program...
 	   XXX changes to filter program may require changes
 	   to the insn number(s) used below! XXX */
 #if defined(RELAY_PORT)
@@ -278,8 +278,8 @@ static void lpf_gen_filter_setup (info)
 	if (setsockopt (info -> rfdesc, SOL_SOCKET, SO_ATTACH_FILTER, &p,
 			sizeof p) < 0) {
 		if (errno == ENOPROTOOPT || errno == EPROTONOSUPPORT ||
-		    errno == ESOCKTNOSUPPORT || errno == EPFNOSUPPORT ||
-		    errno == EAFNOSUPPORT) {
+			errno == ESOCKTNOSUPPORT || errno == EPFNOSUPPORT ||
+			errno == EAFNOSUPPORT) {
 			log_error ("socket: %m - make sure");
 			log_error ("CONFIG_PACKET (Packet socket) %s",
 				   "and CONFIG_FILTER");
@@ -304,7 +304,7 @@ static void lpf_tr_filter_setup (info)
 	p.len = dhcp_bpf_tr_filter_len;
 	p.filter = dhcp_bpf_tr_filter;
 
-        /* Patch the server port into the LPF  program...
+		/* Patch the server port into the LPF  program...
 	   XXX changes to filter program may require changes
 	   XXX to the insn number(s) used below!
 	   XXX Token ring filter is null - when/if we have a filter 
@@ -314,8 +314,8 @@ static void lpf_tr_filter_setup (info)
 	if (setsockopt (info -> rfdesc, SOL_SOCKET, SO_ATTACH_FILTER, &p,
 			sizeof p) < 0) {
 		if (errno == ENOPROTOOPT || errno == EPROTONOSUPPORT ||
-		    errno == ESOCKTNOSUPPORT || errno == EPFNOSUPPORT ||
-		    errno == EAFNOSUPPORT) {
+			errno == ESOCKTNOSUPPORT || errno == EPFNOSUPPORT ||
+			errno == EAFNOSUPPORT) {
 			log_error ("socket: %m - make sure");
 			log_error ("CONFIG_PACKET (Packet socket) %s",
 				   "and CONFIG_FILTER");
@@ -348,7 +348,7 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 
 	if (!strcmp (interface -> name, "fallback"))
 		return send_fallback (interface, packet, raw,
-				      len, from, to, hto);
+					  len, from, to, hto);
 
 	if (hto == NULL && interface->anycast_mac_addr.hlen)
 		hto = &interface->anycast_mac_addr;
@@ -435,7 +435,7 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 
 	for (cmsg = CMSG_FIRSTHDR(&msg); cmsg; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
 		if (cmsg->cmsg_level == SOL_PACKET &&
-		    cmsg->cmsg_type == PACKET_AUXDATA) {
+			cmsg->cmsg_type == PACKET_AUXDATA) {
 			struct tpacket_auxdata *aux = (void *)CMSG_DATA(cmsg);
 #ifdef VLAN_TCI_PRESENT
 			/* Discard packets with stripped vlan id */
@@ -445,7 +445,7 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 #endif
 
 			csum_ready = ((aux->tp_status & TP_STATUS_CSUMNOTREADY)
-				      ? 0 : 1);
+					  ? 0 : 1);
 		}
 	}
 
@@ -468,7 +468,7 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 
 	/* Decode the IP and UDP headers... */
 	offset = decode_udp_ip_header (interface, ibuf, bufix, from,
-				       (unsigned)length, &paylen, csum_ready);
+					   (unsigned)length, &paylen, csum_ready);
 
 	/* If the IP or UDP checksum was bad, skip the packet... */
 	if (offset < 0)
@@ -550,6 +550,11 @@ get_hw_addr(const char *name, struct hardware *hw) {
 			hw->hbuf[0] = HTYPE_ETHER;
 			memcpy(&hw->hbuf[1], sa->sa_data, 6);
 			break;
+		case ARPHRD_LOOPBACK:
+			hw->hlen = 7;
+			hw->hbuf[0] = HTYPE_ETHER;
+			memcpy(&hw->hbuf[1], sa->sa_data, 6);
+			break;
 		case ARPHRD_IEEE802:
 #ifdef ARPHRD_IEEE802_TR
 		case ARPHRD_IEEE802_TR:
@@ -560,7 +565,7 @@ get_hw_addr(const char *name, struct hardware *hw) {
 			break;
 		case ARPHRD_FDDI:
 			hw->hlen = 7;
-			hw->hbuf[0] = HTYPE_FDDI;
+			hw->hbuf[0] = HTYPE_FDDI; 
 			memcpy(&hw->hbuf[1], sa->sa_data, 6);
 			break;
 		default:
