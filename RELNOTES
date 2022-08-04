@@ -36,6 +36,11 @@ by Eric Young (eay@cryptsoft.com).
   [Gitblab #253]
   CVE: CVS-2022-2928
 
+! Corrected a memory leak that occurs when unpacking a packet that has an
+  FQDN option (81) that contains a label whose lenght is greater than 63.
+  [Gitblab #254]
+  CVE: CVS-2022-2929
+
 		Changes since 4.4.2-P1 (New Features)
 
 - Two new OMAPI function calls were added, `dhcpctl_timed_connect()`
