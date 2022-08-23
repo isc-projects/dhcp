@@ -36,6 +36,7 @@ by Eric Young (eay@cryptsoft.com).
 
 ! Corrected a memory leak that occurs when unpacking a packet that has an
   FQDN option (81) that contains a label whose lenght is greater than 63.
+  Thanks to VictorV of Cyber Kunlun Lab for reporting the issue.
   [Gitblab #254]
   CVE: CVS-2022-2929
 
