@@ -1,6 +1,6 @@
                 Internet Systems Consortium DHCP Distribution
-                            Version 4.4.3
-                            9 March 2022
+                          Version 4.4.3-P1
+                            ? ????? 2022
                             Release Notes
 
                             NEW FEATURES
@@ -31,9 +31,10 @@ by Eric Young (eay@cryptsoft.com).
 		Changes since 4.4.3 (Bug Fixes)
 
 ! Corrected a reference count leak that occurs when the server builds
-  responses to leasequery packets.
+  responses to leasequery packets. Thanks to VictorV of Cyber Kunlun
+  Lab for reporting the issue.
   [Gitblab #253]
-  CVE: <TBD>
+  CVE: CVS-2022-2928
 
 		Changes since 4.4.2-P1 (New Features)
 
