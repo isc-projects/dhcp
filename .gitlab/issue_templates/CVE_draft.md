@@ -93,5 +93,101 @@ your name here
 
 ISC Support Engineer
 
---------
-(INTERNAL) attach text copies of the CVE Advisory draft(s) here
+---------------
+[DRAFT TEXT OF THE ADVISORY IS BELOW, NOTE THAT THIS IS ONLY A WORKING DRAFT]
+
+
+CVE: CVE-9999-99999  [FILL IN]
+
+Document version: 1.0
+
+Posting date: [FILL IN DD MONTH YEAR]
+
+Program impacted: DHCP
+
+Versions affected: DHCP [FILL IN]
+
+Severity: [FILL IN - MEDIUM, HIGH OR CRITICAL]
+
+Exploitable: [FILL IN - REMOTELY OR LOCALLY]
+
+Description:
+
+[FILL IN]
+
+Impact:
+
+[FILL IN]
+
+CVSS Score: [FILL IN]
+
+CVSS Vector: CVSS v3.1 Vector: [PASTE HERE]
+
+For more information on the Common Vulnerability Scoring System and to
+obtain your specific environmental score please visit: 
+https://nvd.nist.gov/vuln-metrics/cvss/v3-calculator?vector=AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:F/RL:O/RC:C&version=3.1.
+
+Workarounds:
+
+[FILL IN, OFTEN ...]
+No workarounds known.
+
+Active exploits:
+[FILL IN, OFTEN ...]
+We are not aware of any active exploits.
+
+Solution:
+[FILL IN, TYPICALLY SOMETHING LIKE THIS...]
+Upgrade to the patched release most closely related to your current
+version of DHCP:
+
+DHCP 4.4.x (Current Stable)
+DHCP 4.1.x (Old Stable)
+
+Acknowledgments: ISC would like to thank [REPORTER] from [REPORTER ORGANIZATION] 
+for for discovering and reporting this issue.
+
+Document revision history:
+
+1.0 Early Notification, [DAY  MONTH YEAR]
+
+Related documents:
+
+
+Do you still have questions? Questions regarding this advisory should
+go to security-officer@isc.org. To report a new issue, please encrypt
+your message using security-officer@isc.org's PGP key which can be
+found here: https://www.isc.org/pgpkey/. If you are unable to use
+encrypted email, you may also report new issues at: 
+https://www.isc.org/reportbug/.
+
+Note:
+
+ISC patches only currently supported versions. When possible we
+indicate EOL versions affected. (For current information on which
+versions are actively supported, please see:
+https://www.isc.org/download/ )
+
+ISC Security Vulnerability Disclosure Policy:
+
+Details of our current security advisory policy and practice can be
+found in the ISC Software Defect and Security Vulnerability Disclosure
+Policy at https://kb.isc.org/docs/aa-00861.
+
+The Knowledgebase article [PASTE IN THE LINK HERE] is the
+complete and official security advisory document.
+
+Legal Disclaimer:
+
+Internet Systems Consortium (ISC) is providing this notice on an "AS
+IS" basis. No warranty or guarantee of any kind is expressed in this
+notice and none should be implied. ISC expressly excludes and
+disclaims any warranties regarding this notice or materials referred
+to in this notice, including, without limitation, any implied warranty
+of merchantability, fitness for a particular purpose, absence of
+hidden defects, or of non-infringement. Your use or reliance on this
+notice or materials referred to in this notice is at your own risk.
+ISC may change this notice at any time. A stand-alone copy or
+paraphrase of the text of this document that omits the document URL is
+an uncontrolled copy. Uncontrolled copies may lack important
+information, be out of date, or contain factual errors.
