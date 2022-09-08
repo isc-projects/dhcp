@@ -7,6 +7,8 @@ about: Create draft emails for a security vulnerability
 (INTERNAL) (Non-authoritative Draft only)
 The version in the KB is the authoritative Advisory, this is only DRAFT text to be used for communications (emails). This is also not the CVE checklist for this issue. Once the CVE is made public, this issue should be deleted from the repo.
 
+(INTERNAL)  DO NOT FORGET TO MAKE THIS ISSUE CONFIDENTIAL!
+
 (INTERNAL) (Keep things text-only friendly)
 All of the official communication about this vulnerability will use a text-only version of this article. This is most obvious in the way that certain links are constructed.  Most links should be constructed contrary to "web best-practice" and use the full URL as their link text. 
 
