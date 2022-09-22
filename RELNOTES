@@ -1,13 +1,13 @@
                 Internet Systems Consortium DHCP Distribution
                           Version 4.4.3-P1
-                            ? ????? 2022
+                            October 5, 2022
                             Release Notes
 
 Please note that that ISC DHCP is licensed under the Mozilla Public
 License, MPL 2.0. Please see https://www.mozilla.org/en-US/MPL/2.0/ to read
 the MPL 2.0 license terms.
 
-NOTE: The client and relay components are now End-Of-Life.
+NOTE: The client and relay components are End-Of-Life.
 4.4.3 is the final release for those components.
 
 For information on how to install, configure, and run this software, as
@@ -35,7 +35,7 @@ by Eric Young (eay@cryptsoft.com).
   CVE: CVS-2022-2928
 
 ! Corrected a memory leak that occurs when unpacking a packet that has an
-  FQDN option (81) that contains a label whose lenght is greater than 63.
+  FQDN option (81) that contains a label with length greater than 63 bytes.
   Thanks to VictorV of Cyber Kunlun Lab for reporting the issue.
   [Gitblab #254]
   CVE: CVS-2022-2929
