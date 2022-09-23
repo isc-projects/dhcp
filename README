@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-			     Version 4.4.3
-			     9 March 2022
+			     Version 4.4.3-P1
+			      5 October 2022
 
 			      README FILE
 
@@ -94,7 +94,7 @@ directory, it may not have up-to-date information).
 
 				RELEASE STATUS
 
-Version 4.4.3 is a maintenance release of the DHCP client, relay and
+Version 4.4.3-P1 is a maintenance release of the DHCP client, relay and
 server. It is the final release for the client and relay components,
 which have reached end-of-life and will no longer be maintained.
 
@@ -105,12 +105,12 @@ which have reached end-of-life and will no longer be maintained.
 To build the DHCP Distribution, unpack the compressed tar file using
 the tar utility and the gzip command - type something like:
 
-	gunzip dhcp-4.4.3.tar.gz
-	tar xvf dhcp-4.4.3.tar
+	gunzip dhcp-4.4.3-P1.tar.gz
+	tar xvf dhcp-4.4.3-P1.tar
 
 			    CONFIGURING IT
 
-Now, cd to the dhcp-4.4.3 subdirectory that you've just created and
+Now, cd to the dhcp-4.4.3-P1 subdirectory that you've just created and
 configure the source tree by typing:
 
 	./configure
