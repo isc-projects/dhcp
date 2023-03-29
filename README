@@ -4,6 +4,9 @@
 
 			      README FILE
 
+NOTE: This software is now End-Of-Life. 4.4.3 is the final release planned. 
+We will continue to keep the public issue tracker and user mailing list open.
+
 You should read this file carefully before trying to install or use
 the ISC DHCP Distribution.
 
@@ -53,7 +56,7 @@ well as the dhcp-options man page.   A sample DHCP server
 configuration is in the file server/dhcpd.conf.example.   The source for
 the dhcpd, dhcpd.leases and dhcpd.conf man pages is in the server/ sub-
 directory in the distribution.   The source for the dhcp-options.5
-man page is in the common/ subdirectory.
+man page is in the common/ subdirectory. The server component is End-of-Life. 
 
 DHCP Client documentation is in the dhclient man page.  DHCP client
 configuration documentation is in the dhclient.conf man page and the
@@ -63,11 +66,11 @@ client lease database is documented in the dhclient.leases man page.
 The source for all these man pages is in the client/ subdirectory in
 the distribution.   In addition, the dhcp-options man page should be
 referred to for information about DHCP options. The client component
-is End-of-Life and will not be part of future releases.
+is End-of-Life.
 
 DHCP relay agent documentation is in the dhcrelay man page, the source
 for which is distributed in the relay/ subdirectory. The relay component
-is End-of-Life and will not be part of future releases.
+is End-of-Life.
 
 KEA Migration Assistant documentation, including how to build, install
 and use it, is included in the keama/ directory.
