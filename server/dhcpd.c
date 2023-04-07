@@ -433,6 +433,12 @@ main(int argc, char **argv) {
 			local_port = validate_port (argv [i]);
 			log_debug ("binding to user-specified port %d",
 			       ntohs (local_port));
+		} else if (!strcmp (argv [i], "--remote-port")) {
+			if (++i == argc)
+				usage(use_noarg, argv[i-1]);
+			remote_port = validate_port (argv [i]);
+			log_debug ("binding to user-specified remote port %d",
+			       ntohs (remote_port));
 		} else if (!strcmp (argv [i], "-f")) {
 #ifndef DEBUG
 			/* daemon = 0; */
@@ -706,7 +712,11 @@ main(int argc, char **argv) {
 	}
 
   	if (local_family == AF_INET) {
-		remote_port = htons(ntohs(local_port) + 1);
+		if(!remote_port){
+			remote_port = htons(ntohs(local_port) + 1);
+		} else {
+			log_info("Remote port already set : %d", ntohs(remote_port));
+		}
 	} else {
 		/* INSIST(local_family == AF_INET6); */
 		ent = getservbyname("dhcpv6-client", "udp");
