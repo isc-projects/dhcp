@@ -33,6 +33,8 @@
 # define send_packet trace_packet_send
 #endif
 
+#define pradhan 0
+
 void bootp (packet)
 	struct packet *packet;
 {
