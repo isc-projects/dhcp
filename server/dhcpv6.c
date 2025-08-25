@@ -4107,6 +4107,11 @@ reply_process_ia_pd(struct reply_state *reply, struct option_cache *ia) {
 	}
 	reply->ia->ia_type = D6O_IA_PD;
 
+	memcpy(&reply->ia->gw_addr, reply->packet->client_addr.iabuf, 16);
+
+	if (strlen(reply->packet->interface->name) > 0) {
+		reply->ia->if_index = if_nametoindex(reply->packet->interface->name);
+	}
 	/* Cache pre-existing IA_PD, if any. */
 	ia_hash_lookup(&reply->old_ia, ia_pd_active,
 		       (unsigned char *)reply->ia->iaid_duid.data,
