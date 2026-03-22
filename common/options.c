@@ -2735,6 +2735,9 @@ build_server_oro(struct data_string *server_oro,
 	 * Allocate space.
 	 */
 	memset(server_oro, 0, sizeof(*server_oro));
+	if (num_opts > INT_MAX / 2) {
+		log_fatal("server ORO option count overflow");
+	}
 	if (!buffer_allocate(&server_oro->buffer, num_opts * 2, MDL)) {
 		log_fatal("no memory to build server ORO");
 	}
@@ -3661,7 +3664,12 @@ fqdn6_universe_decode(struct option_state *options,
 	 * first to calculate the precise size or reallocate to a smaller
 	 * buffer later, either of which is a bigger performance hit than
 	 * just doing a generous allocation. */
-	unsigned bp_size = 3 + (length * 4);
+	unsigned bp_size;
+	if (length > (UINT_MAX - 3) / 4) {
+		log_error("dhcp6.fqdn option length overflow.");
+		return 0;
+	}
+	bp_size = 3 + (length * 4);
 
 	if (!buffer_allocate(&bp, bp_size, MDL)) {
 		log_error("No memory for dhcp6.fqdn option buffer.");
