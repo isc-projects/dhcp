@@ -102,6 +102,9 @@ isc_result_t omapi_array_set (omapi_array_t *array, void *ptr, int index,
 	   space in the array, make more space in the array. */
 	if (array -> max <= index) {
 		delta = index - array -> max + 10;
+		if ((unsigned)delta > SIZE_MAX / sizeof (char *) ||
+		    (unsigned)(array -> max + delta) > SIZE_MAX / sizeof (char *))
+			return ISC_R_NOMEMORY;
 		newbuf = dmalloc ((array -> max + delta) * sizeof (char *),
 				  file, line);
 		if (!newbuf)
