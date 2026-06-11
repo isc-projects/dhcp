@@ -30,6 +30,138 @@
 #include <ctype.h>
 #include <errno.h>
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <linux/rtnetlink.h>
+#include <sys/socket.h>
+#include <net/if.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <time.h>
+
+#define BUF_SIZE 4096
+
+struct nl_req {
+    struct nlmsghdr nlh;
+    struct rtmsg rtm;
+    char buf[BUF_SIZE];
+};
+
+int send_netlink_request(int action, const struct in6_addr *dest_addr, int prefix_len, const struct in6_addr *gateway_addr, int ifindex) {
+    int sockfd;
+    struct sockaddr_nl sa;
+    struct nl_req req;
+    struct nlattr *nla;
+    int flags;
+
+    // 创建 netlink 套接字
+    sockfd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+    if (sockfd < 0) {
+		log_error("%s %d \n", MDL);
+        return -1;
+    }
+
+    // 设置套接字为非阻塞模式
+    flags = fcntl(sockfd, F_GETFL, 0);
+    fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
+
+    // 初始化 sockaddr_nl
+    memset(&sa, 0, sizeof(sa));
+    sa.nl_family = AF_NETLINK;
+
+    // 初始化请求
+    memset(&req, 0, sizeof(req));
+    req.nlh.nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
+    req.nlh.nlmsg_type = action;
+    req.nlh.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+    if (action == RTM_NEWROUTE) {
+        req.nlh.nlmsg_flags |= NLM_F_CREATE | NLM_F_REPLACE | NLM_F_EXCL;
+    }
+    req.nlh.nlmsg_seq = time(NULL);
+    req.nlh.nlmsg_pid = getpid();
+
+    req.rtm.rtm_family = AF_INET6;
+    req.rtm.rtm_dst_len = prefix_len;
+    req.rtm.rtm_src_len = 0;
+    req.rtm.rtm_table = RT_TABLE_MAIN;
+    req.rtm.rtm_protocol = RTPROT_BOOT;
+    req.rtm.rtm_scope = RT_SCOPE_UNIVERSE;
+    req.rtm.rtm_type = RTN_UNICAST;
+
+    // 设置目标地址
+    nla = (struct nlattr *)(((char *)&req) + NLMSG_ALIGN(req.nlh.nlmsg_len));
+    nla->nla_len = RTA_LENGTH(sizeof(*dest_addr));
+    nla->nla_type = RTA_DST;
+    memcpy(RTA_DATA(nla), dest_addr, sizeof(*dest_addr));
+    req.nlh.nlmsg_len = NLMSG_ALIGN(req.nlh.nlmsg_len) + nla->nla_len;
+
+    // 设置下一跳地址
+    nla = (struct nlattr *)(((char *)&req) + NLMSG_ALIGN(req.nlh.nlmsg_len));
+    nla->nla_len = RTA_LENGTH(sizeof(*gateway_addr));
+    nla->nla_type = RTA_GATEWAY;
+    memcpy(RTA_DATA(nla), gateway_addr, sizeof(*gateway_addr));
+    req.nlh.nlmsg_len = NLMSG_ALIGN(req.nlh.nlmsg_len) + nla->nla_len;
+
+    // 设置接口
+    nla = (struct nlattr *)(((char *)&req) + NLMSG_ALIGN(req.nlh.nlmsg_len));
+    nla->nla_len = RTA_LENGTH(sizeof(ifindex));
+    nla->nla_type = RTA_OIF;
+    memcpy(RTA_DATA(nla), &ifindex, sizeof(ifindex));
+    req.nlh.nlmsg_len = NLMSG_ALIGN(req.nlh.nlmsg_len) + nla->nla_len;
+
+    // 发送请求
+    if (sendto(sockfd, &req, req.nlh.nlmsg_len, 0, (struct sockaddr *)&sa, sizeof(sa)) < 0) {
+        close(sockfd);
+		log_error("%s %d \n", MDL);
+        return -1;
+    }
+
+    // 接收确认
+    char buf[BUF_SIZE];
+    struct iovec iov = { buf, sizeof(buf) };
+    struct msghdr msg = { &sa, sizeof(sa), &iov, 1, NULL, 0, 0 };
+    int ret;
+    while ((ret = recvmsg(sockfd, &msg, 0)) < 0) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            usleep(100000); // 等待 100 毫秒
+        } else {
+            close(sockfd);
+			log_error("%s %d \n", MDL);
+            return -1;
+        }
+    }
+
+     // 解析确认消息
+    struct nlmsghdr *nlh = (struct nlmsghdr *)buf;
+    for (; NLMSG_OK(nlh, ret); nlh = NLMSG_NEXT(nlh, ret)) {
+        if (nlh->nlmsg_type == NLMSG_ERROR) {
+            struct nlmsgerr *err = (struct nlmsgerr *)NLMSG_DATA(nlh);
+            if (err->error != 0) {
+                close(sockfd);
+				log_error("%s %d %s \n", MDL, strerror(-err->error));
+                return -1;
+            }
+        }
+    }
+
+    // 关闭套接字
+    close(sockfd);
+
+    return 0;
+}
+
+int add_ipv6_route(const struct in6_addr *dest_addr, int prefix_len, const struct in6_addr *gateway_addr, int ifindex) {
+    return send_netlink_request(RTM_NEWROUTE, dest_addr, prefix_len, gateway_addr, ifindex);
+}
+
+int delete_ipv6_route(const struct in6_addr *dest_addr, int prefix_len, const struct in6_addr *gateway_addr, int ifindex) {
+    return send_netlink_request(RTM_DELROUTE, dest_addr, prefix_len, gateway_addr, ifindex);
+}
+
+
 #define LEASE_REWRITE_PERIOD 3600
 
 static isc_result_t write_binding_scope(FILE *db_file, struct binding *bnd,
@@ -520,6 +652,8 @@ write_ia(const struct ia_xx *ia) {
 	struct binding *bnd;
 	int i;
 	char addr_buf[sizeof("ffff:ffff:ffff:ffff:ffff:ffff.255.255.255.255")];
+	char addr_buf2[sizeof("ffff:ffff:ffff:ffff:ffff:ffff.255.255.255.255")];
+	char ifname[16];
 	const char *binding_state;
 	const char *tval;
 	char *s;
@@ -595,9 +729,25 @@ write_ia(const struct ia_xx *ia) {
 	}
 	for (i=0; i<ia->num_iasubopt; i++) {
 		iasubopt = ia->iasubopt[i];
-
 		inet_ntop(AF_INET6, &iasubopt->addr,
 			  addr_buf, sizeof(addr_buf));
+
+		if (ia->ia_type == D6O_IA_PD) {
+			int ret;
+			inet_ntop(AF_INET6, &ia->gw_addr,
+			  addr_buf2, sizeof(addr_buf2));
+			if_indextoname(ia->if_index, ifname);
+			if (ia->if_index) {
+				if (iasubopt->state == FTS_ACTIVE || iasubopt->state == FTS_RESET || iasubopt->state == FTS_BACKUP) {
+					ret = add_ipv6_route(&iasubopt->addr, iasubopt->plen, &ia->gw_addr, ia->if_index);
+					log_info("IA PD add %s/%d via %s dev %s %s \n",addr_buf, iasubopt->plen, addr_buf2, ifname, ret == 0 ? "success" : "fail");
+				} else {
+					ret = delete_ipv6_route(&iasubopt->addr, iasubopt->plen, &ia->gw_addr, ia->if_index);
+					log_info("IA PD del %s/%d via %s dev %s %s \n",addr_buf, iasubopt->plen, addr_buf2, ifname, ret == 0 ? "success" : "fail");
+				}
+			}
+		}
+
 		if ((ia->ia_type != D6O_IA_PD) &&
 		    (fprintf(db_file, "  iaaddr %s {\n", addr_buf) < 0)) {
 			goto error_exit;
