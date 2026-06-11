@@ -5854,8 +5854,16 @@ iterate_over_ia_na(struct data_string *reply_ret,
 		   const struct data_string *client_id,
 		   const struct data_string *server_id,
 		   const char *packet_type,
-		   void (*ia_na_match)(),
-		   void (*ia_na_nomatch)())
+		   void (*ia_na_match)(const struct data_string *client_id,
+		    const struct data_string *iaaddr,
+		    struct iasubopt *lease),
+		   void (*ia_na_nomatch)(const struct data_string *client_id,
+		      const struct data_string *iaaddr,
+		      u_int32_t *ia_na_id,
+		      struct packet *packet,
+		      char *reply_data,
+		      int *reply_ofs,
+		      int reply_len))
 {
 	struct option_state *opt_state;
 	struct host_decl *packet_host;
@@ -6356,8 +6364,16 @@ iterate_over_ia_pd(struct data_string *reply_ret,
 		   const struct data_string *client_id,
 		   const struct data_string *server_id,
 		   const char *packet_type,
-		   void (*ia_pd_match)(),
-		   void (*ia_pd_nomatch)())
+		   void (*ia_pd_match)(const struct data_string *client_id,
+		    const struct data_string *iapref,
+		    struct iasubopt *prefix),
+		   void (*ia_pd_nomatch)(const struct data_string *client_id,
+		      const struct data_string *iapref,
+		      u_int32_t *ia_pd_id,
+		      struct packet *packet,
+		      char *reply_data,
+		      int *reply_ofs,
+		      int reply_len))
 {
 	struct data_string reply_new;
 	int reply_len;
