@@ -359,13 +359,16 @@ main(int argc, char **argv) {
 		if (!strcmp(argv[i], "-r")) {
 			release_mode = 1;
 			/* no_daemon = 1; */
-#ifdef DHCPv6
 		} else if (!strcmp(argv[i], "-4")) {
+#ifdef DHCPv6
 			if (local_family_set && local_family != AF_INET)
 				log_fatal("Client can only do v4 or v6, not "
 					  "both.");
 			local_family_set = 1;
 			local_family = AF_INET;
+#endif /* DHCPv6 */
+			/* when compiled without DHCPv6 support, -4 is a no-op */
+#ifdef DHCPv6
 		} else if (!strcmp(argv[i], "-6")) {
 			if (local_family_set && local_family != AF_INET6)
 				log_fatal("Client can only do v4 or v6, not "
