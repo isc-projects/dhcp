@@ -164,10 +164,44 @@ void concat_lists (const char* label, struct data_string* list1,
     data_string_forget(&result, MDL);
 }
 
+ATF_TC(MRns_name_uncompress_list_overflow);
+
+ATF_TC_HEAD(MRns_name_uncompress_list_overflow, tc) {
+    atf_tc_set_md_var(tc, "descr", "MRns_name_uncompress_list must not write "
+                      "the name separator past the end of the output buffer");
+}
+
+/* When the running output exactly fills the buffer (one byte left for the
+ * NUL) and another name follows, the separator must be rejected rather than
+ * writing the comma plus trailing NUL one byte past the end. */
+ATF_TC_BODY(MRns_name_uncompress_list_overflow, tc) {
+    const char text_list[] = "one.com,two.com";
+    unsigned char compbuf[64];
+    int clen;
+
+    /* A sentinel byte sits right after the buffer we hand to the decoder. */
+    char outbuf[16];
+    size_t dstsize = sizeof("one.com");   /* first name fills this exactly */
+    int ret;
+
+    memset(outbuf, 0xAA, sizeof(outbuf));
+
+    clen = MRns_name_compress_list(text_list, sizeof(text_list),
+                                   compbuf, sizeof(compbuf));
+    ATF_REQUIRE_MSG((clen > 0), "compress_list failed %d", clen);
+
+    ret = MRns_name_uncompress_list(compbuf, clen, outbuf, dstsize);
+
+    ATF_REQUIRE_MSG((ret < 0), "expected rejection, got %d", ret);
+    ATF_REQUIRE_MSG(((unsigned char)outbuf[dstsize] == 0xAA),
+                    "separator wrote past end of output buffer");
+}
+
 ATF_TP_ADD_TCS(tp)
 {
     ATF_TP_ADD_TC(tp, MRns_name_list_funcs);
     ATF_TP_ADD_TC(tp, concat_dclists);
+    ATF_TP_ADD_TC(tp, MRns_name_uncompress_list_overflow);
 
     return (atf_no_error());
 }
