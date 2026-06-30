@@ -732,6 +732,12 @@ int MRns_name_uncompress_list(const unsigned char* buf, int buflen,
 		}
 
 		if (!first_pass) {
+			/* The separator needs room for the comma and the
+			   trailing NUL written right after it. */
+			if (dst_remaining < 2) {
+				errno = EMSGSIZE;
+				return (-1);
+			}
 			*dst++ = ',';
 			*dst = '\0';
 			dst_remaining--;
