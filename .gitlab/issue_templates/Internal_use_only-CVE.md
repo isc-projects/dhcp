@@ -56,7 +56,7 @@ This is a checklist for EOL software. The main differences to the usual process 
   - [ ] [:grey_question:][step_public_mrs]        **(SwEng)** Ensure there are no public merge requests which inadvertently disclose the issue
   - [ ] [:grey_question:][step_coordinate_cve_id] **(SwEng)** ~~Check if we need to coordinate with other vendors (an industry-wide CVE identifier might be necessary)~~
 
-### Before Code Freeze
+### Before Code Freeze (there is no code freeze)
 
   - [ ] [:grey_question:][step_assign_cve_id]     **(SwEng)** Assign a CVE identifier, and update the GitLab Issue with it
   - [ ] [:grey_question:][step_note_cve_info]     **(SwEng)** Determine CVSS score and CWE category, and update the GitLab Issue with them
@@ -102,8 +102,8 @@ Nothing.
 ### On the Day of Public Disclosure
 
   - [ ] [:grey_question:][step_clearance]         **(SwEng)** ~~Grant QA & Marketing clearance to proceed with public release~~
-  - [ ] [:grey_question:][step_public_repo]       **(SwEng)** Push the merged fix from private to public repo
-  - [ ] [:grey_question:][step_no_confidential]   **(SwEng)** Switch the confidentiality off on the issue
+  - [ ] [:grey_question:][step_eol_public_repo]   **(SwEng)** Push the merged fix from private to public repo
+  - [ ] [:grey_question:][step_eol_public_issue]  **(SwEng)** Switch the confidentiality off on the issue
   - [ ] [:grey_question:][step_bump_advisory]     **(Support)** Bump Document Version for the Security Advisory in Printing Press
   - [ ] [:grey_question:][step_publish_advisory]  **(Support)** Knowledge Base: Publish the Security Advisory as a new article
   - [ ] [:grey_question:][step_matrix]            **(Support)** Knowledge Base: Add the CVE to the full list. ~~Also add the new releases to the vulnerability matrix (as outlined in the release checklist)~~
@@ -157,6 +157,9 @@ Nothing.
 [step_embargo_end]:       https://gitlab.isc.org/isc-private/isc-wiki/-/wikis/Security-Incident-Handling-Checklist-Explanations#inform-original-reporter-if-external-that-the-security-disclosure-process-is-complete
 [step_evn_clear]:         https://gitlab.isc.org/isc-private/isc-wiki/-/wikis/Security-Incident-Handling-Checklist-Explanations#update-the-tickets-in-the-evn-queues-in-rt-that-the-embargo-is-lifted
 [step_customers]:         https://gitlab.isc.org/isc-private/isc-wiki/-/wikis/Security-Incident-Handling-Checklist-Explanations#ensure-that-a-ticket-has-been-sent-in-the-appropriate-announce-queue-in-rt-to-notify-customers-that-the-release-is-published-as-outlined-in-the-release-checklist
+
+[step_eol_public_repo]:   https://gitlab.isc.org/isc-private/isc-wiki/-/wikis/Security-Incident-Handling-Checklist-Explanations#merge-to-public-repo
+[step_eol_public_issue]:  https://gitlab.isc.org/isc-private/isc-wiki/-/wikis/Security-Incident-Handling-Checklist-Explanations#merge-to-public-repo
 
 ## Original Report
 
