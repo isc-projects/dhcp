@@ -11,6 +11,14 @@ confidential!
 
 ## Quick Links
 
+This is a checklist for EOL software. The main differences to the usual process are:
+
+- No release, no release checklist, just the patch in public repo
+- No affected versions determination
+- System tests/reproducer optional
+- The T-5 period is really T-30
+- No T-3/T-1 steps
+
 [checklist_explanations]: https://gitlab.isc.org/isc-private/isc-wiki/-/wikis/Security-Incident-Handling-Checklist-Explanations
 
 ⏩ **Each [:grey_question:][checklist_explanations] is a link to [explanations of each checklist step][checklist_explanations].** ⏪
@@ -18,7 +26,7 @@ confidential!
 |                    |                                                                        |
 | ------------------ | ---------------------------------------------------------------------- |
 | Incident Manager:  | @user (assigned SwEng person) [:grey_question:][step_incident_manager] |
-| Multi-vendor?      | :question: Yes/No? [:grey_question:][step_coordinate_cve_id]           |
+| ~~Multi-vendor?~~      | NO                                                                     |
 | Public Disclosure: | YYYY-MM-DD                                                             |
 | CVSS Score:        | [0.0][cvss_score_url]                                                  |
 | CWE:               | [CWE-NNN][cwe_category_url]                                            |
@@ -26,7 +34,7 @@ confidential!
 | Security Advisory: | [p-p!NNN][press_url]                                                   |
 | Zulip Topic:       | [CVE-YYYY-NNNN][zulip_url]                                             |
 | Support Ticket:    | [URL]                                                                  |
-| Release Checklist: | #NNNN                                                                  |
+| ~~Release Checklist:~~ | (none, no release planned)                                         |
 
 [cvss_score_url]: https://nvd.nist.gov/vuln-metrics/cvss/v3-calculator?vector=AV:X/AC:X/PR:X/UI:X/S:X/C:X/I:X/A:X&version=3.1
 [cwe_category_url]: https://cwe.mitre.org/data/definitions/NNN.html
@@ -38,61 +46,68 @@ confidential!
 
 ### ASAP
 
+  - [ ] [:grey_question:][step_emergency]         **(SwEng)** For EOL software, determine if a fix is necessary (not for client or relay, it depends on the server)
+
   - [ ] [:grey_question:][step_emergency]         **(SwEng)** Consider invoking the emergency procedures
   - [ ] [:grey_question:][step_oper_notification] **(SwEng)** Consider if we need Operational Notification
   - [ ] [:grey_question:][step_zulip]             **(SwEng)** Create a dedicated Zulip Topic
   - [ ] [:grey_question:][step_respond]           **(SwEng)** Respond to the bug reporter
   - [ ] [:grey_question:][step_public_mrs]        **(SwEng)** Ensure there are no public merge requests which inadvertently disclose the issue
-  - [ ] [:grey_question:][step_coordinate_cve_id] **(SwEng)** Check if we need to coordinate with other vendors (an industry-wide CVE identifier might be necessary)
+  - [ ] [:grey_question:][step_coordinate_cve_id] **(SwEng)** ~~Check if we need to coordinate with other vendors (an industry-wide CVE identifier might be necessary)~~
 
 ### Before Code Freeze
 
   - [ ] [:grey_question:][step_assign_cve_id]     **(SwEng)** Assign a CVE identifier, and update the GitLab Issue with it
   - [ ] [:grey_question:][step_note_cve_info]     **(SwEng)** Determine CVSS score and CWE category, and update the GitLab Issue with them
-  - [ ] [:grey_question:][step_versions_affected] **(SwEng)** Determine product branches/versions affected
-    - [ ] **(SwEng)** Including Subscription Edition(s)
-    - [ ] **(SwEng)** Including EOL version(s) receiving paid support
-  - [ ] [:grey_question:][step_earliest_prepare]  **(Support)** Prepare text for Earliest EVN notification in e-n-d
-  - [ ] [:grey_question:][step_earliest_send]     **(Support)** Send Earliest EVN notification in RT
+  - [ ] [:grey_question:][step_versions_affected] **(SwEng)** ~~Determine product branches/versions affected~~: 4.4.3/latest master only
+  - [ ] [:grey_question:][step_earliest_prepare]  **(Support)** ~~Prepare text for Earliest EVN notification in e-n-d~~
+  - [ ] [:grey_question:][step_earliest_send]     **(Support)** ~~Send Earliest EVN notification in RT~~
   - [ ] [:grey_question:][step_advisory_mr]       **(Support)** Begin preparing the Security Advisory in printing-press
-  - [ ] [:grey_question:][step_reproducer]        **(SwEng)** Prepare a private merge request containing a system test reproducing the problem
-  - [ ] [:grey_question:][step_notify_support]    **(SwEng)** Notify Support when a reproducer is ready
-  - [ ] [:grey_question:][step_code_analysis]     **(SwEng)** Prepare a detailed explanation of the code flow triggering the problem
+  - [ ] [:grey_question:][step_reproducer]        **(SwEng)** Prepare a private merge request for a fix. A system test reproducing the problem is optional.
+  - [ ] [:grey_question:][step_notify_support]    **(SwEng)** Notify Support when a reproducer is ready (optional)
+  - [ ] [:grey_question:][step_code_analysis]     **(SwEng)** ~~Prepare a detailed explanation of the code flow triggering the problem~~
   - [ ] [:grey_question:][step_fix]               **(SwEng)** Prepare a fix and push it as a separate commit to the merge request with the reproducer
   - [ ] [:grey_question:][step_review_fix]        **(SwEng)** Ensure the merge request with the fix is reviewed and has no outstanding discussions
   - [ ] [:grey_question:][step_review_docs]       **(Support)** Review the documentation changes introduced by the merge request with the fix
-  - [ ] [:grey_question:][step_backports]         **(SwEng)** Prepare backports of the merge request addressing the problem for all affected (and still maintained) branches of a given product
-  - [ ] [:grey_question:][step_merge_fixes]       **(SwEng)** Merge the CVE fixes and reproducer when they get approved
+  - [ ] [:grey_question:][step_backports]         **(SwEng)** ~~Prepare backports of the merge request addressing the problem for all affected (and still maintained) branches of a given product~~
+  - [ ] [:grey_question:][step_merge_fixes]       **(SwEng)** Merge the CVE fixes and reproducer when they get approved to private repo
   - [ ] [:grey_question:][step_finish_advisory]   **(Support)** Finish preparing the Security Advisory in printing-press
-  - [ ] [:grey_question:][step_issue_milestone]   **(QA)** Move this issue to its release milestone
-  - [ ] [:grey_question:][step_coordinate_check]  **(SwEng)** Make sure other vendors are able to release on the date that was previously agreed upon
+  - [ ] [:grey_question:][step_issue_milestone]   **(QA)** ~~Move this issue to its release milestone~~
+  - [ ] [:grey_question:][step_coordinate_check]  **(SwEng)** ~~Make sure other vendors are able to release on the date that was previously agreed upon~~
 
 ### Earlier Than T-5
 
-  - [ ] [:grey_question:][step_evn_releases]      **(QA)** Prepare EVN releases (as outlined in the Release Checklist)
+  - [ ] [:grey_question:][step_evn_releases]      **(QA)** ~~Prepare EVN releases (as outlined in the Release Checklist)~~
 
-### At T-5
+### At T-30
 
-  - [ ] [:grey_question:][step_evn_links]         **(Marketing)** (BIND 9 only) Update the BIND -S [ticket](https://techsupport.isc.org/Ticket/Display.html?id=23796) in the support portal with download links to the new versions
+This is really the same as T-5 for other projects.
+
   - [ ] [:grey_question:][step_evn_send_t_5]      **(Support)** Notify eligible customers by adding a ticket to the 5-Day queue in RT with the text of the advisory (earliest, and T-5)
-  - [ ] [:grey_question:][step_preannouncement]   **(Marketing)** Send a pre-announcement email to the appropriate *-announce* mailing list to alert users that the upcoming release will include security fixes
+  - [ ] [:grey_question:][step_preannouncement]   **(Marketing)** ~~Send a pre-announcement email to the appropriate *-announce* mailing list to alert users that the upcoming release will include security fixes~~
 
 ### At T-3
 
-  - [ ] [:grey_question:][step_evn_send_t_3]      **(Support)** Notify eligible customers by adding a ticket to the 3-Day queue in RT with the text of the advisory (T-3)
+Nothing.
+
+  - [ ] [:grey_question:][step_evn_send_t_3]      **(Support)** ~~Notify eligible customers by adding a ticket to the 3-Day queue in RT with the text of the advisory (T-3)~~
 
 ### At T-1
 
-  - [ ] [:grey_question:][step_packager_emails]   **(QA)** Send notifications to OS packagers
+Nothing.
+
+  - [ ] [:grey_question:][step_packager_emails]   **(QA)**~~Send notifications to OS packagers~~
 
 ### On the Day of Public Disclosure
 
-  - [ ] [:grey_question:][step_clearance]         **(SwEng)** Grant QA & Marketing clearance to proceed with public release
+  - [ ] [:grey_question:][step_clearance]         **(SwEng)** ~~Grant QA & Marketing clearance to proceed with public release~~
+  - [ ] [:grey_question:][step_public_repo]       **(SwEng)** Push the merged fix from private to public repo
+  - [ ] [:grey_question:][step_no_confidential]   **(SwEng)** Switch the confidentiality off on the issue
   - [ ] [:grey_question:][step_bump_advisory]     **(Support)** Bump Document Version for the Security Advisory in Printing Press
   - [ ] [:grey_question:][step_publish_advisory]  **(Support)** Knowledge Base: Publish the Security Advisory as a new article
-  - [ ] [:grey_question:][step_matrix]            **(Support)** Knowledge Base: Add the CVE to the full list and (for BIND) the matrix. Also add the new releases to the vulnerability matrix (as outlined in the release checklist)
-  - [ ] [:grey_question:][step_publish]           **(QA/Marketing)** Publish the releases (as outlined in the release checklist)
-  - [ ] [:grey_question:][step_notifications]     **(QA)** Send notification emails to third parties
+  - [ ] [:grey_question:][step_matrix]            **(Support)** Knowledge Base: Add the CVE to the full list. ~~Also add the new releases to the vulnerability matrix (as outlined in the release checklist)~~
+  - [ ] [:grey_question:][step_publish]           **(QA/Marketing)** ~~Publish the releases (as outlined in the release checklist)~~
+  - [ ] [:grey_question:][step_notifications]     **(QA)** ~~Send notification emails to third parties~~
   - [ ] [:grey_question:][step_mitre]             **(QA)** Advise MITRE about the disclosed CVEs
   - [ ] [:grey_question:][step_merge_advisory]    **(QA)** Merge the Security Advisory merge request
   - [ ] [:grey_question:][step_embargo_end]       **(SwEng)** Inform original reporter (if external) that the security disclosure process is complete
