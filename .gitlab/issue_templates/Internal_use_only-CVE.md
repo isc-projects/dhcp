@@ -31,7 +31,7 @@ This is a checklist for EOL software. The main differences to the usual process 
 | Public Disclosure: | YYYY-MM-DD                                                             |
 | CVSS Score:        | [0.0][cvss_score_url]                                                  |
 | CWE:               | [CWE-NNN][cwe_category_url]                                            |
-| Earliest EVN:      | [e-n-d!NNN][earliest_url]                                              |
+| EVN Preamble:      | [e-n-d!NNN][earliest_url]                                              |
 | Security Advisory: | [p-p!NNN][press_url]                                                   |
 | Zulip Topic:       | [CVE-YYYY-NNNN][zulip_url]                                             |
 | Support Ticket:    | [URL]                                                                  |
@@ -61,8 +61,7 @@ This is a checklist for EOL software. The main differences to the usual process 
   - [ ] [:grey_question:][step_assign_cve_id]     **(SwEng)** Assign a CVE identifier, and update the GitLab Issue with it
   - [ ] [:grey_question:][step_note_cve_info]     **(SwEng)** Determine CVSS score and CWE category, and update the GitLab Issue with them
   - [ ] [:grey_question:][step_versions_affected] **(SwEng)** ~~Determine product branches/versions affected~~: 4.4.3/latest master only
-  - [ ] [:grey_question:][step_earliest_prepare]  **(Support)** ~~Prepare text for Earliest EVN notification in e-n-d~~
-  - [ ] [:grey_question:][step_earliest_send]     **(Support)** ~~Send Earliest EVN notification in RT~~
+  - [ ] [:grey_question:][step_earliest_prepare]  **(Support)** ~~Prepare text for EVN Preamble notification in e-n-d~~
   - [ ] [:grey_question:][step_advisory_mr]       **(Support)** Begin preparing the Security Advisory in printing-press
   - [ ] [:grey_question:][step_reproducer]        **(SwEng)** Prepare a private merge request for a fix (optional). A system test reproducing the problem is optional, too.
   - [ ] [:grey_question:][step_notify_support]    **(SwEng)** Notify Support when a reproducer is ready (optional)
@@ -76,7 +75,7 @@ This is a checklist for EOL software. The main differences to the usual process 
   - [ ] [:grey_question:][step_issue_milestone]   **(QA)** ~~Move this issue to its release milestone~~
   - [ ] [:grey_question:][step_coordinate_check]  **(SwEng)** ~~Make sure other vendors are able to release on the date that was previously agreed upon~~
 
-### Earlier Than T-5
+### Earlier Than T-30
 
   - [ ] [:grey_question:][step_evn_releases]      **(QA)** ~~Prepare EVN releases (as outlined in the Release Checklist)~~
 
@@ -84,7 +83,7 @@ This is a checklist for EOL software. The main differences to the usual process 
 
 This is really the same as T-5 for other projects.
 
-  - [ ] [:grey_question:][step_evn_send_t_5]      **(Support)** Notify eligible customers by adding a ticket to the 5-Day queue in RT with the text of the advisory (earliest, and T-5)
+  - [ ] [:grey_question:][step_evn_send_t_5]      **(Support)** Notify eligible customers by adding a ticket to the 5-Day queue in RT with the text of the advisory (Combining the "EVN Preamble" and "Security Advisory" texts)
   - [ ] [:grey_question:][step_preannouncement]   **(Marketing)** ~~Send a pre-announcement email to the appropriate *-announce* mailing list to alert users that the upcoming release will include security fixes~~
 
 ### At T-3
@@ -106,7 +105,6 @@ Nothing.
   - [ ] [:grey_question:][step_eol_public_issue]  **(SwEng)** Switch the confidentiality off on the issue
   - [ ] [:grey_question:][step_bump_advisory]     **(Support)** Bump Document Version for the Security Advisory in Printing Press
   - [ ] [:grey_question:][step_publish_advisory]  **(Support)** Knowledge Base: Publish the Security Advisory as a new article
-  - [ ] [:grey_question:][step_matrix]            **(Support)** Knowledge Base: Add the CVE to the full list. ~~Also add the new releases to the vulnerability matrix (as outlined in the release checklist)~~
   - [ ] [:grey_question:][step_publish]           **(QA/Marketing)** ~~Publish the releases (as outlined in the release checklist)~~
   - [ ] [:grey_question:][step_notifications]     **(QA)** ~~Send notification emails to third parties~~
   - [ ] [:grey_question:][step_mitre]             **(QA)** Advise MITRE about the disclosed CVEs
@@ -126,7 +124,7 @@ Nothing.
 [step_note_cve_info]:     https://gitlab.isc.org/isc-private/isc-wiki/-/wikis/Security-Incident-Handling-Checklist-Explanations#update-this-issue-with-the-assigned-cve-identifier-the-cvss-score-and-the-cwe-category
 [step_versions_affected]: https://gitlab.isc.org/isc-private/isc-wiki/-/wikis/Security-Incident-Handling-Checklist-Explanations#determine-the-range-of-product-versions-affected-including-the-subscription-edition
 [step_workarounds]:       https://gitlab.isc.org/isc-private/isc-wiki/-/wikis/Security-Incident-Handling-Checklist-Explanations#determine-whether-workarounds-for-the-problem-exist
-[step_earliest_prepare]:  https://gitlab.isc.org/isc-private/isc-wiki/-/wikis/Security-Incident-Handling-Checklist-Explanations#prepare-earliest-notification-text
+[step_earliest_prepare]:  ~~https://gitlab.isc.org/isc-private/isc-wiki/-/wikis/Security-Incident-Handling-Checklist-Explanations#prepare-earliest-notification-text~~ Prepare an earliest notification in https://gitlab.isc.org/support-team/earliest-notification-drafting/-/merge_requests similar to https://gitlab.isc.org/support-team/earliest-notification-drafting/-/merge_requests/94
 [step_earliest_send]:     https://gitlab.isc.org/isc-private/isc-wiki/-/wikis/Security-Incident-Handling-Checklist-Explanations#update-earliest-notification-ticket-in-support-portal-earliest-queue-which-will-notify-earliest-customers
 [step_advisory_mr]:       https://gitlab.isc.org/isc-private/isc-wiki/-/wikis/Security-Incident-Handling-Checklist-Explanations#create-a-merge-request-for-the-security-advisory-and-include-all-readily-available-information-in-it
 [step_reproducer]:        https://gitlab.isc.org/isc-private/isc-wiki/-/wikis/Security-Incident-Handling-Checklist-Explanations#prepare-a-private-merge-request-containing-a-system-test-reproducing-the-problem
