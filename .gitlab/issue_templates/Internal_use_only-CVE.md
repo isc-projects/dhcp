@@ -54,59 +54,42 @@ This is a checklist for EOL software. The main differences to the usual process 
   - [ ] [:grey_question:][step_zulip]             **(SwEng)** Create a dedicated Zulip Topic
   - [ ] [:grey_question:][step_respond]           **(SwEng)** Respond to the bug reporter
   - [ ] [:grey_question:][step_public_mrs]        **(SwEng)** Ensure there are no public merge requests which inadvertently disclose the issue
-  - [ ] [:grey_question:][step_coordinate_cve_id] **(SwEng)** ~~Check if we need to coordinate with other vendors (an industry-wide CVE identifier might be necessary)~~
 
 ### Before Code Freeze (there is no code freeze)
 
   - [ ] [:grey_question:][step_assign_cve_id]     **(SwEng)** Assign a CVE identifier, and update the GitLab Issue with it
   - [ ] [:grey_question:][step_note_cve_info]     **(SwEng)** Determine CVSS score and CWE category, and update the GitLab Issue with them
-  - [ ] [:grey_question:][step_versions_affected] **(SwEng)** ~~Determine product branches/versions affected~~: 4.4.3/latest master only
-  - [ ] [:grey_question:][step_earliest_prepare]  **(Support)** ~~Prepare text for EVN Preamble notification in e-n-d~~
+  - [ ] [:grey_question:][step_versions_affected] **(SwEng)** Use the following as branches/versions affected: 4.4.3/latest master
   - [ ] [:grey_question:][step_advisory_mr]       **(Support)** Begin preparing the Security Advisory in printing-press
   - [ ] [:grey_question:][step_reproducer]        **(SwEng)** Prepare a private merge request for a fix (optional). A system test reproducing the problem is optional, too.
   - [ ] [:grey_question:][step_notify_support]    **(SwEng)** Notify Support when a reproducer is ready (optional)
-  - [ ] [:grey_question:][step_code_analysis]     **(SwEng)** ~~Prepare a detailed explanation of the code flow triggering the problem~~
   - [ ] [:grey_question:][step_fix]               **(SwEng)** Prepare a fix and push it as a separate commit to the merge request with the reproducer (optional)
   - [ ] [:grey_question:][step_review_fix]        **(SwEng)** Ensure the merge request with the fix is reviewed and has no outstanding discussions (if fix is needed)
   - [ ] [:grey_question:][step_review_docs]       **(Support)** Review the documentation changes introduced by the merge request with the fix
-  - [ ] [:grey_question:][step_backports]         **(SwEng)** ~~Prepare backports of the merge request addressing the problem for all affected (and still maintained) branches of a given product~~
   - [ ] [:grey_question:][step_merge_fixes]       **(SwEng)** Merge the CVE fixes and reproducer when they get approved to private repo
   - [ ] [:grey_question:][step_finish_advisory]   **(Support)** Finish preparing the Security Advisory in printing-press
-  - [ ] [:grey_question:][step_issue_milestone]   **(QA)** ~~Move this issue to its release milestone~~
-  - [ ] [:grey_question:][step_coordinate_check]  **(SwEng)** ~~Make sure other vendors are able to release on the date that was previously agreed upon~~
 
-### Earlier Than T-30
-
-  - [ ] [:grey_question:][step_evn_releases]      **(QA)** ~~Prepare EVN releases (as outlined in the Release Checklist)~~
 
 ### At T-30
 
 This is really the same as T-5 for other projects.
 
   - [ ] [:grey_question:][step_evn_send_t_5]      **(Support)** Notify eligible customers by adding a ticket to the 5-Day queue in RT with the text of the advisory (Combining the "EVN Preamble" and "Security Advisory" texts)
-  - [ ] [:grey_question:][step_preannouncement]   **(Marketing)** ~~Send a pre-announcement email to the appropriate *-announce* mailing list to alert users that the upcoming release will include security fixes~~
 
 ### At T-3
 
 Nothing.
 
-  - [ ] [:grey_question:][step_evn_send_t_3]      **(Support)** ~~Notify eligible customers by adding a ticket to the 3-Day queue in RT with the text of the advisory (T-3)~~
-
 ### At T-1
 
 Nothing.
 
-  - [ ] [:grey_question:][step_packager_emails]   **(QA)**~~Send notifications to OS packagers~~
-
 ### On the Day of Public Disclosure
 
-  - [ ] [:grey_question:][step_clearance]         **(SwEng)** ~~Grant QA & Marketing clearance to proceed with public release~~
   - [ ] [:grey_question:][step_eol_public_repo]   **(SwEng)** Push the merged fix from private to public repo
   - [ ] [:grey_question:][step_eol_public_issue]  **(SwEng)** Switch the confidentiality off on the issue
   - [ ] [:grey_question:][step_bump_advisory]     **(Support)** Bump Document Version for the Security Advisory in Printing Press
   - [ ] [:grey_question:][step_publish_advisory]  **(Support)** Knowledge Base: Publish the Security Advisory as a new article
-  - [ ] [:grey_question:][step_publish]           **(QA/Marketing)** ~~Publish the releases (as outlined in the release checklist)~~
-  - [ ] [:grey_question:][step_notifications]     **(QA)** ~~Send notification emails to third parties~~
   - [ ] [:grey_question:][step_mitre]             **(QA)** Advise MITRE about the disclosed CVEs
   - [ ] [:grey_question:][step_merge_advisory]    **(QA)** Merge the Security Advisory merge request
   - [ ] [:grey_question:][step_embargo_end]       **(SwEng)** Inform original reporter (if external) that the security disclosure process is complete
