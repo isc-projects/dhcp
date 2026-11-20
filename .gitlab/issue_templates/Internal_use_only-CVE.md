@@ -2,7 +2,7 @@
 THIS ISSUE TEMPLATE IS INTENDED ONLY FOR INTERNAL USE.
 
 If the bug you are reporting is potentially security-related - for example,
-if it involves an assertion failure or other crash in `named` that can be
+if it involves an assertion failure or other crash in isc-dhcp that can be
 triggered repeatedly - then please make sure that you make the new issue
 confidential!
 -->
@@ -15,6 +15,7 @@ This is a checklist for EOL software. The main differences to the usual process 
 
 - No release, no release checklist, just the patch in public repo
 - No affected versions determination
+- The fix is optional (no for client, relay; maybe for server). If we decide to not fix it, many steps are skipped
 - System tests/reproducer optional
 - The T-5 period is really T-30
 - No T-3/T-1 steps
@@ -63,11 +64,11 @@ This is a checklist for EOL software. The main differences to the usual process 
   - [ ] [:grey_question:][step_earliest_prepare]  **(Support)** ~~Prepare text for Earliest EVN notification in e-n-d~~
   - [ ] [:grey_question:][step_earliest_send]     **(Support)** ~~Send Earliest EVN notification in RT~~
   - [ ] [:grey_question:][step_advisory_mr]       **(Support)** Begin preparing the Security Advisory in printing-press
-  - [ ] [:grey_question:][step_reproducer]        **(SwEng)** Prepare a private merge request for a fix. A system test reproducing the problem is optional.
+  - [ ] [:grey_question:][step_reproducer]        **(SwEng)** Prepare a private merge request for a fix (optional). A system test reproducing the problem is optional, too.
   - [ ] [:grey_question:][step_notify_support]    **(SwEng)** Notify Support when a reproducer is ready (optional)
   - [ ] [:grey_question:][step_code_analysis]     **(SwEng)** ~~Prepare a detailed explanation of the code flow triggering the problem~~
-  - [ ] [:grey_question:][step_fix]               **(SwEng)** Prepare a fix and push it as a separate commit to the merge request with the reproducer
-  - [ ] [:grey_question:][step_review_fix]        **(SwEng)** Ensure the merge request with the fix is reviewed and has no outstanding discussions
+  - [ ] [:grey_question:][step_fix]               **(SwEng)** Prepare a fix and push it as a separate commit to the merge request with the reproducer (optional)
+  - [ ] [:grey_question:][step_review_fix]        **(SwEng)** Ensure the merge request with the fix is reviewed and has no outstanding discussions (if fix is needed)
   - [ ] [:grey_question:][step_review_docs]       **(Support)** Review the documentation changes introduced by the merge request with the fix
   - [ ] [:grey_question:][step_backports]         **(SwEng)** ~~Prepare backports of the merge request addressing the problem for all affected (and still maintained) branches of a given product~~
   - [ ] [:grey_question:][step_merge_fixes]       **(SwEng)** Merge the CVE fixes and reproducer when they get approved to private repo
