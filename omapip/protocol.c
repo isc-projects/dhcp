@@ -709,15 +709,23 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 			(p -> message -> authenticator -> u.buffer.value, c,
 			 p -> message -> authlen);
 
-		/* Verify the signature. */
-		if (p -> message -> id_object &&
-		    ((signature -> value -> u.buffer.len !=
-		      p -> message -> authlen) ||
-		     (memcmp (signature -> value -> u.buffer.value,
-			      p -> message -> authenticator -> u.buffer.value,
-			      p -> message -> authlen) != 0))) {
-			/* Invalid signature. */
-			p->verify_result = DHCP_R_INVALIDKEY;
+		/* Verify the signature using constant-time comparison
+		 * to prevent timing side-channel attacks. */
+		if (p -> message -> id_object) {
+			int sig_mismatch = (signature -> value -> u.buffer.len !=
+					    p -> message -> authlen);
+			if (!sig_mismatch) {
+				volatile unsigned char diff = 0;
+				unsigned i;
+				for (i = 0; i < p -> message -> authlen; i++)
+					diff |= signature -> value -> u.buffer.value[i]
+					       ^ p -> message -> authenticator -> u.buffer.value[i];
+				sig_mismatch = (diff != 0);
+			}
+			if (sig_mismatch) {
+				/* Invalid signature. */
+				p->verify_result = DHCP_R_INVALIDKEY;
+			}
 		}
 
 		if (signature != NULL) {

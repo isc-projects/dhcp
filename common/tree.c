@@ -58,7 +58,7 @@ data_string_sprintfa(struct data_string *ds, const char *fmt, ...) {
 	int cur_strlen;
 	int max;
 	int vsnprintf_ret;
-	int new_len;
+	unsigned int new_len;
 	struct buffer *tmp_buffer;
 
 	/*
@@ -97,10 +97,13 @@ data_string_sprintfa(struct data_string *ds, const char *fmt, ...) {
 		/*
 		 * Figure out a size big enough.
 		 */
-		new_len = ds->len * 2;
-		while (new_len <= cur_strlen + vsnprintf_ret) {
+		new_len = ds->len;
+		do {
+			if (new_len > UINT_MAX / 2) {
+				return 0;
+			}
 			new_len *= 2;
-		}
+		} while (new_len <= (unsigned int)(cur_strlen + vsnprintf_ret));
 
 		/*
 		 * Create a new buffer and fill it.
