@@ -1481,6 +1481,8 @@ void parse_option_space_decl (cfile)
 	}
 	nu -> index = universe_count++;
 	if (nu -> index >= universe_max) {
+		if (universe_max > INT_MAX / 2)
+			log_fatal ("Option space array too large.");
 		ua = dmalloc (universe_max * 2 * sizeof *ua, MDL);
 		if (!ua)
 			log_fatal ("No memory to expand option space array.");

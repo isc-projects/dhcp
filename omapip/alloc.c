@@ -1106,6 +1106,8 @@ isc_result_t omapi_addr_list_new (omapi_addr_list_t **d, unsigned count,
 {
 	omapi_addr_list_t *new;
 
+	if (count > (SIZE_MAX - sizeof (omapi_addr_list_t)) / sizeof (omapi_addr_t))
+		return ISC_R_NOMEMORY;
 	new = dmalloc ((count * sizeof (omapi_addr_t)) +
 		       sizeof (omapi_addr_list_t), file, line);
 	if (!new)
