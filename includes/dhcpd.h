@@ -1678,6 +1678,8 @@ struct ia_xx {
 	int max_iasubopt;		/* space available for IAADDR/PREFIX */
 	time_t cltt;			/* client last transaction time */
 	struct iasubopt **iasubopt;	/* pointers to the IAADDR/IAPREFIXs */
+	struct in6_addr gw_addr;      /* pd hop addr */
+	int if_index;
 };
 
 extern ia_hash_t *ia_na_active;
